@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LaserFlow</title>
+<style>
+  :root{
+    --bg:#0a0b0e; --panel:#121419; --panel2:#181b22; --line:#242833;
+    --ink:#e7eaf0; --dim:#8b93a4; --cyan:#33e0d0; --amber:#f2a623;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:14px;line-height:1.5}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;
+         border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:17px;font-weight:500;letter-spacing:.14em}
+  header .dot{color:var(--cyan)}
+  header .meta{font-family:var(--mono);color:var(--dim);font-size:12px}
+  main{display:grid;grid-template-columns:minmax(260px,1fr) 280px 260px 320px;gap:0;
+       height:calc(100vh - 50px)}
+  @media(max-width:1100px){main{grid-template-columns:1fr;height:auto}}
+  .stage{padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0;align-items:center}
+  .libcol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
+          overflow-y:auto;display:flex;flex-direction:column}
+  .gencol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
+          overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(4,33,31,.35);
+           border-top-color:#04211f;border-radius:50%;animation:spin .7s linear infinite;
+           vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  canvas{height:48vh;max-height:48vh;max-width:100%;aspect-ratio:1/1;width:auto;
+         background:#000;border:1px solid var(--line);border-radius:12px;
+         display:block;margin:0 auto}
+  .readouts{width:100%;display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);
+            font-size:12px;color:var(--dim)}
+  .readouts b{color:var(--ink);font-weight:500}
+  .rail{border-left:1px solid var(--line);background:var(--panel);
+        padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+  .group{display:flex;flex-direction:column;gap:10px}
+  .group h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
+            text-transform:uppercase;color:var(--dim)}
+  .field{display:flex;align-items:center;gap:10px}
+  .field label{flex:0 0 84px;font-size:12px;color:var(--dim)}
+  .field input[type=range]{flex:1;accent-color:var(--cyan);height:3px}
+  .field .val{flex:0 0 46px;text-align:right;font-family:var(--mono);
+              font-size:12px;color:var(--cyan)}
+  .row{display:flex;gap:8px}
+  label.flabel{font-size:11px;color:var(--dim);letter-spacing:.04em}
+  input[type=text],textarea{flex:1;background:var(--panel2);border:1px solid var(--line);
+       color:var(--ink);border-radius:8px;padding:8px 10px;font-size:13px;
+       font-family:var(--sans);resize:vertical}
+  textarea{width:100%;min-height:64px;line-height:1.4}
+  input[type=text]:focus,textarea:focus{outline:none;border-color:var(--cyan)}
+  select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+         border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono);
+         flex:0 0 auto}
+  .field select{flex:1}
+  select:focus{outline:none;border-color:var(--cyan)}
+  button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+         border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  button.go{background:var(--cyan);border-color:var(--cyan);color:#04211f;font-weight:500;
+            min-width:110px}
+  button.amber{border-color:var(--amber)}
+  button:disabled{opacity:.7;cursor:default}
+  .progress{width:100%;height:5px;border-radius:3px;background:var(--panel2);
+            overflow:hidden;display:none}
+  .progress.active{display:block}
+  .progress .bar{height:100%;background:var(--cyan);width:0%;
+                 transition:width .15s ease-out}
+  .lib{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto}
+  .lib .item{display:flex;align-items:center;justify-content:space-between;
+             padding:7px 10px;border:1px solid var(--line);border-radius:8px;
+             cursor:pointer;font-family:var(--mono);font-size:12px}
+  .lib .item:hover{border-color:var(--cyan)}
+  .synthblock{width:100%;border:1px solid var(--line);border-radius:12px;
+              background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
+  .synthhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .synthhead h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
+                text-transform:uppercase;color:var(--dim)}
+  .synthglobals{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .knob{display:flex;flex-direction:column;gap:3px;min-width:88px}
+  .knob label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
+              display:flex;justify-content:space-between}
+  .knob label span{color:var(--cyan);font-family:var(--mono)}
+  .knob input[type=range]{accent-color:var(--cyan);height:3px}
+  .voices{display:flex;gap:10px;flex-wrap:wrap}
+  .voice{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;
+         padding:10px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
+  .voice.muted{opacity:.45}
+  .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .voice .vname{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .voice .vtype{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .voice .mutebtn{padding:3px 8px;font-size:11px;border-radius:6px}
+  .voice .mutebtn.on{border-color:var(--amber);color:var(--amber)}
+  .voice select{font-size:11px;padding:4px 6px}
+  .diagrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-family:var(--mono);
+           font-size:11px;color:var(--dim)}
+  .diagrid b{color:var(--ink);font-weight:500}
+  .diagrid .bad{color:var(--amber)}
+  .underruns{max-height:100px;overflow-y:auto;font-family:var(--mono);font-size:10px;
+             color:var(--dim);display:flex;flex-direction:column;gap:2px}
+  .lib .item .x{color:var(--dim);padding:0 4px}
+  .lib .item .x:hover{color:var(--amber)}
+  .hint{font-size:11px;color:var(--dim);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header>
+  <h1>LASER<span class="dot">·</span>FLOW</h1>
+  <span class="meta" id="meta">connecting…</span>
+  <span style="flex:1"></span>
+  <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
+  <button class="amber" id="master-blank">Blank</button>
+</header>
+<main>
+  <section class="stage">
+    <canvas id="view" width="600" height="600"></canvas>
+    <div class="readouts">
+      <span>scene <b id="r-scene">—</b></span>
+      <span>points <b id="r-points">0</b></span>
+      <span>pps <b id="r-pps">0</b></span>
+      <span>out <b id="r-out">—</b></span>
+      <span>audio <b id="r-audio">—</b></span>
+      <span>level <b id="r-level">0</b></span>
+      <span>director <b id="r-dir">—</b></span>
+    </div>
+    <div class="synthblock" id="synthblock">
+      <div class="synthhead">
+        <h2>Soundscape</h2>
+        <div class="synthglobals" id="synthglobals"></div>
+      </div>
+      <div class="voices" id="voices"></div>
+    </div>
+  </section>
+
+  <section class="libcol">
+    <div class="group" style="flex:1;min-height:0">
+      <h2>Library</h2>
+      <div class="lib" id="lib" style="flex:1;max-height:none"></div>
+      <div class="row">
+        <input type="text" id="savename" placeholder="save current as…">
+        <button id="save">Save</button>
+      </div>
+      <button id="update">Update scene from config</button>
+      <div class="hint">writes the live camera/config back into the loaded scene</div>
+    </div>
+  </section>
+
+  <section class="gencol">
+    <div class="group">
+      <h2>Generate scene</h2>
+      <label class="flabel" for="scenename">name</label>
+      <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
+      <label class="flabel" for="kw">scene keywords</label>
+      <textarea id="kw" placeholder="exploring underwater with dozens of large jellyfish, long pink trailing tentacles, shafts of light from above…"></textarea>
+      <label class="flabel" for="audiokw">audio prompt</label>
+      <textarea id="audiokw" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:44px"></textarea>
+      <div class="field"><label>model</label>
+        <select id="d-model">
+          <option value="haiku">Haiku · fast/cheap</option>
+          <option value="sonnet">Sonnet · better</option>
+          <option value="opus">Opus · best</option>
+        </select></div>
+      <div class="field"><label>effort</label>
+        <select id="d-effort">
+          <option value="low">low</option>
+          <option value="med">medium</option>
+          <option value="high">high · richest</option>
+        </select></div>
+      <button class="go" id="gen">Generate</button>
+      <div class="progress" id="genprog"><div class="bar" id="genbar"></div></div>
+      <div class="hint" id="dirhint">keyword → scene (added to the library)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-top:4px">
+        <input type="checkbox" id="audioonly"> regenerate audio only, for an existing scene
+      </label>
+      <div id="audioonlyrow" style="display:none;flex-direction:column;gap:8px">
+        <select id="audiotarget"></select>
+        <button id="applyaudio">Apply to scene</button>
+        <div class="hint">uses the audio prompt above; leaves that scene's visuals untouched</div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="rail">
+    <div class="group">
+      <h2>Output</h2>
+      <div class="field"><label>max PPS</label>
+        <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget</div>
+      <div class="field"><label>scene PPS</label>
+        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">optional per-scene override — blank uses max PPS</div>
+    </div>
+
+    <div class="group">
+      <h2>Modulation</h2>
+      <div class="field"><label>audio ↔ visual</label>
+        <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
+        <span class="val" id="v-mlink">1.00</span></div>
+      <div class="hint">turns the whole audio→visual coupling up or down — the "level effect"</div>
+      <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="group">
+      <h2>Scene</h2>
+      <div class="field"><label>LFO rate</label>
+        <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
+        <span class="val" id="v-lfo">0.05</span></div>
+      <div class="field"><label>crossfade</label>
+        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="2">
+        <span class="val" id="v-xf">2.0</span></div>
+    </div>
+
+    <div class="group" id="g-camera" style="display:none">
+      <h2>Camera</h2>
+      <div class="field"><label>mode</label>
+        <select id="c-mode">
+          <option value="orbit">orbit</option>
+          <option value="drift">drift</option>
+          <option value="fly">fly</option>
+        </select></div>
+      <div class="field"><label>speed</label>
+        <input type="range" id="c-speed" min="0" max="2" step="0.05" value="0.6">
+        <span class="val" id="v-cspeed">0.60</span></div>
+      <div class="field"><label>orbit dist</label>
+        <input type="range" id="c-radius" min="3" max="20" step="0.5" value="10">
+        <span class="val" id="v-cradius">10.0</span></div>
+      <div class="field"><label>field of view</label>
+        <input type="range" id="c-fov" min="30" max="100" step="1" value="62">
+        <span class="val" id="v-cfov">62</span></div>
+      <div class="field"><label>draw depth</label>
+        <input type="range" id="c-far" min="6" max="40" step="1" value="30">
+        <span class="val" id="v-cfar">30</span></div>
+      <div class="field"><label>max strokes</label>
+        <input type="range" id="c-max" min="20" max="200" step="5" value="120">
+        <span class="val" id="v-cmax">120</span></div>
+    </div>
+
+    <div class="group" id="g-motion">
+      <h2>Motion</h2>
+      <div class="field"><label>flow speed</label>
+        <input type="range" id="s-speed" min="0" max="0.6" step="0.01" value="0.2">
+        <span class="val" id="v-speed">0.20</span></div>
+      <div class="field"><label>turbulence</label>
+        <input type="range" id="s-turb" min="0" max="1" step="0.01" value="0.35">
+        <span class="val" id="v-turb">0.35</span></div>
+      <div class="field"><label>hue</label>
+        <input type="range" id="s-hue" min="0" max="1" step="0.01" value="0.55">
+        <span class="val" id="v-hue">0.55</span></div>
+    </div>
+
+    <div class="group">
+      <h2>Envelope</h2>
+      <div class="row">
+        <button class="amber" id="trig">Swell ⇩</button>
+        <button id="rel">Release ⇧</button>
+      </div>
+      <div class="hint">routes to synth + visuals via the matrix</div>
+    </div>
+
+    <div class="group">
+      <h2>Audio diagnostics</h2>
+      <div class="hint" id="diag-status">audio: —</div>
+      <div class="diagrid" id="diagstats"></div>
+      <div class="field"><label>device</label>
+        <select id="a-device"><option value="">system default</option></select></div>
+      <div class="field"><label>blocksize</label>
+        <select id="a-blocksize">
+          <option value="512">512</option><option value="1024">1024</option>
+          <option value="2048">2048</option>
+          <option value="4096">4096</option><option value="8192" selected>8192</option>
+          <option value="16384">16384</option><option value="32768">32768</option>
+        </select></div>
+      <div class="field"><label>latency</label>
+        <select id="a-latency">
+          <option value="low">low</option><option value="high" selected>high</option>
+        </select></div>
+      <div class="row">
+        <button id="a-apply">Apply</button>
+        <button id="a-rescan">Rescan devices</button>
+        <button id="a-copy">Copy diagnostics</button>
+      </div>
+      <div class="hint" id="a-applystatus"></div>
+      <div class="hint">bigger blocksize / high latency = fewer glitches, more delay before you hear a change</div>
+      <div class="underruns" id="diag-underruns"></div>
+    </div>
+
+    <div class="group">
+      <h2>Connection</h2>
+      <div class="row">
+        <input type="password" id="apikey" placeholder="ANTHROPIC_API_KEY (sk-…)">
+      </div>
+      <div class="row">
+        <button id="apisave">Save key</button>
+        <button id="apitest">Test connection</button>
+      </div>
+      <div class="hint" id="apistatus">director: —</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+const ws = new WebSocket(`ws://${location.host}/ws`);
+const $ = id => document.getElementById(id);
+const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
+
+ws.onopen = () => $("meta").textContent = "linked";
+ws.onclose = () => $("meta").textContent = "disconnected";
+ws.onmessage = e => {
+  const m = JSON.parse(e.data);
+  if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
+  else if (m.type === "generate_result") {
+    if (m.action === "apply_audio") {
+      endApply();
+      $("dirhint").textContent = m.ok && m.source === "claude" ? "audio updated on scene ✓"
+        : m.ok && m.source === "cache" ? "audio updated from cache ✓"
+        : "audio fallback — " + (m.error || "no key");
+      return;
+    }
+    $("genbar").style.width = "100%";
+    setTimeout(endGen, 200);
+    $("scenename").value = "";
+    const src = $("dirhint");
+    src.textContent = m.ok && m.source === "claude" ? "composed by Claude ✓ (added to library)"
+      : m.ok && m.source === "cache" ? "from cache ✓"
+      : "local fallback — " + (m.error || "no key");
+  }
+  else if (m.type === "api_result") {
+    const s = $("apistatus");
+    s.textContent = (m.ok ? "\u2714 " : "\u2716 ") + m.detail;
+    s.style.color = m.ok ? "var(--cyan)" : "var(--amber)";
+  }
+  else if (m.type === "audio_config_result") {
+    const el = $("a-applystatus");
+    if (!m.ok) {
+      el.textContent = "\u2716 audio failed to (re)start" + (m.error ? ": " + m.error : "");
+      el.style.color = "var(--amber)";
+    } else if (m.requested_blocksize && m.applied && m.requested_blocksize !== m.applied.blocksize) {
+      el.textContent = `\u26a0 ${m.requested_blocksize} failed to open — kept previous ${m.applied.blocksize}`;
+      el.style.color = "var(--amber)";
+    } else {
+      el.textContent = "\u2714 applied — running at " + (m.applied ? m.applied.blocksize : "?");
+      el.style.color = "var(--cyan)";
+    }
+  }
+};
+
+function paintState(s){
+  _lastState = s;
+  $("meta").textContent = `v${s.version} · ${s.output}`;
+  const mt = $("master-toggle");
+  mt.dataset.active = s.active ? "1" : "0";
+  mt.textContent = s.active ? "■ Stop" : "▶ Start";
+  mt.className = s.active ? "amber" : "go";
+  $("r-scene").textContent = s.scene || "—";
+  $("r-points").textContent = s.points;
+  $("r-pps").textContent = s.pps;
+  $("r-out").textContent = s.output;
+  $("r-audio").textContent = !s.active ? "muted" : (s.audio ? "on" : "off");
+  $("r-level").textContent = s.audio_level;
+  $("r-dir").textContent = s.director_online ? "claude" : "local";
+  if (!$("d-model").dataset.init && s.director_choice) {
+    $("d-model").dataset.init = "1";
+    $("d-model").value = s.director_choice;
+    $("d-effort").value = s.director_effort || "med";
+  }
+  if (generating && typeof s.director_progress === "number") {
+    $("genbar").style.width = Math.max(2, Math.round(s.director_progress*100)) + "%";
+  }
+  $("dirhint").textContent = s.director_online
+    ? "keyword → Claude scene spec (cached; ~1 call per new keyword)"
+    : "keyword → local scene (set a key to use Claude)";
+  if (s.director_source) {
+    const src = $("dirhint");
+    if (s.director_source === "claude") src.textContent = "last scene: composed by Claude ✓";
+    else if (s.director_source === "cache") src.textContent = "last scene: from cache (Claude) ✓";
+    else src.textContent = "last scene: local fallback — " + (s.director_error || "no key");
+  }
+  const as = $("apistatus");
+  if (!as.dataset.touched)
+    as.textContent = s.director_online ? `director: ${s.director_model}` : "director: local (no key)";
+  const lib = $("lib");
+  if (lib.dataset.sig !== s.library.join(",")) {
+    lib.dataset.sig = s.library.join(",");
+    lib.innerHTML = "";
+    s.library.forEach(name => {
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `<span>${name}</span><span class="x">✕</span>`;
+      el.querySelector("span:first-child").onclick = () => send({type:"scene_load",name});
+      el.querySelector(".x").onclick = ev => { ev.stopPropagation();
+        if (confirm(`Delete "${name}"?`)) send({type:"scene_delete",name}); };
+      lib.appendChild(el);
+    });
+  }
+  // show camera controls for 3D scenes, motion controls for flat ones
+  $("g-camera").style.display = s.scene_3d ? "flex" : "none";
+  $("g-motion").style.display = s.scene_3d ? "none" : "flex";
+  // sync camera sliders to the active scene once, whenever the scene changes
+  if (s.camera && $("g-camera").dataset.scene !== s.scene) {
+    $("g-camera").dataset.scene = s.scene;
+    const c = s.camera, set = (id,val,fmt)=>{ $(id).value=val; $("v-"+id.replace("-","")).textContent=fmt(val); };
+    $("c-mode").value = c.mode;
+    set("c-speed", c.speed, v=>(+v).toFixed(2));
+    set("c-radius", c.orbit_radius, v=>(+v).toFixed(1));
+    set("c-fov", c.fov, v=>(+v).toFixed(0));
+    set("c-far", c.far, v=>(+v).toFixed(0));
+    set("c-max", c.max_strokes, v=>(+v).toFixed(0));
+  }
+  // max PPS: reflect the persisted ceiling unless the user is actively editing
+  if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
+    $("o-maxpps").value = s.max_pps;
+  }
+  // per-scene PPS override: sync once per scene change, blank means "auto"
+  if ($("o-scenepps").dataset.scene !== s.scene) {
+    $("o-scenepps").dataset.scene = s.scene;
+    $("o-scenepps").value = (s.scene_pps_override ?? "") === "" ? "" : s.scene_pps_override;
+  }
+  renderSoundscape(s);
+  renderRoutes(s);
+  syncAudioTargets(s);
+  renderDiagnostics(s);
+}
+
+function renderDiagnostics(s){
+  const status = $("diag-status");
+  if (!s.audio) {
+    status.textContent = "audio: offline" + (s.audio_error ? " — " + s.audio_error : " (no key/device? see below)");
+    status.style.color = "var(--amber)";
+    $("diagstats").innerHTML = "";
+    $("diag-underruns").innerHTML = "";
+  } else {
+    const d = s.audio_diag || {};
+    const bad = d.underruns > 0 || d.duration_budget_pct > 70;
+    const mismatch = d.requested_blocksize && d.requested_blocksize !== d.blocksize;
+    status.textContent = `audio: running \u00b7 blocksize ${d.blocksize} @ ${d.sr}Hz`
+      + (mismatch ? ` (requested ${d.requested_blocksize})` : "");
+    status.style.color = (bad || mismatch) ? "var(--amber)" : "var(--cyan)";
+    const g = $("diagstats");
+    g.innerHTML = `
+      <span>callbacks</span><b>${d.callbacks ?? 0}</b>
+      <span>underruns</span><b class="${d.underruns?'bad':''}">${d.underruns ?? 0}</b>
+      <span>avg render</span><b>${d.avg_duration_ms ?? 0} ms</b>
+      <span>max render</span><b class="${(d.duration_budget_pct>70)?'bad':''}">${d.max_duration_ms ?? 0} ms (${d.duration_budget_pct ?? 0}% of budget)</b>
+      <span>callback budget</span><b>${d.expected_interval_ms ?? 0} ms</b>
+      <span>max interval</span><b class="${(d.max_interval_ms > (d.expected_interval_ms||1)*1.5)?'bad':''}">${d.max_interval_ms ?? 0} ms</b>
+    `;
+    const u = $("diag-underruns");
+    let extra = "";
+    if (d.error) extra = `<div style="color:var(--amber)">${d.error}</div>`;
+    if ((d.recent_underruns||[]).length){
+      u.innerHTML = extra + "recent xruns:<br>" + d.recent_underruns.slice(-10).reverse()
+        .map(e => `t+${e.t}s: ${e.flags.join(",")}`).join("<br>");
+    } else {
+      u.innerHTML = extra + (d.callbacks ? "no hardware-reported xruns yet" : "");
+    }
+  }
+  // device list, populated once and refreshed on rescan
+  const devs = s.audio_devices;
+  const sel = $("a-device");
+  const sig = devs ? (devs.devices||[]).map(x=>x.index).join(",") : "";
+  if (sel.dataset.sig !== sig) {
+    sel.dataset.sig = sig;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">system default</option>';
+    if (devs && devs.ok) {
+      devs.devices.forEach(dv => {
+        const o = document.createElement("option");
+        o.value = dv.index; o.textContent = `${dv.name} (${dv.hostapi})`;
+        sel.appendChild(o);
+      });
+    }
+    if ([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  }
+  if (s.audio_cfg && document.activeElement !== $("a-blocksize")) {
+    $("a-blocksize").value = String(s.audio_cfg.blocksize ?? 8192);
+  }
+  if (s.audio_cfg && document.activeElement !== $("a-latency")) {
+    $("a-latency").value = s.audio_cfg.latency ?? "high";
+  }
+}
+
+$("a-apply").onclick = () => {
+  $("a-applystatus").textContent = "applying…";
+  $("a-applystatus").style.color = "var(--dim)";
+  const device = $("a-device").value;
+  send({type:"audio_config",
+    device: device === "" ? null : parseInt(device,10),
+    blocksize: parseInt($("a-blocksize").value,10),
+    latency: $("a-latency").value});
+};
+$("a-rescan").onclick = () => send({type:"rescan_audio_devices"});
+$("a-copy").onclick = async () => {
+  const payload = JSON.stringify({
+    audio_error: _lastState?.audio_error,
+    audio_cfg: _lastState?.audio_cfg,
+    audio_diag: _lastState?.audio_diag,
+    audio_devices: _lastState?.audio_devices,
+    scene: _lastState?.scene,
+    output: _lastState?.output,
+    pps: _lastState?.pps,
+  }, null, 2);
+  try { await navigator.clipboard.writeText(payload);
+    $("a-copy").textContent = "copied!"; setTimeout(()=>$("a-copy").textContent="Copy diagnostics", 1500);
+  } catch(e) { $("a-copy").textContent = "copy failed"; }
+};
+let _lastState = null;
+
+let _routesSig = "";
+function renderRoutes(s){
+  if (document.activeElement !== $("m-link")) {
+    $("m-link").value = s.audio_link ?? 1;
+    $("v-mlink").textContent = (s.audio_link ?? 1).toFixed(2);
+  }
+  const mods = s.modulation || [];
+  const sig = s.scene + "|" + mods.map(r=>r.source+">"+r.dest).join(",");
+  if (sig === _routesSig) return;
+  _routesSig = sig;
+  const box = $("routes"); box.innerHTML = "";
+  mods.forEach((r, i) => {
+    const wrap = document.createElement("div"); wrap.className = "field";
+    const label = document.createElement("label");
+    label.textContent = `${r.source}→${r.dest.split(".").pop()}`;
+    label.style.flex = "0 0 120px"; label.title = `${r.source} → ${r.dest}`;
+    label.style.overflow = "hidden"; label.style.textOverflow = "ellipsis"; label.style.whiteSpace="nowrap";
+    const range = document.createElement("input");
+    range.type = "range";
+    const mag = Math.max(Math.abs(r.depth), 0.05);
+    range.min = 0; range.max = (mag * 3).toFixed(4); range.step = (mag/50).toFixed(5);
+    range.value = r.depth;
+    const val = document.createElement("span"); val.className="val"; val.textContent = (+r.depth).toFixed(3);
+    range.oninput = () => { val.textContent = (+range.value).toFixed(3);
+      send({type:"set", key:`route.${i}.depth`, value:+range.value}); };
+    wrap.appendChild(label); wrap.appendChild(range); wrap.appendChild(val);
+    box.appendChild(wrap);
+  });
+}
+$("m-link").oninput = () => {
+  $("v-mlink").textContent = (+$("m-link").value).toFixed(2);
+  send({type:"set", key:"audio_link", value:+$("m-link").value});
+};
+
+function syncAudioTargets(s){
+  const sel = $("audiotarget");
+  const sig = (s.library||[]).join(",");
+  if (sel.dataset.sig === sig) return;
+  sel.dataset.sig = sig;
+  const prev = sel.value;
+  sel.innerHTML = "";
+  (s.library||[]).forEach(name => {
+    const o = document.createElement("option"); o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
+$("audioonly").onchange = () => {
+  $("audioonlyrow").style.display = $("audioonly").checked ? "flex" : "none";
+};
+let applying = false;
+function endApply(){
+  applying = false;
+  $("applyaudio").disabled = false;
+  $("applyaudio").textContent = "Apply to scene";
+}
+$("applyaudio").onclick = () => {
+  const scene = $("audiotarget").value;
+  const audio = $("audiokw").value.trim();
+  if (!scene || !audio || applying) return;
+  applying = true;
+  $("applyaudio").disabled = true;
+  $("applyaudio").innerHTML = '<span class="spinner"></span>';
+  send({type:"apply_audio", scene, audio});
+};
+
+const sendAudio = (key, value) => send({type:"set_audio", key, value});
+let _scapeSig = "";
+function knob(label, key, min, max, step, val, fmt){
+  const wrap = document.createElement("div"); wrap.className = "knob";
+  const l = document.createElement("label");
+  const name = document.createElement("span"); name.textContent = label; name.style.color="var(--dim)";
+  const v = document.createElement("span"); v.textContent = fmt(val);
+  l.appendChild(name); l.appendChild(v);
+  const r = document.createElement("input");
+  r.type="range"; r.min=min; r.max=max; r.step=step; r.value=val;
+  r.oninput = () => { v.textContent = fmt(+r.value); sendAudio(key, +r.value); };
+  wrap.appendChild(l); wrap.appendChild(r);
+  return wrap;
+}
+function renderSoundscape(s){
+  const sc = s.soundscape;
+  const block = $("synthblock");
+  if (!sc || !s.audio){
+    block.style.opacity = sc ? "1" : ".5";
+  } else { block.style.opacity = "1"; }
+  if (!sc) { $("synthglobals").innerHTML=""; $("voices").innerHTML=""; return; }
+  // rebuild only when the structure (voice names/types) changes, so live
+  // dragging doesn't wipe the control you're holding
+  const sig = s.scene + "|" + (sc.voices||[]).map(v=>v.name+":"+v.type).join(",");
+  if (sig === _scapeSig) return;
+  _scapeSig = sig;
+
+  const g = $("synthglobals"); g.innerHTML="";
+  g.appendChild(knob("master","master",0,1,0.01, sc.master ?? 0.8, v=>v.toFixed(2)));
+  g.appendChild(knob("tempo","tempo",20,160,1, sc.tempo ?? 60, v=>v.toFixed(0)));
+  g.appendChild(knob("distort","distortion",0,1,0.01, sc.distortion ?? 0, v=>v.toFixed(2)));
+  const d = sc.delay || {};
+  g.appendChild(knob("delay time","delay.time",0.05,1.2,0.01, d.time ?? 0.4, v=>v.toFixed(2)));
+  g.appendChild(knob("delay fbk","delay.feedback",0,0.9,0.01, d.feedback ?? 0.3, v=>v.toFixed(2)));
+  g.appendChild(knob("delay mix","delay.mix",0,0.9,0.01, d.mix ?? 0.25, v=>v.toFixed(2)));
+
+  const vc = $("voices"); vc.innerHTML="";
+  (sc.voices||[]).forEach(v => {
+    const el = document.createElement("div");
+    el.className = "voice" + (v.mute ? " muted":"");
+    const head = document.createElement("div"); head.className="vhead";
+    head.innerHTML = `<span class="vname">${v.name}</span><span class="vtype">${v.type}</span>`;
+    const mb = document.createElement("button");
+    mb.className = "mutebtn" + (v.mute?" on":""); mb.textContent = v.mute?"muted":"mute";
+    mb.onclick = () => { const nm=!el.classList.contains("muted");
+      el.classList.toggle("muted",nm); mb.classList.toggle("on",nm); mb.textContent=nm?"muted":"mute";
+      sendAudio(`voice.${v.name}.mute`, nm); };
+    const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center";
+    hrow.appendChild(head); hrow.appendChild(mb);
+    el.appendChild(hrow);
+    el.appendChild(knob("level",`voice.${v.name}.level`,0,1,0.01, v.level ?? 0.4, x=>x.toFixed(2)));
+    if (v.type==="pad" || v.type==="sub" || v.type==="pluck" || v.type==="osc"){
+      const sel = document.createElement("select");
+      ["sine","saw","square","triangle"].forEach(w=>{
+        const o=document.createElement("option"); o.value=w; o.textContent=w;
+        if ((v.waveform||"sine")===w) o.selected=true; sel.appendChild(o); });
+      sel.onchange = () => sendAudio(`voice.${v.name}.waveform`, sel.value);
+      const wl = document.createElement("label"); wl.className="flabel"; wl.textContent="wave";
+      el.appendChild(wl); el.appendChild(sel);
+    }
+    if (v.type==="pad" || v.type==="noise")
+      el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2)));
+    if (v.type==="pluck")
+      el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2)));
+    if (v.type==="osc"){
+      el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0)));
+      el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3)));
+      el.appendChild(knob("sub",`voice.${v.name}.sub`,0,1,0.01, v.sub ?? 0, x=>x.toFixed(2)));
+    }
+    el.appendChild(knob("pan",`voice.${v.name}.pan`,-1,1,0.05, v.pan ?? 0, x=>x.toFixed(2)));
+
+    // ADSR envelope — available on sustained voices (pad/osc)
+    if (v.type==="pad" || v.type==="osc"){
+      const env = v.env || {attack:3.0, decay:1.2, sustain:0.85, release:2.5};
+      const envWrap = document.createElement("div");
+      envWrap.style.cssText = "border-top:1px solid var(--line);padding-top:8px;margin-top:2px;display:flex;flex-direction:column;gap:2px";
+      const envLabel = document.createElement("div");
+      envLabel.style.cssText = "font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em";
+      envLabel.textContent = "envelope";
+      envWrap.appendChild(envLabel);
+      const envRow = document.createElement("div");
+      envRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+      const mkEnvKnob = (label, field, min, max, step) => {
+        const kn = knob(label, `__env_${field}_${v.name}`, min, max, step, env[field], x=>x.toFixed(2));
+        kn.style.minWidth = "64px";
+        kn.querySelector("input").oninput = (e) => {
+          kn.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
+          sendAudio(`voice.${v.name}.env`, {...env, [field]: +e.target.value});
+        };
+        return kn;
+      };
+      envRow.appendChild(mkEnvKnob("attack","attack",0.01,8,0.05));
+      envRow.appendChild(mkEnvKnob("decay","decay",0.01,8,0.05));
+      envRow.appendChild(mkEnvKnob("sustain","sustain",0,1,0.01));
+      envRow.appendChild(mkEnvKnob("release","release",0.05,10,0.05));
+      envWrap.appendChild(envRow);
+      el.appendChild(envWrap);
+    }
+
+    // arpeggiator — available on chord-based voices (pad/osc)
+    if (v.type==="pad" || v.type==="osc"){
+      const arp = v.arp || {on:false, mode:"up", rate:2.0, decay:0.3};
+      const arpWrap = document.createElement("div");
+      arpWrap.style.cssText = "border-top:1px solid var(--line);padding-top:8px;margin-top:2px;display:flex;flex-direction:column;gap:6px";
+      const arpHead = document.createElement("label");
+      arpHead.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!arp.on;
+      cb.onchange = () => { sendAudio(`voice.${v.name}.arp`, {...arp, on: cb.checked}); toggleArpFields(cb.checked); };
+      arpHead.appendChild(cb); arpHead.appendChild(document.createTextNode("arpeggiate chord"));
+      arpWrap.appendChild(arpHead);
+
+      const arpFields = document.createElement("div");
+      arpFields.style.cssText = "display:flex;flex-direction:column;gap:6px";
+      function toggleArpFields(on){ arpFields.style.display = on ? "flex" : "none"; }
+      toggleArpFields(!!arp.on);
+
+      const modeSel = document.createElement("select");
+      ["up","down","updown","random"].forEach(mo=>{
+        const o=document.createElement("option"); o.value=mo; o.textContent=mo;
+        if ((arp.mode||"up")===mo) o.selected=true; modeSel.appendChild(o); });
+      modeSel.onchange = () => sendAudio(`voice.${v.name}.arp`, {...arp, mode: modeSel.value, on: cb.checked});
+      const ml = document.createElement("label"); ml.className="flabel"; ml.textContent="pattern";
+      arpFields.appendChild(ml); arpFields.appendChild(modeSel);
+
+      const rateKnob = knob("arp rate",`__arp_rate_${v.name}`,0.25,8,0.25, arp.rate ?? 2.0, x=>x.toFixed(2));
+      rateKnob.querySelector("input").oninput = (e) => {
+        rateKnob.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
+        sendAudio(`voice.${v.name}.arp`, {...arp, rate: +e.target.value, on: cb.checked});
+      };
+      arpFields.appendChild(rateKnob);
+
+      const decayKnob = knob("arp decay",`__arp_decay_${v.name}`,0.05,2,0.05, arp.decay ?? 0.3, x=>x.toFixed(2));
+      decayKnob.querySelector("input").oninput = (e) => {
+        decayKnob.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
+        sendAudio(`voice.${v.name}.arp`, {...arp, decay: +e.target.value, on: cb.checked});
+      };
+      arpFields.appendChild(decayKnob);
+
+      arpWrap.appendChild(arpFields);
+      el.appendChild(arpWrap);
+    }
+    vc.appendChild(el);
+  });
+}
+
+const cv = $("view"), cx = cv.getContext("2d");
+function paintPreview(scene){
+  const w = cv.width, h = cv.height;
+  cx.fillStyle = "#000"; cx.fillRect(0,0,w,h);
+  const map = (x,y) => [ (x*0.5+0.5)*w, (0.5-y*0.5)*h ];
+  cx.lineWidth = 1.4; cx.lineJoin = "round";
+  for (const st of scene){
+    const [r,g,b] = st.c;
+    cx.strokeStyle = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    cx.beginPath();
+    st.p.forEach((pt,i)=>{ const [X,Y]=map(pt[0],pt[1]);
+      i? cx.lineTo(X,Y): cx.moveTo(X,Y); });
+    cx.stroke();
+  }
+}
+
+function slider(id, key, label, fmt=(v)=>(+v).toFixed(2)){
+  const s=$(id), v=$("v-"+label);
+  s.oninput = () => { v.textContent = fmt(s.value); send({type:"set",key,value:+s.value}); };
+}
+slider("s-speed","layer0.speed","speed");
+slider("s-turb","layer0.turbulence","turb");
+slider("s-hue","layer0.hue","hue");
+slider("s-lfo","lfo_slow.rate","lfo");
+slider("s-xf","crossfade","xf",(v)=>(+v).toFixed(1));
+
+slider("c-speed","camera.speed","cspeed");
+slider("c-radius","camera.orbit_radius","cradius",(v)=>(+v).toFixed(1));
+slider("c-fov","camera.fov","cfov",(v)=>(+v).toFixed(0));
+slider("c-far","camera.far","cfar",(v)=>(+v).toFixed(0));
+slider("c-max","camera.max_strokes","cmax",(v)=>(+v).toFixed(0));
+$("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
+
+let generating = false, genTimer = null;
+function startGen(){
+  if (generating) return;
+  generating = true;
+  $("gen").disabled = true;
+  $("gen").innerHTML = '<span class="spinner"></span>';
+  $("genprog").classList.add("active");
+  $("genbar").style.width = "2%";
+  genTimer = setTimeout(endGen, 120000);   // safety restore
+}
+function endGen(){
+  generating = false;
+  $("gen").disabled = false;
+  $("gen").textContent = "Generate";
+  $("genprog").classList.remove("active");
+  $("genbar").style.width = "0%";
+  if (genTimer) { clearTimeout(genTimer); genTimer = null; }
+}
+$("gen").onclick = () => {
+  const k = $("kw").value.trim();
+  if (!k || generating) return;
+  startGen();
+  send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim()});
+};
+// multiline field: Ctrl/Cmd+Enter submits, plain Enter makes a new line
+$("kw").addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("gen").click();
+});
+
+$("d-model").onchange = () => send({type:"set_model", value:$("d-model").value});
+$("d-effort").onchange = () => send({type:"set_effort", value:$("d-effort").value});
+
+function commitPps(el, key, allowBlank){
+  const raw = el.value.trim();
+  if (raw === "" && allowBlank) { send({type:"set", key, value:null}); return; }
+  const n = parseInt(raw, 10);
+  if (!isNaN(n) && n > 0) send({type:"set", key, value:n});
+}
+$("o-maxpps").addEventListener("change", () => commitPps($("o-maxpps"), "max_pps", false));
+$("o-scenepps").addEventListener("change", () => commitPps($("o-scenepps"), "scene.pps", true));
+
+$("save").onclick = () => { const n=$("savename").value.trim(); if(n){ send({type:"scene_save",name:n}); $("savename").value=""; } };
+$("update").onclick = () => send({type:"scene_update"});
+$("trig").onclick = () => send({type:"trigger"});
+$("rel").onclick = () => send({type:"release"});
+
+$("master-toggle").onclick = () => {
+  const nowActive = $("master-toggle").dataset.active === "1";
+  send({type:"set_active", value: !nowActive});
+};
+$("master-blank").onclick = () => send({type:"blank"});
+
+$("apisave").onclick = () => {
+  const k = $("apikey").value.trim();
+  if (!k) return;
+  $("apistatus").dataset.touched = "1";
+  $("apistatus").textContent = "saving…";
+  send({type:"set_api_key", key:k});
+};
+$("apitest").onclick = () => {
+  $("apistatus").dataset.touched = "1";
+  $("apistatus").textContent = "testing…";
+  $("apistatus").style.color = "var(--dim)";
+  send({type:"test_api_key"});
+};
+</script>
+</body>
+</html>

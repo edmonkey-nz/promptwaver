@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments (any name/location convention)
+.venv/
+.venv*/
+venv/
+env/
+
+# LaserFlow local/runtime state — never commit secrets or machine-specific data
+settings.json
+scenes/generated/*.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# VSCode: keep the shared config, ignore personal machine-specific overrides
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Node (only present if jsdom or similar dev tooling was installed locally)
+node_modules/

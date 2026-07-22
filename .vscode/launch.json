@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "LaserFlow: web (no hardware)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--web"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "LaserFlow: web + laser",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--web", "--laser", "--pps", "18000"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "LaserFlow: web + laser (custom Helios lib path)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--web", "--laser"],
+      "env": { "HELIOS_LIB": "/full/path/to/libHeliosDacAPI.so" },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

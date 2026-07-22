@@ -1,0 +1,9 @@
+# core (required)
+numpy>=1.24
+aiohttp>=3.9
+
+# optional — install to unlock features:
+#   pyo            polyphonic pad synth audio output
+#   sounddevice    the synth + mic reactivity (needs system PortAudio: sudo apt install libportaudio2)
+#   anthropic      Claude scene director (else a local keyword mapping is used)
+# pip install pyo sounddevice anthropic

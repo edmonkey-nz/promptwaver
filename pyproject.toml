@@ -1,0 +1,32 @@
+[project]
+name = "laserflow"
+description = "AI-composed 3D laser environments with a generative ambient soundscape, for the Helios Laser DAC."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.24",
+    "aiohttp>=3.9",
+]
+
+[project.optional-dependencies]
+audio = ["sounddevice"]
+ai = ["anthropic"]
+
+# --- dev tooling -------------------------------------------------------
+# Not a distributable package (there's no setup step — see README "Run"),
+# so no [build-system]/[tool.setuptools] section. This file exists for
+# project metadata and the tool config below.
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # long lines happen in generated-scene helpers; not worth failing CI over
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
