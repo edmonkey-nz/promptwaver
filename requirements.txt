@@ -3,7 +3,15 @@ numpy>=1.24
 aiohttp>=3.9
 
 # optional — install to unlock features:
-#   pyo            polyphonic pad synth audio output
-#   sounddevice    the synth + mic reactivity (needs system PortAudio: sudo apt install libportaudio2)
-#   anthropic      Claude scene director (else a local keyword mapping is used)
-# pip install pyo sounddevice anthropic
+#   sounddevice    the synth + mic reactivity (needs system PortAudio runtime:
+#                  sudo apt install libportaudio2)
+#   anthropic      Claude scene director (else a local keyword mapping is used;
+#                  needs messages.stream() for the live progress bar, so >=0.34)
+#
+# pyo is NOT used — the synth is pure numpy + sounddevice (see promptwaver/audio/synth.py);
+# an old pyo-based build was dropped after its C extension repeatedly failed to
+# compile against current GCC (see README "Install" section for the history).
+#
+# pip install sounddevice anthropic
+#   sounddevice>=0.4.6
+#   anthropic>=0.34.0

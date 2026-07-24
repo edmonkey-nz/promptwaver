@@ -1,0 +1,374 @@
+{
+  "name": "walking between shelves of books in a library",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "floor": [
+            {
+              "op": "grid",
+              "w": 24,
+              "h": 24,
+              "nx": 12,
+              "ny": 12,
+              "plane": "xz",
+              "c": [
+                0,
+                -1.8,
+                0
+              ]
+            }
+          ],
+          "shelf": [
+            {
+              "op": "box",
+              "size": [
+                6,
+                0.15,
+                0.5
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                6,
+                0.15,
+                0.5
+              ],
+              "c": [
+                0,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                6,
+                0.15,
+                0.5
+              ],
+              "c": [
+                0,
+                1.6,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                6,
+                0.15,
+                0.5
+              ],
+              "c": [
+                0,
+                2.4,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -3.2,
+                -0.2,
+                0
+              ],
+              "b": [
+                -3.2,
+                2.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                3.2,
+                -0.2,
+                0
+              ],
+              "b": [
+                3.2,
+                2.5,
+                0
+              ]
+            }
+          ],
+          "books": [
+            {
+              "op": "box",
+              "size": [
+                0.08,
+                0.3,
+                0.4
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.08,
+                0.28,
+                0.38
+              ],
+              "c": [
+                0.15,
+                0.02,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.08,
+                0.32,
+                0.42
+              ],
+              "c": [
+                -0.15,
+                -0.01,
+                0
+              ]
+            }
+          ],
+          "aisle": [
+            {
+              "op": "line",
+              "a": [
+                -0.5,
+                -1.8,
+                -12
+              ],
+              "b": [
+                -0.5,
+                -1.8,
+                12
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.5,
+                -1.8,
+                -12
+              ],
+              "b": [
+                0.5,
+                -1.8,
+                12
+              ]
+            }
+          ],
+          "ceiling": [
+            {
+              "op": "grid",
+              "w": 24,
+              "h": 24,
+              "nx": 8,
+              "ny": 8,
+              "plane": "xz",
+              "c": [
+                0,
+                3,
+                0
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "floor",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "color": [
+              0.25,
+              0.2,
+              0.15
+            ]
+          },
+          {
+            "shape": "ceiling",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "color": [
+              0.3,
+              0.25,
+              0.2
+            ]
+          },
+          {
+            "shape": "shelf",
+            "pos": [
+              -4,
+              0,
+              0
+            ],
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shelf",
+            "pos": [
+              4,
+              0,
+              0
+            ],
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "books",
+            "pos": [
+              -4,
+              0.4,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.8,
+              0.3,
+              0.25
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "books",
+            "pos": [
+              4,
+              0.4,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.25,
+              0.5,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "books",
+            "pos": [
+              -4,
+              1.2,
+              0
+            ],
+            "scale": 0.95,
+            "color": [
+              0.7,
+              0.6,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "books",
+            "pos": [
+              4,
+              1.2,
+              0
+            ],
+            "scale": 0.95,
+            "color": [
+              0.3,
+              0.7,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "aisle",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "color": [
+              0.4,
+              0.35,
+              0.3
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#1a140f",
+    "#c94a3c",
+    "#2060a8",
+    "#b39620",
+    "#4db24d"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 3,
+    "attack": 4,
+    "release": 6,
+    "base_note": 48,
+    "chord": [
+      0,
+      5,
+      12
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.4
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "orbit_radius": 4,
+    "far": 30,
+    "speed": 0.3,
+    "max_strokes": 110,
+    "depth": {
+      "mode": "cull"
+    }
+  }
+}

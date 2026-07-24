@@ -1,0 +1,910 @@
+{
+  "name": "jellyfish-hl",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "seafloor": [
+            {
+              "op": "grid",
+              "w": 24,
+              "h": 24,
+              "nx": 10,
+              "ny": 10,
+              "plane": "xz",
+              "c": [
+                0,
+                -5,
+                0
+              ]
+            }
+          ],
+          "jelly": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0.05,
+                  0.55
+                ],
+                [
+                  0.55,
+                  0.42
+                ],
+                [
+                  0.9,
+                  0.18
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.82,
+                  -0.08
+                ],
+                [
+                  0.45,
+                  -0.1
+                ]
+              ],
+              "seg": 8,
+              "meridians": 5
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.8,
+                  -0.1,
+                  0
+                ],
+                [
+                  0.9,
+                  -1.0,
+                  0.1
+                ],
+                [
+                  0.7,
+                  -1.9,
+                  -0.1
+                ],
+                [
+                  0.85,
+                  -2.6,
+                  0.1
+                ]
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.8,
+                  -0.1,
+                  0
+                ],
+                [
+                  -0.9,
+                  -1.0,
+                  -0.1
+                ],
+                [
+                  -0.6,
+                  -1.8,
+                  0.1
+                ],
+                [
+                  -0.8,
+                  -2.5,
+                  -0.1
+                ]
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.1,
+                  0.85
+                ],
+                [
+                  0.1,
+                  -1.1,
+                  0.9
+                ],
+                [
+                  -0.1,
+                  -1.9,
+                  0.7
+                ],
+                [
+                  0.05,
+                  -2.6,
+                  0.85
+                ]
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.1,
+                  -0.85
+                ],
+                [
+                  -0.1,
+                  -1.1,
+                  -0.9
+                ],
+                [
+                  0.1,
+                  -1.9,
+                  -0.7
+                ],
+                [
+                  -0.05,
+                  -2.6,
+                  -0.85
+                ]
+              ]
+            }
+          ],
+          "kelp": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -5,
+                  0
+                ],
+                [
+                  0.3,
+                  -2.5,
+                  0.2
+                ],
+                [
+                  -0.2,
+                  0,
+                  -0.2
+                ],
+                [
+                  0.3,
+                  2.5,
+                  0.1
+                ],
+                [
+                  -0.1,
+                  4.5,
+                  0
+                ]
+              ]
+            }
+          ],
+          "rock": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.6,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0.4,
+                  0.3
+                ],
+                [
+                  0.6,
+                  0.1,
+                  0.2
+                ],
+                [
+                  0.3,
+                  -0.3,
+                  -0.3
+                ],
+                [
+                  -0.6,
+                  0,
+                  0
+                ]
+              ],
+              "closed": true
+            }
+          ],
+          "coral": [
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                0.9,
+                0.3
+              ],
+              "c": [
+                0,
+                0.45,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.9,
+                0
+              ],
+              "b": [
+                0.4,
+                1.5,
+                0.2
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.9,
+                0
+              ],
+              "b": [
+                -0.35,
+                1.4,
+                -0.15
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.15,
+                1.1,
+                0.1
+              ],
+              "b": [
+                0.55,
+                1.7,
+                0.3
+              ]
+            }
+          ],
+          "bubble": [
+            {
+              "op": "circle",
+              "r": 0.12,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 8
+            }
+          ],
+          "light_ray": [
+            {
+              "op": "line",
+              "a": [
+                -3,
+                7,
+                -2
+              ],
+              "b": [
+                -1,
+                -5,
+                -1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                2,
+                7,
+                1
+              ],
+              "b": [
+                0.5,
+                -5,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                5,
+                7,
+                -3
+              ],
+              "b": [
+                3,
+                -5,
+                -2
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "seafloor",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "color": [
+              0.05,
+              0.15,
+              0.2
+            ]
+          },
+          {
+            "shape": "light_ray",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "color": [
+              0.4,
+              0.6,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              -6,
+              2,
+              -4
+            ],
+            "scale": 1.3,
+            "color": [
+              0.6,
+              0.3,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.15
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              -4,
+              0.5,
+              2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.3,
+              0.7,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.5,
+              "amp": 0.12
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              -1,
+              3,
+              -6
+            ],
+            "scale": 1.5,
+            "color": [
+              0.5,
+              0.4,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.7,
+              "amp": 0.18
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              2,
+              1.5,
+              3
+            ],
+            "scale": 1.2,
+            "color": [
+              0.4,
+              0.8,
+              0.7
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.55,
+              "amp": 0.14
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              5,
+              2.5,
+              -2
+            ],
+            "scale": 1.4,
+            "color": [
+              0.7,
+              0.4,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.65,
+              "amp": 0.16
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              7,
+              0.8,
+              4
+            ],
+            "scale": 1.0,
+            "color": [
+              0.35,
+              0.65,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.5,
+              "amp": 0.1
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              -7,
+              3.5,
+              3
+            ],
+            "scale": 1.3,
+            "color": [
+              0.55,
+              0.35,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.15
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              0,
+              4,
+              0
+            ],
+            "scale": 1.6,
+            "color": [
+              0.6,
+              0.5,
+              0.95
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.45,
+              "amp": 0.2
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              4,
+              -0.5,
+              -5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.3,
+              0.75,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.13
+            }
+          },
+          {
+            "shape": "jelly",
+            "pos": [
+              -3,
+              -1.5,
+              -2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.45,
+              0.55,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.55,
+              "amp": 0.14
+            }
+          },
+          {
+            "shape": "kelp",
+            "pos": [
+              -8,
+              -5,
+              -3
+            ],
+            "scale": 1.4,
+            "color": [
+              0.1,
+              0.5,
+              0.3
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 0.3,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "kelp",
+            "pos": [
+              6,
+              -5,
+              5
+            ],
+            "scale": 1.6,
+            "color": [
+              0.15,
+              0.55,
+              0.35
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.25,
+              "amp": 0.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "kelp",
+            "pos": [
+              -2,
+              -5,
+              6
+            ],
+            "scale": 1.2,
+            "color": [
+              0.12,
+              0.5,
+              0.3
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "kelp",
+            "pos": [
+              3,
+              -5,
+              -7
+            ],
+            "scale": 1.5,
+            "color": [
+              0.1,
+              0.45,
+              0.28
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.22,
+              "amp": 0.3,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "rock",
+            "pos": [
+              -5,
+              -4.7,
+              1
+            ],
+            "scale": 1.5,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "rock",
+            "pos": [
+              2,
+              -4.6,
+              -3
+            ],
+            "scale": 1.2,
+            "color": [
+              0.28,
+              0.28,
+              0.32
+            ]
+          },
+          {
+            "shape": "rock",
+            "pos": [
+              6,
+              -4.7,
+              2
+            ],
+            "scale": 1.7,
+            "color": [
+              0.32,
+              0.32,
+              0.36
+            ]
+          },
+          {
+            "shape": "coral",
+            "pos": [
+              -3,
+              -4.5,
+              4
+            ],
+            "scale": 1.0,
+            "color": [
+              0.9,
+              0.4,
+              0.5
+            ]
+          },
+          {
+            "shape": "coral",
+            "pos": [
+              4,
+              -4.5,
+              -1
+            ],
+            "scale": 1.2,
+            "color": [
+              0.85,
+              0.45,
+              0.55
+            ]
+          },
+          {
+            "shape": "bubble",
+            "pos": [
+              -1,
+              -3,
+              1
+            ],
+            "scale": 1.0,
+            "color": [
+              0.6,
+              0.8,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.5,
+              "amp": 3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "bubble",
+            "pos": [
+              2,
+              -4,
+              -2
+            ],
+            "scale": 1.3,
+            "color": [
+              0.6,
+              0.8,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.4,
+              "amp": 3.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "bubble",
+            "pos": [
+              -4,
+              -2,
+              -1
+            ],
+            "scale": 0.8,
+            "color": [
+              0.6,
+              0.8,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 2.8,
+              "axis": "y"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#050912",
+    "#5a3a8a",
+    "#3a7a9a",
+    "#7ac0b0",
+    "#c07aa8"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 6,
+    "attack": 4,
+    "release": 8,
+    "base_note": 38,
+    "chord": [
+      0,
+      5,
+      10,
+      14,
+      19
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.4
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "orbit_radius": 9,
+    "far": 30,
+    "speed": 0.25,
+    "max_strokes": 110,
+    "depth": {
+      "mode": "cull"
+    }
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 45,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.6,
+      "feedback": 0.4,
+      "mix": 0.45
+    },
+    "voices": [
+      {
+        "name": "deep_water",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 30,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.45,
+        "tone": 0.3,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.5
+        }
+      },
+      {
+        "name": "bubble_rise",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 60,
+        "scale": [
+          0,
+          3,
+          5,
+          7,
+          10,
+          12
+        ],
+        "level": 0.35,
+        "rate": 0.6,
+        "decay": 1.2,
+        "pan": 0.2
+      },
+      {
+        "name": "water_shimmer",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.5,
+        "pan": -0.15
+      },
+      {
+        "name": "jellyfish_pulse",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 48,
+        "chord": [
+          0,
+          5,
+          12
+        ],
+        "unison": 2,
+        "detune": 0.012,
+        "sub": 0.15,
+        "level": 0.3,
+        "pan": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "updown",
+          "rate": 1.2,
+          "decay": 0.8
+        }
+      },
+      {
+        "name": "distant_current",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 36,
+        "chord": [
+          0,
+          12
+        ],
+        "level": 0.25,
+        "tone": 0.35,
+        "detune": 0.015,
+        "pan": -0.25,
+        "env": {
+          "attack": 5.0,
+          "decay": 2.0,
+          "sustain": 0.75,
+          "release": 4.0
+        }
+      }
+    ]
+  },
+  "audio_link": 1.0
+}

@@ -1,6 +1,6 @@
-# LaserFlow
+# PromptWaver
 
-![version](https://img.shields.io/badge/version-0.15.2-33e0d0)
+![version](https://img.shields.io/badge/version-0.22.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 
@@ -9,10 +9,8 @@
 > See [CHANGELOG.md](CHANGELOG.md) for what's landed.
 
 A realtime **immersive audio/visual instrument** for the Helios Laser DAC — an
-ambient scene sculptor in the spirit of *Fluid / Depth* (PS1, 1996): you steer
-a living system rather than play to win. Procedural vector visuals are streamed
-to a laser over ILDA, a polyphonic pad synth breathes underneath, and a shared
-**modulation matrix** couples the two so light and sound move together.
+ambient scene and soundscape explorer. Procedural vector visuals are streamed
+to a laser over ILDA, a polyphonic synth with unlimited audio controls provides the sound.
 
 Claude acts as an offline **scene director**: a keyword ("water flowing",
 "aurora over a still lake") becomes a scene spec, which the local engine then
@@ -20,19 +18,7 @@ renders at full framerate with no further API calls. That keeps it cheap enough
 to run for hours — the network is touched at most once per new keyword, and
 results are cached.
 
-Sibling project to *Laser! Laser Laser!* — same stack (vanilla Python + numpy,
-`aiohttp` browser control surface, a thin ctypes Helios wrapper), same
-`{type, key, value}` websocket protocol, keyed to **scenes** instead of patterns.
 
-## ⚠️ Laser safety first
-
-- Wear eyewear rated for **every** wavelength your unit emits.
-- Bench-test with laser current at **minimum** for first light.
-- Put a hardware **e-stop / key switch** on the laser supply — do not rely on
-  ILDA interlock pins or software blanking.
-- A blanking failure leaves a **stationary hot spot**, not a scanning pattern.
-- Keystone/invert are applied to the DAC output only; the browser preview is a
-  reference and is never distorted.
 
 ## Install
 
@@ -62,7 +48,7 @@ current compiler. Two ways through:
    sudo apt install gcc-12 g++-12
    CC=gcc-12 CXX=g++-12 pip install --no-cache-dir pyo
    ```
-2. **Skip pyo** — LaserFlow's audio layer (`laserflow/audio/synth.py`) is a thin
+2. **Skip pyo** — PromptWaver's audio layer (`promptwaver/audio/synth.py`) is a thin
    wrapper; a pure numpy + `sounddevice` synth backend needs no C compilation at
    all and sidesteps this class of problem entirely. Given pyo has now failed
    twice on your setup, this is the path I'd recommend, and it fits directly
@@ -83,7 +69,7 @@ g++ -Wall -std=c++14 -fPIC -O2 -c HeliosDac.cpp
 g++ -shared -o libHeliosDacAPI.so HeliosDacAPI.o HeliosDac.o -lusb-1.0
 ```
 
-Then either point LaserFlow at it directly:
+Then either point PromptWaver at it directly:
 ```bash
 HELIOS_LIB=/full/path/to/libHeliosDacAPI.so python run.py --web --laser
 ```
@@ -147,19 +133,19 @@ turbulence while an LFO opens the synth filter — one instrument, not two apps.
 
 Module map:
 
-- `laserflow/geometry.py` — `Path` (normalized polyline + colour), the unit everything speaks.
-- `laserflow/modulation.py` — sources (LFO, ADSR `Envelope`, `Value`) + `ModMatrix` routing.
-- `laserflow/generators/` — `flow_field`, `attractor`, `ripples`; `@register` to add more.
-- `laserflow/scenes.py` — `SceneSpec`, live `Scene`, `SceneManager` (library + crossfade).
-- `laserflow/director/` — `SceneDirector` (Claude + cache) and the local `fallback`.
-- `laserflow/audio/` — `PadSynth` (pyo) and `AudioAnalysis` (sounddevice).
-- `laserflow/output/` — `PathPlanner` + `HeliosOutput` / `NullOutput`.
-- `laserflow/scene3d.py` — `Camera` + projection (near-clip, frame-clip, depth cueing) for 3D scenes.
-- `laserflow/primitives.py` — ready-made low-poly primitive kit (planet, ring, jellyfish…).
-- `laserflow/shapes.py` — the shape-grammar interpreter that expands Claude-authored geometry `defs`.
-- `laserflow/settings.py` — local settings store (API key), gitignored.
-- `laserflow/engine.py` — the realtime loop and thread-safe control surface.
-- `laserflow/web/` — `aiohttp` server + single-page control UI.
+- `promptwaver/geometry.py` — `Path` (normalized polyline + colour), the unit everything speaks.
+- `promptwaver/modulation.py` — sources (LFO, ADSR `Envelope`, `Value`) + `ModMatrix` routing.
+- `promptwaver/generators/` — `flow_field`, `attractor`, `ripples`; `@register` to add more.
+- `promptwaver/scenes.py` — `SceneSpec`, live `Scene`, `SceneManager` (library + crossfade).
+- `promptwaver/director/` — `SceneDirector` (Claude + cache) and the local `fallback`.
+- `promptwaver/audio/` — `PadSynth` (pyo) and `AudioAnalysis` (sounddevice).
+- `promptwaver/output/` — `PathPlanner` + `HeliosOutput` / `NullOutput`.
+- `promptwaver/scene3d.py` — `Camera` + projection (near-clip, frame-clip, depth cueing) for 3D scenes.
+- `promptwaver/primitives.py` — ready-made low-poly primitive kit (planet, ring, jellyfish…).
+- `promptwaver/shapes.py` — the shape-grammar interpreter that expands Claude-authored geometry `defs`.
+- `promptwaver/settings.py` — local settings store (API key), gitignored.
+- `promptwaver/engine.py` — the realtime loop and thread-safe control surface.
+- `promptwaver/web/` — `aiohttp` server + single-page control UI.
 
 ## 3D immersive scenes
 
@@ -244,13 +230,13 @@ Two settings govern draw rate, in the **Output** group:
 
 The richest scenes are **composed**, not procedural: Claude (or the local
 fallback) emits a *scene graph* — a list of nodes that place low-poly
-**primitives** in 3D space, each with a transform, colour, and motion. LaserFlow
+**primitives** in 3D space, each with a transform, colour, and motion. PromptWaver
 instantiates the geometry and the camera floats through it. Claude never emits
 raw meshes; it arranges a vetted kit, so every object stays clean and
 budget-safe. Try *"floating in space"* or *"swimming in a coral reef with
 jellyfish"*.
 
-Primitive kit (`laserflow/primitives.py`): `planet`, `ring`, `ball`,
+Primitive kit (`promptwaver/primitives.py`): `planet`, `ring`, `ball`,
 `starfield`, `jellyfish`, `torus`, `crystal`. Add one = add a `@register`
 function; it's instantly available to the director.
 
@@ -281,13 +267,13 @@ blank and it composes something that fits the scene.
 
 The synth is **pure numpy + sounddevice** (no C build — deliberately, after pyo
 wouldn't compile). It needs the PortAudio *runtime*:
-`sudo apt install libportaudio2`. Without it, LaserFlow runs silently and
+`sudo apt install libportaudio2`. Without it, PromptWaver runs silently and
 everything else is unaffected.
 
 Voices: `pad` (sustained drone chord), `pluck` (sparse scale notes), `noise`
 (air/wind texture), `sub` (low drone). Global effects: tempo, master, soft
 distortion (waveshaping), and a stereo delay (time/feedback/mix). The DSP core
-(`laserflow/audio/dsp.py`) is separate from audio I/O so it can be rendered and
+(`promptwaver/audio/dsp.py`) is separate from audio I/O so it can be rendered and
 tested offline. The delay is fully vectorised (no per-sample Python loop) and
 the output stream runs at a larger blocksize with high-latency buffering —
 earlier builds glitched because a per-sample delay loop plus a small buffer left
@@ -295,11 +281,17 @@ the realtime audio callback fighting the GIL against the 45fps visual thread and
 losing; the render is now ~1.6ms of work per ~46ms callback, comfortable
 headroom.
 
-The **Soundscape mixer** sits under the preview: master/tempo/distortion and
-delay knobs up top, then a strip per voice with level, waveform, tone/rate, pan,
-and mute. Every control updates the running synth live, and mirrors into the
-scene — hit **Update scene from config** to save your mix back into the scene
-JSON (`"soundscape"`), so it travels with the scene through the library.
+The **Soundscape mixer** sits beside the preview: master/tempo/distortion,
+delay, and a 3-band EQ (low/mid/high, ±24dB) up top, then a strip per voice
+with level, waveform, tone/rate, pan, and mute. The EQ is a per-block
+frequency-domain gain curve (`promptwaver/audio/dsp.py:_apply_eq`) — pure numpy,
+no new dependency — applied to the whole mix before the delay/distortion
+stage. A VU meter under the global knobs shows the actual post-master,
+post-limiter output level, with a clipping LED that lights (and holds
+briefly) if a block's peak nears digital full-scale. Every control updates
+the running synth live, and mirrors into the scene — hit **Update scene from
+config** to save your mix back into the scene JSON (`"soundscape"`), so it
+travels with the scene through the library.
 
 **Regenerate just the audio**: tick "regenerate audio only, for an existing
 scene" under Generate, pick a scene from the dropdown, write an audio prompt,
@@ -339,7 +331,7 @@ Fixed by splitting the two cases: **startup autodetect** (finding something
 that works on a fresh launch) still uses the ladder. An **explicit request**
 (clicking Apply) now tries only the size you asked for — if it fails, you get
 an honest error ("requested 8192 failed to open: `<real reason>`; restored
-previous working blocksize 8192") and LaserFlow falls back to *restoring*
+previous working blocksize 8192") and PromptWaver falls back to *restoring*
 whatever was last known to genuinely work, not silently substituting and
 remembering a smaller one. Verified directly: a request that fails no longer
 lands on an untracked smaller size, and a config that was working before a
@@ -462,11 +454,11 @@ result — "applied ✓", "⚠ 16384 not supported here — running at 8192 inst
 or the real error — shown right under the button, plus in the diagnostics
 panel itself. Some backends (PulseAudio/PipeWire virtual devices — likely
 `pipewire`/`default`/`Default Sink` in your device list) cap how large a
-buffer they'll accept independent of anything LaserFlow does; the ladder finds
+buffer they'll accept independent of anything PromptWaver does; the ladder finds
 the largest size that specific backend actually honours.
 
 **Still landing on 4096 after v0.13.0's ladder fix?** At that point it's very
-likely a genuine ceiling on your audio backend, not a LaserFlow bug — the
+likely a genuine ceiling on your audio backend, not a PromptWaver bug — the
 ladder was verified working correctly in isolation (finds and reports the
 largest size that actually opens). Your device list (`pipewire`, `default`,
 `Default Sink`) points at PipeWire/PulseAudio virtual devices, which commonly
@@ -511,7 +503,7 @@ you're on the current build.
 
 Nothing draws, plays, or animates until you click **Start** (a single toggle,
 top-right of the header — it reads **▶ Start** when idle and **■ Stop** when
-running). On load, LaserFlow sits idle: the laser is sent an explicit blanked
+running). On load, PromptWaver sits idle: the laser is sent an explicit blanked
 (zero-intensity) frame every tick, audio is muted at the DSP level, and the
 scene clock is frozen — not stopped from zero, *frozen*, so Stop then Start
 again resumes exactly where it left off rather than jumping the animation
@@ -564,7 +556,7 @@ If audio is glitching, the **Audio diagnostics** panel is built to tell you
 PortAudio itself (via sounddevice's callback `status` flags), not estimates:
 
 - **underruns** — hardware-reported xruns. **0 underruns but audible
-  glitching** points to something *below* LaserFlow: OS audio scheduling,
+  glitching** points to something *below* PromptWaver: OS audio scheduling,
   another app holding the device, or a sandboxed/virtual audio layer (e.g.
   PulseAudio routed through a snap/flatpak) adding jitter no amount of Python
   optimisation fixes.
@@ -573,7 +565,7 @@ PortAudio itself (via sounddevice's callback `status` flags), not estimates:
   bigger blocksize or a lighter soundscape.
 - **max interval** vs the expected callback interval — large gaps mean the
   callback itself was delayed before starting, independent of our render time;
-  also points below LaserFlow.
+  also points below PromptWaver.
 
 Controls: pick an output **device** (rescan to refresh the list), a
 **blocksize** (bigger = more buffer headroom, more latency before you hear a
@@ -594,9 +586,14 @@ Open the app and use the **Connection** panel: paste your key, **Save key**
 flips to your model id when it's live. This is a convenience for local use — for
 a public release, move the key to the OS keyring or an env-only flow.
 
+A status dot next to **Connection** reflects the director's actual live state
+(green "connected" / grey "offline") on every state broadcast — not just
+right after you click Test — so a key that stops working mid-session (package
+missing, network down, key revoked) is visible without re-testing.
+
 ## Adding a scene generator
 
-Drop a file in `laserflow/generators/`, subclass `Generator`, `@register` it,
+Drop a file in `promptwaver/generators/`, subclass `Generator`, `@register` it,
 and import it in `generators/__init__.py`:
 
 ```python
@@ -651,7 +648,7 @@ time — verify at <https://docs.claude.com/en/docs/about-claude/models>.
 
 Every generation is **added to the library** automatically. Tweak the live
 camera/config, then **Update scene from config** writes those settings back into
-the loaded scene. Override the response ceiling with `LASERFLOW_MAX_TOKENS`.
+the loaded scene. Override the response ceiling with `PROMPTWAVER_MAX_TOKENS`.
 
 **Naming**: give a scene an explicit name in the Generate panel and it's used as
 the library title; leave it blank and Claude's own name (or the keyword) is used.
@@ -688,7 +685,7 @@ The UI's director line reports the source of the last scene: *composed by Claude
 
 Opens straight into VSCode: `.vscode/settings.json` points the Python
 interpreter at `.venv`, and `.vscode/launch.json` has F5-ready configs
-("LaserFlow: web (no hardware)" is the fast one for UI/scene work — no audio
+("PromptWaver: web (no hardware)" is the fast one for UI/scene work — no audio
 device or laser required). `.vscode/extensions.json` recommends Pylance and
 Ruff; `pyproject.toml` holds Ruff/Black config (line length 100).
 

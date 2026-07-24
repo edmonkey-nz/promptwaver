@@ -1,4 +1,4 @@
-"""The modulation matrix — LaserFlow's shared nervous system.
+"""The modulation matrix — PromptWaver's shared nervous system.
 
 Sources (LFOs, ADSR envelopes, audio level, the transport clock) are sampled
 once per tick into a flat dict of named values. Routes then add scaled source

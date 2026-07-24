@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LaserFlow entry point.
+"""PromptWaver entry point.
 
 Examples
 --------
@@ -20,15 +20,15 @@ from __future__ import annotations
 import argparse
 import os
 
-from laserflow.engine import Engine
-from laserflow.web import run as run_web
-from laserflow.director import local_scene
+from promptwaver.engine import Engine
+from promptwaver.web import run as run_web
+from promptwaver.director import local_scene
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def parse_args():
-    ap = argparse.ArgumentParser(description="LaserFlow — immersive laser + synth instrument")
+    ap = argparse.ArgumentParser(description="PromptWaver — immersive laser + synth instrument")
     ap.add_argument("--web", action="store_true", help="serve the browser control surface")
     ap.add_argument("--web-port", type=int, default=8080)
     ap.add_argument("--host", default="0.0.0.0")
@@ -58,16 +58,16 @@ def main():
     # start with something on screen immediately
     engine._install_spec(local_scene(args.scene))
     engine.start()
-    print(f"[laserflow] engine running — output={engine.output.name} "
+    print(f"[promptwaver] engine running — output={engine.output.name} "
           f"director={'claude' if engine.director.online else 'local'}")
     if args.web:
-        print(f"[laserflow] open http://localhost:{args.web_port}")
+        print(f"[promptwaver] open http://localhost:{args.web_port}")
         try:
             run_web(engine, host=args.host, port=args.web_port)
         finally:
             engine.stop()
     else:
-        print("[laserflow] running headless; Ctrl-C to stop")
+        print("[promptwaver] running headless; Ctrl-C to stop")
         try:
             import time
             while True:

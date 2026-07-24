@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PromptWaver — Output</title>
+<link rel="icon" type="image/svg+xml" href="/static/promptwaver.svg">
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden;
+            cursor:none}
+  canvas{display:block;width:100vw;height:100vh}
+  #hint{position:fixed;left:0;right:0;bottom:24px;text-align:center;
+        font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#5a5f6b;
+        opacity:1;transition:opacity 1.5s ease-out;pointer-events:none;user-select:none}
+  #hint.gone{opacity:0}
+  #status{position:fixed;left:0;right:0;top:24px;text-align:center;
+          font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#a04040;
+          display:none;pointer-events:none;user-select:none}
+  #status.show{display:block}
+</style>
+</head>
+<body>
+<canvas id="out"></canvas>
+<div id="hint">PromptWaver output — drag this window to your projector/second screen, then press F11 for fullscreen</div>
+<div id="status">disconnected — retrying…</div>
+<script>
+const cv = document.getElementById("out"), cx = cv.getContext("2d");
+const statusEl = document.getElementById("status");
+const hintEl = document.getElementById("hint");
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(window.innerWidth * dpr);
+  cv.height = Math.round(window.innerHeight * dpr);
+}
+window.addEventListener("resize", resize);
+resize();
+
+setTimeout(() => hintEl.classList.add("gone"), 4000);
+
+function paint(scene){
+  const w = cv.width, h = cv.height;
+  cx.fillStyle = "#000"; cx.fillRect(0, 0, w, h);
+  if (!scene || !scene.length) return;
+  // fit the normalized -1..1 scene into the window, preserving aspect ratio
+  // (letterboxed) rather than stretching to an arbitrary window shape
+  const s = Math.min(w, h) * 0.5;
+  const cx0 = w / 2, cy0 = h / 2;
+  const map = (x, y) => [cx0 + x * s, cy0 - y * s];
+  cx.lineWidth = Math.max(1, s / 260);
+  cx.lineJoin = "round";
+  for (const st of scene) {
+    const [r, g, b] = st.c;
+    cx.strokeStyle = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    cx.beginPath();
+    st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
+    cx.stroke();
+  }
+}
+
+let ws = null;
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws?hq=1`);
+  ws.onopen = () => statusEl.classList.remove("show");
+  ws.onclose = () => { statusEl.classList.add("show"); setTimeout(connect, 1000); };
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === "state") paint(m.preview);
+  };
+}
+connect();
+</script>
+</body>
+</html>

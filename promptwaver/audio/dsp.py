@@ -18,6 +18,8 @@ A soundscape spec (JSON, stored in the scene):
 {
   "tempo": 60, "master": 0.8, "distortion": 0.0,
   "delay": {"time": 0.4, "feedback": 0.35, "mix": 0.3},
+  "eq": {"low": 0.0, "mid": 0.0, "high": 0.0},
+  "swell_amount": 0.0, "swell_period": 24.0,
   "voices": [
     {"name":"drone","type":"pad","waveform":"saw","note":36,"chord":[0,7,12],
      "level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,"mute":false},
@@ -30,6 +32,7 @@ A soundscape spec (JSON, stored in the scene):
 
 from __future__ import annotations
 
+import math
 import random
 
 import numpy as np
@@ -54,6 +57,41 @@ def _osc(phase: np.ndarray, waveform: str) -> np.ndarray:
     if waveform == "triangle":
         return 4.0 * np.abs((phase % 1.0) - 0.5) - 1.0
     return np.sin(2.0 * np.pi * phase)          # sine (default)
+
+
+def _eq_gain_db(freqs: np.ndarray, low_db: float, mid_db: float, high_db: float,
+                low_x: float = 250.0, high_x: float = 4000.0) -> np.ndarray:
+    """Per-bin gain (dB) for a 3-band EQ, as a smooth crossfade between three
+    bands (~1 octave transition) rather than hard cuts — avoids ringing at
+    the crossover points."""
+    f = np.maximum(freqs, 1.0)                     # guard log2(0) at DC
+    lf = np.log2(f)
+    l1, l2 = np.log2(low_x), np.log2(high_x)
+    low_w = 1.0 / (1.0 + np.exp(lf - l1))
+    high_w = 1.0 / (1.0 + np.exp(l2 - lf))
+    mid_w = np.clip(1.0 - low_w - high_w, 0.0, 1.0)
+    return low_w * low_db + mid_w * mid_db + high_w * high_db
+
+
+def _apply_eq(mix: np.ndarray, eq: dict, sr: int) -> np.ndarray:
+    """3-band low/mid/high EQ (gains in dB), applied as a per-block frequency
+    -domain gain curve (rFFT -> scale bins -> irFFT). Pure numpy, fully
+    vectorised — no per-sample recursion, matching the rest of this module's
+    realtime-safety approach. Like `Delay`, this is block-granular (the curve
+    is exact for the block but not continuous across block boundaries via
+    overlap-add) — acceptable here for the same reason: blocks are large
+    (thousands of samples) and the material is slow ambient pads, not
+    transient-heavy material where that would be audible."""
+    low_db = float(eq.get("low", 0.0))
+    mid_db = float(eq.get("mid", 0.0))
+    high_db = float(eq.get("high", 0.0))
+    n = mix.shape[0]
+    freqs = np.fft.rfftfreq(n, d=1.0 / sr)
+    gain_db = _eq_gain_db(freqs, low_db, mid_db, high_db)
+    gain = 10.0 ** (gain_db / 20.0)
+    spec = np.fft.rfft(mix, axis=0)
+    spec *= gain[:, None]
+    return np.fft.irfft(spec, n=n, axis=0).astype(np.float32)
 
 
 class Delay:
@@ -95,7 +133,45 @@ class Soundscape:
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
         self.spec = {}
         self.muted = False        # engine-level gate; independent of spec['master']
+        self._mute_gain = 1.0     # currently-applied smoothed mute multiplier (0..1)
+        self._mute_from = 1.0
+        self._mute_to = 1.0
+        self._mute_fade_dur = 0.0
+        self._mute_fade_pos = 0.0
+        self.last_peak = 0.0      # post-master output peak of the last rendered block (VU meter)
+        self.last_clip = False    # last_peak reached the clip threshold
+        # "orchestration" swell: a slow, continuous per-voice level LFO (long
+        # period, independent random phase per voice) layered on top of each
+        # voice's own level — the whole point is that voices *don't* all
+        # swell in lockstep, so the mix feels arranged rather than uniformly
+        # breathing. Separate from the ADSR envelope above, which only fires
+        # once on trigger/mute; this runs continuously for as long as a voice
+        # plays. Off by default (swell_amount=0) so existing scenes/tests are
+        # unaffected — see SCENE_SIZE-style "evolution" character slider in
+        # the director, which is what turns this on for new generations.
+        self._swell_phase: dict[str, float] = {}
+        self._swell_period: dict[str, float] = {}
         self.set_spec(spec or default_soundscape())
+
+    def set_muted(self, muted: bool, fade: float = 0.0):
+        """Mute/unmute, optionally ramped over `fade` seconds (e.g. a "Disable
+        Audio" button) rather than the instant snap plain `muted = True` gives
+        (used for the safety-critical Start/Stop and Blank gates, which must
+        not lag behind the click)."""
+        self.muted = bool(muted)
+        target = 0.0 if muted else 1.0
+        fade = max(0.0, float(fade or 0.0))
+        if fade <= 0.0:
+            self._mute_gain = target
+            self._mute_from = target
+            self._mute_to = target
+            self._mute_fade_dur = 0.0
+            self._mute_fade_pos = 0.0
+        else:
+            self._mute_from = self._mute_gain   # start from wherever it is now, so a
+            self._mute_to = target               # rapid re-toggle mid-fade doesn't jump
+            self._mute_fade_dur = fade
+            self._mute_fade_pos = 0.0
 
     # --- spec / params -----------------------------------------------------
     def set_spec(self, spec: dict):
@@ -110,16 +186,29 @@ class Soundscape:
                     attack=e.get("attack", 3.0), decay=e.get("decay", 1.2),
                     sustain=e.get("sustain", 0.85), release=e.get("release", 2.5))
                 self._voice_env_on[v["name"]] = False
+            # assign each voice its own random phase/period once, the first
+            # time its name is seen — preserved across live param tweaks
+            # (which don't call set_spec) so the swell keeps its place
+            # instead of jumping every time a knob moves.
+            name = v["name"]
+            if name not in self._swell_phase:
+                self._swell_phase[name] = random.uniform(0.0, 2 * math.pi)
+                base_period = float(self.spec.get("swell_period", 24.0))
+                self._swell_period[name] = base_period * random.uniform(0.7, 1.3)
 
     def set_param(self, path: str, value):
-        """Live update. Paths: 'master', 'tempo', 'distortion',
-        'delay.time|feedback|mix', 'voice.<name>.<field>'."""
+        """Live update. Paths: 'master', 'tempo', 'distortion', 'swell_amount',
+        'swell_period', 'delay.time|feedback|mix', 'eq.low|mid|high',
+        'voice.<name>.<field>'."""
         s = self.spec
         parts = path.split(".")
-        if len(parts) == 1 and parts[0] in ("master", "tempo", "distortion"):
+        if len(parts) == 1 and parts[0] in ("master", "tempo", "distortion",
+                                             "swell_amount", "swell_period"):
             s[parts[0]] = _coerce(parts[0], value)
         elif parts[0] == "delay" and len(parts) == 2:
             s["delay"][parts[1]] = float(value)
+        elif parts[0] == "eq" and len(parts) == 2:
+            s.setdefault("eq", {})[parts[1]] = float(value)
         elif parts[0] == "voice" and len(parts) == 3:
             for v in s["voices"]:
                 if v["name"] == parts[1]:
@@ -129,6 +218,21 @@ class Soundscape:
                         env = self._voice_env[v["name"]]
                         env.a, env.d, env.s, env.r = e.get("attack", env.a), \
                             e.get("decay", env.d), e.get("sustain", env.s), e.get("release", env.r)
+
+    def _swell_gain(self, name: str, block_t: float) -> float:
+        """This voice's slow orchestration multiplier at this block's start
+        time — 1.0 (unattenuated) at the peak of its cycle, down to
+        `1 - swell_amount` at the trough. Block-granular (evaluated once per
+        render() call, not per-sample) is plenty for a period measured in
+        tens of seconds — matches the precision `Delay`/`_apply_eq` already
+        use for similarly slow-moving effects."""
+        amount = float(self.spec.get("swell_amount", 0.0))
+        if amount <= 0.0:
+            return 1.0
+        period = self._swell_period.get(name) or float(self.spec.get("swell_period", 24.0))
+        phase = self._swell_phase.get(name, 0.0)
+        w = math.sin(2 * math.pi * (block_t / period) + phase)   # -1..1
+        return 1.0 - amount * (0.5 - 0.5 * w)                     # 1.0 at peak, 1-amount at trough
 
     # --- rendering ---------------------------------------------------------
     def render(self, frames: int) -> np.ndarray:
@@ -177,11 +281,16 @@ class Soundscape:
                 continue
             mono = mono * gain
             mono = mono * float(v.get("level", 0.4))
+            mono = mono * self._swell_gain(name, block_t)
             pan = float(v.get("pan", 0.0))
             l = mono * np.sqrt(0.5 * (1 - pan))
             r = mono * np.sqrt(0.5 * (1 + pan))
             mix[:, 0] += l
             mix[:, 1] += r
+
+        eq = self.spec.get("eq")
+        if eq and (eq.get("low") or eq.get("mid") or eq.get("high")):
+            mix = _apply_eq(mix, eq, self.sr)
 
         d = self.spec["delay"]
         if d.get("mix", 0) > 0:
@@ -192,10 +301,24 @@ class Soundscape:
             g = 1.0 + drive * 8.0
             mix = np.tanh(mix * g) / np.tanh(g if g > 1 else 1)
 
-        mix *= float(self.spec.get("master", 0.8)) * (0.0 if self.muted else 1.0)
+        master = float(self.spec.get("master", 0.8))
+        if self._mute_fade_pos < self._mute_fade_dur:
+            prog = (self._mute_fade_pos + np.arange(frames) / self.sr) / self._mute_fade_dur
+            prog = np.clip(prog, 0.0, 1.0)
+            mute_gain = self._mute_from + (self._mute_to - self._mute_from) * prog
+            self._mute_fade_pos += frames / self.sr
+            self._mute_gain = float(mute_gain[-1])
+            mix *= master * mute_gain[:, None]
+        else:
+            mix *= master * self._mute_gain
         np.tanh(mix, out=mix)                     # gentle safety limiter
         self._clock += frames
-        return mix.astype(np.float32)
+        mix = mix.astype(np.float32)
+        # VU meter source: measured post-master, post-limiter — moving the
+        # master knob (or muting) is directly visible on the meter.
+        self.last_peak = float(np.max(np.abs(mix))) if mix.size else 0.0
+        self.last_clip = self.last_peak >= 0.98
+        return mix
 
     # --- voice renderers ---------------------------------------------------
     def _render_pad(self, v, t, n0, frames):
@@ -366,6 +489,98 @@ class Soundscape:
         return w * 0.5
 
 
+class SoundscapeMixer:
+    """Owns the currently-playing `Soundscape` plus, during a scene switch,
+    the outgoing one — equal-power crossfading between them over a
+    configurable duration so switching scenes doesn't hard-cut the audio.
+    Pure DSP, no device I/O, so it renders and tests the same as `Soundscape`.
+
+    A fresh `Soundscape` instance is built for the incoming spec (rather than
+    mutating the live one in place) so its pad/osc voices get a clean ADSR
+    attack from silence on top of the crossfade curve, and the outgoing
+    instance keeps rendering its own spec untouched while its output is faded
+    out — no interaction between the two beyond the mix.
+    """
+
+    def __init__(self, spec: dict | None = None, sr: int = SR):
+        self.sr = sr
+        self.current = Soundscape(spec, sr=sr)
+        self._old: Soundscape | None = None
+        self._fade_dur = 0.0
+        self._fade_pos = 0.0
+        self._peak = 0.0
+        self._clip = False
+
+    def set_spec(self, spec: dict, fade: float = 0.0):
+        fade = max(0.0, float(fade or 0.0))
+        if fade <= 0.0:
+            self.current.set_spec(spec)
+            self._old = None
+            return
+        old, muted = self.current, self.current.muted
+        self.current = Soundscape(spec, sr=self.sr)
+        self.current.set_muted(muted)   # instant — the new instance's own gain starts fresh
+        self._old = old
+        self._fade_dur = fade
+        self._fade_pos = 0.0
+
+    def set_param(self, path: str, value):
+        self.current.set_param(path, value)   # live tweaks always target the incoming/current one
+
+    @property
+    def spec(self) -> dict:
+        return self.current.spec
+
+    @property
+    def last_peak(self) -> float:
+        return self._peak
+
+    @property
+    def last_clip(self) -> bool:
+        return self._clip
+
+    @property
+    def muted(self) -> bool:
+        return self.current.muted
+
+    def set_muted(self, muted: bool, fade: float = 0.0):
+        self.current.set_muted(muted, fade)
+        if self._old is not None:
+            self._old.set_muted(muted, fade)
+
+    def render(self, frames: int) -> np.ndarray:
+        if self._old is None:
+            out = self.current.render(frames)
+            self._peak = self.current.last_peak
+            self._clip = self.current.last_clip
+            return out
+        block_new = self.current.render(frames)
+        block_old = self._old.render(frames)
+        prog = (self._fade_pos + np.arange(frames) / self.sr) / self._fade_dur
+        prog = np.clip(prog, 0.0, 1.0)[:, None]
+        # Linear crossfade (fade_in + fade_out == 1 everywhere), not the more
+        # usual equal-power sin/cos curve: each side is already an
+        # independently master-scaled, tanh-limited full mix (not a raw
+        # unmixed voice), so equal-power's fade_in+fade_out reaching ~1.41 at
+        # the midpoint could sum two near-full-scale signals into real
+        # overs — measured up to ~150% peak on a complex scene, which is
+        # exactly the audible "jerky/glitching" during scene switches this
+        # replaces. Linear guarantees the blend is a convex combination of
+        # two already-bounded signals, so it can never exceed either side.
+        out = (block_new * prog + block_old * (1.0 - prog)).astype(np.float32)
+        # extra safety clamp on the combined signal, same "gentle safety
+        # limiter" pattern Soundscape.render applies to its own mix — cheap,
+        # and guards against anything unexpected (e.g. an EQ boost) still
+        # pushing the blend itself out of range.
+        np.tanh(out, out=out)
+        self._fade_pos += frames / self.sr
+        if self._fade_pos >= self._fade_dur:
+            self._old = None
+        self._peak = float(np.max(np.abs(out))) if out.size else 0.0
+        self._clip = self._peak >= 0.98
+        return out
+
+
 # --- spec helpers ----------------------------------------------------------
 
 def _coerce(field, value):
@@ -406,6 +621,13 @@ def _normalise(spec: dict) -> dict:
     dl["feedback"] = _clamp(dl.get("feedback"), 0.0, 0.92, 0.3)
     dl["mix"] = _clamp(dl.get("mix"), 0.0, 0.95, 0.25)
     s["delay"] = dl
+    eq = dict(s.get("eq", {}))
+    eq["low"] = _clamp(eq.get("low"), -24.0, 24.0, 0.0)
+    eq["mid"] = _clamp(eq.get("mid"), -24.0, 24.0, 0.0)
+    eq["high"] = _clamp(eq.get("high"), -24.0, 24.0, 0.0)
+    s["eq"] = eq
+    s["swell_amount"] = _clamp(s.get("swell_amount"), 0.0, 1.0, 0.0)
+    s["swell_period"] = _clamp(s.get("swell_period"), 5.0, 120.0, 24.0)
     voices = []
     for i, v in enumerate(s.get("voices", [])):
         v = dict(v)
@@ -433,7 +655,7 @@ def _normalise(spec: dict) -> dict:
         env = v.get("env")
         if isinstance(env, dict):
             env = dict(env)
-            env["attack"] = _clamp(env.get("attack"), 0.01, 10.0, 3.0)
+            env["attack"] = _clamp(env.get("attack"), 0.01, 15.0, 3.0)
             env["decay"] = _clamp(env.get("decay"), 0.01, 10.0, 1.2)
             env["sustain"] = _clamp(env.get("sustain"), 0.0, 1.0, 0.85)
             env["release"] = _clamp(env.get("release"), 0.05, 15.0, 2.5)
@@ -455,6 +677,8 @@ def default_soundscape() -> dict:
     return {
         "tempo": 60, "master": 0.8, "distortion": 0.05,
         "delay": {"time": 0.45, "feedback": 0.35, "mix": 0.3},
+        "eq": {"low": 0.0, "mid": 0.0, "high": 0.0},
+        "swell_amount": 0.0, "swell_period": 24.0,
         "voices": [
             {"name": "drone", "type": "pad", "waveform": "saw", "note": 36,
              "chord": [0, 7, 12, 19], "level": 0.5, "tone": 0.35, "detune": 0.012, "pan": 0.0},

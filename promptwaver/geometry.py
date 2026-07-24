@@ -3,7 +3,7 @@
 Everything the visual engine produces is a list of `Path`s. A Path is a
 polyline in normalized coordinates (x, y in [-1, 1]) plus an RGB colour in
 [0, 1]. The laser is a *vector* device — we draw strokes, never pixels — so
-this is the natural unit throughout LaserFlow.
+this is the natural unit throughout PromptWaver.
 """
 
 from __future__ import annotations

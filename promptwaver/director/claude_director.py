@@ -1,14 +1,14 @@
 """Claude as the *scene director*.
 
 A keyword ("water flowing", "aurora over a still lake") becomes a SceneSpec.
-This is the ONLY place LaserFlow touches the network, and it does so at most
+This is the ONLY place PromptWaver touches the network, and it does so at most
 once per new keyword: results are cached to disk, so a whole evening of
 performance costs a handful of small calls. Between scene changes there is zero
 API traffic — the local engine renders everything.
 
 Cost control, by design:
   * one small structured call per *uncached* keyword
-  * a low-cost model (Haiku-class) by default; override with LASERFLOW_MODEL
+  * a low-cost model (Haiku-class) by default; override with PROMPTWAVER_MODEL
   * on-disk cache keyed by keyword (scenes/generated/)
   * graceful fallback to the local mapping if no key / no SDK / any error
 
@@ -29,9 +29,9 @@ from ..primitives import available as available_primitives
 from .. import settings
 from .fallback import local_scene
 
-_DEFAULT_MODEL = os.environ.get("LASERFLOW_MODEL", "claude-haiku-4-5")
+_DEFAULT_MODEL = os.environ.get("PROMPTWAVER_MODEL", "claude-haiku-4-5")
 
-_SYSTEM = """You are the scene director for LaserFlow, an ambient laser + synth
+_SYSTEM = """You are the scene director for PromptWaver, an ambient laser + synth
 instrument that draws glowing wireframe VECTOR line-art (no fills, no shading —
 just strokes on black). Given a keyword, return ONE JSON object describing a
 calming, immersive 3D scene the viewer floats through. Output ONLY the JSON — no
@@ -186,16 +186,81 @@ EFFORT = {
                      "Add small secondary details that sell the place."},
 }
 
+# scene size -> spatial-scale directive. "small" is the historical default (no
+# hint needed — it's what the system prompt's own baseline ranges already
+# produce); medium/large ask for a physically bigger world to fly through,
+# independent of effort (which controls object *count/detail*, not distance).
+SCENE_SIZE = {
+    "small": None,
+    "medium": ("Scale: expansive, not intimate. Spread object placement over "
+               "roughly -14..14 on each axis (wider than the usual -8..8), and "
+               "size the camera accordingly: orbit/drift radius 10-16, far "
+               "plane 30-45. The world should feel noticeably bigger to fly "
+               "through, with more open space between features."),
+    "large": ("Scale: vast. Spread object placement over roughly -22..22 on "
+              "each axis, and size the camera accordingly: orbit/drift radius "
+              "16-26, far plane 45-70. A sprawling environment with real "
+              "travel distance between features — err on the side of more "
+              "empty space and fewer, more spread-out landmarks rather than "
+              "cramming more objects into the same small volume."),
+}
+
+# "Character" sliders (Generate modal), 0..1 centered at 0.5. warmth/energy
+# are soft prompt hints — like EFFORT/SCENE_SIZE, they bias choices Claude
+# has to make itself (voice type, tempo), so there's no way to force them
+# after the fact; a near-center value adds no hint at all, matching the
+# pre-slider baseline exactly. "evolution" is different — see
+# _apply_evolution below, which sets it deterministically after the response
+# comes back, so it works regardless of whether Claude "listened".
+def _character_hints(warmth: float | None, energy: float | None) -> str:
+    lines = []
+    if warmth is not None:
+        if warmth >= 0.7:
+            lines.append(
+                "Tone: warm and mellow. Favour \"pad\"/\"sub\" voices over \"pluck\" "
+                "— at most one sparse pluck/bell accent, the rest sustained. Lower "
+                "tone values (0.2-0.5) and a longer attack (4-10s) for a slow, warm "
+                "build rather than an immediately-present sound.")
+        elif warmth <= 0.3:
+            lines.append(
+                "Tone: bright and crisp. Pluck/arp textures and higher tone values "
+                "(0.6-0.9) are welcome — present and percussive rather than soft.")
+    if energy is not None:
+        if energy >= 0.7:
+            lines.append(
+                "Energy: lively. Tempo 90-140, more movement (arpeggios, faster "
+                "pluck rate), a busier texture with more simultaneous events.")
+        elif energy <= 0.3:
+            lines.append(
+                "Energy: calm and spacious. Tempo 40-70, sparse — few simultaneous "
+                "events, generous space between them.")
+    return " ".join(lines)
+
+
+def _apply_evolution(spec: SceneSpec, evolution: float | None) -> SceneSpec:
+    """Deterministically sets swell_amount (the slow per-voice "orchestration"
+    modulation in dsp.py) from the "evolution" character slider. Applied
+    after the fact rather than as a prompt hint, so — unlike warmth/energy —
+    it's a guarantee: every generation actually breathes over time by roughly
+    the amount asked for, regardless of whether Claude's own response
+    included (or would have honoured) any particular swell_amount."""
+    if evolution is None or not spec.soundscape:
+        return spec
+    amount = max(0.0, min(1.0, float(evolution))) * 0.6   # capped so it's never overwhelming
+    spec.soundscape["swell_amount"] = round(amount, 3)
+    return spec
+
 
 class SceneDirector:
     def __init__(self, cache_dir: str, model: str | None = None):
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
-        self.max_tokens = int(os.environ.get("LASERFLOW_MAX_TOKENS", "8000"))
+        self.max_tokens = int(os.environ.get("PROMPTWAVER_MAX_TOKENS", "8000"))
         self.last_source = None       # "claude" | "cache" | "fallback"
         self.last_error = None
         self.last_progress = 0.0      # 0..1, approximate — see _from_claude
         self.generating = False
+        self._offline_reason = None   # why the client is unavailable, set by _make_client
         # model + effort persist across restarts via settings.json
         self.model_choice = model or settings.get("model", "haiku")
         self.model = MODEL_PRESETS.get(self.model_choice, self.model_choice)
@@ -220,12 +285,20 @@ class SceneDirector:
 
     def _make_client(self):
         if not os.environ.get("ANTHROPIC_API_KEY"):
+            self._offline_reason = "no API key set"
             return None
         try:
             import anthropic
-            return anthropic.Anthropic()
-        except Exception:
+        except ImportError:
+            self._offline_reason = "anthropic package not installed (pip install anthropic)"
             return None
+        try:
+            client = anthropic.Anthropic()
+        except Exception as e:
+            self._offline_reason = f"client init failed: {_friendly_error(e)}"
+            return None
+        self._offline_reason = None
+        return client
 
     def reload(self):
         """Rebuild the client, e.g. after the key changes."""
@@ -273,8 +346,12 @@ class SceneDirector:
         h = hashlib.sha1(keyword.strip().lower().encode()).hexdigest()[:12]
         return os.path.join(self.cache_dir, f"g2_{h}.json")
 
-    def generate(self, keyword: str, use_cache: bool = True, audio: str | None = None) -> SceneSpec:
-        cache = self._cache_path(keyword + "|" + (audio or ""))
+    def generate(self, keyword: str, use_cache: bool = True, audio: str | None = None,
+                 size: str = "small", warmth: float | None = None, energy: float | None = None,
+                 evolution: float | None = None) -> SceneSpec:
+        size = size if size in SCENE_SIZE else "small"
+        cache = self._cache_path(keyword + "|" + (audio or "") + "|" + size +
+                                 f"|w{warmth}|e{energy}|v{evolution}")
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
                 self.last_source = "cache"
@@ -286,28 +363,32 @@ class SceneDirector:
         self.last_progress = 0.0
         try:
             if self.online:
-                spec, ok = self._from_claude(keyword, audio)
+                spec, ok = self._from_claude(keyword, audio, size, warmth, energy)
                 if ok:
                     self.last_source = "claude"
                     self.last_error = None
+                    spec = _apply_evolution(_ensure_soundscape(spec), evolution)
                     with open(cache, "w") as f:      # only cache genuine Claude output
                         json.dump(spec.to_dict(), f, indent=2)
-                    return _ensure_soundscape(spec)
+                    return spec
                 # Claude failed — fall back but do NOT cache, so a retry/fix takes effect
                 self.last_source = "fallback"
-                return _ensure_soundscape(local_scene(keyword))
+                return _apply_evolution(_ensure_soundscape(local_scene(keyword)), evolution)
 
             self.last_source = "fallback"
-            self.last_error = "no API key — using local fallback"
-            return _ensure_soundscape(local_scene(keyword))
+            self.last_error = (self._offline_reason or "no API key") + " — using local fallback"
+            return _apply_evolution(_ensure_soundscape(local_scene(keyword)), evolution)
         finally:
             self.last_progress = 1.0
             self.generating = False
 
-    def generate_audio(self, context: str, audio_prompt: str, use_cache: bool = True) -> dict:
+    def generate_audio(self, context: str, audio_prompt: str, use_cache: bool = True,
+                       warmth: float | None = None, energy: float | None = None,
+                       evolution: float | None = None) -> dict:
         """Generate (or fetch from cache) just a soundscape for an existing
         scene — cheaper and faster than a full scene regeneration."""
-        cache = self._cache_path("audio|" + context + "|" + audio_prompt)
+        cache = self._cache_path("audio|" + context + "|" + audio_prompt +
+                                 f"|w{warmth}|e{energy}|v{evolution}")
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
                 self.last_source = "cache"
@@ -320,14 +401,16 @@ class SceneDirector:
         try:
             if not self.online:
                 self.last_source = "fallback"
-                self.last_error = "no API key — using local fallback"
+                self.last_error = (self._offline_reason or "no API key") + " — using local fallback"
                 from ..audio import default_soundscape
                 return default_soundscape()
             tier = EFFORT.get(self.effort, EFFORT["med"])
+            character_hint = _character_hints(warmth, energy)
+            character_line = f"\n\n{character_hint}" if character_hint else ""
             content = (f"The laser scene is: \"{context}\". Compose ONLY an ambient "
                       f"soundscape for it, matching this brief: \"{audio_prompt}\". "
                       f"Output ONLY a JSON object with this exact shape, no prose, no "
-                      f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}\n\n{tier['hint']}")
+                      f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}\n\n{tier['hint']}" + character_line)
             budget_chars = min(tier["max_tokens"], 3000) * 4
             text, stop_reason = self._stream_or_call(content, budget_chars)
             if stop_reason == "max_tokens":
@@ -339,6 +422,8 @@ class SceneDirector:
             scape = data.get("soundscape", data)   # tolerate either shape
             if not scape.get("voices"):
                 raise ValueError("no voices in response")
+            if evolution is not None:
+                scape["swell_amount"] = round(max(0.0, min(1.0, float(evolution))) * 0.6, 3)
             self.last_source = "claude"
             self.last_error = None
             self.last_progress = 1.0
@@ -348,14 +433,15 @@ class SceneDirector:
         except Exception as e:
             self.last_error = _friendly_error(e)
             self.last_source = "fallback"
-            print(f"[laserflow] audio-only generation failed: {self.last_error}")
+            print(f"[promptwaver] audio-only generation failed: {self.last_error}")
             from ..audio import default_soundscape
             return default_soundscape()
         finally:
             self.last_progress = 1.0
             self.generating = False
 
-    def _from_claude(self, keyword: str, audio: str | None = None):
+    def _from_claude(self, keyword: str, audio: str | None = None, size: str = "small",
+                     warmth: float | None = None, energy: float | None = None):
         """Return (spec, ok). ok=False means fall back (reason in last_error)."""
         tier = EFFORT.get(self.effort, EFFORT["med"])
         audio_line = ""
@@ -365,12 +451,16 @@ class SceneDirector:
         else:
             audio_line = ("\n\nAudio: also compose a calm ambient soundscape that fits the "
                           "scene, in the \"soundscape\" field.")
+        size_hint = SCENE_SIZE.get(size)
+        size_line = f"\n\n{size_hint}" if size_hint else ""
+        character_hint = _character_hints(warmth, energy)
+        character_line = f"\n\n{character_hint}" if character_hint else ""
         content = (f"Design a scene for the keyword: {keyword}\n\n"
                    f"Effort: {self.effort}. {tier['hint']}\n\n"
                    f"Hardware constraint: the laser draws at a maximum of "
                    f"{self.max_pps} points per second. Keep total stroke length "
                    f"and object count efficient for this budget — favour fewer, "
-                   f"cleaner strokes over dense detail." + audio_line)
+                   f"cleaner strokes over dense detail." + size_line + character_line + audio_line)
         # Rough proxy for "percent complete": the API has no notion of overall
         # completion (it doesn't know the final length in advance), but a
         # streaming call reports tokens as they're generated, which we compare
@@ -380,8 +470,8 @@ class SceneDirector:
             text, stop_reason = self._stream_or_call(content, budget_chars)
             if stop_reason == "max_tokens":
                 self.last_error = ("response truncated — try a lower effort or raise "
-                                   f"LASERFLOW_MAX_TOKENS (tier budget {tier['max_tokens']})")
-                print(f"[laserflow] director: {self.last_error}")
+                                   f"PROMPTWAVER_MAX_TOKENS (tier budget {tier['max_tokens']})")
+                print(f"[promptwaver] director: {self.last_error}")
                 return None, False
             data = json.loads(_extract_json(text))
             spec = SceneSpec.from_dict(data)
@@ -391,7 +481,7 @@ class SceneDirector:
             return spec, True
         except Exception as e:
             self.last_error = _friendly_error(e)
-            print(f"[laserflow] director generation failed: {self.last_error}")
+            print(f"[promptwaver] director generation failed: {self.last_error}")
             return None, False
 
     def _stream_or_call(self, content: str, budget_chars: int):

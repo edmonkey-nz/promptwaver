@@ -3,11 +3,11 @@ sounddevice output stream. No C compilation (unlike pyo); needs the PortAudio
 *runtime* (`sudo apt install libportaudio2`) which sounddevice binds to.
 
 If sounddevice or PortAudio isn't available, `make_synth` returns a NullSynth so
-the rest of LaserFlow runs silently and unaffected.
+the rest of PromptWaver runs silently and unaffected.
 
 Every callback is instrumented via `diagnostics.CallbackStats` so glitches can
 be measured (render duration vs. budget, hardware-reported xruns, callback
-interval jitter) instead of guessed at — see `laserflow/audio/diagnostics.py`.
+interval jitter) instead of guessed at — see `promptwaver/audio/diagnostics.py`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 import threading
 import time
 
-from .dsp import Soundscape, default_soundscape, SR
+from .dsp import SoundscapeMixer, default_soundscape, SR
 from .diagnostics import CallbackStats, list_devices
 
 
@@ -24,11 +24,12 @@ class NullSynth:
 
     def start(self): pass
     def stop(self): pass
-    def set_soundscape(self, spec): pass
+    def set_soundscape(self, spec, fade=0.0): pass
     def set_audio_param(self, path, value): pass
-    def set_muted(self, muted): pass
+    def set_muted(self, muted, fade=0.0): pass
     def soundscape(self): return None
     def diagnostics(self): return None
+    def vu(self): return None
     # legacy no-ops (old pad-synth interface)
     def set_patch(self, patch): pass
     def set_cutoff(self, hz): pass
@@ -44,7 +45,7 @@ class SoundscapeSynth:
         self.device = device
         self.latency = latency
         self._lock = threading.Lock()
-        self._scape = Soundscape(default_soundscape(), sr=sr)
+        self._scape = SoundscapeMixer(default_soundscape(), sr=sr)
         self._stream = None
         self.stats = CallbackStats(sr, blocksize)
         self.last_error = None
@@ -84,7 +85,7 @@ class SoundscapeSynth:
     # Some backends (notably PulseAudio/PipeWire virtual devices, which is
     # what "default"/"pipewire"/"Default Sink" in the device list usually are)
     # cap how large a period/buffer they'll accept, independent of anything
-    # LaserFlow does — so instead of just reverting to whatever was running
+    # PromptWaver does — so instead of just reverting to whatever was running
     # before, step down and use the largest size that actually opens.
     _SIZE_LADDER = [32768, 16384, 8192, 4096, 2048, 1024, 512]
 
@@ -114,7 +115,7 @@ class SoundscapeSynth:
             self.latency = latency
         if sr is not None:
             self.sr = int(sr)
-            self._scape = Soundscape(self._scape.spec, sr=self.sr)
+            self._scape = SoundscapeMixer(self._scape.spec, sr=self.sr)
 
         requested = int(blocksize) if blocksize is not None else self.blocksize
         self.requested_blocksize = requested
@@ -131,7 +132,7 @@ class SoundscapeSynth:
                 if size != requested:
                     self.last_error = (f"requested {requested} not supported by this "
                                        f"device; running at {size} instead")
-                    print(f"[laserflow] audio: {self.last_error}")
+                    print(f"[promptwaver] audio: {self.last_error}")
                 return
             except Exception as e:
                 last_exc = e
@@ -149,24 +150,31 @@ class SoundscapeSynth:
                 self.last_error += f"; restored previous working blocksize {self.blocksize}"
             except Exception as e2:
                 self.last_error += f"; could not restore previous config either: {e2}"
-        print(f"[laserflow] audio reconfigure failed: {self.last_error}")
+        print(f"[promptwaver] audio reconfigure failed: {self.last_error}")
 
-    def set_soundscape(self, spec):
+    def set_soundscape(self, spec, fade=0.0):
         if not spec:
             return
         with self._lock:
-            self._scape.set_spec(spec)
+            self._scape.set_spec(spec, fade=fade)
 
     def set_audio_param(self, path, value):
         with self._lock:
             self._scape.set_param(path, value)
 
-    def set_muted(self, muted: bool):
+    def set_muted(self, muted: bool, fade: float = 0.0):
         with self._lock:
-            self._scape.muted = bool(muted)
+            self._scape.set_muted(bool(muted), fade)
 
     def soundscape(self):
         return self._scape.spec
+
+    def vu(self):
+        """Post-master output level of the last rendered block, for the VU
+        meter — read under the same lock the audio callback renders under, so
+        it can't observe a torn mid-render state."""
+        with self._lock:
+            return {"peak": self._scape.last_peak, "clipping": self._scape.last_clip}
 
     def diagnostics(self):
         d = self.stats.summary()
@@ -194,6 +202,6 @@ def make_synth(enable_audio: bool, **kw):
         return SoundscapeSynth(**kw), None
     except Exception as e:
         msg = str(e)
-        print(f"[laserflow] audio unavailable ({msg}); running silent. "
+        print(f"[promptwaver] audio unavailable ({msg}); running silent. "
               f"On Linux try: sudo apt install libportaudio2")
         return NullSynth(), msg

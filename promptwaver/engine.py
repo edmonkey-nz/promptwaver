@@ -12,11 +12,12 @@ the top of the loop so the render thread never races the websocket thread.
 
 from __future__ import annotations
 
+import colorsys
 import json
 import threading
 import time
 
-from .modulation import ModMatrix, LFO, Envelope, Value
+from .modulation import ModMatrix, LFO, Value
 from .scenes import SceneManager, SceneSpec
 from .director import SceneDirector
 from .audio import make_synth, AudioAnalysis
@@ -30,6 +31,8 @@ def _apply_scape_param(scape: dict, path: str, value):
         scape[parts[0]] = value
     elif parts[0] == "delay" and len(parts) == 2:
         scape.setdefault("delay", {})[parts[1]] = value
+    elif parts[0] == "eq" and len(parts) == 2:
+        scape.setdefault("eq", {})[parts[1]] = value
     elif parts[0] == "voice" and len(parts) == 3:
         for v in scape.get("voices", []):
             if v.get("name") == parts[1]:
@@ -56,12 +59,12 @@ class Engine:
         self.fps = fps
         self.pps = pps
         self.crossfade = 2.0
+        self.audio_fade = 2.0     # soundscape crossfade duration (s) on scene switch, 0-16
 
         # shared spine
         self.matrix = ModMatrix()
         self.matrix.add_source("lfo_slow", LFO(rate=0.05, shape="sine"))
         self.matrix.add_source("lfo_mid", LFO(rate=0.2, shape="triangle"))
-        self.matrix.add_source("env", Envelope())
         self._audio_src = self.matrix.add_source("audio_level", Value(smooth=0.1))
 
         self.scenes = SceneManager(library_dir)
@@ -91,6 +94,29 @@ class Engine:
         # fire before the render thread's first tick) is silent, not a pop.
         self.active = False
         self.synth.set_muted(True)
+        # "Disable Audio"/"Disable Visuals" (Global section): independent,
+        # gracefully-fadeable gates layered on top of the instant active/blank
+        # ones above — see _sync_audio_mute and the visual-fade block in _loop.
+        self.audio_disabled = False
+        self.visuals_disabled = False
+        self._visual_gain = 1.0
+        self._visual_from = 1.0
+        self._visual_to = 1.0
+        self._visual_fade_dur = 0.0
+        self._visual_fade_pos = 0.0
+        # Global "hue override" — recolours every output stroke to a single
+        # hue (preserving each point's own saturation/value, so depth cueing
+        # and per-scene brightness still read), independent of whatever the
+        # scene/generator itself chose.
+        self.hue_override_on = False
+        self.hue_value = 0.5
+        # library key of the currently-loaded scene, tracked separately from
+        # spec.name: a handful of shipped example scenes have a free-text
+        # internal name that doesn't match their filename (e.g.
+        # "forest_flythrough.json" internally named "forest flythrough"), so
+        # matching the library grid against spec.name silently fails for
+        # those — this is the identifier the UI should actually highlight on.
+        self._current_library_name = None
 
     # lifecycle -------------------------------------------------------------
     def start(self):
@@ -141,6 +167,12 @@ class Engine:
     def _apply_param(self, key, value):
         if key == "crossfade":
             self.crossfade = float(value)
+        elif key == "audio_fade":
+            self.audio_fade = max(0.0, min(16.0, float(value)))
+        elif key == "hue_override":
+            self.hue_override_on = bool(value)
+        elif key == "hue_value":
+            self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
             self.pps = int(value)
         elif key == "max_pps":
@@ -208,39 +240,99 @@ class Engine:
             self.scenes.set_scene(self.scenes.current.spec, crossfade=0)
 
     def load_scene(self, name: str):
-        self._enqueue(lambda: self.scenes.set_scene(
-            self.scenes.load_spec(name), crossfade=self.crossfade))
+        def apply():
+            # was previously a bespoke self.scenes.set_scene(...) call that
+            # only crossfaded the *visuals* — it never reached _install_spec,
+            # so the synth's soundscape, the modulation routes, and the PPS
+            # ceiling all silently stayed on whatever the previously-loaded
+            # scene had. Routing through _install_spec (same as a fresh
+            # generation) fixes all three.
+            self._install_spec(self.scenes.load_spec(name))
+            self._current_library_name = name
+        self._enqueue(apply)
 
     def save_scene(self, name: str):
         def apply():
             if self.scenes.current:
                 self.scenes.save(name, self.scenes.current.spec)
+                self._current_library_name = name
         self._enqueue(apply)
 
-    def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None):
+    def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None,
+                       size: str = "small", warmth: float | None = None,
+                       energy: float | None = None, evolution: float | None = None):
         # the director call may hit the network; run it off the loop then queue
-        spec = self.director.generate(keyword, audio=audio)
+        spec = self.director.generate(keyword, audio=audio, size=size,
+                                      warmth=warmth, energy=energy, evolution=evolution)
         # add every new generation to the library by default
         name = (name or "").strip() or spec.name or keyword
         spec.name = name
         try:
             self.scenes.save(name, spec)
         except Exception as e:
-            print(f"[laserflow] could not save generation: {e}")
-        self._enqueue(lambda: self._install_spec(spec))
+            print(f"[promptwaver] could not save generation: {e}")
+        def apply():
+            self._install_spec(spec)
+            self._current_library_name = name
+        self._enqueue(apply)
+
+    def _sync_audio_mute(self, fade: float = 0.0):
+        """Audio should be muted if EITHER the engine is inactive/blanked OR
+        the independent "Disable Audio" gate (Global section) is on — this is
+        the single place that combines the two into the one mute call the
+        synth actually takes."""
+        self.synth.set_muted(self.audio_disabled or not self.active, fade)
 
     def set_active(self, value: bool):
         """Master Start/Stop. While inactive: scene time is frozen (not just
         stopped — resuming continues from where it left off, no time-jump),
         the laser is sent an explicit blanked frame every tick, and audio is
         muted at the DSP level (the scene's own mix/levels are untouched, so
-        nothing needs re-tuning after Start)."""
+        nothing needs re-tuning after Start). Instant, not faded — this is the
+        safety-critical gate and must not lag behind the click."""
         def apply():
             self.active = bool(value)
-            self.synth.set_muted(not self.active)
+            self._sync_audio_mute(fade=0.0)
             if not self.active:
                 self.output.blank()
                 self._last_frame = []
+        self._enqueue(apply)
+
+    def disable_audio(self, fade: float = 2.0):
+        """Independent audio-only gate (Global section) — gracefully fades
+        out over `fade` seconds rather than Start/Stop's instant cut, and
+        doesn't touch visuals or the active/blank state at all."""
+        def apply():
+            self.audio_disabled = True
+            self._sync_audio_mute(fade=fade)
+        self._enqueue(apply)
+
+    def enable_audio(self, fade: float = 2.0):
+        def apply():
+            self.audio_disabled = False
+            self._sync_audio_mute(fade=fade)
+        self._enqueue(apply)
+
+    def disable_visuals(self, fade: float = 2.0):
+        """Independent visuals-only gate (Global section) — fades the frame's
+        own colours to black over `fade` seconds (same per-point dimming
+        SceneManager already uses for a scene crossfade) rather than blanking
+        outright, and doesn't touch audio or the active/blank state at all."""
+        def apply():
+            self.visuals_disabled = True
+            self._visual_from = self._visual_gain
+            self._visual_to = 0.0
+            self._visual_fade_dur = max(0.0, float(fade))
+            self._visual_fade_pos = 0.0
+        self._enqueue(apply)
+
+    def enable_visuals(self, fade: float = 2.0):
+        def apply():
+            self.visuals_disabled = False
+            self._visual_from = self._visual_gain
+            self._visual_to = 1.0
+            self._visual_fade_dur = max(0.0, float(fade))
+            self._visual_fade_pos = 0.0
         self._enqueue(apply)
 
     def blank(self):
@@ -260,27 +352,29 @@ class Engine:
     def set_effort(self, effort: str):
         self._enqueue(lambda: self.director.set_effort(effort))
 
-    def apply_audio_to_scene(self, scene_name: str, audio_prompt: str):
+    def apply_audio_to_scene(self, scene_name: str, audio_prompt: str, warmth: float | None = None,
+                             energy: float | None = None, evolution: float | None = None):
         """Regenerate just the soundscape for an existing library scene, leaving
         its visuals untouched. Runs off the render loop (network call)."""
         try:
             spec = self.scenes.load_spec(scene_name)
         except Exception as e:
-            print(f"[laserflow] could not load scene {scene_name!r}: {e}")
+            print(f"[promptwaver] could not load scene {scene_name!r}: {e}")
             return
-        scape = self.director.generate_audio(spec.name, audio_prompt)
+        scape = self.director.generate_audio(spec.name, audio_prompt, warmth=warmth,
+                                             energy=energy, evolution=evolution)
         spec.soundscape = scape
         try:
             self.scenes.save(scene_name, spec)
         except Exception as e:
-            print(f"[laserflow] could not save scene {scene_name!r}: {e}")
+            print(f"[promptwaver] could not save scene {scene_name!r}: {e}")
 
         def apply():
             # if this scene is the one currently playing, hear the change now
             if self.scenes.current and self.scenes.current.spec.name == scene_name:
                 self.scenes.current.spec.soundscape = scape
                 if getattr(self.synth, "online", False):
-                    self.synth.set_soundscape(scape)
+                    self.synth.set_soundscape(scape, fade=self.audio_fade)
         self._enqueue(apply)
 
     def configure_audio(self, *, device=None, blocksize=None, latency=None):
@@ -318,27 +412,38 @@ class Engine:
                 _apply_scape_param(sc.spec.soundscape, path, value)
         self._enqueue(apply)
 
-    def update_current_scene(self):
-        """Save the live config (current camera settings) back into the current
-        scene, overwriting its stored settings under the same name."""
+    def update_current_scene(self, camera: bool = True, soundscape: bool = True):
+        """Save the live config back into the current scene, overwriting its
+        stored settings under the same name. `camera`/`soundscape` select which
+        half to update — "Save Camera settings" / "Save Soundscape settings" /
+        "Save all scene settings" (Scene settings section) are this same call
+        with different flags; the other half of the saved file is left as-is."""
         def apply():
             sc = self.scenes.current
             if sc is None:
                 return
-            cam = getattr(sc, "camera", None)
-            if cam is not None:
-                sc.spec.camera.update({
-                    "mode": cam.mode, "speed": round(cam.base_speed, 3),
-                    "orbit_radius": cam.orbit_radius, "orbit_height": cam.orbit_height,
-                    "fov": cam.fov, "near": cam.near, "far": cam.far,
-                    "max_strokes": cam.max_strokes,
-                })
-            # capture the live soundscape (GUI tweaks) back into the scene
-            if getattr(self.synth, "online", False):
+            if camera:
+                cam = getattr(sc, "camera", None)
+                if cam is not None:
+                    sc.spec.camera.update({
+                        "mode": cam.mode, "speed": round(cam.base_speed, 3),
+                        "orbit_radius": cam.orbit_radius, "orbit_height": cam.orbit_height,
+                        "fov": cam.fov, "near": cam.near, "far": cam.far,
+                        "max_strokes": cam.max_strokes,
+                    })
+            if soundscape and getattr(self.synth, "online", False):
+                # capture the live soundscape (GUI tweaks) back into the scene
                 cur = self.synth.soundscape()
                 if cur:
                     sc.spec.soundscape = json.loads(json.dumps(cur))  # deep copy
-            self.scenes.save(sc.spec.name, sc.spec)
+            # Save under the library key that was actually loaded, not
+            # sc.spec.name — a handful of shipped example scenes have a
+            # free-text internal name that doesn't match their filename (see
+            # _current_library_name's own docstring), and saving under
+            # spec.name there would silently create a *new*, differently-named
+            # duplicate file instead of updating the one that's open.
+            target = self._current_library_name or sc.spec.name
+            self.scenes.save(target, sc.spec)
         self._enqueue(apply)
 
     def _install_spec(self, spec: SceneSpec):
@@ -348,7 +453,7 @@ class Engine:
         self.pps = min(spec.pps, self.director.max_pps) if spec.pps else self.director.max_pps
         if getattr(self.synth, "online", False):
             scape = spec.soundscape or _patch_to_soundscape(spec.audio_patch)
-            self.synth.set_soundscape(scape)
+            self.synth.set_soundscape(scape, fade=self.audio_fade)
 
     def _apply_modulation(self, spec: SceneSpec):
         self.matrix.clear_routes()
@@ -358,12 +463,6 @@ class Engine:
         # global audio<->visual coupling level (the "level effect"): scales every
         # route sourced from live audio, independent of each route's own depth
         self.matrix.set_source_scale("audio_level", float(getattr(spec, "audio_link", 1.0)))
-
-    def trigger(self):
-        self._enqueue(lambda: self.matrix.sources["env"].trigger())
-
-    def release(self):
-        self._enqueue(lambda: self.matrix.sources["env"].release())
 
     # loop ------------------------------------------------------------------
     def _loop(self):
@@ -380,7 +479,7 @@ class Engine:
                 try:
                     fn()
                 except Exception as e:
-                    print(f"[laserflow] action error: {e}")
+                    print(f"[promptwaver] action error: {e}")
 
             if not self.active:
                 # Shift the epoch forward by exactly this tick's dt so the
@@ -402,6 +501,31 @@ class Engine:
 
             # render + output
             frame = self.scenes.render(t, dt, self.matrix)
+
+            # "Disable Visuals" fade — dims every point's colour toward black
+            # over _visual_fade_dur seconds, the same per-point scaling trick
+            # SceneManager already uses for a scene crossfade. Independent of
+            # active/blank: audio keeps playing normally through this.
+            if self._visual_fade_pos < self._visual_fade_dur:
+                self._visual_fade_pos += dt
+                prog = min(1.0, self._visual_fade_pos / self._visual_fade_dur)
+                self._visual_gain = self._visual_from + (self._visual_to - self._visual_from) * prog
+            else:
+                self._visual_gain = self._visual_to
+            if self._visual_gain < 1.0:
+                g = self._visual_gain
+                for p in frame:
+                    p.color = tuple(c * g for c in p.color)
+
+            # Global "hue override" — recolour every stroke to one hue,
+            # keeping each point's own saturation/value (so depth cueing and
+            # relative brightness still read, just under a single colour).
+            if self.hue_override_on:
+                hv = self.hue_value
+                for p in frame:
+                    _, s, v = colorsys.rgb_to_hsv(*p.color)
+                    p.color = colorsys.hsv_to_rgb(hv, s, v)
+
             self._last_frame = frame
             self.output.write(frame, self.pps)
 
@@ -418,11 +542,14 @@ class Engine:
                       "orbit_radius": cam.orbit_radius, "fov": cam.fov,
                       "far": cam.far, "max_strokes": cam.max_strokes}
         return {
-            "version": __import__("laserflow").__version__,
+            "version": __import__("promptwaver").__version__,
             "active": self.active,
+            "audio_disabled": self.audio_disabled,
+            "visuals_disabled": self.visuals_disabled,
             "scene": self.scenes.current.spec.name if self.scenes.current else None,
+            "library_name": self._current_library_name,
             "library": self.scenes.names(),
-            "generators": __import__("laserflow.generators", fromlist=["available"]).available(),
+            "generators": __import__("promptwaver.generators", fromlist=["available"]).available(),
             "points": getattr(self.output, "last_points", 0),
             "output": self.output.name,
             "audio": getattr(self.synth, "online", False),
@@ -444,20 +571,29 @@ class Engine:
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
             "audio_diag": self.synth.diagnostics() if getattr(self.synth, "online", False) else None,
+            "vu": self.synth.vu() if getattr(self.synth, "online", False) else None,
             "audio_devices": self._device_list,
             "audio_cfg": self._audio_cfg,
             "audio_error": self.audio_error,
             "crossfade": self.crossfade,
+            "audio_fade": self.audio_fade,
+            "hue_override": self.hue_override_on,
+            "hue_value": self.hue_value,
+            "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),
         }
 
-    def preview(self, max_points: int = 400):
-        """A light polyline list for the browser canvas (normalized coords)."""
+    def preview(self, max_points: int = 400, stroke_thin: int = 60):
+        """A polyline list for a browser canvas (normalized coords). Default
+        args give the light, thinned version used for the small in-page
+        control-UI preview; the standalone output window (server.py, a "hq"
+        websocket connection) asks for a much higher ceiling since it's the
+        actual thing being watched, not just a status glance."""
         out = []
         for p in self._last_frame:
             pts = p.points
-            if len(pts) > 60:  # thin dense strokes for the preview
-                pts = pts[:: max(1, len(pts) // 60)]
+            if len(pts) > stroke_thin:  # thin dense strokes for the preview
+                pts = pts[:: max(1, len(pts) // stroke_thin)]
             out.append({
                 "c": [round(float(v), 3) for v in p.color],
                 "p": [[round(float(x), 3), round(float(y), 3)] for x, y in pts],

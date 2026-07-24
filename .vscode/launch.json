@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "LaserFlow: web (no hardware)",
+      "name": "PromptWaver: web (no hardware)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/run.py",
@@ -11,7 +11,7 @@
       "justMyCode": true
     },
     {
-      "name": "LaserFlow: web + laser",
+      "name": "PromptWaver: web + laser",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/run.py",
@@ -20,7 +20,7 @@
       "justMyCode": true
     },
     {
-      "name": "LaserFlow: web + laser (custom Helios lib path)",
+      "name": "PromptWaver: web + laser (custom Helios lib path)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/run.py",

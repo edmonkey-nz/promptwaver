@@ -1,0 +1,1385 @@
+{
+  "name": "loomery",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "floor": [
+            {
+              "op": "grid",
+              "w": 36,
+              "h": 36,
+              "nx": 12,
+              "ny": 12,
+              "plane": "xz",
+              "c": [
+                0,
+                -2,
+                0
+              ]
+            }
+          ],
+          "back_wall": [
+            {
+              "op": "rect",
+              "w": 36,
+              "h": 12,
+              "plane": "xy",
+              "c": [
+                0,
+                4,
+                -14
+              ]
+            }
+          ],
+          "side_wall_left": [
+            {
+              "op": "rect",
+              "w": 28,
+              "h": 12,
+              "plane": "yz",
+              "c": [
+                -14,
+                4,
+                0
+              ]
+            }
+          ],
+          "side_wall_right": [
+            {
+              "op": "rect",
+              "w": 28,
+              "h": 12,
+              "plane": "yz",
+              "c": [
+                14,
+                4,
+                0
+              ]
+            }
+          ],
+          "loom_frame": [
+            {
+              "op": "box",
+              "size": [
+                3.2,
+                4.5,
+                1.2
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.6,
+                -2.25,
+                0.6
+              ],
+              "b": [
+                -1.6,
+                2.25,
+                0.6
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.6,
+                -2.25,
+                0.6
+              ],
+              "b": [
+                1.6,
+                2.25,
+                0.6
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.6,
+                -2.25,
+                0.6
+              ],
+              "b": [
+                1.6,
+                -2.25,
+                0.6
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.6,
+                2.25,
+                0.6
+              ],
+              "b": [
+                1.6,
+                2.25,
+                0.6
+              ]
+            }
+          ],
+          "warp_threads": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.5,
+                  -2,
+                  0.61
+                ],
+                [
+                  -1.5,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.1,
+                  -2,
+                  0.61
+                ],
+                [
+                  -1.1,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.7,
+                  -2,
+                  0.61
+                ],
+                [
+                  -0.7,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.3,
+                  -2,
+                  0.61
+                ],
+                [
+                  -0.3,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.1,
+                  -2,
+                  0.61
+                ],
+                [
+                  0.1,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.5,
+                  -2,
+                  0.61
+                ],
+                [
+                  0.5,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.9,
+                  -2,
+                  0.61
+                ],
+                [
+                  0.9,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  1.3,
+                  -2,
+                  0.61
+                ],
+                [
+                  1.3,
+                  2,
+                  0.61
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "loom_treadle": [
+            {
+              "op": "box",
+              "size": [
+                2.8,
+                0.2,
+                0.8
+              ],
+              "c": [
+                0,
+                -2.4,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.4,
+                -2.3,
+                -0.4
+              ],
+              "b": [
+                -0.8,
+                -1.2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.4,
+                -2.3,
+                -0.4
+              ],
+              "b": [
+                0.8,
+                -1.2,
+                0
+              ]
+            }
+          ],
+          "spinning_wheel": [
+            {
+              "op": "circle",
+              "r": 1.2,
+              "plane": "yz",
+              "c": [
+                0,
+                0.2,
+                0
+              ],
+              "seg": 24
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.2,
+                0
+              ],
+              "b": [
+                0.4,
+                1.8,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.2,
+                0
+              ],
+              "b": [
+                -0.4,
+                1.8,
+                0
+              ]
+            },
+            {
+              "op": "circle",
+              "r": 0.3,
+              "plane": "yz",
+              "c": [
+                0,
+                1.8,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.4,
+                1.8
+              ],
+              "c": [
+                0,
+                -1.4,
+                0
+              ]
+            }
+          ],
+          "yarn_bobbin": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0.5,
+                  -0.8
+                ],
+                [
+                  0.6,
+                  -0.5
+                ],
+                [
+                  0.7,
+                  0
+                ],
+                [
+                  0.6,
+                  0.5
+                ],
+                [
+                  0.5,
+                  0.8
+                ]
+              ],
+              "seg": 16,
+              "meridians": 6
+            }
+          ],
+          "fabric_roll": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0.4,
+                  -1.2
+                ],
+                [
+                  1.0,
+                  -1.0
+                ],
+                [
+                  1.2,
+                  0
+                ],
+                [
+                  1.0,
+                  1.0
+                ],
+                [
+                  0.4,
+                  1.2
+                ]
+              ],
+              "seg": 20,
+              "meridians": 8
+            }
+          ],
+          "work_table": [
+            {
+              "op": "box",
+              "size": [
+                4,
+                0.3,
+                2.4
+              ],
+              "c": [
+                0,
+                -1.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                1.8,
+                0.3
+              ],
+              "c": [
+                -1.8,
+                -2.7,
+                -1.0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                1.8,
+                0.3
+              ],
+              "c": [
+                -1.8,
+                -2.7,
+                1.0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                1.8,
+                0.3
+              ],
+              "c": [
+                1.8,
+                -2.7,
+                -1.0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                1.8,
+                0.3
+              ],
+              "c": [
+                1.8,
+                -2.7,
+                1.0
+              ]
+            }
+          ],
+          "thread_spool": [
+            {
+              "op": "circle",
+              "r": 0.6,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.08,
+                -0.6,
+                0
+              ],
+              "b": [
+                -0.08,
+                0.6,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.08,
+                -0.6,
+                0
+              ],
+              "b": [
+                0.08,
+                0.6,
+                0
+              ]
+            }
+          ],
+          "drying_rack": [
+            {
+              "op": "box",
+              "size": [
+                3,
+                0.2,
+                0.2
+              ],
+              "c": [
+                0,
+                3,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.4,
+                3,
+                -0.1
+              ],
+              "b": [
+                -1.4,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.7,
+                3,
+                -0.1
+              ],
+              "b": [
+                -0.7,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                3,
+                -0.1
+              ],
+              "b": [
+                0,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.7,
+                3,
+                -0.1
+              ],
+              "b": [
+                0.7,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.4,
+                3,
+                -0.1
+              ],
+              "b": [
+                1.4,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.4,
+                  2.2,
+                  -0.1
+                ],
+                [
+                  -1.4,
+                  2.2,
+                  1.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.7,
+                  2.2,
+                  -0.1
+                ],
+                [
+                  -0.7,
+                  2.2,
+                  1.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  2.2,
+                  -0.1
+                ],
+                [
+                  0,
+                  2.2,
+                  1.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.7,
+                  2.2,
+                  -0.1
+                ],
+                [
+                  0.7,
+                  2.2,
+                  1.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  1.4,
+                  2.2,
+                  -0.1
+                ],
+                [
+                  1.4,
+                  2.2,
+                  1.2
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "window_frame": [
+            {
+              "op": "rect",
+              "w": 3.6,
+              "h": 2.4,
+              "plane": "xy",
+              "c": [
+                0,
+                2.5,
+                -13.9
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.8,
+                2.5,
+                -13.9
+              ],
+              "b": [
+                1.8,
+                2.5,
+                -13.9
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.3,
+                -13.9
+              ],
+              "b": [
+                0,
+                3.7,
+                -13.9
+              ]
+            }
+          ],
+          "shelf": [
+            {
+              "op": "box",
+              "size": [
+                2.8,
+                0.2,
+                1.2
+              ],
+              "c": [
+                0,
+                2.6,
+                0
+              ]
+            }
+          ],
+          "weaver_loom_compact": [
+            {
+              "op": "box",
+              "size": [
+                2.4,
+                3.2,
+                0.9
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "circle",
+              "r": 0.5,
+              "plane": "xz",
+              "c": [
+                0,
+                1.8,
+                0.45
+              ],
+              "seg": 16
+            },
+            {
+              "op": "circle",
+              "r": 0.5,
+              "plane": "xz",
+              "c": [
+                0,
+                1.8,
+                -0.45
+              ],
+              "seg": 16
+            }
+          ],
+          "basket_supplies": [
+            {
+              "op": "box",
+              "size": [
+                1.2,
+                0.8,
+                1.2
+              ],
+              "c": [
+                0,
+                -1.6,
+                0
+              ]
+            },
+            {
+              "op": "arc",
+              "r": 0.6,
+              "a0": 0,
+              "a1": 3.14159,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.8,
+                0
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "floor",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.65,
+              0.58,
+              0.5
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "back_wall",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.72,
+              0.68,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "side_wall_left",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.65,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "side_wall_right",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.65,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "loom_frame",
+            "pos": [
+              -9,
+              0.5,
+              3
+            ],
+            "scale": 1.1,
+            "color": [
+              0.55,
+              0.44,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "warp_threads",
+            "pos": [
+              -9,
+              0.5,
+              3.65
+            ],
+            "scale": 1.1,
+            "color": [
+              0.95,
+              0.92,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "loom_treadle",
+            "pos": [
+              -9,
+              0,
+              3
+            ],
+            "scale": 1.1,
+            "color": [
+              0.48,
+              0.38,
+              0.28
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.2,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spinning_wheel",
+            "pos": [
+              8,
+              1.2,
+              -6
+            ],
+            "scale": 1.0,
+            "color": [
+              0.6,
+              0.48,
+              0.38
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 3.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "yarn_bobbin",
+            "pos": [
+              8,
+              3.2,
+              -5.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.88,
+              0.76,
+              0.62
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "fabric_roll",
+            "pos": [
+              -8,
+              1.4,
+              -8
+            ],
+            "scale": 1.0,
+            "color": [
+              0.82,
+              0.72,
+              0.6
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.6,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "work_table",
+            "pos": [
+              6,
+              0,
+              6
+            ],
+            "scale": 1.0,
+            "color": [
+              0.58,
+              0.48,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "thread_spool",
+            "pos": [
+              6,
+              1.8,
+              5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.92,
+              0.18,
+              0.2
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "thread_spool",
+            "pos": [
+              6.5,
+              1.8,
+              6.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.18,
+              0.48,
+              0.82
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "drying_rack",
+            "pos": [
+              -6,
+              2,
+              10
+            ],
+            "scale": 1.2,
+            "color": [
+              0.55,
+              0.44,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "window_frame",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.28,
+              0.35,
+              0.48
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shelf",
+            "pos": [
+              -12,
+              3.8,
+              8
+            ],
+            "scale": 1.0,
+            "color": [
+              0.55,
+              0.44,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "yarn_bobbin",
+            "pos": [
+              -11.4,
+              4.8,
+              7.6
+            ],
+            "scale": 0.6,
+            "color": [
+              0.92,
+              0.6,
+              0.28
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "yarn_bobbin",
+            "pos": [
+              -12.6,
+              4.8,
+              8.4
+            ],
+            "scale": 0.6,
+            "color": [
+              0.28,
+              0.72,
+              0.45
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "weaver_loom_compact",
+            "pos": [
+              10,
+              1.0,
+              8
+            ],
+            "scale": 0.95,
+            "color": [
+              0.52,
+              0.42,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.8,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "basket_supplies",
+            "pos": [
+              -2,
+              0,
+              -10
+            ],
+            "scale": 1.2,
+            "color": [
+              0.7,
+              0.55,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#3d2817",
+    "#8b7355",
+    "#c9a876",
+    "#f5e6d3",
+    "#2d4a6d",
+    "#d4472a",
+    "#2b9e6f"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "triangle",
+    "voices": 5,
+    "attack": 0.8,
+    "release": 1.2,
+    "base_note": 48,
+    "chord": [
+      0,
+      7,
+      12,
+      16
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      1.2,
+      2
+    ],
+    "orbit_radius": 14,
+    "far": 40,
+    "speed": 0.05,
+    "max_strokes": 200,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 71.0,
+    "master": 0.75,
+    "distortion": 0.05,
+    "delay": {
+      "time": 0.35,
+      "feedback": 0.32,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "mechanical_drone",
+        "type": "pad",
+        "waveform": "saw",
+        "note": 36,
+        "chord": [
+          0,
+          12,
+          19
+        ],
+        "level": 0.45,
+        "tone": 0.65,
+        "detune": 0.018,
+        "pan": -0.1,
+        "env": {
+          "attack": 1.2,
+          "decay": 0.8,
+          "sustain": 0.75,
+          "release": 1.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "spinning_arpeggios",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 60,
+        "chord": [
+          0,
+          4,
+          7,
+          11
+        ],
+        "level": 0.38,
+        "unison": 3,
+        "detune": 0.043,
+        "sub": 0.15,
+        "pan": 0.15,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 1.5,
+          "decay": 0.25
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "plucked_notes",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          5,
+          7,
+          10,
+          12
+        ],
+        "level": 0.05,
+        "rate": 0.1,
+        "decay": 0.9,
+        "pan": -0.2,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "creaking_wood",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 42,
+        "chord": [
+          0,
+          3,
+          8
+        ],
+        "level": 0.28,
+        "unison": 2,
+        "detune": 0.012,
+        "sub": 0.3,
+        "pan": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "random",
+          "rate": 0.6,
+          "decay": 1.2
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "ambient_bustle",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.72,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.67,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 118.0
+  },
+  "audio_link": 0.8
+}

@@ -1,0 +1,773 @@
+{
+  "name": "a cave with dripping water and glowing crystals",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "floor": [
+            {
+              "op": "grid",
+              "w": 20,
+              "h": 26,
+              "nx": 9,
+              "ny": 11,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "ceiling": [
+            {
+              "op": "grid",
+              "w": 20,
+              "h": 26,
+              "nx": 9,
+              "ny": 11,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "wall": [
+            {
+              "op": "grid",
+              "w": 8,
+              "h": 26,
+              "nx": 5,
+              "ny": 11,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "stalactite": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0.5,
+                  0
+                ],
+                [
+                  0.28,
+                  -0.9
+                ],
+                [
+                  0.04,
+                  -1.8
+                ]
+              ],
+              "seg": 8,
+              "meridians": 4
+            }
+          ],
+          "stalagmite": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0.5,
+                  0
+                ],
+                [
+                  0.25,
+                  0.9
+                ],
+                [
+                  0.03,
+                  1.8
+                ]
+              ],
+              "seg": 8,
+              "meridians": 4
+            }
+          ],
+          "crystal": [
+            {
+              "op": "line",
+              "a": [
+                -0.15,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                1.2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.15,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                1.2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.25,
+                0,
+                0.2
+              ],
+              "b": [
+                0.4,
+                0.8,
+                0.2
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.55,
+                0,
+                0.2
+              ],
+              "b": [
+                0.4,
+                0.8,
+                0.2
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.45,
+                0,
+                -0.1
+              ],
+              "b": [
+                -0.35,
+                1.5,
+                -0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.25,
+                0,
+                -0.1
+              ],
+              "b": [
+                -0.35,
+                1.5,
+                -0.1
+              ]
+            }
+          ],
+          "pool": [
+            {
+              "op": "circle",
+              "r": 1.2,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "circle",
+              "r": 0.7,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 14
+            }
+          ],
+          "drip": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                -1.4,
+                0
+              ]
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "xz",
+              "c": [
+                0,
+                -1.4,
+                0
+              ],
+              "seg": 8
+            }
+          ],
+          "tunnel": [
+            {
+              "op": "arc",
+              "r": 5,
+              "a0": 0,
+              "a1": 6.283,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "rocks": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.5,
+                  0,
+                  0
+                ],
+                [
+                  -0.1,
+                  0.35,
+                  0.15
+                ],
+                [
+                  0.4,
+                  0.15,
+                  0.1
+                ],
+                [
+                  0.3,
+                  -0.1,
+                  -0.2
+                ],
+                [
+                  -0.5,
+                  0,
+                  0
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.6,
+                  0,
+                  0.3
+                ],
+                [
+                  0.9,
+                  0.25,
+                  0.35
+                ],
+                [
+                  1.2,
+                  0.05,
+                  0.2
+                ],
+                [
+                  1.0,
+                  -0.15,
+                  0.1
+                ],
+                [
+                  0.6,
+                  0,
+                  0.3
+                ]
+              ],
+              "closed": true
+            }
+          ],
+          "roots": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  -0.1,
+                  -0.5,
+                  0.05
+                ],
+                [
+                  -0.05,
+                  -0.9,
+                  0.1
+                ]
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.3,
+                  0,
+                  0
+                ],
+                [
+                  0.35,
+                  -0.4,
+                  -0.05
+                ],
+                [
+                  0.25,
+                  -0.7,
+                  -0.1
+                ]
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.3,
+                  0,
+                  0.1
+                ],
+                [
+                  -0.25,
+                  -0.55,
+                  0.15
+                ],
+                [
+                  -0.35,
+                  -0.85,
+                  0.2
+                ]
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "floor",
+            "pos": [
+              0,
+              -3,
+              -5
+            ],
+            "color": [
+              0.18,
+              0.14,
+              0.12
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ceiling",
+            "pos": [
+              0,
+              4,
+              -5
+            ],
+            "color": [
+              0.15,
+              0.12,
+              0.1
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wall",
+            "pos": [
+              -6,
+              1,
+              -5
+            ],
+            "color": [
+              0.2,
+              0.15,
+              0.13
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wall",
+            "pos": [
+              6,
+              1,
+              -5
+            ],
+            "color": [
+              0.2,
+              0.15,
+              0.13
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stalactite",
+            "pos": [
+              -2,
+              4,
+              -3
+            ],
+            "scale": 1.2,
+            "color": [
+              0.4,
+              0.32,
+              0.28
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stalactite",
+            "pos": [
+              3,
+              4,
+              -6
+            ],
+            "scale": 1.5,
+            "color": [
+              0.42,
+              0.34,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stalagmite",
+            "pos": [
+              -1.5,
+              -3,
+              -4
+            ],
+            "scale": 1.3,
+            "color": [
+              0.38,
+              0.3,
+              0.26
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stalagmite",
+            "pos": [
+              2.5,
+              -3,
+              -7
+            ],
+            "scale": 1.6,
+            "color": [
+              0.4,
+              0.32,
+              0.28
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crystal",
+            "pos": [
+              -3,
+              -2.8,
+              -2
+            ],
+            "scale": 1.4,
+            "color": [
+              0.95,
+              0.6,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.4,
+              "amp": 0.15
+            }
+          },
+          {
+            "shape": "crystal",
+            "pos": [
+              2,
+              -2.9,
+              -5
+            ],
+            "scale": 1.7,
+            "color": [
+              0.9,
+              0.4,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.35,
+              "amp": 0.18
+            }
+          },
+          {
+            "shape": "crystal",
+            "pos": [
+              0,
+              3.4,
+              -6.5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.95,
+              0.75,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.3,
+              "amp": 0.12
+            }
+          },
+          {
+            "shape": "pool",
+            "pos": [
+              0,
+              -2.95,
+              -4
+            ],
+            "color": [
+              0.5,
+              0.35,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.2,
+              "amp": 0.05
+            }
+          },
+          {
+            "shape": "drip",
+            "pos": [
+              0,
+              2,
+              -4
+            ],
+            "color": [
+              0.7,
+              0.65,
+              0.5
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.6,
+              "amp": 0.6,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "tunnel",
+            "pos": [
+              0,
+              0.5,
+              -14
+            ],
+            "scale": 1.6,
+            "color": [
+              0.35,
+              0.22,
+              0.18
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "rocks",
+            "pos": [
+              1.2,
+              -2.9,
+              1
+            ],
+            "scale": 1.0,
+            "color": [
+              0.32,
+              0.26,
+              0.22
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "roots",
+            "pos": [
+              -1,
+              3.9,
+              -1
+            ],
+            "scale": 1.2,
+            "color": [
+              0.3,
+              0.28,
+              0.18
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 0.1,
+              "axis": "x"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0d0906",
+    "#f2a04a",
+    "#e06666",
+    "#f5c25c",
+    "#4a3527"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 3,
+    "attack": 6,
+    "release": 6,
+    "base_note": 36,
+    "chord": [
+      0,
+      7,
+      12
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.4
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      -1,
+      -6
+    ],
+    "orbit_radius": 6,
+    "far": 30,
+    "speed": 0.15,
+    "max_strokes": 110,
+    "depth": {
+      "mode": "cull"
+    }
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 48,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.6,
+      "feedback": 0.4,
+      "mix": 0.3
+    },
+    "voices": [
+      {
+        "name": "drone",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 36,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.5,
+        "tone": 0.3,
+        "detune": 0.01,
+        "pan": 0.0,
+        "env": {
+          "attack": 7.0,
+          "decay": 2.0,
+          "sustain": 0.8,
+          "release": 5.0
+        }
+      },
+      {
+        "name": "sub",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 24,
+        "chord": [
+          0,
+          12
+        ],
+        "unison": 2,
+        "detune": 0.01,
+        "sub": 0.5,
+        "level": 0.3,
+        "pan": 0.05,
+        "env": {
+          "attack": 8.0,
+          "decay": 2.0,
+          "sustain": 0.85,
+          "release": 6.0
+        }
+      },
+      {
+        "name": "drip_bell",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "level": 0.2,
+        "rate": 0.25,
+        "decay": 2.2,
+        "pan": 0.25
+      },
+      {
+        "name": "air",
+        "type": "noise",
+        "level": 0.15,
+        "tone": 0.3,
+        "pan": -0.1
+      }
+    ],
+    "swell_amount": 0.54
+  },
+  "audio_link": 1.0
+}

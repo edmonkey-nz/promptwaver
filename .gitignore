@@ -13,7 +13,7 @@ dist/
 venv/
 env/
 
-# LaserFlow local/runtime state — never commit secrets or machine-specific data
+# PromptWaver local/runtime state — never commit secrets or machine-specific data
 settings.json
 scenes/generated/*.json
 

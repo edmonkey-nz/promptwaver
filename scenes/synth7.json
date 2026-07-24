@@ -1,0 +1,1046 @@
+{
+  "name": "synth7",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "pcb_board": [
+            {
+              "op": "rect",
+              "w": 16,
+              "h": 12,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "grid",
+              "w": 16,
+              "h": 12,
+              "nx": 9,
+              "ny": 7,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "ic_chip": [
+            {
+              "op": "box",
+              "size": [
+                1.2,
+                0.8,
+                1.2
+              ],
+              "c": [
+                0,
+                0.4,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.65,
+                0,
+                0
+              ],
+              "b": [
+                -0.65,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.65,
+                0,
+                0
+              ],
+              "b": [
+                0.65,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                -0.65
+              ],
+              "b": [
+                0,
+                0.8,
+                -0.65
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0.65
+              ],
+              "b": [
+                0,
+                0.8,
+                0.65
+              ]
+            }
+          ],
+          "resistor": [
+            {
+              "op": "box",
+              "size": [
+                2.0,
+                0.25,
+                0.25
+              ],
+              "c": [
+                0,
+                0.125,
+                0
+              ]
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "yz",
+              "c": [
+                -0.8,
+                0.125,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "yz",
+              "c": [
+                0.8,
+                0.125,
+                0
+              ],
+              "seg": 8
+            }
+          ],
+          "capacitor": [
+            {
+              "op": "box",
+              "size": [
+                0.3,
+                1.0,
+                0.3
+              ],
+              "c": [
+                0,
+                0.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.2,
+                0,
+                0
+              ],
+              "b": [
+                0.2,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.2,
+                1,
+                0
+              ],
+              "b": [
+                0.2,
+                1,
+                0
+              ]
+            }
+          ],
+          "diode": [
+            {
+              "op": "box",
+              "size": [
+                0.25,
+                1.4,
+                0.25
+              ],
+              "c": [
+                0,
+                0.7,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.15,
+                0.1,
+                0
+              ],
+              "b": [
+                0.15,
+                0.1,
+                0
+              ]
+            }
+          ],
+          "led_bulb": [
+            {
+              "op": "circle",
+              "r": 0.35,
+              "plane": "xy",
+              "c": [
+                0,
+                0.35,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                0.8,
+                0.2
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "power_connector": [
+            {
+              "op": "box",
+              "size": [
+                0.8,
+                0.6,
+                1.0
+              ],
+              "c": [
+                0,
+                0.3,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.3,
+                0,
+                -0.5
+              ],
+              "b": [
+                -0.3,
+                0,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.3,
+                0,
+                -0.5
+              ],
+              "b": [
+                0.3,
+                0,
+                0.5
+              ]
+            }
+          ],
+          "heatsink": [
+            {
+              "op": "box",
+              "size": [
+                1.8,
+                2.0,
+                0.4
+              ],
+              "c": [
+                0,
+                1,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.9,
+                0.3,
+                0
+              ],
+              "b": [
+                -0.9,
+                1.7,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.3,
+                0.3,
+                0
+              ],
+              "b": [
+                -0.3,
+                1.7,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.3,
+                0.3,
+                0
+              ],
+              "b": [
+                0.3,
+                1.7,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.9,
+                0.3,
+                0
+              ],
+              "b": [
+                0.9,
+                1.7,
+                0
+              ]
+            }
+          ],
+          "wire_bundle_a": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -4.0,
+                  1.5,
+                  -2.0
+                ],
+                [
+                  -3.5,
+                  2.2,
+                  -1.8
+                ],
+                [
+                  -2.8,
+                  2.5,
+                  -1.5
+                ],
+                [
+                  -1.8,
+                  2.2,
+                  -1.2
+                ],
+                [
+                  -0.5,
+                  1.8,
+                  -0.8
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "wire_bundle_b": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  3.5,
+                  1.2,
+                  2.2
+                ],
+                [
+                  2.8,
+                  2.0,
+                  2.5
+                ],
+                [
+                  1.5,
+                  2.4,
+                  2.2
+                ],
+                [
+                  0.2,
+                  1.9,
+                  1.5
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "trace_path_a": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -5.5,
+                  0.1,
+                  -1.0
+                ],
+                [
+                  -4.2,
+                  0.15,
+                  -0.8
+                ],
+                [
+                  -2.8,
+                  0.12,
+                  -1.2
+                ],
+                [
+                  -1.5,
+                  0.18,
+                  -0.5
+                ],
+                [
+                  0.5,
+                  0.1,
+                  0.3
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "trace_path_b": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  4.8,
+                  0.08,
+                  1.5
+                ],
+                [
+                  3.2,
+                  0.14,
+                  1.2
+                ],
+                [
+                  1.0,
+                  0.09,
+                  0.8
+                ],
+                [
+                  -1.2,
+                  0.12,
+                  1.0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "solder_pad": [
+            {
+              "op": "circle",
+              "r": 0.18,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 6
+            }
+          ],
+          "via_cluster": [
+            {
+              "op": "circle",
+              "r": 0.08,
+              "plane": "xy",
+              "c": [
+                -1.5,
+                0.05,
+                -0.5
+              ],
+              "seg": 5
+            },
+            {
+              "op": "circle",
+              "r": 0.08,
+              "plane": "xy",
+              "c": [
+                -1.2,
+                0.05,
+                -0.5
+              ],
+              "seg": 5
+            },
+            {
+              "op": "circle",
+              "r": 0.08,
+              "plane": "xy",
+              "c": [
+                -1.35,
+                0.05,
+                -0.2
+              ],
+              "seg": 5
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "pcb_board",
+            "pos": [
+              0,
+              -0.05,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.1,
+              0.2,
+              0.15
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ic_chip",
+            "pos": [
+              -3.5,
+              0,
+              -2.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.15,
+              0.15,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ic_chip",
+            "pos": [
+              3.8,
+              0,
+              3.2
+            ],
+            "scale": 0.85,
+            "color": [
+              0.15,
+              0.15,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "resistor",
+            "pos": [
+              -1.8,
+              0.2,
+              -4.0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.6,
+              0.4,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "resistor",
+            "pos": [
+              2.5,
+              0.2,
+              4.0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.6,
+              0.4,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "capacitor",
+            "pos": [
+              -5.2,
+              0.3,
+              1.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.3,
+              0.5,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "capacitor",
+            "pos": [
+              5.0,
+              0.3,
+              -3.0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.3,
+              0.5,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "diode",
+            "pos": [
+              0.5,
+              0.2,
+              -3.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.7,
+              0.3,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "led_bulb",
+            "pos": [
+              -3.0,
+              1.2,
+              3.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.0,
+              1.0,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.6,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "led_bulb",
+            "pos": [
+              4.2,
+              1.2,
+              -2.0
+            ],
+            "scale": 1.0,
+            "color": [
+              1.0,
+              0.2,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.2,
+              "amp": 0.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "led_bulb",
+            "pos": [
+              0.8,
+              1.2,
+              4.5
+            ],
+            "scale": 0.9,
+            "color": [
+              0.2,
+              0.6,
+              1.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.0,
+              "amp": 0.55,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "power_connector",
+            "pos": [
+              -7.0,
+              0.4,
+              0.0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.8,
+              0.2,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "heatsink",
+            "pos": [
+              1.5,
+              0.0,
+              0.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.4,
+              0.45,
+              0.5
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wire_bundle_a",
+            "pos": [
+              0,
+              0.02,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              1.0,
+              0.6,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.8,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wire_bundle_b",
+            "pos": [
+              0,
+              0.02,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.9,
+              0.2,
+              0.6
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "trace_path_a",
+            "pos": [
+              0,
+              0.08,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.4,
+              0.8,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.5,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "trace_path_b",
+            "pos": [
+              0,
+              0.08,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              1.0,
+              0.8,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.9,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "via_cluster",
+            "pos": [
+              0,
+              0.04,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.7,
+              0.7,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a1a",
+    "#00ff66",
+    "#ff33cc",
+    "#1088ff",
+    "#ffaa33",
+    "#ff4444"
+  ],
+  "audio_patch": {
+    "engine": "osc",
+    "waveform": "square",
+    "voices": 3,
+    "attack": 0.5,
+    "release": 1.2,
+    "base_note": 24,
+    "chord": [
+      0,
+      7,
+      12
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      0.5,
+      0
+    ],
+    "orbit_radius": 12.5,
+    "far": 32,
+    "speed": 0.4,
+    "max_strokes": 110,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 50.0,
+    "master": 1.0,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.65,
+      "feedback": 0.0,
+      "mix": 0.0
+    },
+    "voices": [
+      {
+        "name": "bass_moog",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 24,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "unison": 2.0,
+        "detune": 0.01,
+        "sub": 0.91,
+        "level": 1.0,
+        "tone": 0.3,
+        "pan": 0.0,
+        "env": {
+          "attack": 0.8,
+          "decay": 0.6,
+          "sustain": 0.88,
+          "release": 9.35
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "acid_lead",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 36,
+        "chord": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "unison": 2,
+        "detune": 0.04,
+        "sub": 0.1,
+        "level": 0.8,
+        "tone": 0.6,
+        "pan": 0.15,
+        "arp": {
+          "on": true,
+          "mode": "updown",
+          "rate": 1.2,
+          "decay": 0.35
+        },
+        "env": {
+          "attack": 0.3,
+          "decay": 0.4,
+          "sustain": 0.75,
+          "release": 0.8
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "acid_wail",
+        "type": "osc",
+        "waveform": "square",
+        "note": 48,
+        "chord": [
+          0,
+          5,
+          12
+        ],
+        "unison": 3,
+        "detune": 0.035,
+        "sub": 0.0,
+        "level": 0.39,
+        "tone": 0.5,
+        "pan": -0.2,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2.4,
+          "decay": 0.25
+        },
+        "env": {
+          "attack": 0.2,
+          "decay": 0.5,
+          "sustain": 0.7,
+          "release": 1.2
+        },
+        "mute": true,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "ambient_pad",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 20,
+        "chord": [
+          0,
+          7,
+          12,
+          19
+        ],
+        "level": 0.28,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": -0.15,
+        "env": {
+          "attack": 2.5,
+          "decay": 1.0,
+          "sustain": 0.82,
+          "release": 3.2
+        },
+        "mute": true,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ]
+  },
+  "audio_link": 1.0
+}

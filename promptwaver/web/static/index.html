@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LaserFlow</title>
+<title>PromptWaver</title>
+<link rel="icon" type="image/svg+xml" href="/static/promptwaver.svg">
 <style>
   :root{
     --bg:#0a0b0e; --panel:#121419; --panel2:#181b22; --line:#242833;
-    --ink:#e7eaf0; --dim:#8b93a4; --cyan:#33e0d0; --amber:#f2a623;
+    --ink:#e7eaf0; --dim:#8b93a4; --cyan:#33e0d0; --amber:#f2a623; --red:#ff4d4d;
+    --green:#2ecc71;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
   }
@@ -17,39 +19,75 @@
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;
          border-bottom:1px solid var(--line)}
   header h1{margin:0;font-size:17px;font-weight:500;letter-spacing:.14em}
+  header .logo{width:26px;height:26px;flex-shrink:0}
   header .dot{color:var(--cyan)}
+  .icon-btn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+            border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center}
+  .icon-btn:hover{border-color:var(--cyan)}
+  .api-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim)}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(4,5,7,.7);
+    display:none;align-items:flex-start;justify-content:center;z-index:100;
+    padding:6vh 24px;overflow-y:auto}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    max-width:640px;width:100%;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .modal-head{display:flex;align-items:center;justify-content:space-between}
+  .modal-head h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink)}
+  .modal-close{background:none;border:none;color:var(--dim);font-size:22px;
+    cursor:pointer;padding:0 4px;line-height:1}
+  .modal-close:hover{color:var(--ink)}
   header .meta{font-family:var(--mono);color:var(--dim);font-size:12px}
-  main{display:grid;grid-template-columns:minmax(260px,1fr) 280px 260px 320px;gap:0;
-       height:calc(100vh - 50px)}
-  @media(max-width:1100px){main{grid-template-columns:1fr;height:auto}}
-  .stage{padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0;align-items:center}
+  /* Page scrolls naturally (body, not per-panel scrollboxes) — a tall
+     Library or several open accordions push the page down instead of being
+     clipped inside a fixed-height box. */
+  main{display:flex;flex-direction:column}
+  .toprow{display:grid;grid-template-columns:20% 65% 15%;gap:0;
+          min-height:720px;border-bottom:1px solid var(--line)}
+  .bottomrow{display:grid;grid-template-columns:7fr 1fr;gap:0}
+  @media(max-width:1100px){
+    .toprow{grid-template-columns:1fr;min-height:0}
+    .bottomrow{grid-template-columns:1fr}
+  }
+  .stage{padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0;
+         align-items:center}
+  .soundcol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
+            display:flex;flex-direction:column;gap:12px;min-width:0}
+  .sidecol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
+           display:flex;flex-direction:column;gap:14px;min-width:0}
   .libcol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
-          overflow-y:auto;display:flex;flex-direction:column}
+          display:flex;flex-direction:column}
   .gencol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
-          overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+          display:flex;flex-direction:column;gap:18px}
   .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(4,33,31,.35);
            border-top-color:#04211f;border-radius:50%;animation:spin .7s linear infinite;
            vertical-align:middle}
   @keyframes spin{to{transform:rotate(360deg)}}
-  canvas{height:48vh;max-height:48vh;max-width:100%;aspect-ratio:1/1;width:auto;
+  canvas{width:100%;max-width:100%;height:auto;aspect-ratio:1/1;
          background:#000;border:1px solid var(--line);border-radius:12px;
          display:block;margin:0 auto}
   .readouts{width:100%;display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);
             font-size:12px;color:var(--dim)}
   .readouts b{color:var(--ink);font-weight:500}
-  .rail{border-left:1px solid var(--line);background:var(--panel);
-        padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
   .group{display:flex;flex-direction:column;gap:10px}
   .group h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
             text-transform:uppercase;color:var(--dim)}
-  .field{display:flex;align-items:center;gap:10px}
+  .field{display:flex;align-items:center;gap:10px;min-width:0}
   .field label{flex:0 0 84px;font-size:12px;color:var(--dim)}
-  .field input[type=range]{flex:1;accent-color:var(--cyan);height:3px}
+  .field input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:3px}
   .field .val{flex:0 0 46px;text-align:right;font-family:var(--mono);
               font-size:12px;color:var(--cyan)}
   .row{display:flex;gap:8px}
   label.flabel{font-size:11px;color:var(--dim);letter-spacing:.04em}
-  input[type=text],textarea{flex:1;background:var(--panel2);border:1px solid var(--line);
+  .char-block{display:flex;flex-direction:column;gap:10px}
+  .char-row{display:flex;align-items:center;gap:8px}
+  .char-row .char-lbl{font-size:11px;color:var(--dim);flex:0 0 60px;
+    text-transform:uppercase;letter-spacing:.03em}
+  .char-row .char-lbl.right{text-align:right}
+  .char-row input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:3px}
+  input[type=text],textarea{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);
        color:var(--ink);border-radius:8px;padding:8px 10px;font-size:13px;
        font-family:var(--sans);resize:vertical}
   textarea{width:100%;min-height:64px;line-height:1.4}
@@ -71,17 +109,22 @@
   .progress.active{display:block}
   .progress .bar{height:100%;background:var(--cyan);width:0%;
                  transition:width .15s ease-out}
-  .lib{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto}
-  .lib .item{display:flex;align-items:center;justify-content:space-between;
+  .lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+       gap:6px;align-content:start}
+  .lib .item{display:flex;align-items:center;justify-content:space-between;gap:6px;
              padding:7px 10px;border:1px solid var(--line);border-radius:8px;
-             cursor:pointer;font-family:var(--mono);font-size:12px}
+             cursor:pointer;font-family:var(--mono);font-size:12px;min-width:0}
+  .lib .item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lib .item:hover{border-color:var(--cyan)}
+  .lib .item.active{border-color:var(--cyan);background:rgba(51,224,208,.12)}
+  .lib .item.active span:first-child{color:var(--cyan)}
   .synthblock{width:100%;border:1px solid var(--line);border-radius:12px;
               background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
   .synthhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
   .synthhead h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
                 text-transform:uppercase;color:var(--dim)}
-  .synthglobals{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .synthglobals{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 20px}
+  .synthglobals .knob{min-width:0}
   .knob{display:flex;flex-direction:column;gap:3px;min-width:88px}
   .knob label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
               display:flex;justify-content:space-between}
@@ -106,117 +149,82 @@
   .lib .item .x{color:var(--dim);padding:0 4px}
   .lib .item .x:hover{color:var(--amber)}
   .hint{font-size:11px;color:var(--dim);font-family:var(--mono)}
+
+  details.accordion{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  details.accordion summary{cursor:pointer;padding:10px 12px;font-size:11px;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--dim);list-style:none;
+    display:flex;align-items:center;justify-content:space-between;user-select:none}
+  details.accordion summary::-webkit-details-marker{display:none}
+  details.accordion summary::after{content:"▸";font-family:var(--mono);
+    transition:transform .15s;color:var(--dim)}
+  details.accordion[open] summary::after{transform:rotate(90deg)}
+  details.accordion .accordion-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+  details.accordion + details.accordion{margin-top:0}
+
+  .statusdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);
+    box-shadow:0 0 6px var(--red);flex:0 0 auto}
+  .statusdot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .statushead{display:flex;align-items:center;gap:8px}
+
+  .vmeters-row{display:flex;gap:18px;align-items:center;padding:4px 0 8px}
+  .vmeters{display:flex;gap:24px;align-items:flex-end}
+  .vbuttons{display:flex;flex-direction:column;gap:8px}
+  .vbuttons button{white-space:nowrap}
+  .vchannel{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .vchannel label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
+    display:flex;flex-direction:column;align-items:center;gap:4px}
+  .vslider-wrap{height:112px;display:flex;align-items:center;justify-content:center}
+  .vslider{writing-mode:vertical-lr;direction:rtl;width:10px;height:105px;accent-color:var(--cyan)}
+  .vu-bar{width:22px;height:112px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
+    overflow:hidden;display:flex;flex-direction:column-reverse}
+  .vu-fill{width:100%;height:0%;background:var(--cyan)}
+  .vu-fill.hot{background:var(--amber)}
+  .vu-fill.clip{background:var(--red)}
+  .vu-clip{width:10px;height:10px;border-radius:50%;background:var(--line);
+    transition:background .1s,box-shadow .1s}
+
+  .xfade-indicator{display:none;flex-direction:column;gap:6px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+  .xfade-indicator.show{display:flex}
+  .xfade-labels{display:flex;justify-content:space-between;font-family:var(--mono);
+    font-size:11px;color:var(--ink)}
+  .xfade-labels span:last-child{color:var(--cyan)}
+  .xfade-bar{position:relative;height:8px;border-radius:4px;background:var(--bg);
+    border:1px solid var(--line);overflow:hidden}
+  .xfade-glow{position:absolute;top:0;left:0;bottom:0;width:0%;border-radius:4px;
+    background:linear-gradient(90deg,var(--dim),var(--cyan));
+    box-shadow:0 0 10px 1px var(--cyan);transition:width .1s linear}
+  .vu-clip.hot{background:var(--red);box-shadow:0 0 8px var(--red)}
 </style>
 </head>
 <body>
 <header>
-  <h1>LASER<span class="dot">·</span>FLOW</h1>
+  <img class="logo" src="/static/promptwaver.svg" alt="">
+  <h1>PROMPTWAVER</h1>
+  <button class="icon-btn" id="settings-open" title="Settings">⚙</button>
+  <div class="api-status">
+    <span>Status:</span>
+    <span class="statusdot" id="engine-dot" title="backend engine websocket"></span>
+    <span>Engine</span>
+    <span class="statusdot" id="claude-dot" title="Claude API"></span>
+    <span>Claude API</span>
+  </div>
   <span class="meta" id="meta">connecting…</span>
   <span style="flex:1"></span>
+  <button id="output-toggle" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output Window</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
-  <button class="amber" id="master-blank">Blank</button>
+  <button class="amber" id="master-blank">LASER BLANK</button>
 </header>
 <main>
+ <div class="toprow">
   <section class="stage">
     <canvas id="view" width="600" height="600"></canvas>
     <div class="readouts">
       <span>scene <b id="r-scene">—</b></span>
       <span>points <b id="r-points">0</b></span>
-      <span>pps <b id="r-pps">0</b></span>
-      <span>out <b id="r-out">—</b></span>
-      <span>audio <b id="r-audio">—</b></span>
-      <span>level <b id="r-level">0</b></span>
-      <span>director <b id="r-dir">—</b></span>
-    </div>
-    <div class="synthblock" id="synthblock">
-      <div class="synthhead">
-        <h2>Soundscape</h2>
-        <div class="synthglobals" id="synthglobals"></div>
-      </div>
-      <div class="voices" id="voices"></div>
-    </div>
-  </section>
-
-  <section class="libcol">
-    <div class="group" style="flex:1;min-height:0">
-      <h2>Library</h2>
-      <div class="lib" id="lib" style="flex:1;max-height:none"></div>
-      <div class="row">
-        <input type="text" id="savename" placeholder="save current as…">
-        <button id="save">Save</button>
-      </div>
-      <button id="update">Update scene from config</button>
-      <div class="hint">writes the live camera/config back into the loaded scene</div>
-    </div>
-  </section>
-
-  <section class="gencol">
-    <div class="group">
-      <h2>Generate scene</h2>
-      <label class="flabel" for="scenename">name</label>
-      <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
-      <label class="flabel" for="kw">scene keywords</label>
-      <textarea id="kw" placeholder="exploring underwater with dozens of large jellyfish, long pink trailing tentacles, shafts of light from above…"></textarea>
-      <label class="flabel" for="audiokw">audio prompt</label>
-      <textarea id="audiokw" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:44px"></textarea>
-      <div class="field"><label>model</label>
-        <select id="d-model">
-          <option value="haiku">Haiku · fast/cheap</option>
-          <option value="sonnet">Sonnet · better</option>
-          <option value="opus">Opus · best</option>
-        </select></div>
-      <div class="field"><label>effort</label>
-        <select id="d-effort">
-          <option value="low">low</option>
-          <option value="med">medium</option>
-          <option value="high">high · richest</option>
-        </select></div>
-      <button class="go" id="gen">Generate</button>
-      <div class="progress" id="genprog"><div class="bar" id="genbar"></div></div>
-      <div class="hint" id="dirhint">keyword → scene (added to the library)</div>
-
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-top:4px">
-        <input type="checkbox" id="audioonly"> regenerate audio only, for an existing scene
-      </label>
-      <div id="audioonlyrow" style="display:none;flex-direction:column;gap:8px">
-        <select id="audiotarget"></select>
-        <button id="applyaudio">Apply to scene</button>
-        <div class="hint">uses the audio prompt above; leaves that scene's visuals untouched</div>
-      </div>
-    </div>
-  </section>
-
-  <aside class="rail">
-    <div class="group">
-      <h2>Output</h2>
-      <div class="field"><label>max PPS</label>
-        <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget</div>
-      <div class="field"><label>scene PPS</label>
-        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="hint">optional per-scene override — blank uses max PPS</div>
     </div>
 
-    <div class="group">
-      <h2>Modulation</h2>
-      <div class="field"><label>audio ↔ visual</label>
-        <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
-        <span class="val" id="v-mlink">1.00</span></div>
-      <div class="hint">turns the whole audio→visual coupling up or down — the "level effect"</div>
-      <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
-
-    <div class="group">
-      <h2>Scene</h2>
-      <div class="field"><label>LFO rate</label>
-        <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
-        <span class="val" id="v-lfo">0.05</span></div>
-      <div class="field"><label>crossfade</label>
-        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="2">
-        <span class="val" id="v-xf">2.0</span></div>
-    </div>
-
-    <div class="group" id="g-camera" style="display:none">
+    <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
       <div class="field"><label>mode</label>
         <select id="c-mode">
@@ -241,7 +249,7 @@
         <span class="val" id="v-cmax">120</span></div>
     </div>
 
-    <div class="group" id="g-motion">
+    <div class="group" id="g-motion" style="width:100%">
       <h2>Motion</h2>
       <div class="field"><label>flow speed</label>
         <input type="range" id="s-speed" min="0" max="0.6" step="0.01" value="0.2">
@@ -254,44 +262,200 @@
         <span class="val" id="v-hue">0.55</span></div>
     </div>
 
-    <div class="group">
-      <h2>Envelope</h2>
-      <div class="row">
-        <button class="amber" id="trig">Swell ⇩</button>
-        <button id="rel">Release ⇧</button>
+  </section>
+
+  <section class="soundcol">
+    <div class="synthblock" id="synthblock">
+      <div class="synthhead">
+        <h2>Soundscape</h2>
       </div>
-      <div class="hint">routes to synth + visuals via the matrix</div>
+      <div class="synthglobals" id="synthglobals"></div>
+      <div class="voices" id="voices"></div>
+    </div>
+  </section>
+
+  <aside class="sidecol">
+    <div class="group" id="g-global">
+      <h2>Global</h2>
+
+      <div class="xfade-indicator" id="xfade-indicator">
+        <div class="xfade-labels">
+          <span id="xfade-from">—</span>
+          <span id="xfade-to">—</span>
+        </div>
+        <div class="xfade-bar"><div class="xfade-glow" id="xfade-glow"></div></div>
+      </div>
+
+      <div class="vmeters-row">
+        <div class="vmeters">
+          <div class="vchannel">
+            <div class="vslider-wrap"><input type="range" id="g-master" class="vslider" min="0" max="1" step="0.01" value="0.8"></div>
+            <label>master <span class="val" id="v-gmaster">0.80</span></label>
+          </div>
+          <div class="vchannel">
+            <div class="vu-bar"><div class="vu-fill" id="vu-fill"></div></div>
+            <label>output <span class="vu-clip" id="vu-clip" title="clipping"></span></label>
+          </div>
+        </div>
+        <div class="vbuttons">
+          <button id="disable-audio">Disable Audio</button>
+          <button id="disable-visuals">Disable Visuals</button>
+        </div>
+      </div>
+
+      <div class="field"><label>crossfade</label>
+        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="2">
+        <span class="val" id="v-xf">2.0</span></div>
+      <div class="field"><label>audio fade</label>
+        <input type="range" id="s-afade" min="0" max="16" step="0.5" value="2">
+        <span class="val" id="v-safade">2.0</span></div>
+      <div class="field"><label>scene PPS</label>
+        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="field"><label style="display:flex;align-items:center;gap:6px;flex:0 0 84px">
+          <input type="checkbox" id="hue-override-on"> hue override</label>
+        <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="v-hueoverride">0.50</span></div>
     </div>
 
     <div class="group">
-      <h2>Audio diagnostics</h2>
-      <div class="hint" id="diag-status">audio: —</div>
-      <div class="diagrid" id="diagstats"></div>
-      <div class="field"><label>device</label>
-        <select id="a-device"><option value="">system default</option></select></div>
-      <div class="field"><label>blocksize</label>
-        <select id="a-blocksize">
-          <option value="512">512</option><option value="1024">1024</option>
-          <option value="2048">2048</option>
-          <option value="4096">4096</option><option value="8192" selected>8192</option>
-          <option value="16384">16384</option><option value="32768">32768</option>
-        </select></div>
-      <div class="field"><label>latency</label>
-        <select id="a-latency">
-          <option value="low">low</option><option value="high" selected>high</option>
-        </select></div>
-      <div class="row">
-        <button id="a-apply">Apply</button>
-        <button id="a-rescan">Rescan devices</button>
-        <button id="a-copy">Copy diagnostics</button>
+      <h2>Scene settings</h2>
+      <button id="save-soundscape">Save Soundscape settings</button>
+      <button id="save-camera">Save Camera settings</button>
+      <button id="save-all-scene">Save all scene settings</button>
+      <button id="save-as-open">Save as…</button>
+    </div>
+
+    <details class="accordion" id="acc-diag">
+      <summary>Audio diagnostics</summary>
+      <div class="accordion-body">
+        <div class="hint" id="diag-status">audio: —</div>
+        <div class="diagrid" id="diagstats"></div>
+        <div class="field"><label>device</label>
+          <select id="a-device"><option value="">system default</option></select></div>
+        <div class="field"><label>blocksize</label>
+          <select id="a-blocksize">
+            <option value="512">512</option><option value="1024">1024</option>
+            <option value="2048">2048</option>
+            <option value="4096">4096</option><option value="8192" selected>8192</option>
+            <option value="16384">16384</option><option value="32768">32768</option>
+          </select></div>
+        <div class="field"><label>latency</label>
+          <select id="a-latency">
+            <option value="low">low</option><option value="high" selected>high</option>
+          </select></div>
+        <div class="row">
+          <button id="a-apply">Apply</button>
+          <button id="a-rescan">Rescan devices</button>
+          <button id="a-copy">Copy diagnostics</button>
+        </div>
+        <div class="hint" id="a-applystatus"></div>
+        <div class="hint">bigger blocksize / high latency = fewer glitches, more delay before you hear a change</div>
+        <div class="underruns" id="diag-underruns"></div>
       </div>
-      <div class="hint" id="a-applystatus"></div>
-      <div class="hint">bigger blocksize / high latency = fewer glitches, more delay before you hear a change</div>
-      <div class="underruns" id="diag-underruns"></div>
+    </details>
+
+    <details class="accordion" id="acc-modulation">
+      <summary>Modulation</summary>
+      <div class="accordion-body">
+        <div class="field"><label>audio ↔ visual</label>
+          <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
+          <span class="val" id="v-mlink">1.00</span></div>
+        <div class="hint">turns the whole audio→visual coupling up or down — the "level effect"</div>
+        <div class="field"><label>LFO rate</label>
+          <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
+          <span class="val" id="v-lfo">0.05</span></div>
+        <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </details>
+  </aside>
+ </div>
+
+ <div class="bottomrow">
+  <section class="libcol">
+    <div class="group">
+      <h2>Scene library</h2>
+      <div class="lib" id="lib"></div>
+    </div>
+  </section>
+
+  <section class="gencol">
+    <div class="group">
+      <h2>Scene creation</h2>
+      <button class="go" id="gen-open" style="width:100%">Generate scene…</button>
+    </div>
+  </section>
+ </div>
+</main>
+
+<div class="modal-backdrop" id="modal-generate">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Generate scene</h2>
+      <button class="modal-close" id="gen-close">&times;</button>
+    </div>
+    <label class="flabel" for="scenename">name</label>
+    <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
+    <label class="flabel" for="kw">scene prompt</label>
+    <textarea id="kw" placeholder="exploring underwater with dozens of large jellyfish, long pink trailing tentacles, shafts of light from above…"></textarea>
+    <label class="flabel" for="audiokw">audio prompt</label>
+    <textarea id="audiokw" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:44px"></textarea>
+
+    <label class="flabel">generative attributes<span style="color:var(--dim);font-weight:400;text-transform:none">— biases Claude's choices; "evolving" is a guarantee, the others are a nudge</span></label>
+    <div class="char-block">
+      <div class="char-row"><span class="char-lbl">cold</span>
+        <input type="range" id="d-warmth" min="0" max="1" step="0.01" value="0.5">
+        <span class="char-lbl right">warm</span></div>
+      <div class="char-row"><span class="char-lbl">calm</span>
+        <input type="range" id="d-energy" min="0" max="1" step="0.01" value="0.5">
+        <span class="char-lbl right">energetic</span></div>
+      <div class="char-row"><span class="char-lbl">static</span>
+        <input type="range" id="d-evolution" min="0" max="1" step="0.01" value="0.5">
+        <span class="char-lbl right">evolving</span></div>
+    </div>
+
+    <div class="field"><label>model</label>
+      <select id="d-model">
+        <option value="haiku">Haiku · fast/cheap</option>
+        <option value="sonnet">Sonnet · better</option>
+        <option value="opus">Opus · best</option>
+      </select></div>
+    <div class="field"><label>effort</label>
+      <select id="d-effort">
+        <option value="low">low</option>
+        <option value="med">medium</option>
+        <option value="high">high · richest</option>
+      </select></div>
+    <div class="field"><label>scene size</label>
+      <select id="d-size">
+        <option value="small" selected>small</option>
+        <option value="medium">medium</option>
+        <option value="large">large</option>
+      </select></div>
+    <div class="hint">bigger 3D environments to fly through — object/detail count is set by effort, not this</div>
+    <button class="go" id="gen">Generate</button>
+    <div class="progress" id="genprog"><div class="bar" id="genbar"></div></div>
+    <div class="hint" id="dirhint-modal">keyword → scene (added to the library)</div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-top:4px">
+      <input type="checkbox" id="audioonly"> regenerate audio only, for an existing scene
+    </label>
+    <div id="audioonlyrow" style="display:none;flex-direction:column;gap:8px">
+      <select id="audiotarget"></select>
+      <button class="go" id="applyaudio">Generate new audio for scene</button>
+      <div class="hint">uses the 'audio prompt' above; leaves that scene's visuals untouched</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-settings">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Settings</h2>
+      <button class="modal-close" id="settings-close">&times;</button>
     </div>
 
     <div class="group">
-      <h2>Connection</h2>
+      <h2 style="font-size:11px">Connection</h2>
       <div class="row">
         <input type="password" id="apikey" placeholder="ANTHROPIC_API_KEY (sk-…)">
       </div>
@@ -301,34 +465,58 @@
       </div>
       <div class="hint" id="apistatus">director: —</div>
     </div>
-  </aside>
-</main>
+
+    <div class="group">
+      <h2 style="font-size:11px">Output</h2>
+      <div class="field"><label>max PPS</label>
+        <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget. Per-scene override is in the Global section.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-saveas">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Save as</h2>
+      <button class="modal-close" id="saveas-close">&times;</button>
+    </div>
+    <label class="flabel" for="saveas-name">name</label>
+    <input type="text" id="saveas-name" placeholder="e.g. Whale Song (evening mix)">
+    <button class="go" id="saveas-confirm">Save</button>
+    <div class="hint">saves the current live scene config (visuals + soundscape) into the library under this new name, alongside the original</div>
+  </div>
+</div>
 
 <script>
 const ws = new WebSocket(`ws://${location.host}/ws`);
 const $ = id => document.getElementById(id);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
 
-ws.onopen = () => $("meta").textContent = "linked";
-ws.onclose = () => $("meta").textContent = "disconnected";
+ws.onopen = () => { $("meta").textContent = ""; $("engine-dot").classList.add("on"); };
+ws.onclose = () => { $("meta").textContent = ""; $("engine-dot").classList.remove("on"); };
+
+// dirhint is mirrored in two places: the compact hint under the "Generate
+// scene…" button, and the fuller one inside the Generate modal itself.
+const setDirhint = text => { $("dirhint-modal").textContent = text; };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
       endApply();
-      $("dirhint").textContent = m.ok && m.source === "claude" ? "audio updated on scene ✓"
+      setDirhint(m.ok && m.source === "claude" ? "audio updated on scene ✓"
         : m.ok && m.source === "cache" ? "audio updated from cache ✓"
-        : "audio fallback — " + (m.error || "no key");
+        : "audio fallback — " + (m.error || "no key"));
       return;
     }
     $("genbar").style.width = "100%";
     setTimeout(endGen, 200);
     $("scenename").value = "";
-    const src = $("dirhint");
-    src.textContent = m.ok && m.source === "claude" ? "composed by Claude ✓ (added to library)"
+    setDirhint(m.ok && m.source === "claude" ? "composed by Claude ✓ (added to library)"
       : m.ok && m.source === "cache" ? "from cache ✓"
-      : "local fallback — " + (m.error || "no key");
+      : "local fallback — " + (m.error || "no key"));
+    closeModal("modal-generate");
   }
   else if (m.type === "api_result") {
     const s = $("apistatus");
@@ -359,11 +547,7 @@ function paintState(s){
   mt.className = s.active ? "amber" : "go";
   $("r-scene").textContent = s.scene || "—";
   $("r-points").textContent = s.points;
-  $("r-pps").textContent = s.pps;
-  $("r-out").textContent = s.output;
-  $("r-audio").textContent = !s.active ? "muted" : (s.audio ? "on" : "off");
-  $("r-level").textContent = s.audio_level;
-  $("r-dir").textContent = s.director_online ? "claude" : "local";
+  $("claude-dot").classList.toggle("on", !!s.director_online);
   if (!$("d-model").dataset.init && s.director_choice) {
     $("d-model").dataset.init = "1";
     $("d-model").value = s.director_choice;
@@ -372,14 +556,13 @@ function paintState(s){
   if (generating && typeof s.director_progress === "number") {
     $("genbar").style.width = Math.max(2, Math.round(s.director_progress*100)) + "%";
   }
-  $("dirhint").textContent = s.director_online
+  setDirhint(s.director_online
     ? "keyword → Claude scene spec (cached; ~1 call per new keyword)"
-    : "keyword → local scene (set a key to use Claude)";
+    : "keyword → local scene (set a key to use Claude)");
   if (s.director_source) {
-    const src = $("dirhint");
-    if (s.director_source === "claude") src.textContent = "last scene: composed by Claude ✓";
-    else if (s.director_source === "cache") src.textContent = "last scene: from cache (Claude) ✓";
-    else src.textContent = "last scene: local fallback — " + (s.director_error || "no key");
+    if (s.director_source === "claude") setDirhint("last scene: composed by Claude ✓");
+    else if (s.director_source === "cache") setDirhint("last scene: from cache (Claude) ✓");
+    else setDirhint("last scene: local fallback — " + (s.director_error || "no key"));
   }
   const as = $("apistatus");
   if (!as.dataset.touched)
@@ -391,6 +574,7 @@ function paintState(s){
     s.library.forEach(name => {
       const el = document.createElement("div");
       el.className = "item";
+      el.dataset.name = name;
       el.innerHTML = `<span>${name}</span><span class="x">✕</span>`;
       el.querySelector("span:first-child").onclick = () => send({type:"scene_load",name});
       el.querySelector(".x").onclick = ev => { ev.stopPropagation();
@@ -398,6 +582,14 @@ function paintState(s){
       lib.appendChild(el);
     });
   }
+  // highlight the currently-loaded scene — separate from the rebuild above
+  // since the active scene can change without the library's name list
+  // changing. Matched against library_name (the filename actually loaded),
+  // not the free-text scene name — a few shipped example scenes have an
+  // internal name that doesn't match their filename.
+  lib.querySelectorAll(".item").forEach(el => {
+    el.classList.toggle("active", el.dataset.name === s.library_name);
+  });
   // show camera controls for 3D scenes, motion controls for flat ones
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
   $("g-motion").style.display = s.scene_3d ? "none" : "flex";
@@ -416,15 +608,66 @@ function paintState(s){
   if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
     $("o-maxpps").value = s.max_pps;
   }
+  if (document.activeElement !== $("s-afade") && typeof s.audio_fade === "number") {
+    $("s-afade").value = s.audio_fade;
+    $("v-safade").textContent = s.audio_fade.toFixed(1);
+  }
+  if (document.activeElement !== $("g-master") && s.soundscape) {
+    const m = s.soundscape.master ?? 0.8;
+    $("g-master").value = m;
+    $("v-gmaster").textContent = m.toFixed(2);
+  }
+  updateDisableButtons(s);
   // per-scene PPS override: sync once per scene change, blank means "auto"
   if ($("o-scenepps").dataset.scene !== s.scene) {
     $("o-scenepps").dataset.scene = s.scene;
     $("o-scenepps").value = (s.scene_pps_override ?? "") === "" ? "" : s.scene_pps_override;
   }
+  if (document.activeElement !== $("hue-override-on")) {
+    $("hue-override-on").checked = !!s.hue_override;
+  }
+  if (document.activeElement !== $("hue-override-val") && typeof s.hue_value === "number") {
+    $("hue-override-val").value = s.hue_value;
+    $("v-hueoverride").textContent = s.hue_value.toFixed(2);
+  }
+  renderXfade(s);
   renderSoundscape(s);
+  renderVu(s);
   renderRoutes(s);
   syncAudioTargets(s);
   renderDiagnostics(s);
+}
+
+function renderXfade(s){
+  const box = $("xfade-indicator");
+  const tr = s.scene_transition;
+  if (!tr) { box.classList.remove("show"); return; }
+  box.classList.add("show");
+  $("xfade-from").textContent = tr.from || "—";
+  $("xfade-to").textContent = tr.to || "—";
+  const pct = Math.max(0, Math.min(1, tr.progress ?? 0)) * 100;
+  $("xfade-glow").style.width = pct.toFixed(1) + "%";
+}
+
+let _clipUntil = 0;
+function renderVu(s){
+  const fill = $("vu-fill"), clipDot = $("vu-clip");
+  const vu = s.vu;
+  if (!vu || !s.audio) {
+    fill.style.height = "0%";
+    fill.classList.remove("hot", "clip");
+    clipDot.classList.remove("hot");
+    return;
+  }
+  const peak = Math.max(0, Math.min(1, vu.peak ?? 0));
+  fill.style.height = (peak * 100).toFixed(1) + "%";
+  fill.classList.remove("hot", "clip");
+  if (peak >= 0.9) fill.classList.add("clip");
+  else if (peak >= 0.7) fill.classList.add("hot");
+  // hold the clip LED lit briefly so a single hot block is actually visible,
+  // rather than a state broadcast blip that flickers on then off
+  if (vu.clipping) _clipUntil = Date.now() + 800;
+  clipDot.classList.toggle("hot", Date.now() < _clipUntil);
 }
 
 function renderDiagnostics(s){
@@ -567,6 +810,9 @@ function endApply(){
   $("applyaudio").disabled = false;
   $("applyaudio").textContent = "Apply to scene";
 }
+const charValues = () => ({
+  warmth: +$("d-warmth").value, energy: +$("d-energy").value, evolution: +$("d-evolution").value,
+});
 $("applyaudio").onclick = () => {
   const scene = $("audiotarget").value;
   const audio = $("audiokw").value.trim();
@@ -574,7 +820,7 @@ $("applyaudio").onclick = () => {
   applying = true;
   $("applyaudio").disabled = true;
   $("applyaudio").innerHTML = '<span class="spinner"></span>';
-  send({type:"apply_audio", scene, audio});
+  send({type:"apply_audio", scene, audio, ...charValues()});
 };
 
 const sendAudio = (key, value) => send({type:"set_audio", key, value});
@@ -612,6 +858,12 @@ function renderSoundscape(s){
   g.appendChild(knob("delay time","delay.time",0.05,1.2,0.01, d.time ?? 0.4, v=>v.toFixed(2)));
   g.appendChild(knob("delay fbk","delay.feedback",0,0.9,0.01, d.feedback ?? 0.3, v=>v.toFixed(2)));
   g.appendChild(knob("delay mix","delay.mix",0,0.9,0.01, d.mix ?? 0.25, v=>v.toFixed(2)));
+  const eq = sc.eq || {};
+  g.appendChild(knob("eq low","eq.low",-24,24,0.5, eq.low ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("eq mid","eq.mid",-24,24,0.5, eq.mid ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("eq high","eq.high",-24,24,0.5, eq.high ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("swell","swell_amount",0,1,0.01, sc.swell_amount ?? 0, v=>v.toFixed(2)));
+  g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
 
   const vc = $("voices"); vc.innerHTML="";
   (sc.voices||[]).forEach(v => {
@@ -658,17 +910,16 @@ function renderSoundscape(s){
       envLabel.textContent = "envelope";
       envWrap.appendChild(envLabel);
       const envRow = document.createElement("div");
-      envRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+      envRow.style.cssText = "display:flex;flex-direction:column;gap:6px";
       const mkEnvKnob = (label, field, min, max, step) => {
         const kn = knob(label, `__env_${field}_${v.name}`, min, max, step, env[field], x=>x.toFixed(2));
-        kn.style.minWidth = "64px";
         kn.querySelector("input").oninput = (e) => {
           kn.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
           sendAudio(`voice.${v.name}.env`, {...env, [field]: +e.target.value});
         };
         return kn;
       };
-      envRow.appendChild(mkEnvKnob("attack","attack",0.01,8,0.05));
+      envRow.appendChild(mkEnvKnob("attack","attack",0.01,15,0.05));
       envRow.appendChild(mkEnvKnob("decay","decay",0.01,8,0.05));
       envRow.appendChild(mkEnvKnob("sustain","sustain",0,1,0.01));
       envRow.appendChild(mkEnvKnob("release","release",0.05,10,0.05));
@@ -747,6 +998,7 @@ slider("s-turb","layer0.turbulence","turb");
 slider("s-hue","layer0.hue","hue");
 slider("s-lfo","lfo_slow.rate","lfo");
 slider("s-xf","crossfade","xf",(v)=>(+v).toFixed(1));
+slider("s-afade","audio_fade","safade",(v)=>(+v).toFixed(1));
 
 slider("c-speed","camera.speed","cspeed");
 slider("c-radius","camera.orbit_radius","cradius",(v)=>(+v).toFixed(1));
@@ -777,7 +1029,8 @@ $("gen").onclick = () => {
   const k = $("kw").value.trim();
   if (!k || generating) return;
   startGen();
-  send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim()});
+  send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim(),
+        size:$("d-size").value, ...charValues()});
 };
 // multiline field: Ctrl/Cmd+Enter submits, plain Enter makes a new line
 $("kw").addEventListener("keydown", e => {
@@ -796,16 +1049,61 @@ function commitPps(el, key, allowBlank){
 $("o-maxpps").addEventListener("change", () => commitPps($("o-maxpps"), "max_pps", false));
 $("o-scenepps").addEventListener("change", () => commitPps($("o-scenepps"), "scene.pps", true));
 
-$("save").onclick = () => { const n=$("savename").value.trim(); if(n){ send({type:"scene_save",name:n}); $("savename").value=""; } };
-$("update").onclick = () => send({type:"scene_update"});
-$("trig").onclick = () => send({type:"trigger"});
-$("rel").onclick = () => send({type:"release"});
-
 $("master-toggle").onclick = () => {
   const nowActive = $("master-toggle").dataset.active === "1";
   send({type:"set_active", value: !nowActive});
 };
 $("master-blank").onclick = () => send({type:"blank"});
+
+// Global section: vertical master fader (mirrors the "master" knob in the
+// Soundscape globals — same underlying value, just always-visible here)
+$("g-master").oninput = () => {
+  $("v-gmaster").textContent = (+$("g-master").value).toFixed(2);
+  sendAudio("master", +$("g-master").value);
+};
+
+// Global hue override: recolours the whole output to one hue, independent
+// of whatever the scene/generator chose
+$("hue-override-on").onchange = () => send({type:"set", key:"hue_override", value:$("hue-override-on").checked});
+$("hue-override-val").oninput = () => {
+  $("v-hueoverride").textContent = (+$("hue-override-val").value).toFixed(2);
+  send({type:"set", key:"hue_value", value:+$("hue-override-val").value});
+};
+
+// Disable Audio / Disable Visuals: independent, gracefully-fading gates —
+// separate from Start/Stop, which is instant and controls both at once
+function updateDisableButtons(s){
+  const ab = $("disable-audio"), vb = $("disable-visuals");
+  ab.textContent = s.audio_disabled ? "Enable Audio" : "Disable Audio";
+  ab.className = s.audio_disabled ? "amber" : "";
+  vb.textContent = s.visuals_disabled ? "Enable Visuals" : "Disable Visuals";
+  vb.className = s.visuals_disabled ? "amber" : "";
+}
+$("disable-audio").onclick = () => {
+  send({type:"set_audio_disabled", value: !_lastState?.audio_disabled, fade: 2.0});
+};
+$("disable-visuals").onclick = () => {
+  send({type:"set_visuals_disabled", value: !_lastState?.visuals_disabled, fade: 2.0});
+};
+
+// Output window: a separate, chrome-less browser window for a projector or
+// second screen (independent of --laser — this is a software-only display
+// path, driven by the same websocket feed the control UI uses).
+let outputWin = null;
+function updateOutputBtn(){
+  const open = outputWin && !outputWin.closed;
+  const btn = $("output-toggle");
+  btn.textContent = open ? "🖵 Close Output Window" : "🖵 Output Window";
+  btn.className = open ? "amber" : "";
+}
+$("output-toggle").onclick = () => {
+  if (outputWin && !outputWin.closed) { outputWin.close(); outputWin = null; updateOutputBtn(); return; }
+  outputWin = window.open("/output", "promptwaver-output",
+    "width=1280,height=720,menubar=no,toolbar=no,location=no,status=no");
+  updateOutputBtn();
+};
+// catches the window being closed via its own OS close button, not just ours
+setInterval(() => { if (outputWin && outputWin.closed) { outputWin = null; updateOutputBtn(); } }, 1000);
 
 $("apisave").onclick = () => {
   const k = $("apikey").value.trim();
@@ -820,6 +1118,48 @@ $("apitest").onclick = () => {
   $("apistatus").style.color = "var(--dim)";
   send({type:"test_api_key"});
 };
+
+// modals: open/close by class toggle, backdrop click (not bubbled from
+// inside the dialog itself) also closes
+function openModal(id){ $(id).classList.add("open"); }
+function closeModal(id){ $(id).classList.remove("open"); }
+$("gen-open").onclick = () => openModal("modal-generate");
+$("gen-close").onclick = () => closeModal("modal-generate");
+$("settings-open").onclick = () => openModal("modal-settings");
+$("settings-close").onclick = () => closeModal("modal-settings");
+$("saveas-close").onclick = () => closeModal("modal-saveas");
+document.querySelectorAll(".modal-backdrop").forEach(el => {
+  el.addEventListener("click", e => { if (e.target === el) el.classList.remove("open"); });
+});
+
+// Scene settings: three granular "save the live config back into the
+// currently-loaded scene" buttons (camera-only / soundscape-only / both),
+// each just scene_update with different flags, plus brief button feedback.
+function saveWithFeedback(btn, label, payload){
+  if (btn.dataset.busy === "1") return;
+  btn.dataset.busy = "1";
+  const original = label;
+  btn.textContent = "Saving…";
+  send(payload);
+  setTimeout(() => { btn.textContent = "Saved ✓"; }, 200);
+  setTimeout(() => { btn.textContent = original; btn.dataset.busy = "0"; }, 1600);
+}
+$("save-soundscape").onclick = () => saveWithFeedback($("save-soundscape"), "Save Soundscape settings",
+  {type:"scene_update", camera:false, soundscape:true});
+$("save-camera").onclick = () => saveWithFeedback($("save-camera"), "Save Camera settings",
+  {type:"scene_update", camera:true, soundscape:false});
+$("save-all-scene").onclick = () => saveWithFeedback($("save-all-scene"), "Save all scene settings",
+  {type:"scene_update", camera:true, soundscape:true});
+
+// Save as: modal popup for naming a new library entry from the current live state
+$("save-as-open").onclick = () => { $("saveas-name").value = ""; openModal("modal-saveas"); };
+$("saveas-confirm").onclick = () => {
+  const n = $("saveas-name").value.trim();
+  if (!n) return;
+  send({type:"scene_save", name:n});
+  closeModal("modal-saveas");
+};
+$("saveas-name").addEventListener("keydown", e => { if (e.key === "Enter") $("saveas-confirm").click(); });
 </script>
 </body>
 </html>

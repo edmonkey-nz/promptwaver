@@ -1,7 +1,7 @@
 """Deterministic local keyword -> SceneSpec mapping.
 
 Used when no Anthropic API key is configured, and as the schema example shown
-to Claude. Keeps LaserFlow fully usable offline: the API is an *optional*
+to Claude. Keeps PromptWaver fully usable offline: the API is an *optional*
 upgrade to the director, never a hard dependency.
 """
 

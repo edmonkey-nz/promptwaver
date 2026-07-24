@@ -7,7 +7,7 @@ ends so corners don't overshoot. Coordinates map [-1,1] -> 12-bit [0,4095].
 
 `HeliosOutput` wraps the official Helios SDK via ctypes (drop your existing
 laserx3 wrapper in here if you prefer). If the shared library isn't present it
-degrades to `NullOutput`, so LaserFlow runs and previews with no hardware.
+degrades to `NullOutput`, so PromptWaver runs and previews with no hardware.
 
 SAFETY: keystone correction and invert are applied to the DAC output only.
 Blanking failures leave a stationary hot spot — always bench-test with the
@@ -241,7 +241,7 @@ class HeliosOutput:
         deadline = time.monotonic() + 0.5
         while self.lib.GetStatus(self.device) != 1:
             if time.monotonic() > deadline:
-                print("[laserflow] Helios DAC not ready after 0.5s; sending anyway")
+                print("[promptwaver] Helios DAC not ready after 0.5s; sending anyway")
                 break
             time.sleep(0.0003)
 
@@ -286,5 +286,5 @@ def make_output(enable_laser: bool, **planner_kw):
         try:
             return HeliosOutput(**planner_kw)
         except Exception as e:  # missing lib or no device
-            print(f"[laserflow] laser output unavailable ({e}); using null output")
+            print(f"[promptwaver] laser output unavailable ({e}); using null output")
     return NullOutput(**planner_kw)

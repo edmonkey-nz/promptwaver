@@ -1,5 +1,5 @@
 [project]
-name = "laserflow"
+name = "promptwaver"
 description = "AI-composed 3D laser environments with a generative ambient soundscape, for the Helios Laser DAC."
 readme = "README.md"
 requires-python = ">=3.10"

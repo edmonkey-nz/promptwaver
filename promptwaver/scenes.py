@@ -149,6 +149,17 @@ class SceneManager:
             self._xfade = 0.0
             self._xfade_dur = crossfade
 
+    def transition_state(self) -> dict | None:
+        """For the UI's scene-transition indicator — None when no crossfade
+        is in flight, else the outgoing/incoming names and 0..1 progress."""
+        if self._next is None or self.current is None:
+            return None
+        return {
+            "from": self.current.spec.name,
+            "to": self._next.spec.name,
+            "progress": min(1.0, self._xfade),
+        }
+
     def render(self, t: float, dt: float, matrix=None) -> Frame:
         if self.current is None:
             return []

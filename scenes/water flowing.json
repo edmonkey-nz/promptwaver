@@ -1,0 +1,144 @@
+{
+  "name": "water flowing",
+  "layers": [
+    {
+      "generator": "flow_field",
+      "params": {
+        "turbulence": 0.3,
+        "speed": 0.18,
+        "hue": 0.55
+      }
+    }
+  ],
+  "palette": [
+    "#0a3d62",
+    "#3c9dd0",
+    "#c8f0ff"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "triangle",
+    "voices": 4,
+    "attack": 3.0,
+    "release": 6.0,
+    "base_note": 48,
+    "chord": [
+      0,
+      7,
+      12,
+      16
+    ]
+  },
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.speed",
+      "depth": 0.05,
+      "bias": 0.0
+    },
+    {
+      "source": "lfo_slow",
+      "dest": "audio.cutoff",
+      "depth": 400.0,
+      "bias": 0.0
+    },
+    {
+      "source": "audio_level",
+      "dest": "visual.turbulence",
+      "depth": 0.4
+    }
+  ],
+  "camera": {},
+  "pps": null,
+  "soundscape": {
+    "tempo": 60.0,
+    "master": 0.8,
+    "distortion": 0.05,
+    "delay": {
+      "time": 0.45,
+      "feedback": 0.35,
+      "mix": 0.3
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "voices": [
+      {
+        "name": "drone",
+        "type": "pad",
+        "waveform": "saw",
+        "note": 36,
+        "chord": [
+          0,
+          7,
+          12,
+          19
+        ],
+        "level": 0.5,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "bells",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "level": 0.28,
+        "rate": 0.5,
+        "decay": 1.6,
+        "pan": 0.25,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "air",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.4,
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ]
+  },
+  "audio_link": 1.0
+}

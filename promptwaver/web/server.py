@@ -8,7 +8,6 @@ a preview frame ~20 Hz, and (b) receives control messages:
     {"type":"scene_load", "name":"water_flowing"}
     {"type":"scene_save", "name":"my mood"}
     {"type":"scene_delete", "name":"..."}
-    {"type":"trigger"} / {"type":"release"}
 """
 
 from __future__ import annotations
@@ -25,11 +24,10 @@ _STATIC = os.path.join(os.path.dirname(__file__), "static")
 def make_app(engine) -> web.Application:
     app = web.Application()
     app["engine"] = engine
-    app["clients"] = set()
+    app["clients"] = {}   # ws -> {"hq": bool}
 
-    async def index(request):
-        resp = web.FileResponse(os.path.join(_STATIC, "index.html"))
-        # The whole UI lives in this one HTML file and changes across sessions
+    def _no_cache(resp):
+        # The whole UI lives in one HTML file and changes across sessions
         # during development; without this, a browser tab left open (or even
         # just reopened) can silently keep serving an old cached copy —
         # looking exactly like "features went missing" even though the server
@@ -38,10 +36,24 @@ def make_app(engine) -> web.Application:
         resp.headers["Pragma"] = "no-cache"
         return resp
 
+    async def index(request):
+        return _no_cache(web.FileResponse(os.path.join(_STATIC, "index.html")))
+
+    async def output_page(request):
+        # A bare, chrome-less fullscreen canvas — meant to be opened as its
+        # own window and dragged onto a projector or second screen. No
+        # controls, no laser/hardware dependency: it's just another websocket
+        # client watching the same state/preview broadcast the control UI
+        # does, so it works identically whether or not --laser is enabled.
+        return _no_cache(web.FileResponse(os.path.join(_STATIC, "output.html")))
+
     async def ws_handler(request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-        request.app["clients"].add(ws)
+        # ?hq=1 (the standalone output window) asks for a much less thinned
+        # preview than the small in-page control-UI canvas needs — it's the
+        # actual thing being watched, not just a status glance.
+        request.app["clients"][ws] = {"hq": request.query.get("hq") == "1"}
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
@@ -49,7 +61,7 @@ def make_app(engine) -> web.Application:
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
         finally:
-            request.app["clients"].discard(ws)
+            request.app["clients"].pop(ws, None)
         return ws
 
     async def broadcaster(app):
@@ -57,11 +69,8 @@ def make_app(engine) -> web.Application:
             while True:
                 if app["clients"]:
                     try:
-                        payload = json.dumps({
-                            "type": "state",
-                            "state": engine.state(),
-                            "preview": engine.preview(),
-                        })
+                        state = engine.state()
+                        preview_std = engine.preview()
                     except Exception as e:
                         # Never let a bad tick (e.g. a non-JSON-serialisable
                         # value slipping into state()) kill this task. Before
@@ -71,15 +80,23 @@ def make_app(engine) -> web.Application:
                         # itself is fine) but never receive another update for
                         # the rest of the session, with the error only surfacing
                         # in the terminal on process exit.
-                        print(f"[laserflow] broadcaster: skipped a bad state "
+                        print(f"[promptwaver] broadcaster: skipped a bad state "
                               f"tick ({e}); continuing")
                         await asyncio.sleep(0.05)
                         continue
-                    for ws in list(app["clients"]):
+                    payload_std = json.dumps({"type": "state", "state": state, "preview": preview_std})
+                    payload_hq = None   # built lazily, only if an hq client is actually connected
+                    for ws, meta in list(app["clients"].items()):
                         try:
-                            await ws.send_str(payload)
+                            if meta.get("hq"):
+                                if payload_hq is None:
+                                    preview_hq = engine.preview(max_points=6000, stroke_thin=300)
+                                    payload_hq = json.dumps({"type": "state", "state": state, "preview": preview_hq})
+                                await ws.send_str(payload_hq)
+                            else:
+                                await ws.send_str(payload_std)
                         except Exception:
-                            app["clients"].discard(ws)
+                            app["clients"].pop(ws, None)
                 await asyncio.sleep(0.05)   # ~20 Hz
         except asyncio.CancelledError:
             pass
@@ -91,6 +108,7 @@ def make_app(engine) -> web.Application:
         app["broadcast_task"].cancel()
 
     app.router.add_get("/", index)
+    app.router.add_get("/output", output_page)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static/", _STATIC)
     app.on_startup.append(on_start)
@@ -107,11 +125,19 @@ async def _handle(engine, m: dict):
         engine.set_active(bool(m.get("value")))
     elif t == "blank":
         engine.blank()
+    elif t == "set_audio_disabled":
+        fade = float(m.get("fade", 2.0))
+        (engine.disable_audio if m.get("value") else engine.enable_audio)(fade=fade)
+    elif t == "set_visuals_disabled":
+        fade = float(m.get("fade", 2.0))
+        (engine.disable_visuals if m.get("value") else engine.enable_visuals)(fade=fade)
     elif t == "generate":
         # run the (possibly networked) director off the event loop, then ack so
         # the UI can restore the Generate button from its throbber state
         await loop.run_in_executor(None, engine.generate_scene,
-                                   m["keyword"], m.get("name"), m.get("audio"))
+                                   m["keyword"], m.get("name"), m.get("audio"),
+                                   m.get("size", "small"), m.get("warmth"),
+                                   m.get("energy"), m.get("evolution"))
         return {"type": "generate_result", "ok": True,
                 "source": engine.director.last_source,
                 "error": engine.director.last_error}
@@ -119,7 +145,8 @@ async def _handle(engine, m: dict):
         engine.set_audio_param(m["key"], m["value"])
     elif t == "apply_audio":
         await loop.run_in_executor(None, engine.apply_audio_to_scene,
-                                   m["scene"], m.get("audio", ""))
+                                   m["scene"], m.get("audio", ""), m.get("warmth"),
+                                   m.get("energy"), m.get("evolution"))
         return {"type": "generate_result", "ok": True, "action": "apply_audio",
                 "source": engine.director.last_source,
                 "error": engine.director.last_error}
@@ -140,17 +167,13 @@ async def _handle(engine, m: dict):
     elif t == "set_effort":
         engine.set_effort(m.get("value", "med"))
     elif t == "scene_update":
-        engine.update_current_scene()
+        engine.update_current_scene(camera=m.get("camera", True), soundscape=m.get("soundscape", True))
     elif t == "scene_load":
         engine.load_scene(m["name"])
     elif t == "scene_save":
         engine.save_scene(m["name"])
     elif t == "scene_delete":
         engine.scenes.delete(m["name"])
-    elif t == "trigger":
-        engine.trigger()
-    elif t == "release":
-        engine.release()
     elif t == "set_api_key":
         engine.director.set_api_key(m.get("key", ""))
         return {"type": "api_result", "action": "save", "ok": engine.director.online,

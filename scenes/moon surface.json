@@ -1,0 +1,403 @@
+{
+  "name": "moon surface",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "lunar_ground": [
+            {
+              "op": "grid",
+              "w": 30,
+              "h": 30,
+              "nx": 6,
+              "ny": 6,
+              "plane": "xz",
+              "c": [
+                0,
+                -2,
+                0
+              ]
+            }
+          ],
+          "crater_small": [
+            {
+              "op": "circle",
+              "r": 1.2,
+              "plane": "xz",
+              "c": [
+                0,
+                -1.8,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "arc",
+              "r": 0.8,
+              "a0": 0,
+              "a1": 3.14159,
+              "plane": "xz",
+              "c": [
+                0,
+                -2.1,
+                0
+              ]
+            }
+          ],
+          "crater_large": [
+            {
+              "op": "circle",
+              "r": 2.5,
+              "plane": "xz",
+              "c": [
+                0,
+                -1.8,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "arc",
+              "r": 1.8,
+              "a0": 0,
+              "a1": 3.14159,
+              "plane": "xz",
+              "c": [
+                0,
+                -2.3,
+                0
+              ]
+            }
+          ],
+          "horizon_curve": [
+            {
+              "op": "arc",
+              "r": 45,
+              "a0": -1.57,
+              "a1": 1.57,
+              "plane": "xy",
+              "c": [
+                0,
+                20,
+                0
+              ]
+            }
+          ],
+          "distant_peaks": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -8,
+                  8,
+                  -30
+                ],
+                [
+                  -5,
+                  12,
+                  -30
+                ],
+                [
+                  -2,
+                  9,
+                  -30
+                ],
+                [
+                  1,
+                  11,
+                  -30
+                ],
+                [
+                  5,
+                  8,
+                  -30
+                ],
+                [
+                  8,
+                  10,
+                  -30
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "astronaut": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                1.8,
+                0
+              ]
+            },
+            {
+              "op": "circle",
+              "r": 0.4,
+              "plane": "xy",
+              "c": [
+                0,
+                2.0,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.5,
+                1.2,
+                0
+              ],
+              "b": [
+                -1.2,
+                0.6,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.5,
+                1.2,
+                0
+              ],
+              "b": [
+                1.2,
+                0.6,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.3,
+                0.4,
+                0
+              ],
+              "b": [
+                -0.5,
+                -0.8,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.3,
+                0.4,
+                0
+              ],
+              "b": [
+                0.5,
+                -0.8,
+                0
+              ]
+            }
+          ],
+          "earth": [
+            {
+              "op": "circle",
+              "r": 3.5,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "arc",
+              "r": 2.2,
+              "a0": 0,
+              "a1": 6.28,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "lunar_ground",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.7,
+              0.8
+            ]
+          },
+          {
+            "shape": "crater_small",
+            "pos": [
+              -6,
+              0,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.5,
+              0.6
+            ]
+          },
+          {
+            "shape": "crater_large",
+            "pos": [
+              5,
+              0,
+              4
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.55
+            ]
+          },
+          {
+            "shape": "crater_small",
+            "pos": [
+              3,
+              0,
+              -6
+            ],
+            "scale": 0.8,
+            "color": [
+              0.5,
+              0.5,
+              0.6
+            ]
+          },
+          {
+            "shape": "horizon_curve",
+            "pos": [
+              0,
+              -2,
+              -35
+            ],
+            "scale": 1,
+            "color": [
+              0.2,
+              0.2,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "distant_peaks",
+            "pos": [
+              0,
+              2,
+              -28
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.4,
+              0.5
+            ]
+          },
+          {
+            "shape": "astronaut",
+            "pos": [
+              -4,
+              -2,
+              3
+            ],
+            "scale": 1,
+            "color": [
+              0.9,
+              0.9,
+              1
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.4,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "earth",
+            "pos": [
+              -12,
+              8,
+              -18
+            ],
+            "scale": 1.2,
+            "color": [
+              0.3,
+              0.5,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 1.5,
+              "axis": "x"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a12",
+    "#b8b8c8",
+    "#d0d0d8",
+    "#1a4080"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 3,
+    "attack": 4,
+    "release": 8,
+    "base_note": 36,
+    "chord": [
+      0,
+      7,
+      12
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      -1,
+      0
+    ],
+    "orbit_radius": 12,
+    "far": 80,
+    "speed": 0.3,
+    "max_strokes": 100,
+    "depth": {
+      "mode": "cull"
+    }
+  },
+  "pps": null
+}
