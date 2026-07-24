@@ -8,15 +8,14 @@
 > scene JSON shape and internal APIs may still change between minor versions.
 > See [CHANGELOG.md](CHANGELOG.md) for what's landed.
 
-A realtime **immersive audio/visual instrument** for the Helios Laser DAC — an
-ambient scene and soundscape explorer. Procedural vector visuals are streamed
-to a laser over ILDA, a polyphonic synth with unlimited audio controls provides the sound.
+A realtime **immersive audio/visual instrument** ambient scene and soundscape explorer. Procedural vector visuals are streamed to a laser over ILDA or to a second monitor/data projector, and a polyphonic synth with unlimited audio controls provides the sound.
 
-Claude acts as an offline **scene director**: a keyword ("water flowing",
-"aurora over a still lake") becomes a scene spec, which the local engine then
-renders at full framerate with no further API calls. That keeps it cheap enough
-to run for hours — the network is touched at most once per new keyword, and
-results are cached.
+Claude acts as an offline **scene director**: prompting one for the 3D scene ("water flowing", "aurora over a still lake") and one for audio (water dripping, flowing river, heavy bass rumblings) becomes a scene spec, which the local engine then
+renders at full framerate with no further API calls and plays the audio. That keeps it cheap enough to run for hours — the network is touched only when a new scene is create. Scenes are saved locally as JSON.
+
+Note: You'll need a paid Claude API account, scenes cost ~5-40 cents (NZD), depending on size, detail and model used.
+
+![Main UI](/promptwaver-snap.png)
 
 
 
