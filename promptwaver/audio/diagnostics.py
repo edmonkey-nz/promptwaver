@@ -23,7 +23,6 @@ rest of the audio stack is struggling.
 from __future__ import annotations
 
 import collections
-import statistics
 import time
 
 
@@ -37,10 +36,22 @@ class CallbackStats:
         self.underrun_events = collections.deque(maxlen=25)
         self.count = 0
         self.underrun_count = 0
+        # A soundscape fade (SoundscapeMixer._phase is not None — its own
+        # fade-out/swap/fade-in, independent of and often longer-lived than
+        # the visual scene crossfade) still renders a live Soundscape and
+        # scales its output during this window; tallied separately so a
+        # heavier scene's fade lasting longer than the visual one is
+        # visible in the numbers instead of assumed. (A prior version
+        # rendered the outgoing AND incoming soundscape simultaneously here,
+        # doubling the per-callback cost for the whole fade — see
+        # SoundscapeMixer's docstring in dsp.py for why that changed.)
+        # instead of guessed at.
+        self.xfade_count = 0
+        self.xfade_over_budget = 0
         self._last_start = None
         self._t0 = time.monotonic()
 
-    def record(self, duration: float, status) -> None:
+    def record(self, duration: float, status, crossfading: bool = False) -> None:
         now = time.monotonic()
         self.count += 1
         self.durations.append(duration)
@@ -48,13 +59,19 @@ class CallbackStats:
             self.intervals.append(now - self._last_start)
         self._last_start = now
 
+        if crossfading:
+            self.xfade_count += 1
+            if duration * 1000 > self.expected_interval * 1000:
+                self.xfade_over_budget += 1
+
         flags = [name for name in
                  ("output_underflow", "input_underflow",
                   "output_overflow", "input_overflow", "priming_output")
                  if getattr(status, name, False)]
         if flags:
             self.underrun_count += 1
-            self.underrun_events.append({"t": round(now - self._t0, 3), "flags": flags})
+            self.underrun_events.append({"t": round(now - self._t0, 3), "flags": flags,
+                                         "crossfade": crossfading})
 
     def summary(self) -> dict:
         d = list(self.durations)
@@ -66,11 +83,16 @@ class CallbackStats:
             "expected_interval_ms": round(budget_ms, 2),
             "callbacks": self.count,
             "underruns": self.underrun_count,
-            "avg_duration_ms": round(statistics.mean(d) * 1000, 3) if d else 0.0,
+            # plain sum()/len(), not statistics.mean() — see perf.py's
+            # summary() for why (mean() is ~100x slower here for no benefit,
+            # and this runs on the same contended broadcaster thread).
+            "avg_duration_ms": round(sum(d) / len(d) * 1000, 3) if d else 0.0,
             "max_duration_ms": round(max(d) * 1000, 3) if d else 0.0,
             "duration_budget_pct": round((max(d) * 1000 / budget_ms * 100), 1) if d and budget_ms else 0.0,
-            "avg_interval_ms": round(statistics.mean(iv) * 1000, 3) if iv else 0.0,
+            "avg_interval_ms": round(sum(iv) / len(iv) * 1000, 3) if iv else 0.0,
             "max_interval_ms": round(max(iv) * 1000, 3) if iv else 0.0,
+            "xfade_callbacks": self.xfade_count,
+            "xfade_over_budget": self.xfade_over_budget,
             "recent_underruns": list(self.underrun_events),
         }
 

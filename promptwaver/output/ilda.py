@@ -194,20 +194,30 @@ class NullOutput:
 
     name = "null"
 
+    # Recompute the exact count this often; reuse the last value on the ticks
+    # in between. point_count() still does the full vectorised arc-length
+    # resample + DAC transform (profiled at ~8ms for a ~80-stroke scene —
+    # a meaningful slice of a ~22ms frame budget) purely to produce a number
+    # for a text readout that a person reads a few times a second at most.
+    # With no hardware to actually stream the planned points to, paying that
+    # cost on every tick was real, unnecessary render-loop overhead for
+    # anyone running without a laser attached.
+    _RECOMPUTE_EVERY = 6
+
     def __init__(self, **planner_kw):
         self.planner = PathPlanner(**planner_kw)
         self.last_points = 0
+        self._tick = 0
 
     def write(self, frame: Frame, pps: int):
-        # Previously called the full plan() (including ctypes buffer
-        # construction) purely to get a length for a UI counter, on every
-        # tick, with no hardware to actually send it to. point_count() does
-        # the same vectorised resampling/transform but skips the ctypes step.
-        self.last_points = self.planner.point_count(frame)
+        self._tick += 1
+        if self._tick % self._RECOMPUTE_EVERY == 1:
+            self.last_points = self.planner.point_count(frame)
 
     def blank(self):
         """No hardware beam to kill, but keep the point counter honest."""
         self.last_points = 0
+        self._tick = 0
 
     def close(self):
         pass

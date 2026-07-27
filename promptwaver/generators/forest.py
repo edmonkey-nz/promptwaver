@@ -42,17 +42,46 @@ class Forest(Generator3D):
         sway=0.04,       # gentle canopy sway
     )
 
-    def render3d(self, t: float, p: dict):
+    def __init__(self, **params):
+        super().__init__(**params)
+        self._layout_key = None
+        self._trees = None   # list of (base_x, built Path3D parts), sway-free
+
+    def _build_layout(self, p: dict):
         n = int(p["trees"])
         D = self.field_depth
         rng = np.random.default_rng(1234)   # stable layout
-        out = []
+        trees = []
         for i in range(n):
             side = -1 if i % 2 == 0 else 1
             x = side * (p["clearance"] + rng.uniform(0, p["spread"]))
             z = (i / n) * D + rng.uniform(-0.4, 0.4)
             height = rng.uniform(1.4, 2.6)
-            # gentle sway animates the whole tree horizontally
-            x += np.sin(t * 0.5 + i) * p["sway"]
-            out.extend(_tree(float(x), float(z), float(height), seed=i))
+            trees.append((float(x), _tree(float(x), float(z), float(height), seed=i)))
+        return trees
+
+    def render3d(self, t: float, p: dict):
+        # Layout (positions, trunk/branch geometry — everything but the sway
+        # sway offset below) is static per (trees, spread, clearance): it was
+        # being torn down and rebuilt from scratch via a fresh RNG every
+        # single frame, the actual cost being the per-branch rng.integers/
+        # rng.uniform calls (3-5 branches x however many trees, 45x/sec) for
+        # geometry that never changes. Only the horizontal sway is time-based,
+        # so that's now the only per-frame work.
+        key = (int(p["trees"]), round(float(p["spread"]), 4), round(float(p["clearance"]), 4))
+        if key != self._layout_key:
+            self._layout_key = key
+            self._trees = self._build_layout(p)
+
+        sway = p["sway"]
+        out = []
+        for i, (base_x, parts) in enumerate(self._trees):
+            dx = float(np.sin(t * 0.5 + i) * sway)
+            if abs(dx) < 1e-9:
+                out.extend(parts)
+                continue
+            for path in parts:
+                pts = path.points.copy()
+                pts[:, 0] += dx
+                out.append(Path3D(pts, path.color, closed=path.closed, lod=path.lod))
         return out

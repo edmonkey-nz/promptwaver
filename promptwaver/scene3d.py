@@ -116,14 +116,17 @@ class Camera:
         cy, sy = math.cos(self._yaw), math.sin(self._yaw)
         cp, sp = math.cos(self._pitch), math.sin(self._pitch)
 
-        # depth-sort strokes so the budget keeps near geometry, drops far first
-        scored = []
-        for p3 in paths3d:
-            # relative depth of this stroke's centroid (after wrap)
-            zc = (float(p3.points[:, 2].mean()) - self.z) % field_depth
-            scored.append((zc, p3))
+        # depth-sort strokes so the budget keeps near geometry, drops far first.
+        # `.sum()/len()` instead of `.points[:,2].mean()`: numpy's generic
+        # `mean()` (dtype/where-handling machinery on top of the reduction)
+        # costs real time when called once per stroke per frame — profiled at
+        # ~2x a scene's whole frame budget for a stroke-rich scene, entirely
+        # in this kind of per-stroke bookkeeping, not the actual drawing.
+        scored = [((float(p3.points[:, 2].sum()) / len(p3.points) - self.z) % field_depth, p3)
+                  for p3 in paths3d]
         scored.sort(key=lambda s: s[0])
 
+        cull = self.depth.mode in ("cull", "both")
         out: Frame = []
         for zc, p3 in scored:
             if len(out) >= self.max_strokes:
@@ -141,9 +144,21 @@ class Camera:
             x, z = x * cy + z * sy, -x * sy + z * cy
             y, z = y * cp - z * sp, y * sp + z * cp
 
+            # Exact (not approximate) skip: if every point of this stroke is
+            # already behind the near plane, or (when culling) beyond far,
+            # `_clip_and_project`'s own visibility mask would exclude all of
+            # them and it'd return nothing — so there's no need to pay for
+            # its per-point clip/run-finding work to find that out. A scene
+            # with more background geometry than its own `max_strokes`
+            # budget (so the strokes-found early-exit above never triggers)
+            # was paying full clip cost for every one of those strokes every
+            # frame regardless of whether any of them were ever visible —
+            # profiled as the dominant render cost for such a scene.
+            if z.max() <= self.near or (cull and z.min() >= self.far):
+                continue
+
             seg = _clip_and_project(x, y, z, f, self.near, self.far,
-                                    self.aspect, self.depth,
-                                    cull=self.depth.mode in ("cull", "both"))
+                                    self.aspect, self.depth, cull=cull)
             for xy, depth in seg:
                 if len(xy) < 2:
                     continue
@@ -168,13 +183,27 @@ class Camera:
         right = right / rn if rn > 1e-6 else np.array([1.0, 0.0, 0.0], np.float32)
         up = np.cross(right, fwd)
 
-        # depth-sort strokes; keep nearest, drop far first for the budget
+        # depth-sort strokes; keep nearest, drop far first for the budget.
+        # Same reasoning as the fly-mode branch above: `.mean(axis=0)` +
+        # `np.linalg.norm` are each general-purpose numpy functions with
+        # their own dispatch overhead, paid once per stroke per frame — for
+        # a several-dozen-stroke scene that's the single biggest line item
+        # in the whole render (profiled). A plain `.sum(axis=0)` plus a
+        # 3-term Euclidean distance in pure Python is exactly the same math,
+        # far cheaper per call for arrays this small.
+        px, py, pz = float(self.pos[0]), float(self.pos[1]), float(self.pos[2])
         scored = []
         for p3 in paths3d:
-            d = float(np.linalg.norm(p3.points.mean(axis=0) - self.pos))
-            scored.append((d, p3))
+            pts = p3.points
+            s = pts.sum(axis=0)
+            n_pts = len(pts)
+            cx = s[0] / n_pts - px
+            cy = s[1] / n_pts - py
+            cz = s[2] / n_pts - pz
+            scored.append(((cx * cx + cy * cy + cz * cz) ** 0.5, p3))
         scored.sort(key=lambda s: s[0])
 
+        cull = self.depth.mode in ("cull", "both")
         out: Frame = []
         for d, p3 in scored:
             if len(out) >= self.max_strokes:
@@ -183,9 +212,18 @@ class Camera:
             x = rel @ right
             y = rel @ up
             z = rel @ fwd                      # +Z in front of the camera
+
+            # Exact skip — see the matching comment in `project()` (fly mode)
+            # above: if nothing in this stroke can pass the visibility test,
+            # skip the clip pipeline entirely instead of running it to
+            # discover that. This is the branch scenes with `max_strokes`
+            # set above their own raw geometry count hit hardest, since the
+            # strokes-found early-exit above never triggers for them either.
+            if z.max() <= self.near or (cull and z.min() >= self.far):
+                continue
+
             seg = _clip_and_project(x, y, z, f, self.near, self.far,
-                                    self.aspect, self.depth,
-                                    cull=self.depth.mode in ("cull", "both"))
+                                    self.aspect, self.depth, cull=cull)
             for xy, depth in seg:
                 if len(xy) < 2:
                     continue
@@ -200,30 +238,64 @@ class Camera:
 def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     """Clip a polyline against the near plane, project surviving segments, and
     return a list of (Nx2 array, mean_depth). Splits the stroke where it crosses
-    the near plane so nothing wraps around behind the camera."""
-    n = len(z)
-    runs = []
-    cur = []
+    the near plane so nothing wraps around behind the camera.
 
-    def proj(i):
-        zz = max(z[i], 1e-3)
-        return (x[i] / zz * f * aspect, y[i] / zz * f)
+    Was a per-point Python loop (`for i in range(n)`) calling a `proj(i)`
+    closure once per point and accumulating into plain lists — profiled as
+    the single hottest spot in the whole render path for a stroke-rich
+    scene, entirely from Python-level overhead (a laser stroke's point count
+    is small, so the *math* here is trivial; it's the interpreter overhead of
+    doing it one point at a time, 45 times a second, across every stroke,
+    that adds up). Visibility, run-finding, and projection are now batch
+    numpy ops over the whole stroke at once; only `_clip_frame`'s box-clip
+    below (genuinely sequential — it merges clipped segments into
+    continuous runs) is still a Python loop, and it now runs over far fewer,
+    already-culled points."""
+    if cull:
+        visible = (z > near) & (z < far)
+    else:
+        visible = z > near
+    if not visible.any():
+        return []
 
-    for i in range(n):
-        visible = z[i] > near and (not cull or z[i] < far)
-        if visible:
-            cur.append((proj(i), z[i]))
-        else:
-            if len(cur) >= 2:
-                runs.append(cur)
-            cur = []
-    if len(cur) >= 2:
-        runs.append(cur)
+    # Runs of >=2 consecutive visible points, via edge-detection on the
+    # boolean mask rather than an explicit per-point accumulate/flush loop.
+    padded = np.concatenate(([False], visible, [False]))
+    edges = np.flatnonzero(padded[1:] != padded[:-1])
+    starts, ends = edges[0::2], edges[1::2]      # [start, end) index pairs, end exclusive
+
+    zc = np.maximum(z, 1e-3)
+    px = x / zc * f * aspect
+    py = y / zc * f
+
+    # A laser stroke's point count is small (a handful to a few dozen), so
+    # numpy's per-call dispatch overhead dominates any array method called
+    # per run — confirmed by benchmark: plain Python min()/max() on a list
+    # slice runs ~40% faster than the equivalent numpy calls at this size.
+    # One `.tolist()` per stroke, then plain Python for the per-run bounds
+    # check below.
+    pxl, pyl, zl = px.tolist(), py.tolist(), z.tolist()
 
     result = []
-    for run in runs:
-        xy = np.array([p for p, _ in run], dtype=np.float32)
-        d = float(np.mean([zz for _, zz in run]))
+    for s, e in zip(starts, ends):
+        n = e - s
+        if n < 2:
+            continue
+        rx, ry = pxl[s:e], pyl[s:e]
+        # Exact skip: [-1,1] is a convex box, so if every point in this run
+        # is on the far side of any one of its four edges, the whole
+        # (piecewise-linear) run is too — `_clip_frame` would clip all of it
+        # away. A scene whose geometry extends well beyond the camera's
+        # field of view at any given moment (composed 3D scenes tend to —
+        # you're only ever looking at part of them) was paying full
+        # box-clip cost, per run, to rediscover that same "entirely
+        # off-screen" answer every single frame. Profiled on one such scene:
+        # over half its on-screen-candidate strokes were fully outside the
+        # frame this way.
+        if (min(rx) > 1.0 or max(rx) < -1.0 or min(ry) > 1.0 or max(ry) < -1.0):
+            continue
+        xy = np.stack([px[s:e], py[s:e]], axis=1).astype(np.float32)
+        d = sum(zl[s:e]) / n
         # clip to the [-1,1] frame: cut lines at the edge rather than clamping
         # them onto it (which draws ugly border-hugging strokes and wastes points)
         for sub in _clip_frame(xy):

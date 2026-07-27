@@ -322,21 +322,35 @@ class Soundscape:
 
     # --- voice renderers ---------------------------------------------------
     def _render_pad(self, v, t, n0, frames):
+        """Additive: `n_partials` sine harmonics per (chord note x detune
+        layer). Was a Python triple-nested loop calling `_osc` once per
+        partial — up to len(chord)*2*n_partials separate numpy calls per
+        audio callback (e.g. a 4-note chord at full brightness: 64 calls,
+        PER sustained voice, every ~185ms block at 8192/44100). Each numpy
+        call has fixed dispatch overhead independent of its size, and this
+        runs inside the realtime audio callback where the GIL is held for
+        the duration — more voices/instruments in a soundscape meant
+        proportionally more of these tiny calls stacking up, which is
+        exactly the "bigger scenes with more instruments" case where visual
+        frame drops got worse (the render thread was losing GIL time to
+        this). Batched into one (partials x frames) vectorised call —
+        verified numerically equivalent to the old loop (max abs diff
+        ~6e-7, pure float32 rounding) before landing this."""
         chord = v.get("chord", [0])
         root = v.get("note", 36)
         wf = v.get("waveform", "saw")
         tone = float(v.get("tone", 0.4))          # brightness 0..1
         detune = float(v.get("detune", 0.01))
         n_partials = 1 if wf == "sine" else max(1, int(2 + tone * 6))
-        out = np.zeros(frames, np.float32)
-        for semi in chord:
-            f = midi_to_hz(root + semi)
-            for layer, dt in enumerate((-detune, detune)):
-                fl = f * (1 + dt)
-                for k in range(1, n_partials + 1):
-                    amp = (tone ** (k - 1)) / k    # rolloff -> warmth
-                    ph = fl * k * t
-                    out += amp * _osc(ph, "sine")
+        ks = np.arange(1, n_partials + 1, dtype=np.float64)
+        amps = (tone ** (ks - 1)) / ks                          # rolloff -> warmth, per partial
+        freqs = [midi_to_hz(root + semi) * (1 + dt)
+                 for semi in chord for dt in (-detune, detune)]  # chord x detune layers
+        freqs = np.asarray(freqs, dtype=np.float64)
+        fk = (freqs[:, None] * ks[None, :]).ravel()             # every (layer, partial) frequency
+        ak = np.tile(amps, len(freqs))                          # matching amplitude per fk entry
+        ph = fk[:, None] * t[None, :]
+        out = (ak[:, None] * _osc(ph, "sine")).sum(axis=0).astype(np.float32)
         out /= max(1, len(chord) * 2)
         return out          # attack/release now handled by the voice's ADSR envelope
 
@@ -344,22 +358,27 @@ class Soundscape:
         """A classic unison multi-oscillator voice — distinct from `pad`
         (which builds warmth from harmonic partials): this stacks detuned
         copies of the SAME waveform for thickness, with an optional
-        one-octave-down sub mixed in. Good for a lead/bass-style texture."""
+        one-octave-down sub mixed in. Good for a lead/bass-style texture.
+
+        Batched the same way as `_render_pad` above (one (chord x unison,
+        frames) vectorised call instead of a nested Python loop of small
+        `_osc` calls) — same GIL-contention reasoning, verified numerically
+        equivalent first."""
         chord = v.get("chord") or [0]
         root = v.get("note", 48)
         wf = v.get("waveform", "saw")
         unison = int(np.clip(v.get("unison", 1), 1, 7))
         detune = float(v.get("detune", 0.01))
         sub = float(np.clip(v.get("sub", 0.0), 0.0, 1.0))
-        spread = np.linspace(-detune, detune, unison) if unison > 1 else [0.0]
-        out = np.zeros(frames, np.float32)
-        for semi in chord:
-            f = midi_to_hz(root + semi)
-            for d in spread:
-                out += _osc(f * (1 + d) * t, wf) / unison
-            if sub > 0:
-                out += sub * _osc((f / 2.0) * t, "sine")
-        out /= max(1, len(chord))
+        spread = np.linspace(-detune, detune, unison) if unison > 1 else np.array([0.0])
+        freqs = np.array([midi_to_hz(root + semi) for semi in chord], dtype=np.float64)
+        fu = (freqs[:, None] * (1.0 + spread[None, :])).ravel()     # every (chord note, unison layer)
+        ph = fu[:, None] * t[None, :]
+        out = _osc(ph, wf).sum(axis=0) / unison
+        if sub > 0:
+            sub_ph = (freqs / 2.0)[:, None] * t[None, :]
+            out = out + sub * _osc(sub_ph, "sine").sum(axis=0)
+        out = (out / max(1, len(chord))).astype(np.float32)
         return out          # attack/release now handled by the voice's ADSR envelope
 
 
@@ -490,23 +509,40 @@ class Soundscape:
 
 
 class SoundscapeMixer:
-    """Owns the currently-playing `Soundscape` plus, during a scene switch,
-    the outgoing one — equal-power crossfading between them over a
-    configurable duration so switching scenes doesn't hard-cut the audio.
-    Pure DSP, no device I/O, so it renders and tests the same as `Soundscape`.
+    """Owns the currently-playing `Soundscape` and, during a scene switch,
+    sequences a fade-out/swap/fade-in rather than crossfading two live
+    instances at once. Pure DSP, no device I/O, so it renders and tests the
+    same as `Soundscape`.
 
-    A fresh `Soundscape` instance is built for the incoming spec (rather than
-    mutating the live one in place) so its pad/osc voices get a clean ADSR
-    attack from silence on top of the crossfade curve, and the outgoing
-    instance keeps rendering its own spec untouched while its output is faded
-    out — no interaction between the two beyond the mix.
+    A prior version rendered the outgoing AND incoming `Soundscape` on every
+    block for the whole switch (a true simultaneous crossfade) — correct
+    sounding, but it doubles the per-callback DSP cost (every voice, on both
+    sides) for the entire fade. On a several-voice soundscape that doubled
+    cost was measured pushing a single realtime audio callback well over its
+    own budget (300%+ observed), which is real, audible underruns/glitching
+    — independent of anything visual, and not something further micro-
+    optimising either side's render cost alone fixes, since the problem is
+    literally "two full renders where the callback only has time for one."
+
+    So: fade the outgoing soundscape to silence over half the requested
+    duration, THEN build the incoming one and fade it up over the other
+    half — only ONE `Soundscape` is ever being rendered at a time, so the
+    doubled cost is gone entirely. The swap itself lands exactly at the
+    silent point between the two halves, so there's no discontinuity to
+    hear. The visual scene crossfade (`SceneManager.render`) is unaffected
+    by this and still overlaps both scenes smoothly — visuals are cheap
+    enough after the camera-projection fix (see scene3d.py) to afford that;
+    audio, even after vectorising the DSP, generally isn't once a soundscape
+    has more than a couple of voices.
     """
 
     def __init__(self, spec: dict | None = None, sr: int = SR):
         self.sr = sr
         self.current = Soundscape(spec, sr=sr)
-        self._old: Soundscape | None = None
-        self._fade_dur = 0.0
+        self._pending_spec: dict | None = None
+        self._pending_muted = False
+        self._phase: str | None = None   # None | "out" | "in"
+        self._fade_dur = 0.0             # duration of the CURRENT half (out or in)
         self._fade_pos = 0.0
         self._peak = 0.0
         self._clip = False
@@ -515,14 +551,13 @@ class SoundscapeMixer:
         fade = max(0.0, float(fade or 0.0))
         if fade <= 0.0:
             self.current.set_spec(spec)
-            self._old = None
+            self._phase = None
             return
-        old, muted = self.current, self.current.muted
-        self.current = Soundscape(spec, sr=self.sr)
-        self.current.set_muted(muted)   # instant — the new instance's own gain starts fresh
-        self._old = old
-        self._fade_dur = fade
+        self._pending_spec = spec
+        self._pending_muted = self.current.muted
+        self._fade_dur = fade / 2.0
         self._fade_pos = 0.0
+        self._phase = "out"
 
     def set_param(self, path: str, value):
         self.current.set_param(path, value)   # live tweaks always target the incoming/current one
@@ -545,37 +580,37 @@ class SoundscapeMixer:
 
     def set_muted(self, muted: bool, fade: float = 0.0):
         self.current.set_muted(muted, fade)
-        if self._old is not None:
-            self._old.set_muted(muted, fade)
+        self._pending_muted = muted   # in case a fade-out is in flight when this lands
 
     def render(self, frames: int) -> np.ndarray:
-        if self._old is None:
+        if self._phase is None:
             out = self.current.render(frames)
             self._peak = self.current.last_peak
             self._clip = self.current.last_clip
             return out
-        block_new = self.current.render(frames)
-        block_old = self._old.render(frames)
-        prog = (self._fade_pos + np.arange(frames) / self.sr) / self._fade_dur
+
+        block = self.current.render(frames)
+        prog = (self._fade_pos + np.arange(frames) / self.sr) / max(self._fade_dur, 1e-6)
         prog = np.clip(prog, 0.0, 1.0)[:, None]
-        # Linear crossfade (fade_in + fade_out == 1 everywhere), not the more
-        # usual equal-power sin/cos curve: each side is already an
-        # independently master-scaled, tanh-limited full mix (not a raw
-        # unmixed voice), so equal-power's fade_in+fade_out reaching ~1.41 at
-        # the midpoint could sum two near-full-scale signals into real
-        # overs — measured up to ~150% peak on a complex scene, which is
-        # exactly the audible "jerky/glitching" during scene switches this
-        # replaces. Linear guarantees the blend is a convex combination of
-        # two already-bounded signals, so it can never exceed either side.
-        out = (block_new * prog + block_old * (1.0 - prog)).astype(np.float32)
-        # extra safety clamp on the combined signal, same "gentle safety
-        # limiter" pattern Soundscape.render applies to its own mix — cheap,
-        # and guards against anything unexpected (e.g. an EQ boost) still
-        # pushing the blend itself out of range.
+        gain = (1.0 - prog) if self._phase == "out" else prog
+        out = (block * gain).astype(np.float32)
+        # same "gentle safety limiter" pattern Soundscape.render applies to
+        # its own mix — cheap, and guards against anything unexpected still
+        # pushing this scaled blend out of range.
         np.tanh(out, out=out)
+
         self._fade_pos += frames / self.sr
         if self._fade_pos >= self._fade_dur:
-            self._old = None
+            if self._phase == "out":
+                # silent now — swap in the new soundscape and fade it up
+                self.current = Soundscape(self._pending_spec, sr=self.sr)
+                self.current.set_muted(self._pending_muted)
+                self._pending_spec = None
+                self._phase = "in"
+                self._fade_pos = 0.0
+            else:
+                self._phase = None
+
         self._peak = float(np.max(np.abs(out))) if out.size else 0.0
         self._clip = self._peak >= 0.98
         return out

@@ -772,6 +772,12 @@
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
-  }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4
+  },
+  "pps": null,
+  "soundscape": {},
+  "audio_link": 1.0
 }

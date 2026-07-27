@@ -37,24 +37,115 @@ resize();
 
 setTimeout(() => hintEl.classList.add("gone"), 4000);
 
+const outputId = new URLSearchParams(location.search).get("out") || "1";
+document.title = `PromptWaver — Output ${outputId}`;
+hintEl.textContent = `PromptWaver output ${outputId} — drag this window to your projector/second screen, then press F11 for fullscreen`;
+
+// Monitor-only visual filters — pure canvas rendering, no effect on the
+// vector data sent to the laser DAC. glow/trail/mirror are per-scene now
+// (saved via Save Camera settings / Save all scene settings on the main
+// control page, loaded with whatever scene is live) — read straight off
+// this window's own copy of the same state broadcast the control page
+// gets, not localStorage, since the engine is the source of truth for
+// them now. flip is different: a per-OUTPUT-MONITOR physical-orientation
+// setting (Settings > Output monitors on the control page), keyed by this
+// window's own `?out=` id, that has nothing to do with the scene — that
+// one still lives in localStorage + the "storage" event, since it's not
+// engine state at all.
+const filters = {
+  glow: 0, trail: 0, mirrorX: false, mirrorY: false,
+  flipX: localStorage.getItem(`pw_filter_flipx_${outputId}`) === "1",
+  flipY: localStorage.getItem(`pw_filter_flipy_${outputId}`) === "1",
+  // This window's OWN keystone (Settings > Output monitors) — independent
+  // of the laser's (which lives server-side, engine-tracked) and of the
+  // other output window's. Display-only: never sent anywhere.
+  keystoneH: parseFloat(localStorage.getItem(`pw_filter_keystoneh_${outputId}`) || "0"),
+  keystoneV: parseFloat(localStorage.getItem(`pw_filter_keystonev_${outputId}`) || "0"),
+};
+window.addEventListener("storage", e => {
+  if (e.key === `pw_filter_flipx_${outputId}`) filters.flipX = e.newValue === "1";
+  if (e.key === `pw_filter_flipy_${outputId}`) filters.flipY = e.newValue === "1";
+  if (e.key === `pw_filter_keystoneh_${outputId}`) filters.keystoneH = parseFloat(e.newValue || "0");
+  if (e.key === `pw_filter_keystonev_${outputId}`) filters.keystoneV = parseFloat(e.newValue || "0");
+});
+
+// Same bilinear formula as output/ilda.py's PathPlanner._to_dac_vec and
+// index.html's matching applyKeystone — kept in sync so this is a faithful
+// stand-in for what a real keystone-corrected screen would show.
+function applyKeystone(x, y, kh, kv){
+  const xk = x * (1 + kh * y);
+  const yk = y * (1 + kv * xk);
+  return [Math.max(-1, Math.min(1, xk)), Math.max(-1, Math.min(1, yk))];
+}
+
+// Reflects one half of the canvas over the centre line onto the other half
+// (kaleidoscope-style) — the shared "mirror" effect (Global section).
+function applyMirror(ctx, canvas, mirrorX, mirrorY){
+  const w = canvas.width, h = canvas.height;
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = "source-over";
+  if (mirrorX){
+    ctx.save();
+    ctx.translate(w, 0); ctx.scale(-1, 1);
+    ctx.drawImage(canvas, 0, 0, w/2, h, 0, 0, w/2, h);
+    ctx.restore();
+  }
+  if (mirrorY){
+    ctx.save();
+    ctx.translate(0, h); ctx.scale(1, -1);
+    ctx.drawImage(canvas, 0, 0, w, h/2, 0, 0, w, h/2);
+    ctx.restore();
+  }
+}
+
+// Reverses the WHOLE image, no reflection — the per-output-monitor "flip"
+// (Settings > Output monitors). Distinct from applyMirror above: this
+// never creates symmetry, it just runs the finished frame through a
+// physical-orientation correction for this specific screen.
+function applyFlip(ctx, canvas, flipX, flipY){
+  const w = canvas.width, h = canvas.height;
+  ctx.save();
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.translate(flipX ? w : 0, flipY ? h : 0);
+  ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+  ctx.drawImage(canvas, 0, 0, w, h);
+  ctx.restore();
+}
+
 function paint(scene){
   const w = cv.width, h = cv.height;
-  cx.fillStyle = "#000"; cx.fillRect(0, 0, w, h);
+  cx.shadowBlur = 0;   // never let a glow from the previous frame bleed into the clear/fade below
+  cx.globalCompositeOperation = "source-over";
+  cx.fillStyle = filters.trail > 0 ? `rgba(0,0,0,${(1 - filters.trail).toFixed(3)})` : "#000";
+  cx.fillRect(0, 0, w, h);
   if (!scene || !scene.length) return;
   // fit the normalized -1..1 scene into the window, preserving aspect ratio
   // (letterboxed) rather than stretching to an arbitrary window shape
   const s = Math.min(w, h) * 0.5;
   const cx0 = w / 2, cy0 = h / 2;
-  const map = (x, y) => [cx0 + x * s, cy0 - y * s];
+  const map = (x, y) => {
+    const [xk, yk] = applyKeystone(x, y, filters.keystoneH, filters.keystoneV);
+    return [cx0 + xk * s, cy0 - yk * s];
+  };
   cx.lineWidth = Math.max(1, s / 260);
   cx.lineJoin = "round";
+  // Single shadowBlur pass — see index.html's matching comment: a multi-pass
+  // additive version (stroking 2-3x per stroke with shadowBlur set) made the
+  // whole preview unusably slow, since shadowBlur is one of the more
+  // expensive canvas 2D ops per call.
+  const glowPx = filters.glow * Math.min(w, h) * 0.05;
   for (const st of scene) {
     const [r, g, b] = st.c;
-    cx.strokeStyle = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    cx.strokeStyle = col;
+    if (glowPx > 0) { cx.shadowBlur = glowPx; cx.shadowColor = col; }
     cx.beginPath();
     st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
     cx.stroke();
   }
+  if (filters.mirrorX || filters.mirrorY) applyMirror(cx, cv, filters.mirrorX, filters.mirrorY);
+  if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);
 }
 
 let ws = null;
@@ -65,7 +156,14 @@ function connect(){
   ws.onerror = () => ws.close();
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
-    if (m.type === "state") paint(m.preview);
+    if (m.type === "state") {
+      const s = m.state || {};
+      filters.glow = s.glow ?? 0;
+      filters.trail = s.trail ?? 0;
+      filters.mirrorX = !!s.mirror_x;
+      filters.mirrorY = !!s.mirror_y;
+      paint(m.preview);
+    }
   };
 }
 connect();

@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.22.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.30.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 
@@ -13,7 +13,7 @@ A realtime **immersive audio/visual instrument** ambient scene and soundscape ex
 Claude acts as an offline **scene director**: prompting one for the 3D scene ("water flowing", "aurora over a still lake") and one for audio (water dripping, flowing river, heavy bass rumblings) becomes a scene spec, which the local engine then
 renders at full framerate with no further API calls and plays the audio. That keeps it cheap enough to run for hours — the network is touched only when a new scene is create. Scenes are saved locally as JSON.
 
-Note: You'll need a paid Claude API account, scenes cost ~5-40 cents (NZD), depending on size, detail and model used.
+Note: You'll need a paid Claude API account if you want to generate any scenes, scenes cost ~5-40 cents(NZD) each, depending on size, detail and model used. You can buy a $5 credit which should last a while (unless you use Sonnet/Opus and make big scenes.)
 
 ![Main UI](/promptwaver-snap.png)
 
@@ -178,6 +178,19 @@ Units that can't fade brightness show depth with **colour**, not intensity.
 
 Try a keyword like *"float through a forest"* to build one.
 
+### Disable scene plane (v0.30.0)
+
+A checkbox under **max strokes** (Camera controls) that hides a scene's
+floor/ground/backdrop geometry — applied in the `World` generator before the
+frame is even built, so the laser and every display are affected identically,
+not just a preview overlay. It matches on the node's authored *name*, not its
+appearance: anything with `floor`, `ground`, `plane`, or `grid` in its name
+(e.g. `floor`, `cave_floor`, `ocean_grid`) — with a deliberate guard so
+`plane` doesn't also catch `planet` (a common primitive). Claude's
+scene-authoring prompt now asks it to name floor/backdrop shapes this way, so
+new generations reliably support the toggle; older or oddly-named scenes may
+not have anything that matches.
+
 ## Claude authors the geometry (shape grammar)
 
 The director isn't limited to a fixed bucket of objects. For a prompt like
@@ -224,6 +237,42 @@ Two settings govern draw rate, in the **Output** group:
   to never exceed it); clear it and the scene falls back to max PPS. Saved into
   the scene JSON as `"pps"`, so it round-trips through the library and
   **Update scene from config**.
+
+## Monitor filters — glow / trails / mirror (v0.30.0)
+
+A **Monitor filters** group under Camera controls adds three canvas-only
+display effects — they never touch the vector data sent to the laser, only
+how it's drawn on screen:
+
+- **glow** — a soft blur halo around each stroke.
+- **trails** — instead of clearing to black each frame, fades the previous
+  frame slightly, so motion leaves a persistence trail.
+- **mirror x/y** — reflects one half of the frame over the centre line onto
+  the other (kaleidoscope-style).
+
+All three are **per-scene settings**: they save into the scene's own JSON via
+the existing **Save Camera settings** / **Save all scene settings** buttons,
+and load back with whichever scene set them — off/0 by default for every
+scene that hasn't (which is every scene made before this existed). They apply
+identically in the small in-page preview and any open Output Window.
+
+## Keystone correction & dual output windows (v0.30.0)
+
+**Output 1** and **Output 2** (header buttons) each open a chrome-less window
+on the same live feed — for driving two screens/projectors from one session.
+Each has its own independent **flip** (a plain whole-image reverse — distinct
+from the "mirror" effect above, which reflects rather than reverses) and its
+own independent **keystone**, both configured per-window in **Settings >
+Output monitors**; purely display-side, nothing sent anywhere.
+
+The laser's own keystone (previously `--keystone-h`/`--keystone-v`,
+launch-only) is now live-adjustable in **Settings > Keystone** — tune it
+while the laser's running, no restart needed. The small in-page visualiser
+mirrors the laser's keystone so it can be dialled in without turning the beam
+on. A **test pattern** toggle there (border, diagonals, crosshair, inner box)
+overrides the live scene *everywhere at once* — laser, visualiser, both
+Output windows — so calibration is against a known shape rather than
+whatever the current scene happens to show.
 
 ## Prompt-composed 3D worlds (scene graph)
 
@@ -431,7 +480,7 @@ the unbounded-note-growth bug above: verified directly with a deliberately
 aggressive multi-voice arp setup (high tempo, high rate, `random` mode) held
 flat at the same note cap with no budget overrun.
 
-## Master Start/Stop and Blank
+## Master Start/Stop and the Laser toggle
 
 **Fixed in v0.13.0 — "picking a higher blocksize resets back to a lower one":**
 `reconfigure()` used to silently revert to whatever was running *before* your
@@ -506,14 +555,23 @@ running). On load, PromptWaver sits idle: the laser is sent an explicit blanked
 (zero-intensity) frame every tick, audio is muted at the DSP level, and the
 scene clock is frozen — not stopped from zero, *frozen*, so Stop then Start
 again resumes exactly where it left off rather than jumping the animation
-forward by however long it was paused.
+forward by however long it was paused. **Start** fades audio in over 1 second
+rather than snapping to full level (a real pop/click otherwise); **Stop**
+stays instant, since that's the safety-critical direction and must not lag
+behind the click.
 
-**Blank** is a separate, always-available safety action: it stops playback
-(same as Stop) and sends the DAC a genuine zero-intensity frame on that same
-tick — a real "beam off" command, not just skipping a write (which would leave
-the last frame looping on the device's own buffer). Muting for audio is
-non-destructive — it doesn't touch the scene's master/level settings, so
-nothing needs re-tuning after Start.
+**Start/Stop Laser** (v0.30.0, header, next to Start/Stop) is a separate,
+independent gate for the physical beam only — **off by default**, regardless
+of whether `--laser` was passed at launch. Visuals, audio, and the browser
+preview all run normally with it off; only the real DAC keeps getting an
+explicit blanked frame until you arm it. The point is being able to compose
+and preview a scene safely before it's actually sent to the rig, without also
+having to stop/restart playback to do it. Turning it off blanks the beam
+immediately, same "real zero-intensity frame" guarantee the old **Blank**
+button gave (which this replaces) — not just skipping a write, which would
+leave the last frame looping on the DAC's own buffer. With no laser hardware
+attached (`NullOutput`), this toggle has no effect either way — the preview
+and point-counter stay accurate regardless.
 
 **Fixed in v0.12.0 — the real "glitches on complicated soundscapes" cause:**
 render duration climbing to 500-1000%+ of budget (rather than occasional
@@ -534,6 +592,21 @@ previously blew up, and confirmed deliberately extreme/malformed values (empty
 scale, tempo=99999, 500-note chords) can no longer even reach that state.
 Blocksize options up to 32768 are also available now for extra headroom on
 top of this fix.
+
+## Performance diagnostics (v0.30.0)
+
+A render-loop counterpart to the Audio diagnostics below: per-tick render/
+output timing, dropped-tick tracking, and whether a drop happened *during a
+scene crossfade* — so "does it lag right when scenes fade" is something you
+can read off real numbers instead of guessing. Lives in a **Performance**
+accordion (sidebar); a lightweight FPS counter under the visualiser works all
+the time, independent of everything else here.
+
+**Off by default** — the timing instrumentation itself has a small real cost
+(measured ~2.5% of a frame). Turn it on live in **Settings > Diagnostics**,
+or launch with `--diag`; no relaunch needed either way, and the FPS counter
+keeps working regardless of this setting. When off, the Audio
+diagnostics/Performance panels hide entirely rather than sitting open empty.
 
 ## Audio diagnostics (glitch troubleshooting)
 

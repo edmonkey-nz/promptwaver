@@ -21,7 +21,9 @@ from .modulation import ModMatrix, LFO, Value
 from .scenes import SceneManager, SceneSpec
 from .director import SceneDirector
 from .audio import make_synth, AudioAnalysis
+from .geometry import test_pattern_frame
 from .output import make_output
+from .perf import LoopStats
 
 
 def _apply_scape_param(scape: dict, path: str, value):
@@ -55,10 +57,22 @@ def _patch_to_soundscape(patch: dict) -> dict:
 class Engine:
     def __init__(self, *, library_dir, cache_dir, fps=45, pps=11000,
                  max_step=0.03, invert_x=False, keystone_h=0.0, keystone_v=0.0,
-                 enable_laser=False, enable_audio=True, model=None):
+                 enable_laser=False, enable_audio=True, model=None,
+                 enable_diagnostics=False):
         self.fps = fps
         self.pps = pps
         self.crossfade = 2.0
+        # Off by default — a small but real cost (measured ~2.5% of a frame,
+        # plus a fixed instrumentation tax on the audio callback) that most
+        # sessions don't need paying for. Toggle live in Settings, or launch
+        # with --diag, whenever actually diagnosing a performance question —
+        # that also lets "is the instrumentation itself costing performance"
+        # be answered directly by A/B rather than assumed —
+        # skips the render/output timing calls and the perf.record() call
+        # in _loop below, and tells the audio callback to skip its own
+        # timing the same way (see audio/synth.py).
+        self._diag_enabled = enable_diagnostics
+        self.perf = LoopStats(fps)
         self.audio_fade = 2.0     # soundscape crossfade duration (s) on scene switch, 0-16
 
         # shared spine
@@ -75,7 +89,8 @@ class Engine:
             "blocksize": int(_settings.get("audio_blocksize", 8192)),
             "latency": _settings.get("audio_latency", "high"),
         }
-        self.synth, self.audio_error = make_synth(enable_audio, **self._audio_cfg)
+        self.synth, self.audio_error = make_synth(enable_audio, enable_diagnostics=enable_diagnostics,
+                                                  **self._audio_cfg)
         self._device_list = None
         self.rescan_audio_devices()
         self.analysis = AudioAnalysis()
@@ -94,6 +109,29 @@ class Engine:
         # fire before the render thread's first tick) is silent, not a pop.
         self.active = False
         self.synth.set_muted(True)
+        # Separate safety gate from `active`: even while the engine is
+        # running (visuals rendering, audio playing, browser preview live),
+        # the real DAC should not receive a non-blanked frame until this is
+        # explicitly turned on — off by default regardless of whether
+        # --laser was passed. Only matters for a real HeliosOutput; NullOutput
+        # (no hardware) always renders normally so the preview/point-counter
+        # stay accurate with no laser connected. See _loop's output-write step.
+        self.laser_on = False
+        # Keystone (Settings > Keystone) — physical rig alignment, not a
+        # scene setting: it stays fixed across scene switches for as long
+        # as this rig is mounted where it is. The actual values live on
+        # self.output.planner (see output/ilda.py's PathPlanner, set at
+        # construction from --keystone-h/-v); set_keystone below just makes
+        # them live-adjustable instead of launch-only.
+        #
+        # Test pattern: a fixed calibration frame (geometry.py's
+        # test_pattern_frame) that _write_output substitutes for the live
+        # scene when this is on — lets keystone be tuned against a known
+        # shape (straight border, diagonals, crosshair) rather than
+        # whatever a scene happens to be showing. Output windows mirror
+        # this via state()'s test_pattern_on and draw their own client-side
+        # copy of the same pattern (see index.html/output.html).
+        self.test_pattern_on = False
         # "Disable Audio"/"Disable Visuals" (Global section): independent,
         # gracefully-fadeable gates layered on top of the instant active/blank
         # ones above — see _sync_audio_mute and the visual-fade block in _loop.
@@ -110,6 +148,25 @@ class Engine:
         # scene/generator itself chose.
         self.hue_override_on = False
         self.hue_value = 0.5
+        # "Disable scene plane" (Camera controls) — hides floor/ground/grid/
+        # plane-named nodes from a 3D scene's own geometry, in both the
+        # laser and the browser/output display alike (it's applied in
+        # World.render3d, before the frame is built at all — see
+        # scenes.py's Scene.render — not a display-only filter).
+        #
+        # These five are per-scene display settings (Camera controls /
+        # Monitor filters in the UI): saved into spec.camera by
+        # update_current_scene and restored by _install_spec when a scene
+        # loads, so they travel with the scene like any other camera
+        # setting rather than leaking into whatever gets loaded next.
+        # Absent from a scene's saved file (any scene that's never had them
+        # explicitly set, including every scene that predates this feature)
+        # means off/0 — see _install_spec's `.get(key, default)` reads.
+        self.disable_plane = False
+        self.mirror_x = False
+        self.mirror_y = False
+        self.glow = 0.0
+        self.trail = 0.0
         # library key of the currently-loaded scene, tracked separately from
         # spec.name: a handful of shipped example scenes have a free-text
         # internal name that doesn't match their filename (e.g.
@@ -171,6 +228,16 @@ class Engine:
             self.audio_fade = max(0.0, min(16.0, float(value)))
         elif key == "hue_override":
             self.hue_override_on = bool(value)
+        elif key == "disable_plane":
+            self.disable_plane = bool(value)
+        elif key == "mirror_x":
+            self.mirror_x = bool(value)
+        elif key == "mirror_y":
+            self.mirror_y = bool(value)
+        elif key == "glow":
+            self.glow = max(0.0, min(1.0, float(value)))
+        elif key == "trail":
+            self.trail = max(0.0, min(0.95, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -288,11 +355,15 @@ class Engine:
         stopped — resuming continues from where it left off, no time-jump),
         the laser is sent an explicit blanked frame every tick, and audio is
         muted at the DSP level (the scene's own mix/levels are untouched, so
-        nothing needs re-tuning after Start). Instant, not faded — this is the
-        safety-critical gate and must not lag behind the click."""
+        nothing needs re-tuning after Start).
+
+        Stopping is instant, not faded — the safety-critical direction
+        (silence/blank NOW) must not lag behind the click. Starting fades
+        audio in over 1s instead of snapping straight to full level, which
+        reads as an abrupt pop/click rather than a clean entrance."""
         def apply():
             self.active = bool(value)
-            self._sync_audio_mute(fade=0.0)
+            self._sync_audio_mute(fade=1.0 if self.active else 0.0)
             if not self.active:
                 self.output.blank()
                 self._last_frame = []
@@ -346,6 +417,50 @@ class Engine:
             self._last_frame = []
         self._enqueue(apply)
 
+    def set_laser(self, value: bool):
+        """Independent gate for the real DAC only (see `laser_on` in
+        __init__) — deliberately does NOT touch `active`/audio/preview: the
+        point is that visuals+audio can keep running and the browser preview
+        keeps showing the live scene while the physical beam stays off, e.g.
+        while composing/previewing a scene before it's safe to send to the
+        rig. Turning it off blanks the real output immediately on this tick;
+        turning it on just stops that override on the next _loop tick."""
+        def apply():
+            self.laser_on = bool(value)
+            if not self.laser_on:
+                self.output.blank()
+        self._enqueue(apply)
+
+    def set_keystone(self, h: float | None = None, v: float | None = None):
+        """Live horizontal/vertical keystone for the laser (Settings >
+        Keystone) — was launch-only (--keystone-h/-v); this makes it
+        adjustable while watching the beam (or the test pattern below)
+        without restarting. Applied in output/ilda.py's PathPlanner,
+        exactly the same as before, just settable at runtime now."""
+        def apply():
+            if h is not None:
+                self.output.planner.keystone_h = float(h)
+            if v is not None:
+                self.output.planner.keystone_v = float(v)
+        self._enqueue(apply)
+
+    def set_test_pattern(self, value: bool):
+        """Show/hide the keystone calibration pattern (Settings > Keystone)
+        — see `test_pattern_on`'s docstring in __init__."""
+        def apply():
+            self.test_pattern_on = bool(value)
+        self._enqueue(apply)
+
+    def set_diagnostics(self, value: bool):
+        """Live toggle for perf/audio instrumentation (Settings modal) — the
+        CLI --no-diag flag's runtime equivalent, for A/B-testing whether the
+        instrumentation itself costs anything without a relaunch."""
+        def apply():
+            self._diag_enabled = bool(value)
+            if hasattr(self.synth, "_diag_enabled"):
+                self.synth._diag_enabled = bool(value)
+        self._enqueue(apply)
+
     def set_model(self, choice: str):
         self._enqueue(lambda: self.director.set_model(choice))
 
@@ -377,25 +492,43 @@ class Engine:
                     self.synth.set_soundscape(scape, fade=self.audio_fade)
         self._enqueue(apply)
 
-    def configure_audio(self, *, device=None, blocksize=None, latency=None):
+    def configure_audio(self, *, device=None, blocksize=None, latency=None) -> threading.Event:
         """Live-reconfigure the audio output (device/blocksize/latency).
         Requests a change; the actual applied config (which may differ, e.g.
         if the backend doesn't support the requested blocksize) is read back
-        from the synth afterwards, not assumed from the request."""
+        from the synth afterwards, not assumed from the request.
+
+        Returns an Event set once the (enqueued, applied on the render
+        thread) reconfigure has actually finished — the caller (the
+        websocket handler) waits on this instead of guessing how long a
+        stream stop/restart takes. That used to be a fixed `sleep(0.3)` in
+        server.py: fine most of the time, but a reconfigure that took a
+        little longer than 300ms (a slower device, PulseAudio under load)
+        made the handler report "audio failed to (re)start" — a false
+        negative — even though the reconfigure went on to succeed a moment
+        later. From the UI this looked exactly like "the setting didn't
+        take", indistinguishable from an actual failure.
+        """
+        done = threading.Event()
+
         def apply():
-            if hasattr(self.synth, "reconfigure"):
-                self.synth.reconfigure(device=device, blocksize=blocksize, latency=latency)
-            else:
-                # NullSynth (or a synth that never opened) — try to start one
-                self.synth, self.audio_error = make_synth(True, **{
-                    "device": device if device is not None else self._audio_cfg["device"],
-                    "blocksize": blocksize if blocksize is not None else self._audio_cfg["blocksize"],
-                    "latency": latency if latency is not None else self._audio_cfg["latency"],
-                })
+            try:
                 if hasattr(self.synth, "reconfigure"):
-                    self.synth.reconfigure(use_ladder=True)   # fresh start — find anything that works
-            self._sync_audio_cfg_from_synth()
+                    self.synth.reconfigure(device=device, blocksize=blocksize, latency=latency)
+                else:
+                    # NullSynth (or a synth that never opened) — try to start one
+                    self.synth, self.audio_error = make_synth(True, enable_diagnostics=self._diag_enabled, **{
+                        "device": device if device is not None else self._audio_cfg["device"],
+                        "blocksize": blocksize if blocksize is not None else self._audio_cfg["blocksize"],
+                        "latency": latency if latency is not None else self._audio_cfg["latency"],
+                    })
+                    if hasattr(self.synth, "reconfigure"):
+                        self.synth.reconfigure(use_ladder=True)   # fresh start — find anything that works
+                self._sync_audio_cfg_from_synth()
+            finally:
+                done.set()
         self._enqueue(apply)
+        return done
 
     def rescan_audio_devices(self):
         from .audio import list_devices
@@ -431,6 +564,18 @@ class Engine:
                         "fov": cam.fov, "near": cam.near, "far": cam.far,
                         "max_strokes": cam.max_strokes,
                     })
+                # Display settings apply to every scene, 2D or 3D (a flat
+                # generator has no `cam` object above, but can still have
+                # mirror/glow/trail set) — outside the `cam is not None`
+                # guard for that reason, still bundled into spec.camera
+                # since that's what these same buttons already write.
+                sc.spec.camera.update({
+                    "disable_plane": self.disable_plane,
+                    "mirror_x": self.mirror_x,
+                    "mirror_y": self.mirror_y,
+                    "glow": self.glow,
+                    "trail": self.trail,
+                })
             if soundscape and getattr(self.synth, "online", False):
                 # capture the live soundscape (GUI tweaks) back into the scene
                 cur = self.synth.soundscape()
@@ -454,6 +599,18 @@ class Engine:
         if getattr(self.synth, "online", False):
             scape = spec.soundscape or _patch_to_soundscape(spec.audio_patch)
             self.synth.set_soundscape(scape, fade=self.audio_fade)
+        # Per-scene display settings (Camera controls / Monitor filters) —
+        # bundled into spec.camera (see update_current_scene). `.get(key,
+        # default)` means any scene that has never had these saved (every
+        # scene predating this feature, and every new one until explicitly
+        # set) loads as off/0, not carrying over whatever the PREVIOUS
+        # scene happened to have live.
+        cam_cfg = spec.camera or {}
+        self.disable_plane = bool(cam_cfg.get("disable_plane", False))
+        self.mirror_x = bool(cam_cfg.get("mirror_x", False))
+        self.mirror_y = bool(cam_cfg.get("mirror_y", False))
+        self.glow = float(cam_cfg.get("glow", 0.0))
+        self.trail = float(cam_cfg.get("trail", 0.0))
 
     def _apply_modulation(self, spec: SceneSpec):
         self.matrix.clear_routes()
@@ -463,6 +620,17 @@ class Engine:
         # global audio<->visual coupling level (the "level effect"): scales every
         # route sourced from live audio, independent of each route's own depth
         self.matrix.set_source_scale("audio_level", float(getattr(spec, "audio_link", 1.0)))
+
+    def _write_output(self, frame):
+        """Real hardware only sends non-blanked frames once `laser_on` is
+        explicitly set — see `set_laser`'s docstring. NullOutput (no
+        hardware attached) always writes normally regardless, so the
+        browser preview and point-count stay accurate when there's no
+        physical beam to protect."""
+        if self.output.name == "helios" and not self.laser_on:
+            self.output.blank()
+        else:
+            self.output.write(frame, self.pps)
 
     # loop ------------------------------------------------------------------
     def _loop(self):
@@ -499,8 +667,17 @@ class Engine:
             self._audio_src.current = self.analysis.level
             self.matrix.update(t, dt)
 
+            # crossfades render two full scenes for the transition's duration
+            # (see SceneManager.render) — captured before render() below,
+            # since a crossfade completing on this exact tick clears it. Only
+            # needed for the perf.record() call below, so skip it too with
+            # diagnostics off.
+            crossfading = self._diag_enabled and self.scenes.transition_state() is not None
+
             # render + output
-            frame = self.scenes.render(t, dt, self.matrix)
+            if self._diag_enabled:
+                t_render0 = time.monotonic()
+            frame = self.scenes.render(t, dt, self.matrix, disable_plane=self.disable_plane)
 
             # "Disable Visuals" fade — dims every point's colour toward black
             # over _visual_fade_dur seconds, the same per-point scaling trick
@@ -526,8 +703,25 @@ class Engine:
                     _, s, v = colorsys.rgb_to_hsv(*p.color)
                     p.color = colorsys.hsv_to_rgb(hv, s, v)
 
+            if self.test_pattern_on:
+                # Overrides whatever the scene rendered this tick, for BOTH
+                # the real laser (via _write_output below) and the preview/
+                # output-window broadcast (self._last_frame) — one pattern,
+                # shown everywhere, so keystone reads the same regardless of
+                # which output you're looking at while tuning it.
+                frame = test_pattern_frame()
             self._last_frame = frame
-            self.output.write(frame, self.pps)
+            self.perf.tick()   # cheap interval/fps tracking — always on, see LoopStats.tick
+            if self._diag_enabled:
+                render_dur = time.monotonic() - t_render0
+                t_out0 = time.monotonic()
+                self._write_output(frame)
+                output_dur = time.monotonic() - t_out0
+                total_dur = time.monotonic() - now
+                self.perf.record(render_s=render_dur, output_s=output_dur, total_s=total_dur,
+                                 n_points=len(frame), crossfading=crossfading)
+            else:
+                self._write_output(frame)
 
             sleep = period - (time.monotonic() - now)
             if sleep > 0:
@@ -544,6 +738,10 @@ class Engine:
         return {
             "version": __import__("promptwaver").__version__,
             "active": self.active,
+            "laser_on": self.laser_on,
+            "keystone_h": getattr(self.output.planner, "keystone_h", 0.0),
+            "keystone_v": getattr(self.output.planner, "keystone_v", 0.0),
+            "test_pattern_on": self.test_pattern_on,
             "audio_disabled": self.audio_disabled,
             "visuals_disabled": self.visuals_disabled,
             "scene": self.scenes.current.spec.name if self.scenes.current else None,
@@ -571,6 +769,8 @@ class Engine:
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
             "audio_diag": self.synth.diagnostics() if getattr(self.synth, "online", False) else None,
+            "perf_diag": self.perf.summary(),
+            "diagnostics_enabled": self._diag_enabled,
             "vu": self.synth.vu() if getattr(self.synth, "online", False) else None,
             "audio_devices": self._device_list,
             "audio_cfg": self._audio_cfg,
@@ -578,6 +778,11 @@ class Engine:
             "crossfade": self.crossfade,
             "audio_fade": self.audio_fade,
             "hue_override": self.hue_override_on,
+            "disable_plane": self.disable_plane,
+            "mirror_x": self.mirror_x,
+            "mirror_y": self.mirror_y,
+            "glow": self.glow,
+            "trail": self.trail,
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),

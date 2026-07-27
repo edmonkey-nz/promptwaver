@@ -1206,9 +1206,9 @@
       2
     ],
     "orbit_radius": 14,
-    "far": 40,
+    "far": 23.0,
     "speed": 0.05,
-    "max_strokes": 200,
+    "max_strokes": 100,
     "depth": {
       "mode": "cull"
     },

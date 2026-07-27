@@ -37,7 +37,7 @@ class NullSynth:
 
 class SoundscapeSynth:
     def __init__(self, sr: int = SR, blocksize: int = 8192, device=None,
-                 latency="high"):
+                 latency="high", enable_diagnostics=True):
         import sounddevice as sd
         self._sd = sd
         self.sr = sr
@@ -46,7 +46,13 @@ class SoundscapeSynth:
         self.latency = latency
         self._lock = threading.Lock()
         self._scape = SoundscapeMixer(default_soundscape(), sr=sr)
+        self._last_vu = {"peak": 0.0, "clipping": False}
         self._stream = None
+        # Off with --no-diag: skips the timing calls and stats.record() in
+        # _callback below — for isolating whether the instrumentation itself
+        # (running inside the realtime callback) is a source of the very
+        # glitching it's meant to help diagnose.
+        self._diag_enabled = enable_diagnostics
         self.stats = CallbackStats(sr, blocksize)
         self.last_error = None
         self.requested_blocksize = blocksize
@@ -58,10 +64,15 @@ class SoundscapeSynth:
         self.online = False
 
     def _callback(self, outdata, frames, time_info, status):
+        if not self._diag_enabled:
+            with self._lock:
+                outdata[:] = self._scape.render(frames)
+            return
         t0 = time.perf_counter()
         with self._lock:
+            crossfading = self._scape._phase is not None
             outdata[:] = self._scape.render(frames)
-        self.stats.record(time.perf_counter() - t0, status)
+        self.stats.record(time.perf_counter() - t0, status, crossfading=crossfading)
 
     def start(self):
         self.stats = CallbackStats(self.sr, self.blocksize)
@@ -171,10 +182,23 @@ class SoundscapeSynth:
 
     def vu(self):
         """Post-master output level of the last rendered block, for the VU
-        meter — read under the same lock the audio callback renders under, so
-        it can't observe a torn mid-render state."""
-        with self._lock:
-            return {"peak": self._scape.last_peak, "clipping": self._scape.last_clip}
+        meter. Non-blocking: this is called from engine.state(), on the
+        asyncio broadcaster thread, at ~20Hz — if it *waited* for the lock
+        while the audio callback is mid-render (the callback holds this same
+        lock for the whole of Soundscape.render(), which we've measured
+        spiking to hundreds of ms on heavier scenes), the entire websocket
+        broadcaster would stall for that long, freezing every connected
+        browser's video preview — completely independent of whether the
+        engine's own render loop is keeping up. That's a real "audio glitch
+        -> visual freeze" coupling that has nothing to do with render cost.
+        Falling back to the last known reading on contention (a peak meter
+        one tick stale is imperceptible) removes it entirely."""
+        if self._lock.acquire(blocking=False):
+            try:
+                self._last_vu = {"peak": self._scape.last_peak, "clipping": self._scape.last_clip}
+            finally:
+                self._lock.release()
+        return self._last_vu
 
     def diagnostics(self):
         d = self.stats.summary()

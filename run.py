@@ -40,6 +40,9 @@ def parse_args():
     ap.add_argument("--keystone-h", type=float, default=0.0)
     ap.add_argument("--keystone-v", type=float, default=0.0)
     ap.add_argument("--fps", type=int, default=45)
+    ap.add_argument("--diag", action="store_true",
+                    help="enable perf/audio diagnostics instrumentation at startup (off by "
+                         "default; also toggleable live in Settings)")
     ap.add_argument("--model", default=None, help="override director model id")
     ap.add_argument("--scene", default="water flowing", help="initial keyword")
     return ap.parse_args()
@@ -54,6 +57,7 @@ def main():
         invert_x=args.invert_x, keystone_h=args.keystone_h,
         keystone_v=args.keystone_v, enable_laser=args.laser,
         enable_audio=not args.no_audio, model=args.model,
+        enable_diagnostics=args.diag,
     )
     # start with something on screen immediately
     engine._install_spec(local_scene(args.scene))

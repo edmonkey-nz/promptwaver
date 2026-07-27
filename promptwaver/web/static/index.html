@@ -173,8 +173,8 @@
   .vchannel{display:flex;flex-direction:column;align-items:center;gap:8px}
   .vchannel label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
     display:flex;flex-direction:column;align-items:center;gap:4px}
-  .vslider-wrap{height:112px;display:flex;align-items:center;justify-content:center}
-  .vslider{writing-mode:vertical-lr;direction:rtl;width:10px;height:105px;accent-color:var(--cyan)}
+  .vslider-wrap{height:73px;display:flex;align-items:center;justify-content:center}
+  .vslider{writing-mode:vertical-lr;direction:rtl;width:10px;height:68px;accent-color:var(--cyan)}   /* 35% shorter than the 112/105px this was */
   .vu-bar{width:22px;height:112px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
     overflow:hidden;display:flex;flex-direction:column-reverse}
   .vu-fill{width:100%;height:0%;background:var(--cyan)}
@@ -183,12 +183,13 @@
   .vu-clip{width:10px;height:10px;border-radius:50%;background:var(--line);
     transition:background .1s,box-shadow .1s}
 
-  .xfade-indicator{display:none;flex-direction:column;gap:6px;padding:8px 10px;
+  .xfade-indicator{display:flex;flex-direction:column;gap:6px;padding:8px 10px;
     border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
-  .xfade-indicator.show{display:flex}
   .xfade-labels{display:flex;justify-content:space-between;font-family:var(--mono);
-    font-size:11px;color:var(--ink)}
-  .xfade-labels span:last-child{color:var(--cyan)}
+    font-size:11px;color:var(--dim)}
+  .xfade-labels.active{color:var(--ink)}
+  .xfade-labels span:last-child{color:var(--dim)}
+  .xfade-labels.active span:last-child{color:var(--cyan)}
   .xfade-bar{position:relative;height:8px;border-radius:4px;background:var(--bg);
     border:1px solid var(--line);overflow:hidden}
   .xfade-glow{position:absolute;top:0;left:0;bottom:0;width:0%;border-radius:4px;
@@ -211,17 +212,17 @@
   </div>
   <span class="meta" id="meta">connecting…</span>
   <span style="flex:1"></span>
-  <button id="output-toggle" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output Window</button>
+  <button id="output-toggle-1" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output 1</button>
+  <button id="output-toggle-2" title="A second output window on the same live feed — independently flippable in Settings, for a second screen/projector">🖵 Output 2</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
-  <button class="amber" id="master-blank">LASER BLANK</button>
+  <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
 </header>
 <main>
  <div class="toprow">
   <section class="stage">
     <canvas id="view" width="600" height="600"></canvas>
     <div class="readouts">
-      <span>scene <b id="r-scene">—</b></span>
-      <span>points <b id="r-points">0</b></span>
+      <span>fps <b id="r-fps">—</b></span>
     </div>
 
     <div class="group" id="g-camera" style="display:none;width:100%">
@@ -247,6 +248,26 @@
       <div class="field"><label>max strokes</label>
         <input type="range" id="c-max" min="20" max="200" step="5" value="120">
         <span class="val" id="v-cmax">120</span></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
+        <input type="checkbox" id="c-disable-plane"> disable scene planes (if possible)
+      </label>
+        </div>
+
+    <div class="group" id="g-monitor" style="width:100%">
+      <h2>Monitor filters</h2>
+      <div class="hint">screen/monitor display only</div>
+      <div class="field"><label>glow</label>
+        <input type="range" id="mf-glow" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="v-mfglow">0.00</span></div>
+      <div class="field"><label>trails</label>
+        <input type="range" id="mf-trail" min="0" max="0.95" step="0.01" value="0">
+        <span class="val" id="v-mftrail">0.00</span></div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="mf-mirror-x"> mirror x</label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="mf-mirror-y"> mirror y</label>
+      </div>
     </div>
 
     <div class="group" id="g-motion" style="width:100%">
@@ -278,14 +299,6 @@
     <div class="group" id="g-global">
       <h2>Global</h2>
 
-      <div class="xfade-indicator" id="xfade-indicator">
-        <div class="xfade-labels">
-          <span id="xfade-from">—</span>
-          <span id="xfade-to">—</span>
-        </div>
-        <div class="xfade-bar"><div class="xfade-glow" id="xfade-glow"></div></div>
-      </div>
-
       <div class="vmeters-row">
         <div class="vmeters">
           <div class="vchannel">
@@ -303,6 +316,18 @@
         </div>
       </div>
 
+      <!-- Always visible (not display:none-toggled) so a scene switch
+           starting/ending doesn't pop this in and out of the layout,
+           shoving the crossfade/audio-fade fields below it around. Shows
+           "—/—" and an empty bar at rest. -->
+      <div class="xfade-indicator" id="xfade-indicator">
+        <div class="xfade-labels">
+          <span id="xfade-from">—</span>
+          <span id="xfade-to">—</span>
+        </div>
+        <div class="xfade-bar"><div class="xfade-glow" id="xfade-glow"></div></div>
+      </div>
+
       <div class="field"><label>crossfade</label>
         <input type="range" id="s-xf" min="0" max="8" step="0.5" value="2">
         <span class="val" id="v-xf">2.0</span></div>
@@ -316,7 +341,18 @@
         <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
         <span class="val" id="v-hueoverride">0.50</span></div>
     </div>
-
+ <details class="accordion" id="acc-modulation" open>
+      <summary>Modulation</summary>
+      <div class="accordion-body">
+        <div class="field"><label>audio ↔ visual</label>
+          <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
+          <span class="val" id="v-mlink">1.00</span></div>
+        <div class="field"><label>LFO rate</label>
+          <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
+          <span class="val" id="v-lfo">0.05</span></div>
+        <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </details>
     <div class="group">
       <h2>Scene settings</h2>
       <button id="save-soundscape">Save Soundscape settings</button>
@@ -354,19 +390,18 @@
       </div>
     </details>
 
-    <details class="accordion" id="acc-modulation">
-      <summary>Modulation</summary>
+    <details class="accordion" id="acc-perf" closed>
+      <summary>Performance</summary>
       <div class="accordion-body">
-        <div class="field"><label>audio ↔ visual</label>
-          <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
-          <span class="val" id="v-mlink">1.00</span></div>
-        <div class="hint">turns the whole audio→visual coupling up or down — the "level effect"</div>
-        <div class="field"><label>LFO rate</label>
-          <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
-          <span class="val" id="v-lfo">0.05</span></div>
-        <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="hint" id="perf-status">fps: —</div>
+        <div class="diagrid" id="perfstats"></div>
+        <div class="hint">"dropped" = ticks where render+output overran the frame budget — the direct measure of visible lag/stutter. "during fades" isolates that same count to ticks where a scene crossfade was rendering two full scenes at once.</div>
+        <div class="underruns" id="perf-drops"></div>
+        <div class="row"><button id="perf-copy">Copy diagnostics</button></div>
       </div>
     </details>
+
+   
   </aside>
  </div>
 
@@ -382,6 +417,8 @@
     <div class="group">
       <h2>Scene creation</h2>
       <button class="go" id="gen-open" style="width:100%">Generate scene…</button>
+              <div class="hint">you can also generate new audio from a new prompt also using this button.</div>
+
     </div>
   </section>
  </div>
@@ -472,6 +509,50 @@
         <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
       <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget. Per-scene override is in the Global section.</div>
     </div>
+
+    <div class="group">
+      <h2 style="font-size:11px">Diagnostics</h2>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px">
+        <input type="checkbox" id="diag-enabled-toggle"> enable perf/audio diagnostics
+      </label>
+      <div class="hint">turns off the render-loop and audio-callback timing instrumentation live, no relaunch needed — for isolating whether the instrumentation itself costs anything. The FPS counter under the visualiser keeps working either way.</div>
+    </div>
+
+    <div class="group">
+      <h2 style="font-size:11px">Keystone</h2>
+      <div class="hint">Corrects for an off-axis-mounted laser (trapezoid distortion) — a physical rig setting, not a scene one, so it stays fixed across scene switches. Applied to the real DAC output (output/ilda.py); the visualiser above mirrors it live so you can tune by eye without the laser on.</div>
+      <div class="field"><label>horizontal</label>
+        <input type="range" id="ks-h" min="-0.5" max="0.5" step="0.005" value="0">
+        <span class="val" id="v-ksh">0.000</span></div>
+      <div class="field"><label>vertical</label>
+        <input type="range" id="ks-v" min="-0.5" max="0.5" step="0.005" value="0">
+        <span class="val" id="v-ksv">0.000</span></div>
+      <button id="test-pattern-toggle">Show test pattern</button>
+      <div class="hint">overrides the current scene with a calibration grid — on the laser, the visualiser, and any open Output Window — until turned off.</div>
+    </div>
+
+    <div class="group">
+      <h2 style="font-size:11px">Output monitors</h2>
+      <div class="hint">Output 1 and Output 2 (header buttons) show the same live feed. Flip reverses the whole image (no reflection, unlike the Global section's "mirror"). Keystone here is independent per window — for when each screen is physically mounted/angled differently (unlike the laser's, above, these are display-only, not sent anywhere). Glow/trail/mirror (Global section) are shared between both.</div>
+      <div class="field"><label>Output 1</label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="out1-flip-x"> flip x</label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="out1-flip-y"> flip y</label>
+      </div>
+      <div class="field"><label>Out 1 keystone</label>
+        <input type="range" id="out1-ks-h" min="-0.5" max="0.5" step="0.005" value="0">
+        <input type="range" id="out1-ks-v" min="-0.5" max="0.5" step="0.005" value="0"></div>
+      <div class="field"><label>Output 2</label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="out2-flip-x"> flip x</label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="out2-flip-y"> flip y</label>
+      </div>
+      <div class="field"><label>Out 2 keystone</label>
+        <input type="range" id="out2-ks-h" min="-0.5" max="0.5" step="0.005" value="0">
+        <input type="range" id="out2-ks-v" min="-0.5" max="0.5" step="0.005" value="0"></div>
+    </div>
   </div>
 </div>
 
@@ -524,6 +605,8 @@ ws.onmessage = e => {
     s.style.color = m.ok ? "var(--cyan)" : "var(--amber)";
   }
   else if (m.type === "audio_config_result") {
+    audioApplyPending = false;
+    audioCfgDirty = false;
     const el = $("a-applystatus");
     if (!m.ok) {
       el.textContent = "\u2716 audio failed to (re)start" + (m.error ? ": " + m.error : "");
@@ -545,8 +628,6 @@ function paintState(s){
   mt.dataset.active = s.active ? "1" : "0";
   mt.textContent = s.active ? "■ Stop" : "▶ Start";
   mt.className = s.active ? "amber" : "go";
-  $("r-scene").textContent = s.scene || "—";
-  $("r-points").textContent = s.points;
   $("claude-dot").classList.toggle("on", !!s.director_online);
   if (!$("d-model").dataset.init && s.director_choice) {
     $("d-model").dataset.init = "1";
@@ -608,6 +689,10 @@ function paintState(s){
   if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
     $("o-maxpps").value = s.max_pps;
   }
+  if (document.activeElement !== $("diag-enabled-toggle") && typeof s.diagnostics_enabled === "boolean") {
+    $("diag-enabled-toggle").checked = s.diagnostics_enabled;
+  }
+  if (typeof s.laser_on === "boolean") updateLaserBtn(s.laser_on);
   if (document.activeElement !== $("s-afade") && typeof s.audio_fade === "number") {
     $("s-afade").value = s.audio_fade;
     $("v-safade").textContent = s.audio_fade.toFixed(1);
@@ -626,6 +711,9 @@ function paintState(s){
   if (document.activeElement !== $("hue-override-on")) {
     $("hue-override-on").checked = !!s.hue_override;
   }
+  if (document.activeElement !== $("c-disable-plane")) {
+    $("c-disable-plane").checked = !!s.disable_plane;
+  }
   if (document.activeElement !== $("hue-override-val") && typeof s.hue_value === "number") {
     $("hue-override-val").value = s.hue_value;
     $("v-hueoverride").textContent = s.hue_value.toFixed(2);
@@ -635,14 +723,30 @@ function paintState(s){
   renderVu(s);
   renderRoutes(s);
   syncAudioTargets(s);
-  renderDiagnostics(s);
+  syncMonitorFilters(s);
+  // Diagnostics off (default) hides these two blocks entirely rather than
+  // leaving them open with a "disabled" message inside. renderPerf() still
+  // runs unconditionally either way — it's what drives the FPS readout
+  // under the visualiser (via LoopStats.tick(), always-on regardless of
+  // this toggle), it just skips its own detailed sub-panel when off.
+  const diagOn = s.diagnostics_enabled !== false;
+  $("acc-diag").style.display = diagOn ? "" : "none";
+  $("acc-perf").style.display = diagOn ? "" : "none";
+  if (diagOn) renderDiagnostics(s);
+  renderPerf(s);
 }
 
 function renderXfade(s){
-  const box = $("xfade-indicator");
   const tr = s.scene_transition;
-  if (!tr) { box.classList.remove("show"); return; }
-  box.classList.add("show");
+  const labels = document.querySelector("#xfade-indicator .xfade-labels");
+  if (!tr) {
+    labels.classList.remove("active");
+    $("xfade-from").textContent = "—";
+    $("xfade-to").textContent = "—";
+    $("xfade-glow").style.width = "0%";
+    return;
+  }
+  labels.classList.add("active");
   $("xfade-from").textContent = tr.from || "—";
   $("xfade-to").textContent = tr.to || "—";
   const pct = Math.max(0, Math.min(1, tr.progress ?? 0)) * 100;
@@ -677,6 +781,11 @@ function renderDiagnostics(s){
     status.style.color = "var(--amber)";
     $("diagstats").innerHTML = "";
     $("diag-underruns").innerHTML = "";
+  } else if (s.diagnostics_enabled === false) {
+    status.textContent = `audio: running \u00b7 blocksize ${s.audio_cfg?.blocksize ?? "?"} @ 44100Hz \u00b7 diagnostics disabled in Settings`;
+    status.style.color = "var(--dim)";
+    $("diagstats").innerHTML = "";
+    $("diag-underruns").innerHTML = "";
   } else {
     const d = s.audio_diag || {};
     const bad = d.underruns > 0 || d.duration_budget_pct > 70;
@@ -692,13 +801,14 @@ function renderDiagnostics(s){
       <span>max render</span><b class="${(d.duration_budget_pct>70)?'bad':''}">${d.max_duration_ms ?? 0} ms (${d.duration_budget_pct ?? 0}% of budget)</b>
       <span>callback budget</span><b>${d.expected_interval_ms ?? 0} ms</b>
       <span>max interval</span><b class="${(d.max_interval_ms > (d.expected_interval_ms||1)*1.5)?'bad':''}">${d.max_interval_ms ?? 0} ms</b>
+      <span>soundscape fades</span><b class="${d.xfade_over_budget?'bad':''}">${d.xfade_over_budget ?? 0}/${d.xfade_callbacks ?? 0} over budget</b>
     `;
     const u = $("diag-underruns");
     let extra = "";
     if (d.error) extra = `<div style="color:var(--amber)">${d.error}</div>`;
     if ((d.recent_underruns||[]).length){
       u.innerHTML = extra + "recent xruns:<br>" + d.recent_underruns.slice(-10).reverse()
-        .map(e => `t+${e.t}s: ${e.flags.join(",")}`).join("<br>");
+        .map(e => `t+${e.t}s: ${e.flags.join(",")}${e.crossfade ? " (during soundscape fade)" : ""}`).join("<br>");
     } else {
       u.innerHTML = extra + (d.callbacks ? "no hardware-reported xruns yet" : "");
     }
@@ -720,15 +830,92 @@ function renderDiagnostics(s){
     }
     if ([...sel.options].some(o=>o.value===cur)) sel.value = cur;
   }
-  if (s.audio_cfg && document.activeElement !== $("a-blocksize")) {
+  // Skip re-syncing from server state while the user has an unapplied pick
+  // (audioCfgDirty, set the instant either <select> changes) or an Apply is
+  // in flight (audioApplyPending). Relying on activeElement alone (as most
+  // other controls in this file do) isn't reliable for these two: picking
+  // an option from a native <select> dropdown doesn't reliably leave the
+  // element focused across browsers/platforms, so the ~20Hz state broadcast
+  // could overwrite the user's pick with the old server value before they
+  // even reach the Apply button — this is what made a newly-picked
+  // blocksize/latency look like it "snapped back to the current setting".
+  if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-blocksize")) {
     $("a-blocksize").value = String(s.audio_cfg.blocksize ?? 8192);
   }
-  if (s.audio_cfg && document.activeElement !== $("a-latency")) {
+  if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-latency")) {
     $("a-latency").value = s.audio_cfg.latency ?? "high";
   }
 }
 
+function renderPerf(s){
+  const d = s.perf_diag;
+  const fpsEl = $("r-fps");
+  const status = $("perf-status");
+  // The FPS readout comes from LoopStats.tick(), which runs every frame
+  // regardless of the diagnostics toggle (see perf.py) — only the fuller
+  // per-stage breakdown below needs the heavier instrumentation on.
+  if (!d || !d.ticks) {
+    fpsEl.textContent = "—";
+    fpsEl.style.color = "";
+    status.textContent = "fps: — (not rendering — click Start)";
+    $("perfstats").innerHTML = "";
+    $("perf-drops").innerHTML = "";
+    return;
+  }
+  const diagOff = s.diagnostics_enabled === false;
+  // amber once we're meaningfully behind target FPS or dropping ticks —
+  // this is the at-a-glance version; the accordion below has the detail.
+  const short = d.target_fps - d.fps > 3 || (!diagOff && d.dropped_pct > 2);
+  fpsEl.textContent = `${d.fps} / ${d.target_fps}`;
+  fpsEl.style.color = short ? "var(--amber)" : "";
+  if (diagOff) {
+    status.textContent = `fps: ${d.fps} (target ${d.target_fps}) · full diagnostics disabled in Settings`;
+    status.style.color = "var(--dim)";
+    $("perfstats").innerHTML = "";
+    $("perf-drops").innerHTML = "";
+    return;
+  }
+  status.textContent = `fps: ${d.fps} (target ${d.target_fps}) · ` +
+    `${d.dropped} dropped ticks (${d.dropped_pct}%)` +
+    (d.xfade_ticks ? ` · ${d.xfade_dropped}/${d.xfade_ticks} dropped during scene fades` : "");
+  status.style.color = short ? "var(--amber)" : "var(--dim)";
+  const g = $("perfstats");
+  g.innerHTML = `
+    <span>render (avg/max)</span><b>${d.avg_render_ms} / ${d.max_render_ms} ms</b>
+    <span>output (avg/max)</span><b>${d.avg_output_ms} / ${d.max_output_ms} ms</b>
+    <span>frame budget</span><b>${d.budget_ms} ms</b>
+    <span>tick interval (avg/max)</span><b class="${d.max_interval_ms > d.budget_ms*1.5 ? 'bad':''}">${d.avg_interval_ms} / ${d.max_interval_ms} ms</b>
+    <span>points (avg/max)</span><b>${d.avg_points} / ${d.max_points}</b>
+    <span>dropped ticks</span><b class="${d.dropped_pct>2?'bad':''}">${d.dropped} (${d.dropped_pct}%)</b>
+  `;
+  const u = $("perf-drops");
+  if ((d.recent_drops||[]).length){
+    u.innerHTML = "recent dropped ticks:<br>" + d.recent_drops.slice(-10).reverse()
+      .map(e => `t+${e.t}s: +${e.over_ms}ms over budget${e.crossfade ? " (during scene fade)" : ""}`).join("<br>");
+  } else {
+    u.innerHTML = "no dropped ticks yet";
+  }
+}
+
+// audioCfgDirty: set the instant the user changes either <select>, cleared
+// once the Apply reply confirms (or reset by a fresh page load). Covers the
+// "picked a value, haven't clicked Apply yet" window that activeElement
+// can't be trusted for — see renderDiagnostics above.
+let audioCfgDirty = false;
+$("a-blocksize").addEventListener("input", () => { audioCfgDirty = true; });
+$("a-latency").addEventListener("input", () => { audioCfgDirty = true; });
+
+// audioApplyPending: set the moment Apply is clicked, cleared once the
+// audio_config_result reply arrives (or after a timeout if it never does).
+// Without this, picking e.g. blocksize 16384 and clicking Apply moved focus
+// to the button, and the very next ~50ms state broadcast (still reporting
+// the OLD blocksize, since the reconfigure hadn't landed yet) snapped the
+// dropdown straight back — looking exactly like the setting refused to
+// change even when it was actually about to apply correctly.
+let audioApplyPending = false;
 $("a-apply").onclick = () => {
+  audioApplyPending = true;
+  setTimeout(() => { audioApplyPending = false; }, 4000);   // safety net if the reply is lost
   $("a-applystatus").textContent = "applying…";
   $("a-applystatus").style.color = "var(--dim)";
   const device = $("a-device").value;
@@ -751,6 +938,20 @@ $("a-copy").onclick = async () => {
   try { await navigator.clipboard.writeText(payload);
     $("a-copy").textContent = "copied!"; setTimeout(()=>$("a-copy").textContent="Copy diagnostics", 1500);
   } catch(e) { $("a-copy").textContent = "copy failed"; }
+};
+$("perf-copy").onclick = async () => {
+  const payload = JSON.stringify({
+    perf_diag: _lastState?.perf_diag,
+    scene: _lastState?.scene,
+    scene_3d: _lastState?.scene_3d,
+    points: _lastState?.points,
+    scene_transition: _lastState?.scene_transition,
+    output: _lastState?.output,
+    pps: _lastState?.pps,
+  }, null, 2);
+  try { await navigator.clipboard.writeText(payload);
+    $("perf-copy").textContent = "copied!"; setTimeout(()=>$("perf-copy").textContent="Copy diagnostics", 1500);
+  } catch(e) { $("perf-copy").textContent = "copy failed"; }
 };
 let _lastState = null;
 
@@ -973,26 +1174,134 @@ function renderSoundscape(s){
   });
 }
 
+// Monitor-only visual filters (glow/trails) — a pure canvas-rendering
+// effect applied here and in output.html; never touches the vector data
+// handed to the laser DAC (engine.py/scene3d.py/ilda.py are untouched by
+// any of this). Synced across this page and any open Output Window via
+// localStorage + the "storage" event, since they're separate browser
+// windows/tabs with no other shared state.
+const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, keystoneH: 0, keystoneV: 0 };
+// Populated from server state (see paintState's call to this), NOT
+// localStorage — glow/trail/mirror are per-scene settings now (saved via
+// Save Camera settings / Save all scene settings, loaded with the scene
+// they were saved on), so the engine is the source of truth. The Output
+// Window picks these up the same way, from its own copy of the same state
+// broadcast — see output.html. keystoneH/V is the LASER's keystone (a rig
+// setting, not per-scene — see Settings > Keystone) — applied here too so
+// this visualiser doubles as the laser's calibration reference; Output
+// 1/2 each have their own independent keystone instead (see
+// outputKeystoneSlider below), since those are separate physical screens.
+function syncMonitorFilters(s){
+  monitorFilters.glow = s.glow ?? 0;
+  monitorFilters.trail = s.trail ?? 0;
+  monitorFilters.mirrorX = !!s.mirror_x;
+  monitorFilters.mirrorY = !!s.mirror_y;
+  monitorFilters.keystoneH = s.keystone_h ?? 0;
+  monitorFilters.keystoneV = s.keystone_v ?? 0;
+  if (document.activeElement !== $("mf-glow")) {
+    $("mf-glow").value = monitorFilters.glow;
+    $("v-mfglow").textContent = monitorFilters.glow.toFixed(2);
+  }
+  if (document.activeElement !== $("mf-trail")) {
+    $("mf-trail").value = monitorFilters.trail;
+    $("v-mftrail").textContent = monitorFilters.trail.toFixed(2);
+  }
+  if (document.activeElement !== $("mf-mirror-x")) $("mf-mirror-x").checked = monitorFilters.mirrorX;
+  if (document.activeElement !== $("mf-mirror-y")) $("mf-mirror-y").checked = monitorFilters.mirrorY;
+  if (document.activeElement !== $("ks-h")) {
+    $("ks-h").value = monitorFilters.keystoneH;
+    $("v-ksh").textContent = monitorFilters.keystoneH.toFixed(3);
+  }
+  if (document.activeElement !== $("ks-v")) {
+    $("ks-v").value = monitorFilters.keystoneV;
+    $("v-ksv").textContent = monitorFilters.keystoneV.toFixed(3);
+  }
+  const tpBtn = $("test-pattern-toggle");
+  tpBtn.textContent = s.test_pattern_on ? "Hide test pattern" : "Show test pattern";
+  tpBtn.className = s.test_pattern_on ? "amber" : "";
+}
+
+// Reflects one half of the already-drawn canvas over the centre line onto
+// the other half (kaleidoscope-style) — distinct from the per-output-monitor
+// "flip" in Settings, which reverses the WHOLE image with no reflection.
+// Applied last, after glow/trail, so it mirrors what's actually on screen.
+// Exact for a box-clipped image: reflecting a convex box across its own
+// centre line always lands back inside the same box, so drawing the canvas
+// onto itself (flipped) is safe and needs no separate offscreen buffer.
+function applyMirror(ctx, canvas, mirrorX, mirrorY){
+  const w = canvas.width, h = canvas.height;
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = "source-over";
+  if (mirrorX){
+    ctx.save();
+    ctx.translate(w, 0); ctx.scale(-1, 1);
+    ctx.drawImage(canvas, 0, 0, w/2, h, 0, 0, w/2, h);
+    ctx.restore();
+  }
+  if (mirrorY){
+    ctx.save();
+    ctx.translate(0, h); ctx.scale(1, -1);
+    ctx.drawImage(canvas, 0, 0, w, h/2, 0, 0, w, h/2);
+    ctx.restore();
+  }
+}
+
 const cv = $("view"), cx = cv.getContext("2d");
+// Same bilinear keystone formula as output/ilda.py's PathPlanner._to_dac_vec
+// (x corrected first, then y using the CORRECTED x) — kept in exact sync so
+// this visualiser is a faithful preview of what the real DAC will draw, not
+// an approximation of it.
+function applyKeystone(x, y, kh, kv){
+  const xk = x * (1 + kh * y);
+  const yk = y * (1 + kv * xk);
+  return [Math.max(-1, Math.min(1, xk)), Math.max(-1, Math.min(1, yk))];
+}
+
 function paintPreview(scene){
   const w = cv.width, h = cv.height;
-  cx.fillStyle = "#000"; cx.fillRect(0,0,w,h);
-  const map = (x,y) => [ (x*0.5+0.5)*w, (0.5-y*0.5)*h ];
+  const { glow, trail, mirrorX, mirrorY, keystoneH, keystoneV } = monitorFilters;
+  cx.shadowBlur = 0;   // never let a glow from the previous frame bleed into the clear/fade below
+  cx.globalCompositeOperation = "source-over";
+  cx.fillStyle = trail > 0 ? `rgba(0,0,0,${(1 - trail).toFixed(3)})` : "#000";
+  cx.fillRect(0,0,w,h);
+  const map = (x,y) => {
+    const [xk, yk] = applyKeystone(x, y, keystoneH, keystoneV);
+    return [ (xk*0.5+0.5)*w, (0.5-yk*0.5)*h ];
+  };
   cx.lineWidth = 1.4; cx.lineJoin = "round";
+  // Single shadowBlur pass, not the multi-pass additive version tried
+  // earlier — that one called .stroke() with shadowBlur set 2-3x per
+  // stroke, and shadowBlur is one of the most expensive canvas 2D ops (a
+  // real blur convolution per call); doing it multiple times per stroke,
+  // per frame, made the whole preview unusably slow. Back to the cheap
+  // version — glow is more subtle without trails, but it doesn't cost
+  // anything close to that.
+  const glowPx = glow * Math.min(w,h) * 0.05;
   for (const st of scene){
     const [r,g,b] = st.c;
-    cx.strokeStyle = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
+    cx.strokeStyle = col;
+    if (glowPx > 0) { cx.shadowBlur = glowPx; cx.shadowColor = col; }
     cx.beginPath();
     st.p.forEach((pt,i)=>{ const [X,Y]=map(pt[0],pt[1]);
       i? cx.lineTo(X,Y): cx.moveTo(X,Y); });
     cx.stroke();
   }
+  if (mirrorX || mirrorY) applyMirror(cx, cv, mirrorX, mirrorY);
 }
 
 function slider(id, key, label, fmt=(v)=>(+v).toFixed(2)){
   const s=$(id), v=$("v-"+label);
   s.oninput = () => { v.textContent = fmt(s.value); send({type:"set",key,value:+s.value}); };
 }
+
+// Monitor filter controls — per-scene now (see syncMonitorFilters above),
+// so these go through the same generic "set" round-trip as any other scene
+// param (camera speed, crossfade, etc.), not a local-only assignment.
+slider("mf-glow", "glow", "mfglow");
+slider("mf-trail", "trail", "mftrail");
+$("mf-mirror-x").onchange = () => send({type:"set", key:"mirror_x", value:$("mf-mirror-x").checked});
+$("mf-mirror-y").onchange = () => send({type:"set", key:"mirror_y", value:$("mf-mirror-y").checked});
 slider("s-speed","layer0.speed","speed");
 slider("s-turb","layer0.turbulence","turb");
 slider("s-hue","layer0.hue","hue");
@@ -1053,7 +1362,19 @@ $("master-toggle").onclick = () => {
   const nowActive = $("master-toggle").dataset.active === "1";
   send({type:"set_active", value: !nowActive});
 };
-$("master-blank").onclick = () => send({type:"blank"});
+// Independent of Start/Stop: visuals+audio+preview can run with the laser
+// off — off is the default/safe state regardless of --laser at launch. Off
+// is styled "go" (safe/neutral); on is "amber" (live beam, matching this
+// codebase's existing warning-color convention) so the armed state reads at
+// a glance, the same way master-toggle already does for Start/Stop.
+let _laserOn = false;
+function updateLaserBtn(on){
+  _laserOn = on;
+  const b = $("laser-toggle");
+  b.textContent = on ? "■ Stop Laser" : "▶ Start Laser";
+  b.className = on ? "amber" : "go";
+}
+$("laser-toggle").onclick = () => send({type: "set_laser", value: !_laserOn});
 
 // Global section: vertical master fader (mirrors the "master" knob in the
 // Soundscape globals — same underlying value, just always-visible here)
@@ -1065,6 +1386,10 @@ $("g-master").oninput = () => {
 // Global hue override: recolours the whole output to one hue, independent
 // of whatever the scene/generator chose
 $("hue-override-on").onchange = () => send({type:"set", key:"hue_override", value:$("hue-override-on").checked});
+// Disable scene plane: hides floor/ground/grid/plane-named nodes from a 3D
+// scene's own geometry — applied before the frame is built (World.render3d),
+// so laser and display are both affected identically, not just this preview.
+$("c-disable-plane").onchange = () => send({type:"set", key:"disable_plane", value:$("c-disable-plane").checked});
 $("hue-override-val").oninput = () => {
   $("v-hueoverride").textContent = (+$("hue-override-val").value).toFixed(2);
   send({type:"set", key:"hue_value", value:+$("hue-override-val").value});
@@ -1086,24 +1411,36 @@ $("disable-visuals").onclick = () => {
   send({type:"set_visuals_disabled", value: !_lastState?.visuals_disabled, fade: 2.0});
 };
 
-// Output window: a separate, chrome-less browser window for a projector or
+// Output windows: separate, chrome-less browser windows for a projector or
 // second screen (independent of --laser — this is a software-only display
-// path, driven by the same websocket feed the control UI uses).
-let outputWin = null;
-function updateOutputBtn(){
-  const open = outputWin && !outputWin.closed;
-  const btn = $("output-toggle");
-  btn.textContent = open ? "🖵 Close Output Window" : "🖵 Output Window";
+// path, driven by the same websocket feed the control UI uses). Output 2 is
+// the same live feed as Output 1, just a second window — each one reads its
+// own flip-x/flip-y state (Settings > Output monitors) via a `?out=` id in
+// its URL, so the two can be flipped independently (e.g. one physically
+// rear-projected) while glow/trail stay shared between them.
+const outputWins = {1: null, 2: null};
+function updateOutputBtn(id){
+  const open = outputWins[id] && !outputWins[id].closed;
+  const btn = $("output-toggle-" + id);
+  btn.textContent = open ? `🖵 Close Output ${id}` : `🖵 Output ${id}`;
   btn.className = open ? "amber" : "";
 }
-$("output-toggle").onclick = () => {
-  if (outputWin && !outputWin.closed) { outputWin.close(); outputWin = null; updateOutputBtn(); return; }
-  outputWin = window.open("/output", "promptwaver-output",
+function toggleOutputWin(id){
+  if (outputWins[id] && !outputWins[id].closed) {
+    outputWins[id].close(); outputWins[id] = null; updateOutputBtn(id); return;
+  }
+  outputWins[id] = window.open(`/output?out=${id}`, `promptwaver-output-${id}`,
     "width=1280,height=720,menubar=no,toolbar=no,location=no,status=no");
-  updateOutputBtn();
-};
-// catches the window being closed via its own OS close button, not just ours
-setInterval(() => { if (outputWin && outputWin.closed) { outputWin = null; updateOutputBtn(); } }, 1000);
+  updateOutputBtn(id);
+}
+$("output-toggle-1").onclick = () => toggleOutputWin(1);
+$("output-toggle-2").onclick = () => toggleOutputWin(2);
+// catches a window being closed via its own OS close button, not just ours
+setInterval(() => {
+  for (const id of [1, 2]) {
+    if (outputWins[id] && outputWins[id].closed) { outputWins[id] = null; updateOutputBtn(id); }
+  }
+}, 1000);
 
 $("apisave").onclick = () => {
   const k = $("apikey").value.trim();
@@ -1127,6 +1464,55 @@ $("gen-open").onclick = () => openModal("modal-generate");
 $("gen-close").onclick = () => closeModal("modal-generate");
 $("settings-open").onclick = () => openModal("modal-settings");
 $("settings-close").onclick = () => closeModal("modal-settings");
+$("diag-enabled-toggle").onchange = () => {
+  send({type: "set_diagnostics", value: $("diag-enabled-toggle").checked});
+};
+
+// Per-output-monitor flip (Settings > Output monitors) — a whole-image
+// reverse, NOT the Global section's half-reflect "mirror" above. Purely
+// client-side, same localStorage + "storage" event pattern as
+// monitorFilters, just scoped per output id so Output 1 and Output 2 can be
+// flipped independently. output.html reads these via its own `?out=` id.
+function outputFlipCheckbox(id, outputId, axis){
+  const key = `pw_filter_flip${axis}_${outputId}`;
+  const el = $(id);
+  el.checked = localStorage.getItem(key) === "1";
+  el.onchange = () => localStorage.setItem(key, el.checked ? "1" : "0");
+}
+outputFlipCheckbox("out1-flip-x", 1, "x");
+outputFlipCheckbox("out1-flip-y", 1, "y");
+outputFlipCheckbox("out2-flip-x", 2, "x");
+outputFlipCheckbox("out2-flip-y", 2, "y");
+
+// Per-output-monitor keystone (Settings > Output monitors) — independent per
+// window, display-only (never sent anywhere, unlike the laser's below).
+// Same localStorage pattern as the flip checkboxes just above.
+function outputKeystoneSlider(id, outputId, axis){
+  const key = `pw_filter_keystone${axis}_${outputId}`;
+  const el = $(id);
+  el.value = parseFloat(localStorage.getItem(key) || "0");
+  el.oninput = () => localStorage.setItem(key, el.value);
+}
+outputKeystoneSlider("out1-ks-h", 1, "h");
+outputKeystoneSlider("out1-ks-v", 1, "v");
+outputKeystoneSlider("out2-ks-h", 2, "h");
+outputKeystoneSlider("out2-ks-v", 2, "v");
+
+// Laser keystone — a live rig setting (Settings > Keystone), not per-scene;
+// see set_keystone's docstring in engine.py. Sent as {h, v} together so a
+// change to one doesn't race a change to the other.
+$("ks-h").oninput = () => {
+  $("v-ksh").textContent = (+$("ks-h").value).toFixed(3);
+  send({type: "set_keystone", h: +$("ks-h").value, v: +$("ks-v").value});
+};
+$("ks-v").oninput = () => {
+  $("v-ksv").textContent = (+$("ks-v").value).toFixed(3);
+  send({type: "set_keystone", h: +$("ks-h").value, v: +$("ks-v").value});
+};
+$("test-pattern-toggle").onclick = () => {
+  const on = $("test-pattern-toggle").textContent.includes("Hide");
+  send({type: "set_test_pattern", value: !on});
+};
 $("saveas-close").onclick = () => closeModal("modal-saveas");
 document.querySelectorAll(".modal-backdrop").forEach(el => {
   el.addEventListener("click", e => { if (e.target === el) el.classList.remove("open"); });

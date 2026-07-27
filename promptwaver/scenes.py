@@ -86,13 +86,21 @@ class Scene:
                 p[key] = matrix.value(f"visual.{key}", p[key])
         return p
 
-    def render(self, t: float, dt: float = 0.0, matrix=None) -> Frame:
+    def render(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False) -> Frame:
         frame: Frame = []
         if self.camera is not None:
             self.camera.update(t, dt, matrix)
         for g, base_params in self._gens:
             p = self._resolve(g, base_params, matrix)
             if getattr(g, "is_3d", False):
+                # "Disable scene plane" (Camera controls): world.py's World
+                # generator looks for this key and skips any node whose
+                # shape/primitive name looks like a floor/ground/grid/plane —
+                # a loose key on the params dict rather than a new method
+                # signature, matching how the rest of this dict is already
+                # loosely extended (e.g. primitives get `t` merged in the
+                # same way). Generators that don't look for it just ignore it.
+                p["_disable_plane"] = disable_plane
                 paths3d = g.render3d(t, p)
                 frame.extend(self.camera.project(paths3d, g.field_depth))
             else:
@@ -110,14 +118,23 @@ class SceneManager:
         self._next: Scene | None = None
         self._xfade = 0.0        # 0..1 progress
         self._xfade_dur = 0.0
+        self._names_cache: list[str] | None = None
 
     # library ---------------------------------------------------------------
     def names(self) -> list[str]:
-        return sorted(
-            os.path.splitext(f)[0]
-            for f in os.listdir(self.library_dir)
-            if f.endswith(".json")
-        )
+        # `state()` (and so this) is polled by the websocket broadcaster at
+        # ~20Hz regardless of whether the library changed — an unconditional
+        # os.listdir()+sort here was real, avoidable disk I/O on the same
+        # process the render thread shares the GIL with, 20 times a second,
+        # for a result that only ever changes on save/delete. Cached and
+        # invalidated explicitly by the two calls below that can change it.
+        if self._names_cache is None:
+            self._names_cache = sorted(
+                os.path.splitext(f)[0]
+                for f in os.listdir(self.library_dir)
+                if f.endswith(".json")
+            )
+        return self._names_cache
 
     def path_for(self, name: str) -> str:
         safe = "".join(c for c in name if c.isalnum() or c in " _-").strip()
@@ -129,6 +146,7 @@ class SceneManager:
         with open(tmp, "w") as f:
             json.dump(spec.to_dict(), f, indent=2)
         os.replace(tmp, self.path_for(name))
+        self._names_cache = None
 
     def load_spec(self, name: str) -> SceneSpec:
         with open(self.path_for(name)) as f:
@@ -138,6 +156,7 @@ class SceneManager:
         p = self.path_for(name)
         if os.path.exists(p):
             os.remove(p)
+        self._names_cache = None
 
     # switching -------------------------------------------------------------
     def set_scene(self, spec: SceneSpec, crossfade: float = 0.0):
@@ -160,10 +179,10 @@ class SceneManager:
             "progress": min(1.0, self._xfade),
         }
 
-    def render(self, t: float, dt: float, matrix=None) -> Frame:
+    def render(self, t: float, dt: float, matrix=None, disable_plane: bool = False) -> Frame:
         if self.current is None:
             return []
-        frame = self.current.render(t, dt, matrix)
+        frame = self.current.render(t, dt, matrix, disable_plane)
         if self._next is not None:
             # MVP crossfade: dim the outgoing, bring up the incoming, both drawn.
             # A later version resamples both to a common point budget and
@@ -172,7 +191,7 @@ class SceneManager:
             a = min(1.0, self._xfade)
             for p in frame:
                 p.color = tuple(c * (1 - a) for c in p.color)
-            nxt = self._next.render(t, dt, matrix)
+            nxt = self._next.render(t, dt, matrix, disable_plane)
             for p in nxt:
                 p.color = tuple(c * a for c in p.color)
             frame = frame + nxt

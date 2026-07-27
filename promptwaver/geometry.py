@@ -61,3 +61,35 @@ def clamp_frame(frame: Frame) -> Frame:
     for p in frame:
         np.clip(p.points, -1.0, 1.0, out=p.points)
     return frame
+
+
+def test_pattern_frame() -> Frame:
+    """A static keystone-calibration pattern: outer border, corner-to-corner
+    diagonals, a centre crosshair, and an inner rule-of-thirds-ish box —
+    straight lines and right angles make it easy to see exactly what a
+    keystone correction is doing to the frame's geometry, in either
+    direction, at a glance. Bright white/cyan so it's unambiguous against
+    whatever palette a scene happens to use.
+
+    Deliberately independent of any generator/camera — this bypasses the
+    live scene entirely (see Engine._loop's test_pattern_on handling, which
+    substitutes this for BOTH the real output and self._last_frame, so
+    every viewer — laser, visualiser, output windows — gets the same
+    pattern through their normal rendering path, each with its own
+    keystone/flip already applied) so calibration doesn't depend on
+    picking a scene with the right geometry to see the effect clearly.
+    """
+    white = (1.0, 1.0, 1.0)
+    cyan = (0.3, 0.9, 1.0)
+    b = 0.96   # inset slightly from the exact [-1,1] edge: a border stroke
+               # drawn exactly ON the edge gets half its width clipped by the
+               # canvas/DAC boundary, rendering as a near-invisible sliver
+    return [
+        Path(np.array([[-b, -b], [b, -b], [b, b], [-b, b], [-b, -b]], np.float32), white, closed=True),
+        Path(np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]], np.float32),
+             cyan, closed=True),
+        Path(np.array([[-1, 0], [1, 0]], np.float32), white),
+        Path(np.array([[0, -1], [0, 1]], np.float32), white),
+        Path(np.array([[-1, -1], [1, 1]], np.float32), cyan),
+        Path(np.array([[-1, 1], [1, -1]], np.float32), cyan),
+    ]

@@ -114,7 +114,11 @@ REQUIREMENTS for every scene:
 - Build a full ENVIRONMENT to navigate inside, not a flat pattern.
 - Author geometry SPECIFIC to THIS keyword. Invent the objects that belong in it.
 - Include a ground/floor or an enclosing boundary (walls, a shell) so it reads as
-  a place, plus several distinct objects that identify the subject.
+  a place, plus several distinct objects that identify the subject. Name that
+  ground/floor/backdrop shape/node with "floor", "ground", "plane", or "grid"
+  somewhere in its name (e.g. "floor", "cave_floor", "ocean_grid") — the viewer
+  can toggle it off independently of the rest of the scene, and only matches on
+  that naming, not on what the shape actually looks like.
 - Place the camera inside/among the objects (orbit or drift), target near centre.
 - NEVER reuse the objects from the example below — they are only to show format.
 

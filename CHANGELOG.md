@@ -8,6 +8,147 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.30.0]
+
+### Performance (the headline of this release)
+- **Vectorized the 3D camera projection path** (`scene3d.py`) — was a
+  per-point Python loop (visibility test, clip, project) for every stroke,
+  every frame; profiled as the single largest render-loop cost for
+  stroke-rich scenes. Rewrote the whole pipeline (visibility mask, run-
+  finding, projection, and a new exact off-screen-stroke skip — scenes with
+  more geometry than fits the camera's view at any moment were paying full
+  clip cost for strokes that render nothing) as batched numpy plus plain
+  Python for the genuinely small per-run work, where plain `min()`/`max()`
+  benchmarked ~40% faster than numpy for arrays this size. Verified against
+  the *unvectorized* version across 540 randomized trials (all camera
+  modes × depth modes, varied geometry/near-far crossings/LOD) — 0
+  mismatches — then measured: one representative scene went from **47ms to
+  17ms per frame**; a stroke-dense scene from 26ms to ~17-24ms depending on
+  its own `max_strokes` headroom.
+- **`World` generator was rebuilding static geometry from scratch every
+  frame** (`generators/world.py`) — every primitive node (planet, ring,
+  ball, torus, crystal, starfield) was re-run through raw numpy/trig/RNG on
+  every tick even though none of them (except the genuinely time-animated
+  jellyfish) depend on time at all. Now cached per (primitive, params), like
+  the def-based shapes already were. Forest trees had the same problem worse
+  — full RNG-driven regeneration (trunk + branches) every frame just to
+  apply a small sway offset; now the static layout is built once and only
+  the sway translation runs per frame.
+- **Audio DSP** (`audio/dsp.py`) pad/osc voice rendering was a Python
+  triple-nested loop calling a tiny numpy op once per (chord note × detune
+  layer × partial) — up to ~64 separate calls per voice per callback.
+  Batched into one vectorized call per voice; verified numerically
+  identical to the old loop across 200 randomized trials (max diff ~6e-7,
+  pure float32 rounding).
+- **Soundscape crossfades no longer double the audio DSP cost.** The old
+  crossfade rendered the outgoing *and* incoming soundscape simultaneously
+  for the whole fade — correct-sounding, but literally 2x the per-callback
+  work, measured pushing a several-voice scene's callback over 300% of
+  budget. Replaced with a sequential fade-out → swap → fade-in: only one
+  soundscape is ever rendered at a time, and the swap lands exactly at the
+  silent point between the two halves so there's no audible click. Verified
+  the sequenced fade has no clipping and a clean crossover.
+- Output with no laser attached was still doing the full DAC point-planning
+  pass (arc-length resample + coordinate transform) every tick purely to
+  feed the UI's point counter (~8ms on a mid-size scene). Now recomputed
+  every 6th tick instead of every tick (~7Hz refresh on a text counter is
+  plenty) — measured output cost drop from ~9ms to ~1.5ms average.
+- The scene library listing (`SceneManager.names()`) did a fresh
+  `os.listdir()` + sort on every ~20Hz state broadcast regardless of
+  whether anything changed. Now cached, invalidated only on save/delete.
+- **Fixed a real bug that could freeze the browser video preview whenever
+  audio was struggling**, independent of the engine's own render loop:
+  `synth.vu()` (the VU meter) was called from the websocket broadcaster
+  thread and *blocked* waiting for the same lock the audio callback holds
+  for its entire render — so a slow audio callback (which we'd just found
+  several real causes of) froze every connected browser's preview for
+  however long that render took. Made `vu()` non-blocking: it tries the
+  lock and falls back to the last known reading on contention, since a
+  meter reading one tick stale is imperceptible.
+- Diagnostics themselves had overhead: `statistics.mean()` in the perf/audio
+  summaries is ~100x slower than a plain `sum()/len()` for lists this size
+  (benchmarked ~500us vs ~5us per call) for no precision benefit worth
+  having — fixed, and it was on the same broadcaster thread already
+  contending with the render/audio threads for the GIL.
+
+### Diagnostics
+- Added a render-loop performance monitor (`promptwaver/perf.py`) mirroring
+  the existing audio `CallbackStats`: per-tick render/output timing, dropped-
+  tick tracking, and — specifically — whether a drop happened *during a
+  scene crossfade*, so "does it lag right when scenes fade" is something you
+  can read off real numbers instead of guessing. New **Performance**
+  accordion (sidebar) surfaces it; a lightweight always-on FPS counter (under
+  the visualiser) works independent of the fuller instrumentation.
+- Diagnostics (both the render-loop monitor above and the audio callback
+  stats) are now **off by default** — a small but real cost (instrumentation
+  timing calls, ~2.5% of a frame measured) most sessions don't need paying
+  for. Toggle live in **Settings > Diagnostics**, or launch with `--diag`; no
+  relaunch needed either way. When off, the Audio diagnostics/Performance
+  blocks hide entirely rather than sitting open empty; the FPS counter keeps
+  working regardless, since it's tracked separately and is effectively free.
+- Audio diagnostics now also tags whether a slow/underrun callback happened
+  during a soundscape crossfade, for the same "is it the fade" question on
+  the audio side.
+
+### New: monitor filters, disable scene plane, keystone, dual outputs
+- Added **glow**, **trails**, and **mirror** (x/y, reflects one half over the
+  centre line) as monitor-only canvas effects — screen/display only, never
+  touch the vector data sent to the laser. These, plus **Disable scene
+  plane**, are now **per-scene settings**: saved into the scene's own JSON
+  via the existing "Save Camera settings" / "Save all scene settings"
+  buttons, loaded back with whatever scene set them, off/0 by default for
+  every scene that hasn't (including every scene that predates this).
+- Added **Disable scene plane** (Camera controls): hides floor/ground/grid/
+  plane-named geometry from a 3D scene, applied in `World.render3d` before
+  the frame is even built — affects the laser and every display identically,
+  not just a preview overlay. Matched by a small regex against the node's
+  authored name (not its content), with a deliberate guard so "plane" doesn't
+  also match "planet" (a very common primitive). Claude's scene-authoring
+  prompt now asks it to name floor/backdrop shapes accordingly so future
+  generations reliably work with this.
+- Added a **second output window** (header: Output 1 / Output 2) — same live
+  feed, independently flippable (whole-image reverse, distinct from the
+  "mirror" effect above) and independently keystone-corrected, for driving
+  two screens/projectors from one session.
+- Added **live keystone correction** (Settings > Keystone): the laser's
+  keystone (previously `--keystone-h/-v`, launch-only) is now adjustable
+  while watching the beam, with the main visualiser mirroring it live so it
+  can be tuned without the laser on. Output 1 and Output 2 each get their
+  own independent keystone too (display-only, physical-screen concern, nothing
+  sent anywhere). A **test pattern** toggle (border, diagonals, crosshair,
+  inner box) overrides the live scene everywhere at once — laser, visualiser,
+  both output windows — for calibrating against a known shape instead of
+  whatever a scene happens to show. Verified the browser-side keystone
+  formula is bit-for-bit identical to the DAC-side one for the same inputs.
+
+### Safety / control
+- Replaced the **LASER BLANK** button with an independent **Start/Stop
+  Laser** toggle, off by default regardless of `--laser`: visuals, audio,
+  and the browser preview all run normally while the physical beam stays
+  dark until explicitly armed — useful while composing/previewing a scene
+  before it's safe to send to the rig. NullOutput (no hardware) is
+  unaffected either way, so the preview/point-counter stay accurate with
+  nothing to protect.
+- **Start** now fades audio in over 1 second instead of snapping straight to
+  full level (a real pop/click before). **Stop** stays instant — the
+  safety-critical direction must not lag behind the click.
+- Fixed the audio blocksize/latency dropdown snapping back to the old value
+  right after clicking Apply (or even before, on some browsers) — the
+  broadcaster's next state update would overwrite the user's pick before the
+  request had actually landed, since the activeElement-based guard used
+  elsewhere doesn't reliably hold focus on a `<select>` after picking an
+  option. Fixed with an explicit dirty/pending flag instead. Also fixed a
+  related false negative: the server used to guess a fixed 300ms wait for a
+  reconfigure to land, reporting "failed to (re)start" if a slower device
+  reopen took longer than that even though it went on to succeed.
+
+### UI
+- The scene-transition indicator is now always visible (previously popped
+  in/out of the layout on every scene switch, shoving the crossfade/audio-
+  fade fields around) and sits directly above the crossfade field.
+- The under-visualiser readout is now just the FPS counter.
+- The vertical master fader is 35% shorter.
+
 ## [0.22.0]
 - Added **per-voice "swell"** (`promptwaver/audio/dsp.py`) — a slow, continuous
   level modulation layered on top of each voice's own level, independent of

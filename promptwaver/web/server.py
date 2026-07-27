@@ -125,6 +125,14 @@ async def _handle(engine, m: dict):
         engine.set_active(bool(m.get("value")))
     elif t == "blank":
         engine.blank()
+    elif t == "set_laser":
+        engine.set_laser(bool(m.get("value")))
+    elif t == "set_diagnostics":
+        engine.set_diagnostics(bool(m.get("value")))
+    elif t == "set_keystone":
+        engine.set_keystone(h=m.get("h"), v=m.get("v"))
+    elif t == "set_test_pattern":
+        engine.set_test_pattern(bool(m.get("value")))
     elif t == "set_audio_disabled":
         fade = float(m.get("fade", 2.0))
         (engine.disable_audio if m.get("value") else engine.enable_audio)(fade=fade)
@@ -151,9 +159,13 @@ async def _handle(engine, m: dict):
                 "source": engine.director.last_source,
                 "error": engine.director.last_error}
     elif t == "audio_config":
-        engine.configure_audio(device=m.get("device"), blocksize=m.get("blocksize"),
-                               latency=m.get("latency"))
-        await asyncio.sleep(0.3)   # let the enqueued reconfigure (and its size ladder) land
+        done = engine.configure_audio(device=m.get("device"), blocksize=m.get("blocksize"),
+                                      latency=m.get("latency"))
+        # Wait for the actual reconfigure to finish (generous cap — a stream
+        # stop/restart is normally well under a second) rather than guessing
+        # a fixed delay; see configure_audio's docstring for the false-negative
+        # this used to produce when a reconfigure ran long.
+        await loop.run_in_executor(None, done.wait, 3.0)
         diag = engine.synth.diagnostics() if getattr(engine.synth, "online", False) else None
         return {"type": "audio_config_result",
                 "ok": bool(getattr(engine.synth, "online", False)),
