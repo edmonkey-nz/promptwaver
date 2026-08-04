@@ -760,18 +760,26 @@
       0
     ],
     "orbit_radius": 12,
-    "far": 28,
-    "speed": 0.4,
+    "far": 19.0,
+    "speed": 0.8,
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.75
   },
   "pps": null,
   "soundscape": {
-    "tempo": 128,
+    "tempo": 124.0,
     "master": 0.7,
-    "distortion": 0.15,
+    "distortion": 0.27,
     "delay": {
       "time": 0.25,
       "feedback": 0.4,
@@ -788,10 +796,33 @@
           7,
           12
         ],
-        "level": 0.45,
+        "level": 0.55,
         "tone": 0.3,
         "detune": 0.02,
-        "pan": 0.0
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "env": {
+          "attack": 3,
+          "decay": 0.06,
+          "sustain": 0.85,
+          "release": 2.5
+        },
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.55
+        }
       },
       {
         "name": "tb303_lead",
@@ -807,9 +838,17 @@
           12
         ],
         "level": 0.35,
-        "rate": 0.6,
+        "rate": 1.0,
         "decay": 0.4,
-        "pan": 0.15
+        "pan": 0.15,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "808_kick",
@@ -822,16 +861,49 @@
         "level": 0.5,
         "tone": 0.5,
         "detune": 0.0,
-        "pan": -0.1
+        "pan": -0.1,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "tech_texture",
         "type": "noise",
         "level": 0.12,
         "tone": 0.6,
-        "pan": -0.15
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
-    ]
+    ],
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.35,
+    "swell_period": 60.0
   },
   "audio_link": 1.0
 }

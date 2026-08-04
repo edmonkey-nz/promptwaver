@@ -43,6 +43,11 @@ def parse_args():
     ap.add_argument("--diag", action="store_true",
                     help="enable perf/audio diagnostics instrumentation at startup (off by "
                          "default; also toggleable live in Settings)")
+    ap.add_argument("--midi", default=None, metavar="HINT",
+                    help="MIDI input port to use, matched by substring (e.g. --midi MPK). "
+                         "Without this the saved port, else the first non-loopback "
+                         "device, is picked automatically; change it live in Settings.")
+    ap.add_argument("--list-midi", action="store_true", help="list MIDI input ports and exit")
     ap.add_argument("--model", default=None, help="override director model id")
     ap.add_argument("--scene", default="water flowing", help="initial keyword")
     return ap.parse_args()
@@ -50,6 +55,16 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.list_midi:
+        from promptwaver.midi import MidiInput
+        names = MidiInput.list_ports()
+        if not names:
+            print("no MIDI input ports found"
+                  if MidiInput.available()
+                  else "mido not installed — pip install mido python-rtmidi")
+        for n in names:
+            print(n)
+        return
     engine = Engine(
         library_dir=os.path.join(HERE, "scenes"),
         cache_dir=os.path.join(HERE, "scenes", "generated"),
@@ -57,7 +72,7 @@ def main():
         invert_x=args.invert_x, keystone_h=args.keystone_h,
         keystone_v=args.keystone_v, enable_laser=args.laser,
         enable_audio=not args.no_audio, model=args.model,
-        enable_diagnostics=args.diag,
+        enable_diagnostics=args.diag, midi_port=args.midi,
     )
     # start with something on screen immediately
     engine._install_spec(local_scene(args.scene))

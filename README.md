@@ -178,6 +178,44 @@ Units that can't fade brightness show depth with **colour**, not intensity.
 
 Try a keyword like *"float through a forest"* to build one.
 
+### Render cost scales with what's drawable, not with world size
+
+`World.render3d` used to transform the entire world every frame and hand the
+lot to the camera, which depth-sorted it, kept `max_strokes`, and discarded the
+rest. So cost tracked how big the world *was*, not how much of it could be
+drawn — on a scene 10× the size of the heaviest shipped one, ~92% of the
+transform work was thrown away, and the frame budget was missed outright.
+
+A node's bounding sphere is one cached radius and one position, so visibility
+and distance can be decided per *node*, before any per-stroke work. Nodes are
+rejected against the far plane and the view cone, sorted by their sphere's
+nearest point, and transformed near-to-far until roughly 3× `max_strokes` has
+been produced — the camera's own depth sort was going to drop the rest anyway.
+Sorting on the sphere's nearest point rather than its centre is what keeps a
+large node like a floor plane sorting early, on the strength of the part of it
+that's close.
+
+Measured on `ants.json` (35 nodes, `max_strokes` 130), scaling the node count,
+p95 render time against a 22.2ms budget at 45fps — output identical in every
+case:
+
+| world size | before | after | |
+|---|---|---|---|
+| 1× (as shipped) | 11.0ms | 11.0ms | break-even |
+| 3× (105 nodes) | 17.8ms | 15.4ms | 1.16× |
+| 10× (350 nodes) | 37.9ms | 21.3ms | 1.78× |
+| 20× (700 nodes) | 60.0ms | 24.1ms | 2.49× |
+
+Fly mode is excluded: it wraps geometry in Z against `field_depth` and tracks
+the camera as a travelled distance rather than a position, so the distance
+maths wouldn't hold. Every director-composed scene uses orbit/drift.
+
+Note the bound derives from `max_strokes`, so it self-tunes for a dual-output
+rig — raising detail for a data projector automatically buys more geometry
+through the transform, and dropping it for the laser stops paying for it. The
+*detail* axis is a separate bottleneck though: at `max_strokes` 600 the cost is
+dominated by per-stroke camera projection, not the world transform.
+
 ### Disable scene plane (v0.30.0)
 
 A checkbox under **max strokes** (Camera controls) that hides a scene's
@@ -365,6 +403,80 @@ control live in the **Modulation** group:
 Both are live and both save via **Update scene from config** (`audio_link` and
 each route's `depth` in the scene JSON).
 
+## MIDI control
+
+Hardware knobs drive the same parameter keys the web UI does. Needs
+`pip install mido python-rtmidi`; without them the MIDI panel in Settings just
+shows as unavailable and nothing else changes.
+
+```bash
+python run.py --list-midi          # show input ports
+python run.py --web --midi MPK     # match a port by substring
+```
+
+Without `--midi` it picks the saved port, else the first non-loopback device
+(`Midi Through` is never auto-selected — it swallows everything silently and
+looks exactly like a dead controller). Change it live in **Settings → MIDI**.
+
+A **MIDI in** indicator sits in the header next to Engine and Claude API: red
+with no controller, green when a port is open, and it flashes cyan on every
+incoming message — so you can confirm the link is live, and see which knob is
+which, without watching a parameter move.
+
+**Learn any control.** Every slider has a small `midi` tag at the end of its
+label. Click it, move a knob, done. Shift-click a bound one to unmap it. The
+tag shows the bound CC (`cc20`), pulses while waiting, and is barely visible
+when unmapped.
+
+**Sliders follow the hardware.** Every on-screen control tracks the engine
+live, so turning a knob moves the matching slider and its readout — the two
+never disagree about what the patch actually is. A control you're dragging is
+left alone (and for ~400ms after you let go), so the two input paths don't
+fight over it.
+
+**Voice knobs bind to a position, not a name.** This is the part worth
+understanding. Camera and master-audio params (`camera.speed`, `master`,
+`eq.low`) are fixed strings that mean the same thing in every scene. A scene's
+*instruments* are not — they're addressed by name (`voice.deep_bass.level`) and
+the names are invented per scene by the director, so a binding to one would die
+on the next generate.
+
+So instrument bindings are stored against an **ordinal** — `voice#0.level`,
+`voice#1.pan` — resolved to whatever name currently occupies that slot at the
+moment the CC arrives. The director is asked to emit voices in a fixed priority
+order (foundation → body → lead → detail → air), so CC 20 is "the low end" on
+every scene you ever generate and muscle memory survives a scene change.
+
+Two levels of storage, deliberately not one:
+
+| where | form | scope |
+|---|---|---|
+| `settings.json` | slot-based (`voice#0.level: 20`) | the controller — constant across every scene |
+| scene JSON | name-based `midi_overrides` | wins while that scene is loaded |
+
+**Pin MIDI map** (Global section) freezes the currently-resolved slot bindings
+into the loaded scene as name-based overrides — for a scene dialled in ahead of
+a set, where a knob should stay on *that* voice wherever it lands in the
+ordering. Nothing needs pressing after a normal generate; slots already track
+the ordering on their own. The button flips to **Unpin** once a scene has pins.
+
+**Encoder modes** (Settings → MIDI, applies to the control you last learned):
+
+- `catch` *(default)* — soft takeover: a knob is ignored until it sweeps across
+  the current value. This is the default because loading a scene replaces every
+  level at once, so without it the first knob you touch snaps the whole mix.
+  Re-arms automatically on every scene load.
+- `absolute` — 0–127 straight onto the range.
+- `relative` — deltas from endless encoders (auto-detects both common signed
+  encodings).
+
+Default layout: CC 1–16 are the globals (master, camera speed, distortion,
+delay mix, EQ, swell, draw depth, max strokes, audio↔visual, crossfade, glow,
+trail, orbit distance, tempo); then banks of 8 for voice slots — CC 20–27
+levels, 30–37 pans, 40–47 tone, 50–57 attack, 60–67 release. One row of knobs
+per field across all voices, which is how you actually mix live. Learning a CC
+takes it from whatever held it, and unmapping hands it back.
+
 ## Blocksize kept resetting to a smaller value (fixed v0.15.1)
 
 Root cause: the fallback ladder I added to auto-detect a working blocksize was
@@ -481,6 +593,18 @@ aggressive multi-voice arp setup (high tempo, high rate, `random` mode) held
 flat at the same note cap with no budget overrun.
 
 ## Master Start/Stop and the Laser toggle
+
+**Start/Stop fades the sound, both directions.** Audio ramps over
+**start/stop fade** (Global, default 1.5s, 0–8s) rather than cutting — a hard
+mute clicked and popped on every stop. Audio is not the safety-critical part
+of a Stop, the *beam* is, so the two are deliberately separate: `output.blank()`
+still lands on the very same tick, unfaded, while the sound rides down. The
+ramp completes after the engine goes inactive because the synth renders on its
+own callback thread; the render loop's inactive branch only stops drawing.
+
+This is distinct from **audio fade** next to it, which is the scene-to-scene
+soundscape crossfade. The **Blank** action stays instant in both — it's the
+panic button, not a toggle.
 
 **Fixed in v0.13.0 — "picking a higher blocksize resets back to a lower one":**
 `reconfigure()` used to silently revert to whatever was running *before* your
@@ -699,9 +823,14 @@ It's now available to the director and the `layer0.*` UI sliders.
     {"source": "lfo_slow",    "dest": "visual.speed",      "depth": 0.05},
     {"source": "lfo_slow",    "dest": "audio.cutoff",      "depth": 400.0},
     {"source": "audio_level", "dest": "visual.turbulence", "depth": 0.4}
-  ]
+  ],
+  "midi_overrides": {"voice.shimmer_lead.pan": 47}
 }
 ```
+
+`midi_overrides` is optional and empty for most scenes — see
+[MIDI control](#midi-control). It only appears once **Pin MIDI map** has been
+used on that scene.
 
 ## Cost control
 
@@ -750,7 +879,10 @@ The UI's director line reports the source of the last scene: *composed by Claude
 - **Waterfall / cave / canyon** environments; richer camera paths (banking, look-at).
 - **Shape-tween crossfade**: resample outgoing + incoming scenes to a common
   point budget and interpolate positions (currently dims/overlays instead).
-- **MIDI + BLE pads**: route CC to matrix destinations (reuse your ESP32 HID pads).
+- **BLE pads**: note-triggered scene recall (reuse your ESP32 HID pads) — the CC
+  half of this now exists, see [MIDI control](#midi-control).
+- **Output detail profiles**: laser and data projector want very different
+  `camera.far` / `max_strokes`; currently changed by hand on every switch.
 - **Key storage**: move `settings.json` key to OS keyring before public release.
 
 ## Development

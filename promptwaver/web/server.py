@@ -8,6 +8,11 @@ a preview frame ~20 Hz, and (b) receives control messages:
     {"type":"scene_load", "name":"water_flowing"}
     {"type":"scene_save", "name":"my mood"}
     {"type":"scene_delete", "name":"..."}
+    {"type":"midi_learn", "key":"voice#0.level"}   (next CC binds; resend to cancel)
+    {"type":"midi_unmap", "key":"voice#0.level"}
+    {"type":"midi_mode", "key":"...", "mode":"catch"|"absolute"|"relative"}
+    {"type":"midi_port", "name":"..."}             (empty name disconnects)
+    {"type":"midi_pin"}                            (freeze slots into the scene)
 """
 
 from __future__ import annotations
@@ -174,6 +179,22 @@ async def _handle(engine, m: dict):
                 "error": diag.get("error") if diag else engine.audio_error}
     elif t == "rescan_audio_devices":
         await loop.run_in_executor(None, engine.rescan_audio_devices)
+    elif t == "midi_port":
+        ok = engine.midi.open_port(m.get("name", ""))
+        return {"type": "midi_result", "action": "port", "ok": ok,
+                "error": engine.midi.error}
+    elif t == "midi_learn":
+        # Same key again (or no key) cancels — the UI's learn button is a
+        # toggle, so clicking the pulsing one backs out of learn mode.
+        engine.midi.arm_learn(m.get("key"))
+    elif t == "midi_unmap":
+        engine.midi.unmap(m["key"])
+    elif t == "midi_mode":
+        engine.midi.set_mode(m["key"], m.get("mode", "catch"))
+    elif t == "midi_pin":
+        result = (engine.clear_midi_pins() if m.get("clear")
+                  else engine.pin_midi_map())
+        return {"type": "midi_result", "action": "pin", **result}
     elif t == "set_model":
         engine.set_model(m.get("value", "haiku"))
     elif t == "set_effort":

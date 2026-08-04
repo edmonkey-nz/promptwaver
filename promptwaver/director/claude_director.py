@@ -104,6 +104,17 @@ fades when muted (defaults are a slow ambient swell; shorten attack/release for
 a more immediate feel). Use 2-4 voices; low tempo; gentle levels (they sum,
 keep master headroom). Match key/mood to the scene.
 
+VOICE ORDER MATTERS — always list "voices" in this fixed priority order:
+  1. foundation: the lowest, most sustained voice (bass/sub/drone pad)
+  2. body: mid-register pads and harmonic texture
+  3. lead: whatever carries the melody or the most movement
+  4. detail: plucks, sequences, arps
+  5. air: noise/atmosphere beds
+Omit any tier the scene doesn't need, but never reorder the ones you do use.
+Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
+names change with every scene, the positions must not — so a stable order is
+what keeps one physical knob meaning "the low end" across every scene.
+
 Budget & feel: a laser draws only a few hundred strokes total, so keep the whole
 scene to roughly 6-12 objects and each object simple (a chair is a few boxes and
 lines, not a mesh). Recognizable silhouette beats detail. Spread objects across
@@ -170,7 +181,12 @@ _SOUNDSCAPE_SCHEMA = """{
       {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1}
     ]
   }
-}"""
+}
+
+List "voices" in this fixed priority order: foundation (lowest/most sustained)
+first, then body pads, then lead, then detail plucks/sequences, then noise/air.
+Omit tiers the piece doesn't need, but never reorder the ones used — hardware
+MIDI knobs bind to voice POSITIONS, and the names change with every scene."""
 
 MODEL_PRESETS = {                       # friendly name -> API id (verify at docs)
     "haiku": "claude-haiku-4-5",

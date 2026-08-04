@@ -7,11 +7,16 @@ aiohttp>=3.9
 #                  sudo apt install libportaudio2)
 #   anthropic      Claude scene director (else a local keyword mapping is used;
 #                  needs messages.stream() for the live progress bar, so >=0.34)
+#   mido +         MIDI control surface (hardware knobs onto camera, master
+#   python-rtmidi  audio and per-voice params). Without them the MIDI panel in
+#                  Settings shows as unavailable and nothing else changes.
 #
 # pyo is NOT used — the synth is pure numpy + sounddevice (see promptwaver/audio/synth.py);
 # an old pyo-based build was dropped after its C extension repeatedly failed to
 # compile against current GCC (see README "Install" section for the history).
 #
-# pip install sounddevice anthropic
+# pip install sounddevice anthropic mido python-rtmidi
 #   sounddevice>=0.4.6
 #   anthropic>=0.34.0
+#   mido>=1.3.0
+#   python-rtmidi>=1.5.0

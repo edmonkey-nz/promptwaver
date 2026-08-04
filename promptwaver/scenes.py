@@ -36,6 +36,12 @@ class SceneSpec:
     pps: int | None = None                                # per-scene PPS override
     soundscape: dict = field(default_factory=dict)        # AI/GUI synth spec
     audio_link: float = 1.0                               # audio<->visual coupling level (the "level effect")
+    # Per-scene MIDI pins: {"voice.shimmer_lead.pan": 47}. Name-based (not
+    # slot-based like the global map in settings.json) because their whole
+    # purpose is to tie a knob to one named voice in this one scene. Empty
+    # for every scene that hasn't been pinned, which is most of them —
+    # see midi.py's module docstring for why the global map is the default.
+    midi_overrides: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -55,6 +61,7 @@ class SceneSpec:
             pps=d.get("pps"),
             soundscape=d.get("soundscape", {}),
             audio_link=d.get("audio_link", 1.0),
+            midi_overrides=d.get("midi_overrides", {}),
         )
 
 
@@ -101,6 +108,14 @@ class Scene:
                 # loosely extended (e.g. primitives get `t` merged in the
                 # same way). Generators that don't look for it just ignore it.
                 p["_disable_plane"] = disable_plane
+                # Same loose-key convention as `_disable_plane` above. The
+                # World generator uses this to decide visibility and spend
+                # its stroke budget per NODE before doing any per-stroke
+                # transform work (see World._render_budgeted) — without it
+                # the whole world gets transformed every frame just for the
+                # camera to discard most of it. Generators that don't look
+                # for it ignore it.
+                p["_camera"] = self.camera
                 paths3d = g.render3d(t, p)
                 frame.extend(self.camera.project(paths3d, g.field_depth))
             else:

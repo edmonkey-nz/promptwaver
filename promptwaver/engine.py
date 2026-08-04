@@ -26,6 +26,127 @@ from .output import make_output
 from .perf import LoopStats
 
 
+class MidiRouter:
+    """The seam between MIDI and the engine.
+
+    `midi.MidiInput` knows about CCs, encoder modes and soft takeover but
+    nothing about the engine; this turns its binding keys into the calls the
+    engine already has. Three jobs:
+
+      * route a key to the right setter — `master` and `voice.*` are synth
+        params (`set_audio_param`), `camera.speed` and friends are engine
+        params (`set_param`)
+      * resolve voice SLOTS (`voice#2.pan`) against the live soundscape, so
+        a binding survives a scene change (see midi.py's docstring)
+      * read a key's current value, which soft takeover and relative
+        encoders both need before they can decide what to do
+
+    Reads come straight off the live synth/scene rather than a cached copy,
+    so a knob is always comparing against the value that is actually
+    sounding — including one a scene load just changed underneath it.
+    """
+
+    def __init__(self, engine):
+        self.engine = engine
+
+    def _voices(self) -> list:
+        synth = self.engine.synth
+        if getattr(synth, "online", False):
+            scape = synth.soundscape() or {}
+        else:
+            sc = self.engine.scenes.current
+            scape = (sc.spec.soundscape if sc else {}) or {}
+        return scape.get("voices", []) or []
+
+    def scene_overrides(self) -> dict:
+        sc = self.engine.scenes.current
+        return dict(sc.spec.midi_overrides) if sc else {}
+
+    def _resolve(self, key: str):
+        from . import midi as _midi
+        if _midi.slot_index(key) is None:
+            return key
+        return _midi.resolve_slot(key, self._voices())
+
+    def set(self, key: str, value):
+        from . import midi as _midi
+        key = self._resolve(key)
+        if key is None:
+            return                      # slot points past the end of this scene
+        if not _midi.is_audio_key(key):
+            self.engine.set_param(key, value)
+            return
+        # ADSR is the one field the synth won't take a scalar path for —
+        # dsp.set_param only understands `voice.<name>.<field>` (three parts)
+        # and applies `env` as a whole dict, so a knob on one stage has to
+        # read the current envelope, change its own stage, and send the lot
+        # back. The UI's own ADSR knobs already work exactly this way.
+        m = _midi._NAME_RE.match(key)
+        if m and m.group(2).startswith("env."):
+            name, stage = m.group(1), m.group(2).split(".", 1)[1]
+            for v in self._voices():
+                if v.get("name") == name:
+                    env = dict(v.get("env") or {})
+                    env[stage] = value
+                    self.engine.set_audio_param(f"voice.{name}.env", env)
+                    return
+            return
+        self.engine.set_audio_param(key, value)
+
+    def get(self, key: str):
+        """Current value of a binding key, or None if it isn't readable right
+        now (an unresolved slot, or a scene with no soundscape yet). None
+        makes the caller skip the move rather than guess a value — guessing
+        is what produces a jump, which is the thing soft takeover exists to
+        prevent."""
+        from . import midi as _midi
+        key = self._resolve(key)
+        if key is None:
+            return None
+        eng = self.engine
+        if key.startswith("camera."):
+            cam = getattr(eng.scenes.current, "camera", None) if eng.scenes.current else None
+            if cam is None:
+                return None
+            attr = {"speed": "base_speed"}.get(key.split(".", 1)[1], key.split(".", 1)[1])
+            v = getattr(cam, attr, None)
+            return float(v) if v is not None else None
+        if key in ("crossfade", "audio_fade", "glow", "trail", "hue_value"):
+            return float(getattr(eng, key))
+        if key.startswith("lfo_slow.") or key.startswith("lfo_mid."):
+            name, attr = key.split(".", 1)
+            src = eng.matrix.sources.get(name)
+            return float(getattr(src, attr)) if src is not None else None
+        if key == "audio_link":
+            return float(eng.scenes.current.spec.audio_link) if eng.scenes.current else None
+        m = _midi._NAME_RE.match(key)
+        if m:
+            name, fields = m.group(1), m.group(2).split(".")
+            for v in self._voices():
+                if v.get("name") == name:
+                    cur = v
+                    for f in fields:
+                        if not isinstance(cur, dict) or f not in cur:
+                            return None
+                        cur = cur[f]
+                    return float(cur) if isinstance(cur, (int, float)) else None
+            return None
+        # soundscape globals: master, tempo, delay.*, eq.*, swell_*
+        scape = None
+        if getattr(eng.synth, "online", False):
+            scape = eng.synth.soundscape()
+        elif eng.scenes.current:
+            scape = eng.scenes.current.spec.soundscape
+        if not scape:
+            return None
+        cur = scape
+        for f in key.split("."):
+            if not isinstance(cur, dict) or f not in cur:
+                return None
+            cur = cur[f]
+        return float(cur) if isinstance(cur, (int, float)) else None
+
+
 def _apply_scape_param(scape: dict, path: str, value):
     """Mirror a live synth param edit into a soundscape dict (for saving)."""
     parts = path.split(".")
@@ -58,7 +179,7 @@ class Engine:
     def __init__(self, *, library_dir, cache_dir, fps=45, pps=11000,
                  max_step=0.03, invert_x=False, keystone_h=0.0, keystone_v=0.0,
                  enable_laser=False, enable_audio=True, model=None,
-                 enable_diagnostics=False):
+                 enable_diagnostics=False, midi_port=None):
         self.fps = fps
         self.pps = pps
         self.crossfade = 2.0
@@ -74,6 +195,11 @@ class Engine:
         self._diag_enabled = enable_diagnostics
         self.perf = LoopStats(fps)
         self.audio_fade = 2.0     # soundscape crossfade duration (s) on scene switch, 0-16
+        # Start/Stop audio ramp (s). Separate from `audio_fade` (which is the
+        # scene-to-scene soundscape crossfade) because they answer different
+        # questions — this one is "how long does the room take to go quiet",
+        # and it wants to be short enough to feel like a button press.
+        self.start_fade = 1.5
 
         # shared spine
         self.matrix = ModMatrix()
@@ -97,6 +223,15 @@ class Engine:
         self.output = make_output(
             enable_laser, max_step=max_step, invert_x=invert_x,
             keystone_h=keystone_h, keystone_v=keystone_v)
+
+        # MIDI control surface. Constructed unconditionally — with no mido
+        # installed or no controller plugged in it simply reports itself as
+        # unavailable, which the UI shows as a greyed-out panel rather than
+        # a missing feature. The router is what lets it address engine and
+        # synth params through the same key namespace the web UI uses.
+        from .midi import MidiInput
+        self.midi_router = MidiRouter(self)
+        self.midi = MidiInput(self.midi_router, _settings, port_hint=midi_port)
 
         self._t0 = time.monotonic()
         self._running = False
@@ -209,6 +344,7 @@ class Engine:
         self.synth.stop()
         self.analysis.stop()
         self.output.close()
+        self.midi.close()
 
     # queued UI actions -----------------------------------------------------
     def _enqueue(self, fn):
@@ -226,6 +362,8 @@ class Engine:
             self.crossfade = float(value)
         elif key == "audio_fade":
             self.audio_fade = max(0.0, min(16.0, float(value)))
+        elif key == "start_fade":
+            self.start_fade = max(0.0, min(8.0, float(value)))
         elif key == "hue_override":
             self.hue_override_on = bool(value)
         elif key == "disable_plane":
@@ -354,17 +492,24 @@ class Engine:
         """Master Start/Stop. While inactive: scene time is frozen (not just
         stopped — resuming continues from where it left off, no time-jump),
         the laser is sent an explicit blanked frame every tick, and audio is
-        muted at the DSP level (the scene's own mix/levels are untouched, so
-        nothing needs re-tuning after Start).
+        faded down at the DSP level (the scene's own mix/levels are untouched,
+        so nothing needs re-tuning after Start).
 
-        Stopping is instant, not faded — the safety-critical direction
-        (silence/blank NOW) must not lag behind the click. Starting fades
-        audio in over 1s instead of snapping straight to full level, which
-        reads as an abrupt pop/click rather than a clean entrance."""
+        Both directions are faded, over `start_fade` seconds. Audio is not the
+        safety-critical part of a Stop — the BEAM is — so the two are handled
+        separately here: `output.blank()` still lands instantly on this very
+        tick, while the sound rides down. An audible hard cut was the only
+        thing the instant mute bought, and it cost a click/pop on every stop.
+
+        The fade continues after `active` goes False because the synth renders
+        on its own callback thread; the render loop's inactive branch only
+        stops drawing, it doesn't stop the audio callback."""
         def apply():
             self.active = bool(value)
-            self._sync_audio_mute(fade=1.0 if self.active else 0.0)
+            self._sync_audio_mute(fade=self.start_fade)
             if not self.active:
+                # Beam first, and unfaded — see the docstring. This is the one
+                # part of a Stop that must not wait for anything.
                 self.output.blank()
                 self._last_frame = []
         self._enqueue(apply)
@@ -545,6 +690,41 @@ class Engine:
                 _apply_scape_param(sc.spec.soundscape, path, value)
         self._enqueue(apply)
 
+    # MIDI ------------------------------------------------------------------
+    def pin_midi_map(self) -> dict:
+        """"Pin MIDI map to scene" (Global section) — freeze the currently
+        resolved voice-slot bindings into the loaded scene as name-based
+        overrides, and save it.
+
+        The global map stays slot-based and untouched; this only adds a
+        scene-local layer that wins while this scene is loaded. Use it on a
+        scene dialled in for a set, where you want a knob tied to *that*
+        voice regardless of where it sits in the ordering. Nothing needs
+        pressing after a normal generate — slots already track the director's
+        voice ordering on their own."""
+        sc = self.scenes.current
+        if sc is None:
+            return {"ok": False, "error": "no scene loaded"}
+        voices = self.midi_router._voices()
+        if not voices:
+            return {"ok": False, "error": "this scene has no voices to pin"}
+        pins = self.midi.pin_map_for(voices)
+        if not pins:
+            return {"ok": False, "error": "no voice controls are mapped"}
+        sc.spec.midi_overrides = pins
+        target = self._current_library_name or sc.spec.name
+        self.scenes.save(target, sc.spec)
+        return {"ok": True, "count": len(pins), "scene": target}
+
+    def clear_midi_pins(self) -> dict:
+        sc = self.scenes.current
+        if sc is None:
+            return {"ok": False, "error": "no scene loaded"}
+        sc.spec.midi_overrides = {}
+        target = self._current_library_name or sc.spec.name
+        self.scenes.save(target, sc.spec)
+        return {"ok": True, "count": 0, "scene": target}
+
     def update_current_scene(self, camera: bool = True, soundscape: bool = True):
         """Save the live config back into the current scene, overwriting its
         stored settings under the same name. `camera`/`soundscape` select which
@@ -592,6 +772,12 @@ class Engine:
         self._enqueue(apply)
 
     def _install_spec(self, spec: SceneSpec):
+        # A scene load replaces every soundscape value at once, so no MIDI
+        # knob's physical position reflects what it controls any more. Re-arm
+        # soft takeover so each one has to sweep back across its value before
+        # it moves anything — otherwise the first knob touched after a scene
+        # change snaps that parameter to wherever the hardware happens to be.
+        self.midi.rearm_takeover()
         self.scenes.set_scene(spec, crossfade=self.crossfade)
         self._apply_modulation(spec)
         # per-scene PPS override if set, else the global hardware ceiling
@@ -777,6 +963,7 @@ class Engine:
             "audio_error": self.audio_error,
             "crossfade": self.crossfade,
             "audio_fade": self.audio_fade,
+            "start_fade": self.start_fade,
             "hue_override": self.hue_override_on,
             "disable_plane": self.disable_plane,
             "mirror_x": self.mirror_x,
@@ -786,6 +973,7 @@ class Engine:
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),
+            "midi": self.midi.state(),
         }
 
     def preview(self, max_points: int = 400, stroke_thin: int = 60):

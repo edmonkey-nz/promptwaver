@@ -130,6 +130,27 @@
               display:flex;justify-content:space-between}
   .knob label span{color:var(--cyan);font-family:var(--mono)}
   .knob input[type=range]{accent-color:var(--cyan);height:3px}
+  /* MIDI learn — a deliberately tiny affordance sitting at the end of a
+     control's label row. Unmapped it is barely there; bound it shows its CC
+     number; learning it pulses so the one control waiting for a knob is
+     obvious across the whole page. */
+  .mlearn{border:0;background:none;padding:0 0 0 6px;cursor:pointer;font-size:9px;
+          line-height:1;color:var(--dim);opacity:.3;font-family:var(--mono);
+          letter-spacing:0;transition:opacity .12s,color .12s}
+  .mlearn:hover{opacity:1;color:var(--cyan)}
+  /* Bound controls are label text, not status: they should be legible when
+     looked for and invisible when not. Full-strength cyan competed with the
+     value readout next to it, which is the thing you're actually reading. */
+  .mlearn.bound{opacity:.55;color:var(--dim)}
+  .mlearn.bound:hover{opacity:1;color:var(--cyan)}
+  .mlearn.learning{opacity:1;color:var(--amber);animation:mpulse 1s infinite}
+  @keyframes mpulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion: reduce){ .mlearn.learning{animation:none} }
+  .midi-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px}
+  .midi-row select{font-size:11px;padding:4px 6px;max-width:100%;flex:1;min-width:120px}
+  .mdot{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block;
+        margin-right:5px;transition:background .1s}
+  .mdot.on{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
   .voices{display:flex;gap:10px;flex-wrap:wrap}
   .voice{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;
          padding:10px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
@@ -164,6 +185,13 @@
   .statusdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);
     box-shadow:0 0 6px var(--red);flex:0 0 auto}
   .statusdot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* MIDI activity flash — overrides .on's green for the ~150ms after a
+     message lands, so traffic is visible at a glance. Transition on the way
+     out only (fast in, slow out) so a single CC still reads as a blink
+     rather than a flicker too short to catch. */
+  .statusdot.midi-act{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .statusdot{transition:background .25s ease-out,box-shadow .25s ease-out}
+  .statusdot.midi-act{transition:none}
   .statushead{display:flex;align-items:center;gap:8px}
 
   .vmeters-row{display:flex;gap:18px;align-items:center;padding:4px 0 8px}
@@ -209,6 +237,12 @@
     <span>Engine</span>
     <span class="statusdot" id="claude-dot" title="Claude API"></span>
     <span>Claude API</span>
+    <!-- Three states, not two: red = no controller connected, green = port
+         open, and a brief cyan flash on every incoming message so you can
+         see the link is live (and which knob is which) without watching a
+         parameter move. -->
+    <span class="statusdot" id="midi-dot" title="MIDI input"></span>
+    <span>MIDI in</span>
   </div>
   <span class="meta" id="meta">connecting…</span>
   <span style="flex:1"></span>
@@ -313,6 +347,13 @@
         <div class="vbuttons">
           <button id="disable-audio">Disable Audio</button>
           <button id="disable-visuals">Disable Visuals</button>
+          <!-- Voice knobs normally follow SLOTS (voice#0, voice#1 …), which
+               track the director's foundation-first voice ordering and so
+               survive a scene change on their own. This pins them to this
+               scene's actual voice NAMES instead — for a scene dialled in
+               ahead of a set, where a knob should stay on that one voice
+               wherever it ends up in the ordering. -->
+          <button id="pin-midi" title="Freeze this scene's voice knobs to its voice names">Pin MIDI map</button>
         </div>
       </div>
 
@@ -334,6 +375,13 @@
       <div class="field"><label>audio fade</label>
         <input type="range" id="s-afade" min="0" max="16" step="0.5" value="2">
         <span class="val" id="v-safade">2.0</span></div>
+      <!-- Distinct from "audio fade" above: that one is the scene-to-scene
+           soundscape crossfade, this is how long Start/Stop takes to bring
+           the room up or down. The beam still blanks instantly on Stop
+           regardless — only the sound rides. -->
+      <div class="field"><label>start/stop fade</label>
+        <input type="range" id="s-startfade" min="0" max="8" step="0.25" value="1.5">
+        <span class="val" id="v-sstartfade">1.5</span></div>
       <div class="field"><label>scene PPS</label>
         <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
       <div class="field"><label style="display:flex;align-items:center;gap:6px;flex:0 0 84px">
@@ -511,6 +559,26 @@
     </div>
 
     <div class="group">
+      <h2 style="font-size:11px">MIDI</h2>
+      <div class="midi-row">
+        <label style="flex:0 0 auto;color:var(--dim)">port</label>
+        <select id="midi-port"></select>
+      </div>
+      <div class="hint" id="midi-status"><i class="mdot"></i>—</div>
+      <div class="midi-row" style="margin-top:6px">
+        <label style="flex:0 0 auto;color:var(--dim)">knob mode</label>
+        <select id="midi-mode-default">
+          <option value="catch">catch (soft takeover)</option>
+          <option value="absolute">absolute</option>
+          <option value="relative">relative (endless encoders)</option>
+        </select>
+      </div>
+      <div class="hint">applies to the control you last learned. <b>catch</b> ignores a knob until it sweeps across the current value, so loading a scene never makes the first knob you touch jump the mix — the right default for voice levels. <b>relative</b> is for endless encoders that send deltas.</div>
+      <div class="hint" style="margin-top:6px">Click the small <span style="font-family:var(--mono);color:var(--cyan)">midi</span> tag beside any slider, then move a knob. Shift-click a bound one to unmap it. Voice knobs bind to a <b>position</b> (voice 1, voice 2 …), not a name, so they keep working after a scene change — <b>Pin MIDI map</b> in the Global section ties them to one scene's actual voices instead.</div>
+      <div class="hint" id="midi-missing" style="display:none;color:var(--amber)">mido isn't installed — <span style="font-family:var(--mono)">pip install mido python-rtmidi</span></div>
+    </div>
+
+    <div class="group">
       <h2 style="font-size:11px">Diagnostics</h2>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px">
         <input type="checkbox" id="diag-enabled-toggle"> enable perf/audio diagnostics
@@ -573,6 +641,10 @@
 const ws = new WebSocket(`ws://${location.host}/ws`);
 const $ = id => document.getElementById(id);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
+// MIDI port names come from the OS (ALSA/CoreMIDI), not from this app, and go
+// into innerHTML — escape rather than trust them.
+const esc = s => String(s).replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 ws.onopen = () => { $("meta").textContent = ""; $("engine-dot").classList.add("on"); };
 ws.onclose = () => { $("meta").textContent = ""; $("engine-dot").classList.remove("on"); };
@@ -598,6 +670,10 @@ ws.onmessage = e => {
       : m.ok && m.source === "cache" ? "from cache ✓"
       : "local fallback — " + (m.error || "no key"));
     closeModal("modal-generate");
+  }
+  else if (m.type === "midi_result") {
+    if (m.action === "pin") pinResult(m);
+    else if (m.action === "port" && !m.ok) $("midi-status").textContent = m.error || "could not open port";
   }
   else if (m.type === "api_result") {
     const s = $("apistatus");
@@ -674,16 +750,13 @@ function paintState(s){
   // show camera controls for 3D scenes, motion controls for flat ones
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
   $("g-motion").style.display = s.scene_3d ? "none" : "flex";
-  // sync camera sliders to the active scene once, whenever the scene changes
+  // Camera slider VALUES now track the engine continuously via syncControls
+  // (below) rather than being copied across once per scene change — a MIDI
+  // knob moves them too, not just a scene load. Only the mode dropdown, which
+  // isn't a numeric control, still needs the once-per-scene copy.
   if (s.camera && $("g-camera").dataset.scene !== s.scene) {
     $("g-camera").dataset.scene = s.scene;
-    const c = s.camera, set = (id,val,fmt)=>{ $(id).value=val; $("v-"+id.replace("-","")).textContent=fmt(val); };
-    $("c-mode").value = c.mode;
-    set("c-speed", c.speed, v=>(+v).toFixed(2));
-    set("c-radius", c.orbit_radius, v=>(+v).toFixed(1));
-    set("c-fov", c.fov, v=>(+v).toFixed(0));
-    set("c-far", c.far, v=>(+v).toFixed(0));
-    set("c-max", c.max_strokes, v=>(+v).toFixed(0));
+    $("c-mode").value = s.camera.mode;
   }
   // max PPS: reflect the persisted ceiling unless the user is actively editing
   if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
@@ -693,15 +766,11 @@ function paintState(s){
     $("diag-enabled-toggle").checked = s.diagnostics_enabled;
   }
   if (typeof s.laser_on === "boolean") updateLaserBtn(s.laser_on);
-  if (document.activeElement !== $("s-afade") && typeof s.audio_fade === "number") {
-    $("s-afade").value = s.audio_fade;
-    $("v-safade").textContent = s.audio_fade.toFixed(1);
-  }
-  if (document.activeElement !== $("g-master") && s.soundscape) {
-    const m = s.soundscape.master ?? 0.8;
-    $("g-master").value = m;
-    $("v-gmaster").textContent = m.toFixed(2);
-  }
+  // s-afade / s-startfade / g-master are all registered controls now — see
+  // syncControls, called below. Their bespoke activeElement-guarded copies
+  // used to live here; the registry's drag/recency guard is strictly better
+  // (focus is sticky after a drag ends, which stalled tracking until you
+  // clicked elsewhere).
   updateDisableButtons(s);
   // per-scene PPS override: sync once per scene change, blank means "auto"
   if ($("o-scenepps").dataset.scene !== s.scene) {
@@ -714,12 +783,14 @@ function paintState(s){
   if (document.activeElement !== $("c-disable-plane")) {
     $("c-disable-plane").checked = !!s.disable_plane;
   }
-  if (document.activeElement !== $("hue-override-val") && typeof s.hue_value === "number") {
-    $("hue-override-val").value = s.hue_value;
-    $("v-hueoverride").textContent = s.hue_value.toFixed(2);
-  }
   renderXfade(s);
+  // before renderSoundscape: it rebuilds the voice strip on a scene change,
+  // and the learn buttons it creates need the current map to paint from
+  syncMidi(s);
   renderSoundscape(s);
+  // after it: the voice knobs it just built have to be in the registry before
+  // this pass, or they show their construction-time value until the next tick
+  syncControls(s);
   renderVu(s);
   renderRoutes(s);
   syncAudioTargets(s);
@@ -1026,18 +1097,230 @@ $("applyaudio").onclick = () => {
 
 const sendAudio = (key, value) => send({type:"set_audio", key, value});
 let _scapeSig = "";
-function knob(label, key, min, max, step, val, fmt){
+
+// ---- MIDI learn -------------------------------------------------------------
+// Every control on the page gets a learn button through one of the two
+// builders below (knob() for the soundscape, slider() for camera/monitor),
+// so there is exactly one place that knows what a learn button looks like.
+//
+// The `midiKey` a button binds is NOT always the key the control sends. Voice
+// controls send a name (`voice.deep_bass.level`) but bind a SLOT
+// (`voice#0.level`), because the name is invented per scene and would leave a
+// dead binding behind on the next generate — see promptwaver/midi.py.
+let _midiState = {map:{}, learn:null};
+const _learnBtns = new Map();     // midiKey -> button, for cheap state sync
+
+function ccFor(midiKey){
+  for (const [cc, k] of Object.entries(_midiState.map || {}))
+    if (k === midiKey) return cc;
+  return null;
+}
+function paintLearn(btn, midiKey){
+  const cc = ccFor(midiKey), learning = _midiState.learn === midiKey;
+  btn.classList.toggle("bound", !!cc && !learning);
+  btn.classList.toggle("learning", learning);
+  btn.textContent = learning ? "•••" : cc ? ("cc" + cc) : "midi";
+  btn.title = learning
+    ? "waiting for a knob… click to cancel"
+    : cc
+      ? `CC ${cc} — click to relearn, shift-click to unmap`
+      : "MIDI learn: click, then move a knob on your controller";
+}
+function learnBtn(midiKey){
+  const b = document.createElement("button");
+  b.className = "mlearn"; b.type = "button";
+  b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    // Shift-click unmaps rather than relearning — the alternative is a
+    // second icon per control, and this page already has a lot of them.
+    if (e.shiftKey && ccFor(midiKey)) send({type:"midi_unmap", key:midiKey});
+    else {
+      send({type:"midi_learn", key:midiKey});
+      // Remember what the "knob mode" dropdown in Settings should act on, and
+      // show that control's current mode there rather than a stale one.
+      _lastLearned = midiKey;
+      const mode = (_midiState.modes || {})[midiKey] || "catch";
+      const sel = $("midi-mode-default");
+      if (sel) sel.value = mode;
+    }
+  };
+  _learnBtns.set(midiKey, b);
+  paintLearn(b, midiKey);
+  return b;
+}
+function repaintLearnButtons(){
+  for (const [key, btn] of _learnBtns) paintLearn(btn, key);
+}
+
+// ---- live control tracking --------------------------------------------------
+// Sliders have to FOLLOW the engine, not just drive it: a knob on the MIDI
+// controller changes the value server-side, and the on-screen control has to
+// move with it or the two disagree about what the patch actually is.
+//
+// Both builders register here, so one sync pass covers every control on the
+// page. `readPath` is where to find the value in the state broadcast, which
+// isn't always the key the control SENDS (ADSR knobs send a whole env dict but
+// read a single stage out of it).
+// A list per path, not one entry: `master` legitimately has two controls (the
+// vertical fader in Global and the knob in the synth globals) and both have to
+// move together, whether the change came from MIDI or from the other one.
+const _ctl = new Map();   // readPath -> [{el, span, fmt}]
+const _dragging = new Set();
+
+function registerCtl(readPath, el, span, fmt){
+  if (!readPath) return;
+  if (!_ctl.has(readPath)) _ctl.set(readPath, []);
+  _ctl.get(readPath).push({el, span, fmt});
+  // Don't fight the user's hand. A pointer held down on a slider means they
+  // own it until they let go; the timestamp then covers the moment after
+  // release, and for keyboard/wheel adjustments which never set the flag.
+  el.addEventListener("pointerdown", () => _dragging.add(el));
+  el.addEventListener("pointerup",   () => _dragging.delete(el));
+  el.addEventListener("pointercancel", () => _dragging.delete(el));
+  el.addEventListener("input", () => { el.dataset.touched = Date.now(); });
+}
+
+// Walk a dotted path, with `voice.<name>.…` resolved by NAME against the live
+// voice list (the state broadcast carries voices as an array, not a map).
+function readStateValue(path, s){
+  if (!s) return undefined;
+  if (path.startsWith("camera.")) return s.camera ? s.camera[path.slice(7)] : undefined;
+  if (path.startsWith("voice.")){
+    const [, name, ...rest] = path.split(".");
+    const v = (s.soundscape?.voices || []).find(x => x.name === name);
+    return rest.reduce((o, k) => (o == null ? undefined : o[k]), v);
+  }
+  if (Object.prototype.hasOwnProperty.call(s, path)) return s[path];   // crossfade, glow, hue_value…
+  return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), s.soundscape);
+}
+
+function syncControls(s){
+  const now = Date.now();
+  for (const [path, list] of _ctl){
+    // renderSoundscape rebuilds the voice strip on every scene change, so
+    // detached controls pile up here otherwise.
+    const live = list.filter(c => c.el.isConnected);
+    if (live.length !== list.length) _ctl.set(path, live);
+    if (!live.length) { _ctl.delete(path); continue; }
+    const v = readStateValue(path, s);
+    if (typeof v !== "number") continue;
+    for (const c of live){
+      if (_dragging.has(c.el)) continue;
+      if (now - (+c.el.dataset.touched || 0) < 400) continue;   // just let go
+      // Compare against the control's own rounding, not the raw float: a
+      // range input snaps to its step, so an exact !== would rewrite the DOM
+      // on every broadcast for a value it can't represent anyway.
+      if (Math.abs((+c.el.value) - v) < (+c.el.step || 0.001) / 2) continue;
+      c.el.value = v;
+      if (c.span) c.span.textContent = c.fmt(v);
+    }
+  }
+}
+
+let _midiFp = "", _midiPortsFp = "", _midiCount = -1, _midiFlash = null;
+function syncMidi(s){
+  const mi = (s && s.midi) || {};
+  _midiState = mi;
+
+  // Only repaint the (potentially hundreds of) learn buttons when the map or
+  // the learn target actually changed — this runs 20x a second otherwise.
+  const fp = JSON.stringify([mi.map, mi.learn, mi.overrides]);
+  if (fp !== _midiFp) { _midiFp = fp; repaintLearnButtons(); }
+
+  $("midi-missing").style.display = mi.available === false ? "" : "none";
+
+  // Header indicator. `connected` is the steady state (green/red); the flash
+  // is driven off the server's message COUNT rather than its `active` flag,
+  // because `active` is a 0.6s window that stays true across several 20Hz
+  // broadcasts — it would hold the dot lit rather than blink it. A change in
+  // count is one discrete "something arrived" event per broadcast.
+  const dotEl = $("midi-dot");
+  dotEl.classList.toggle("on", !!mi.connected);
+  dotEl.title = mi.available === false ? "MIDI unavailable — mido not installed"
+    : mi.connected ? `MIDI in — ${mi.port} (${mi.count || 0} messages)`
+    : "MIDI in — no controller connected";
+  if (mi.connected && mi.count !== _midiCount) {
+    _midiCount = mi.count;
+    dotEl.classList.add("midi-act");
+    clearTimeout(_midiFlash);
+    _midiFlash = setTimeout(() => dotEl.classList.remove("midi-act"), 150);
+  }
+
+  const portsFp = JSON.stringify(mi.ports || []);
+  if (portsFp !== _midiPortsFp) {
+    _midiPortsFp = portsFp;
+    $("midi-port").innerHTML = ['<option value="">— none —</option>']
+      .concat((mi.ports || []).map(p =>
+        `<option value="${esc(p)}"${p === mi.port ? " selected" : ""}>${esc(p)}</option>`))
+      .join("");
+  }
+  if (document.activeElement !== $("midi-port") && mi.port)
+    $("midi-port").value = mi.ports && mi.ports.includes(mi.port) ? mi.port : "";
+
+  const dot = mi.active ? " on" : "";
+  const last = mi.last_cc ? ` · last CC ${mi.last_cc[0]} = ${mi.last_cc[1]}` : "";
+  $("midi-status").innerHTML = `<i class="mdot${dot}"></i>` +
+    (mi.connected ? `${esc(mi.port)} · ${mi.count || 0} messages${last}`
+                  : (mi.error ? esc(mi.error) : "not connected"));
+
+  // The Pin button doubles as the unpin: its label reflects which it'll do.
+  const b = $("pin-midi");
+  if (b.dataset.busy !== "1") {
+    const n = Object.keys(mi.overrides || {}).length;
+    b.textContent = n ? `Unpin MIDI (${n})` : "Pin MIDI map";
+  }
+}
+$("midi-port").onchange = () => send({type:"midi_port", name:$("midi-port").value});
+$("midi-mode-default").onchange = () => {
+  // Applies to the most recently learned control — there's no global mode in
+  // the backend, modes are per-binding, and a single "change every binding"
+  // control would silently rewrite mappings the user tuned individually.
+  const key = _lastLearned;
+  if (key) send({type:"midi_mode", key, mode:$("midi-mode-default").value});
+};
+let _lastLearned = null;
+
+// `opts` (all optional):
+//   midi     binding key for the learn button; null = not MIDI-mappable
+//   read     where to read this value from in the state broadcast, when that
+//            differs from `key` (ADSR sends a whole dict, reads one stage)
+//   onInput  replaces the default "send `key`" behaviour. Takes the number.
+//
+// onInput exists so a caller with a non-trivial send can supply just that,
+// instead of overwriting `input.oninput` after the fact — which meant also
+// re-implementing the value-readout update, via a `label span:last-child`
+// selector that silently stopped matching the moment a learn button became
+// the label's last child. The knob owns its own DOM; callers pass behaviour.
+function knob(label, key, min, max, step, val, fmt, opts = {}){
+  const {midi, read, onInput} = opts;
   const wrap = document.createElement("div"); wrap.className = "knob";
   const l = document.createElement("label");
   const name = document.createElement("span"); name.textContent = label; name.style.color="var(--dim)";
   const v = document.createElement("span"); v.textContent = fmt(val);
   l.appendChild(name); l.appendChild(v);
+  if (midi !== null) l.appendChild(learnBtn(midi === undefined ? key : midi));
   const r = document.createElement("input");
   r.type="range"; r.min=min; r.max=max; r.step=step; r.value=val;
-  r.oninput = () => { v.textContent = fmt(+r.value); sendAudio(key, +r.value); };
+  r.oninput = () => {
+    const n = +r.value;
+    v.textContent = fmt(n);
+    if (onInput) onInput(n); else sendAudio(key, n);
+  };
   wrap.appendChild(l); wrap.appendChild(r);
+  registerCtl(read === undefined ? key : read, r, v, fmt);
   return wrap;
 }
+
+// The live voice record, read from the latest broadcast rather than from the
+// closure the voice strip was built with. Controls that send a whole sub-dict
+// (ADSR, arp) must merge onto CURRENT values: with a stale closure, moving
+// attack from the MIDI controller and then release with the mouse would send
+// the old attack back alongside the new release, silently undoing the knob.
+const liveVoice = (name) =>
+  (_lastState && _lastState.soundscape && _lastState.soundscape.voices || [])
+    .find(x => x.name === name);
+const liveSub = (name, field, fallback) =>
+  ({...fallback, ...((liveVoice(name) || {})[field] || {})});
 function renderSoundscape(s){
   const sc = s.soundscape;
   const block = $("synthblock");
@@ -1067,7 +1350,15 @@ function renderSoundscape(s){
   g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
 
   const vc = $("voices"); vc.innerHTML="";
-  (sc.voices||[]).forEach(v => {
+  // Drop stale slot buttons before rebuilding: a scene with fewer voices than
+  // the last one would otherwise leave entries pointing at detached nodes.
+  for (const k of [..._learnBtns.keys()]) if (k.startsWith("voice#")) _learnBtns.delete(k);
+  // `vi` is the voice's SLOT — what MIDI binds to, so a knob keeps meaning
+  // "the low end" after a scene change even though the name changed. The
+  // director is asked to order voices foundation-first for exactly this
+  // reason (see claude_director.py's VOICE ORDER block).
+  (sc.voices||[]).forEach((v, vi) => {
+    const mk = (field) => `voice#${vi}.${field}`;
     const el = document.createElement("div");
     el.className = "voice" + (v.mute ? " muted":"");
     const head = document.createElement("div"); head.className="vhead";
@@ -1080,7 +1371,7 @@ function renderSoundscape(s){
     const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center";
     hrow.appendChild(head); hrow.appendChild(mb);
     el.appendChild(hrow);
-    el.appendChild(knob("level",`voice.${v.name}.level`,0,1,0.01, v.level ?? 0.4, x=>x.toFixed(2)));
+    el.appendChild(knob("level",`voice.${v.name}.level`,0,1,0.01, v.level ?? 0.4, x=>x.toFixed(2), {midi: mk("level")}));
     if (v.type==="pad" || v.type==="sub" || v.type==="pluck" || v.type==="osc"){
       const sel = document.createElement("select");
       ["sine","saw","square","triangle"].forEach(w=>{
@@ -1091,15 +1382,15 @@ function renderSoundscape(s){
       el.appendChild(wl); el.appendChild(sel);
     }
     if (v.type==="pad" || v.type==="noise")
-      el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2)));
+      el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")}));
     if (v.type==="pluck")
-      el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2)));
+      el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
     if (v.type==="osc"){
-      el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0)));
-      el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3)));
-      el.appendChild(knob("sub",`voice.${v.name}.sub`,0,1,0.01, v.sub ?? 0, x=>x.toFixed(2)));
+      el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
+      el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
+      el.appendChild(knob("sub",`voice.${v.name}.sub`,0,1,0.01, v.sub ?? 0, x=>x.toFixed(2), {midi: mk("sub")}));
     }
-    el.appendChild(knob("pan",`voice.${v.name}.pan`,-1,1,0.05, v.pan ?? 0, x=>x.toFixed(2)));
+    el.appendChild(knob("pan",`voice.${v.name}.pan`,-1,1,0.05, v.pan ?? 0, x=>x.toFixed(2), {midi: mk("pan")}));
 
     // ADSR envelope — available on sustained voices (pad/osc)
     if (v.type==="pad" || v.type==="osc"){
@@ -1112,14 +1403,17 @@ function renderSoundscape(s){
       envWrap.appendChild(envLabel);
       const envRow = document.createElement("div");
       envRow.style.cssText = "display:flex;flex-direction:column;gap:6px";
-      const mkEnvKnob = (label, field, min, max, step) => {
-        const kn = knob(label, `__env_${field}_${v.name}`, min, max, step, env[field], x=>x.toFixed(2));
-        kn.querySelector("input").oninput = (e) => {
-          kn.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
-          sendAudio(`voice.${v.name}.env`, {...env, [field]: +e.target.value});
-        };
-        return kn;
-      };
+      // Each stage is independently MIDI-mappable. The synth only accepts
+      // `env` as a whole dict (dsp.set_param takes three-part paths), so a
+      // single stage is a read-modify-write on both routes: here for the
+      // mouse, and MidiRouter.set for a knob.
+      const mkEnvKnob = (label, field, min, max, step) =>
+        knob(label, `voice.${v.name}.env.${field}`, min, max, step, env[field], x=>x.toFixed(2), {
+          midi: mk("env." + field),
+          read: `voice.${v.name}.env.${field}`,
+          onInput: (n) => sendAudio(`voice.${v.name}.env`,
+                                    {...liveSub(v.name, "env", env), [field]: n}),
+        });
       envRow.appendChild(mkEnvKnob("attack","attack",0.01,15,0.05));
       envRow.appendChild(mkEnvKnob("decay","decay",0.01,8,0.05));
       envRow.appendChild(mkEnvKnob("sustain","sustain",0,1,0.01));
@@ -1153,19 +1447,18 @@ function renderSoundscape(s){
       const ml = document.createElement("label"); ml.className="flabel"; ml.textContent="pattern";
       arpFields.appendChild(ml); arpFields.appendChild(modeSel);
 
-      const rateKnob = knob("arp rate",`__arp_rate_${v.name}`,0.25,8,0.25, arp.rate ?? 2.0, x=>x.toFixed(2));
-      rateKnob.querySelector("input").oninput = (e) => {
-        rateKnob.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
-        sendAudio(`voice.${v.name}.arp`, {...arp, rate: +e.target.value, on: cb.checked});
-      };
-      arpFields.appendChild(rateKnob);
-
-      const decayKnob = knob("arp decay",`__arp_decay_${v.name}`,0.05,2,0.05, arp.decay ?? 0.3, x=>x.toFixed(2));
-      decayKnob.querySelector("input").oninput = (e) => {
-        decayKnob.querySelector("label span:last-child").textContent = (+e.target.value).toFixed(2);
-        sendAudio(`voice.${v.name}.arp`, {...arp, decay: +e.target.value, on: cb.checked});
-      };
-      arpFields.appendChild(decayKnob);
+      // midi:null — arp rate/decay aren't in the MIDI range table, so a
+      // learn button here would bind a CC that then does nothing. (They were
+      // getting one keyed on the internal `__arp_*` placeholder.)
+      const mkArpKnob = (label, field, min, max, step, dflt) =>
+        knob(label, `voice.${v.name}.arp.${field}`, min, max, step, arp[field] ?? dflt, x=>x.toFixed(2), {
+          midi: null,
+          read: `voice.${v.name}.arp.${field}`,
+          onInput: (n) => sendAudio(`voice.${v.name}.arp`,
+                                    {...liveSub(v.name, "arp", arp), [field]: n, on: cb.checked}),
+        });
+      arpFields.appendChild(mkArpKnob("arp rate", "rate", 0.25, 8, 0.25, 2.0));
+      arpFields.appendChild(mkArpKnob("arp decay", "decay", 0.05, 2, 0.05, 0.3));
 
       arpWrap.appendChild(arpFields);
       el.appendChild(arpWrap);
@@ -1290,9 +1583,14 @@ function paintPreview(scene){
   if (mirrorX || mirrorY) applyMirror(cx, cv, mirrorX, mirrorY);
 }
 
-function slider(id, key, label, fmt=(v)=>(+v).toFixed(2)){
+// `midiKey` defaults to `key`; pass null for controls that aren't worth a
+// hardware knob (scene-authoring params rather than performance ones), so the
+// icon doesn't appear on every slider on the page indiscriminately.
+function slider(id, key, label, fmt=(v)=>(+v).toFixed(2), midiKey, readPath){
   const s=$(id), v=$("v-"+label);
   s.oninput = () => { v.textContent = fmt(s.value); send({type:"set",key,value:+s.value}); };
+  if (midiKey !== null) v.insertAdjacentElement("afterend", learnBtn(midiKey === undefined ? key : midiKey));
+  registerCtl(readPath === undefined ? key : readPath, s, v, fmt);
 }
 
 // Monitor filter controls — per-scene now (see syncMonitorFilters above),
@@ -1302,16 +1600,22 @@ slider("mf-glow", "glow", "mfglow");
 slider("mf-trail", "trail", "mftrail");
 $("mf-mirror-x").onchange = () => send({type:"set", key:"mirror_x", value:$("mf-mirror-x").checked});
 $("mf-mirror-y").onchange = () => send({type:"set", key:"mirror_y", value:$("mf-mirror-y").checked});
-slider("s-speed","layer0.speed","speed");
-slider("s-turb","layer0.turbulence","turb");
-slider("s-hue","layer0.hue","hue");
+// layer0.* are 2D-generator authoring params, not things you reach for
+// mid-set, so they get no learn icon (null) — see slider().
+slider("s-speed","layer0.speed","speed",undefined,null);
+slider("s-turb","layer0.turbulence","turb",undefined,null);
+slider("s-hue","layer0.hue","hue",undefined,null);
 slider("s-lfo","lfo_slow.rate","lfo");
 slider("s-xf","crossfade","xf",(v)=>(+v).toFixed(1));
-slider("s-afade","audio_fade","safade",(v)=>(+v).toFixed(1));
+slider("s-afade","audio_fade","safade",(v)=>(+v).toFixed(1),null);
+slider("s-startfade","start_fade","sstartfade",(v)=>(+v).toFixed(2),null);
 
 slider("c-speed","camera.speed","cspeed");
 slider("c-radius","camera.orbit_radius","cradius",(v)=>(+v).toFixed(1));
 slider("c-fov","camera.fov","cfov",(v)=>(+v).toFixed(0));
+// far ("draw depth") and max_strokes are the two that get changed by hand
+// when the rig moves between the laser and a data projector — the projector
+// takes far more detail than a laser's stroke budget allows.
 slider("c-far","camera.far","cfar",(v)=>(+v).toFixed(0));
 slider("c-max","camera.max_strokes","cmax",(v)=>(+v).toFixed(0));
 $("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
@@ -1394,6 +1698,14 @@ $("hue-override-val").oninput = () => {
   $("v-hueoverride").textContent = (+$("hue-override-val").value).toFixed(2);
   send({type:"set", key:"hue_value", value:+$("hue-override-val").value});
 };
+// These three don't go through slider() (each has its own handler above), so
+// they get their learn button and live-tracking registration attached directly.
+$("v-hueoverride").insertAdjacentElement("afterend", learnBtn("hue_value"));
+$("v-mlink").insertAdjacentElement("afterend", learnBtn("audio_link"));
+$("v-gmaster").insertAdjacentElement("afterend", learnBtn("master"));
+registerCtl("hue_value",  $("hue-override-val"), $("v-hueoverride"), v=>(+v).toFixed(2));
+registerCtl("audio_link", $("m-link"),           $("v-mlink"),       v=>(+v).toFixed(2));
+registerCtl("master",     $("g-master"),         $("v-gmaster"),     v=>(+v).toFixed(2));
 
 // Disable Audio / Disable Visuals: independent, gracefully-fading gates —
 // separate from Start/Stop, which is instant and controls both at once
@@ -1404,6 +1716,28 @@ function updateDisableButtons(s){
   vb.textContent = s.visuals_disabled ? "Enable Visuals" : "Disable Visuals";
   vb.className = s.visuals_disabled ? "amber" : "";
 }
+// Pin / unpin this scene's voice mappings. Unlike the Save buttons this one
+// waits for the server's answer rather than assuming success, because it has
+// real failure modes worth surfacing (a scene with no voices, nothing mapped
+// to pin) instead of flashing "Saved ✓" over a no-op.
+$("pin-midi").onclick = () => {
+  const b = $("pin-midi");
+  if (b.dataset.busy === "1") return;
+  b.dataset.busy = "1";
+  const pinned = Object.keys(_midiState.overrides || {}).length > 0;
+  b.textContent = pinned ? "Unpinning…" : "Pinning…";
+  send({type:"midi_pin", clear: pinned});
+};
+function pinResult(m){
+  const b = $("pin-midi");
+  b.dataset.busy = "0";
+  b.textContent = m.ok
+    ? (m.count ? `Pinned ${m.count} ✓` : "Unpinned ✓")
+    : (m.error || "failed");
+  b.className = m.ok ? "" : "amber";
+  setTimeout(() => { b.className = ""; syncMidi(_lastState); }, 2200);
+}
+
 $("disable-audio").onclick = () => {
   send({type:"set_audio_disabled", value: !_lastState?.audio_disabled, fade: 2.0});
 };
