@@ -523,7 +523,7 @@
     <div class="group">
       <h2>Scene creation</h2>
       <button class="go" id="gen-open" style="width:100%">Generate scene…</button>
-              <div class="hint">you can also generate new audio from a new prompt also using this button.</div>
+              <div class="hint">you can also generate new audio from a new prompt using this button.</div>
 
     </div>
   </section>
@@ -1437,9 +1437,13 @@ function renderSoundscape(s){
     block.style.opacity = sc ? "1" : ".5";
   } else { block.style.opacity = "1"; }
   if (!sc) { $("synthglobals").innerHTML=""; $("voices").innerHTML=""; return; }
-  // rebuild only when the structure (voice names/types) changes, so live
-  // dragging doesn't wipe the control you're holding
-  const sig = s.scene + "|" + (sc.voices||[]).map(v=>v.name+":"+v.type).join(",");
+  // Rebuild only when the STRUCTURE changes, so live dragging doesn't wipe
+  // the control you're holding. An LFO's on/target counts as structure —
+  // toggling it from a MIDI knob has to show up here, and it changes which
+  // fields are visible — but its rate/depth deliberately don't, or every
+  // knob turn would tear down the strip mid-drag.
+  const sig = s.scene + "|" + (sc.voices||[]).map(v =>
+    [v.name, v.type, (v.lfo||{}).on ? 1 : 0, (v.lfo||{}).dest || ""].join(":")).join(",");
   if (sig === _scapeSig) return;
   _scapeSig = sig;
 
@@ -1571,6 +1575,70 @@ function renderSoundscape(s){
 
       arpWrap.appendChild(arpFields);
       el.appendChild(arpWrap);
+    }
+
+    // Per-voice LFO — available on every voice type, since even a noise bed
+    // benefits from a slow tremolo or a wandering pan.
+    {
+      const lfo = v.lfo || {on:false, rate:0.06, shape:"sine", depth:0.5, dest:"level"};
+      const w = document.createElement("div");
+      w.style.cssText = "border-top:1px solid var(--line);padding-top:8px;margin-top:2px;display:flex;flex-direction:column;gap:6px";
+      const head = document.createElement("label");
+      head.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)";
+      const on = document.createElement("input"); on.type = "checkbox"; on.checked = !!lfo.on;
+      head.appendChild(on); head.appendChild(document.createTextNode("LFO"));
+      w.appendChild(head);
+
+      const fields = document.createElement("div");
+      fields.style.cssText = "display:flex;flex-direction:column;gap:6px";
+      const toggle = (o) => { fields.style.display = o ? "flex" : "none"; };
+      toggle(!!lfo.on);
+      // Every control sends the WHOLE lfo dict — the synth takes it as one
+      // object (dsp.set_param only understands three-part voice paths), and
+      // merging onto the live value rather than this closure's copy keeps a
+      // MIDI-driven change from being undone by the next click here.
+      const live = () => ({...lfo, ...((liveVoice(v.name) || {}).lfo || {})});
+      const push = (patch) => sendAudio(`voice.${v.name}.lfo`,
+                                        {...live(), ...patch, on: on.checked});
+      on.onchange = () => { toggle(on.checked); push({}); };
+
+      const mkSel = (label, key, opts) => {
+        const s = document.createElement("select");
+        opts.forEach(o => { const e = document.createElement("option");
+          e.value = o; e.textContent = o;
+          if ((lfo[key] ?? opts[0]) === o) e.selected = true; s.appendChild(e); });
+        s.onchange = () => push({[key]: s.value});
+        const l = document.createElement("label"); l.className = "flabel"; l.textContent = label;
+        fields.appendChild(l); fields.appendChild(s);
+        return s;
+      };
+      // "smooth" destinations are per-sample and work at any rate; the rest
+      // are resolved once per audio block, so they step above ~0.5Hz. Marked
+      // in the list so the pairing is visible when choosing.
+      mkSel("target", "dest", ["level", "pan", "tone", "detune", "sub", "waveform", "rate"]);
+      mkSel("shape", "shape", ["sine", "triangle", "saw", "square", "random"]);
+
+      const mkKnob = (label, key, min, max, step, dflt, fmt) =>
+        knob(label, `voice.${v.name}.lfo.${key}`, min, max, step, lfo[key] ?? dflt, fmt, {
+          midi: mk("lfo." + key),
+          read: `voice.${v.name}.lfo.${key}`,
+          onInput: (n) => push({[key]: n}),
+        });
+      // 0 to 0.5 Hz — one cycle every two seconds at the top end, which is
+      // already fast for ambient. Three decimals because the useful range is
+      // the bottom fifth of the travel: 0.02-0.15 is where scenes breathe.
+      fields.appendChild(mkKnob("rate Hz", "rate", 0, 0.5, 0.005, 0.06, x=>x.toFixed(3)));
+      fields.appendChild(mkKnob("amount", "depth", 0, 1, 0.01, 0.5, x=>x.toFixed(2)));
+
+      const note = document.createElement("div");
+      note.style.cssText = "font-size:10px;color:var(--dim);line-height:1.4";
+      note.textContent = "0.02-0.15 Hz is the ambient range (one cycle every "
+        + "7-50s). level and pan stay smooth throughout; the others are set "
+        + "once per audio block, so they granulate near the top of the dial.";
+      fields.appendChild(note);
+
+      w.appendChild(fields);
+      el.appendChild(w);
     }
     vc.appendChild(el);
   });

@@ -803,11 +803,19 @@
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 45,
+    "tempo": 27.0,
     "master": 0.75,
     "distortion": 0.0,
     "delay": {
@@ -835,12 +843,29 @@
           "decay": 1.5,
           "sustain": 0.8,
           "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "arp": {
+          "on": false,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.3
         }
       },
       {
         "name": "bubble_rise",
         "type": "pluck",
-        "waveform": "sine",
+        "waveform": "saw",
         "note": 60,
         "scale": [
           0,
@@ -850,17 +875,40 @@
           10,
           12
         ],
-        "level": 0.35,
-        "rate": 0.6,
+        "level": 0.21,
+        "rate": 0.15,
         "decay": 1.2,
-        "pan": 0.2
+        "pan": 0.2,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "water_shimmer",
         "type": "noise",
         "level": 0.18,
         "tone": 0.5,
-        "pan": -0.15
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "jellyfish_pulse",
@@ -882,7 +930,17 @@
           "mode": "updown",
           "rate": 1.2,
           "decay": 0.8
-        }
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "distant_current",
@@ -902,9 +960,28 @@
           "decay": 2.0,
           "sustain": 0.75,
           "release": 4.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
-    ]
+    ],
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.0,
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {}
 }

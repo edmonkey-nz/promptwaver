@@ -43,6 +43,12 @@ SR = 44100
 VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc")
 WAVEFORMS = ("sine", "saw", "square", "triangle")
 
+#: Ceiling on a per-voice LFO's rate, in Hz. One cycle every two seconds is
+#: already brisk for ambient — the useful range in practice is an order of
+#: magnitude below this. Shared by the DSP clamp, the MIDI range table and the
+#: UI knob so all three agree on what the control means.
+LFO_MAX_RATE = 0.5
+
 
 def midi_to_hz(n: float) -> float:
     return 440.0 * 2.0 ** ((n - 69) / 12.0)
@@ -337,6 +343,106 @@ class Soundscape:
                         env.a, env.d, env.s, env.r = e.get("attack", env.a), \
                             e.get("decay", env.d), e.get("sustain", env.s), e.get("release", env.r)
 
+    # --- per-voice LFO ------------------------------------------------------
+    #
+    # Destinations split into two groups, and the split is forced by the block
+    # size rather than chosen: a block is 190-370ms at the blocksizes this
+    # runs at (8192-16384). Anything evaluated once per block therefore can't
+    # represent an LFO faster than roughly 0.3-0.6Hz without visibly stepping,
+    # and which end of that you get depends on a setting the user can change.
+    #
+    #   PER-SAMPLE  level, pan — applied as arrays over the block, so they stay
+    #               smooth at any rate. Tremolo and auto-pan work up to audio
+    #               rate if you want them to.
+    #   PER-BLOCK   tone, detune, sub, waveform, rate — these select a
+    #               wavetable, a set of frequencies or a note schedule *before*
+    #               the block is rendered, so they can only change between
+    #               blocks. Fine for the slow sweeps they're for; above ~0.5Hz
+    #               they will audibly step, which is why the director is told
+    #               to keep those slow.
+    LFO_DESTS_SMOOTH = ("level", "pan")
+    LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate")
+    LFO_DESTS = LFO_DESTS_SMOOTH + LFO_DESTS_STEPPED
+    LFO_SHAPES = ("sine", "triangle", "saw", "square", "random")
+
+    def _lfo_wave(self, x: np.ndarray | float, shape: str):
+        """Bipolar -1..1 from a phase in cycles. `x` may be an array (the
+        per-sample path) or a float (the per-block one)."""
+        if shape == "triangle":
+            return 4.0 * np.abs((x % 1.0) - 0.5) - 1.0
+        if shape == "saw":
+            return 2.0 * (x % 1.0) - 1.0
+        if shape == "square":
+            return np.where((x % 1.0) < 0.5, 1.0, -1.0)
+        if shape == "random":
+            # Sample & hold: one value per cycle, from a hash of the cycle
+            # number. Deterministic, so a scene sounds the same on every
+            # playback — no RNG state to drift.
+            step = np.floor(x)
+            h = np.sin(step * 12.9898) * 43758.5453
+            return 2.0 * (h - np.floor(h)) - 1.0
+        return np.sin(2.0 * np.pi * x)              # sine (default)
+
+    def _lfo(self, v: dict, n0: int, frames: int):
+        """(per-sample array, mid-block scalar, config) for this voice's LFO,
+        or None when it has none.
+
+        Phase comes from the absolute sample clock for the same reason the
+        oscillators' does — it stays continuous across block boundaries with
+        no stored state, so live edits and block-size changes can't make it
+        jump. The scalar is sampled at the block's MIDPOINT rather than its
+        start, which halves the timing error for the stepped destinations."""
+        lfo = v.get("lfo") or {}
+        if not lfo.get("on"):
+            return None
+        dest = lfo.get("dest", "level")
+        if dest not in self.LFO_DESTS:
+            return None
+        # Capped at 0.5Hz — one cycle every two seconds — because this is an
+        # ambient instrument and anything faster reads as an effect rather
+        # than as the scene breathing. Clamped here as well as in the UI so a
+        # hand-edited or model-authored scene file can't sit outside the range
+        # the controls can express. 0 is allowed and means "frozen": the LFO
+        # holds at its phase offset, which is a useful way to park one.
+        rate = float(min(LFO_MAX_RATE, max(0.0, lfo.get("rate", 0.06))))
+        depth = float(min(1.0, max(0.0, lfo.get("depth", 0.5))))
+        if depth <= 0.0:
+            return None
+        shape = lfo.get("shape", "sine")
+        phase = float(lfo.get("phase", 0.0))
+        t = (n0 + np.arange(frames, dtype=np.float64)) / self.sr
+        x = t * rate + phase
+        arr = self._lfo_wave(x, shape)
+        mid = float(np.asarray(
+            self._lfo_wave((n0 + frames * 0.5) / self.sr * rate + phase, shape)))
+        return arr, mid, dest, depth
+
+    def _lfo_apply_stepped(self, v: dict, mid: float, dest: str, depth: float) -> dict:
+        """A shallow copy of the voice with one stepped param displaced by the
+        LFO. Copied rather than mutated so the spec the UI reads back (and
+        'Save Soundscape settings' writes out) keeps the authored value, not
+        whatever the LFO happened to be doing at that instant."""
+        ev = dict(v)
+        if dest == "tone":
+            ev["tone"] = float(min(1.0, max(0.0, v.get("tone", 1.0) + depth * mid)))
+        elif dest == "detune":
+            ev["detune"] = float(min(0.05, max(0.0,
+                                               v.get("detune", 0.01) + depth * 0.02 * mid)))
+        elif dest == "sub":
+            ev["sub"] = float(min(1.0, max(0.0, v.get("sub", 0.0) + depth * mid)))
+        elif dest == "rate":
+            # Multiplicative: rate is a tempo division, so a fixed offset
+            # would mean something different at every tempo.
+            ev["rate"] = float(max(0.05, v.get("rate", 1.0) * (1.0 + depth * 0.75 * mid)))
+        elif dest == "waveform":
+            # The "osc type" destination: step through the waveform list.
+            # Deliberately quantised — the point is switching timbre, and a
+            # smooth shape would just spend most of its time mid-step.
+            u = (mid + 1.0) * 0.5
+            ev["waveform"] = WAVEFORMS[min(len(WAVEFORMS) - 1,
+                                           int(u * len(WAVEFORMS)))]
+        return ev
+
     def _swell_gain(self, name: str, block_t: float) -> float:
         """This voice's slow orchestration multiplier at this block's start
         time — 1.0 (unattenuated) at the peak of its cycle, down to
@@ -384,27 +490,48 @@ class Soundscape:
             else:
                 gain = 1.0
 
-            arp = v.get("arp") or {}
+            # Per-voice LFO. Stepped destinations have to be resolved BEFORE
+            # the voice renders (they pick a wavetable / frequencies / a note
+            # schedule); the smooth ones are applied to the finished signal
+            # further down.
+            lfo = self._lfo(v, n0, frames)
+            rv = v
+            if lfo is not None and lfo[2] in self.LFO_DESTS_STEPPED:
+                rv = self._lfo_apply_stepped(v, lfo[1], lfo[2], lfo[3])
+
+            arp = rv.get("arp") or {}
             if arp.get("on") and vt in ("pad", "osc"):
-                mono = self._render_arp(v, n0, frames)
+                mono = self._render_arp(rv, n0, frames)
             elif vt == "pad" or vt == "sub":
-                mono = self._render_pad(v, t, n0, frames)
+                mono = self._render_pad(rv, t, n0, frames)
             elif vt == "osc":
-                mono = self._render_osc(v, t, n0, frames)
+                mono = self._render_osc(rv, t, n0, frames)
             elif vt == "pluck":
-                mono = self._render_pluck(v, n0, frames)
+                mono = self._render_pluck(rv, n0, frames)
             elif vt == "noise":
-                mono = self._render_noise(v, frames)
+                mono = self._render_noise(rv, frames)
             else:
                 continue
             mono = mono * gain
-            mono = mono * float(v.get("level", 0.4))
+            level = float(v.get("level", 0.4))
+            if lfo is not None and lfo[2] == "level":
+                # Tremolo, applied per-sample so it stays smooth at any rate.
+                # Unipolar and downward-only: the authored level stays the
+                # ceiling, so turning the LFO on never makes a voice louder
+                # than it was mixed to be.
+                _, _, _, depth = lfo
+                mono = mono * (level * (1.0 - depth * (1.0 - (lfo[0] + 1.0) * 0.5)))
+            else:
+                mono = mono * level
             mono = mono * self._swell_gain(name, block_t)
             pan = float(v.get("pan", 0.0))
-            l = mono * np.sqrt(0.5 * (1 - pan))
-            r = mono * np.sqrt(0.5 * (1 + pan))
-            mix[:, 0] += l
-            mix[:, 1] += r
+            if lfo is not None and lfo[2] == "pan":
+                # Auto-pan around the authored position, per-sample. Clipped
+                # at the extremes rather than wrapped, so a deep sweep parks
+                # at hard left/right instead of jumping to the other side.
+                pan = np.clip(pan + lfo[3] * lfo[0], -1.0, 1.0)
+            mix[:, 0] += mono * np.sqrt(0.5 * (1 - pan))
+            mix[:, 1] += mono * np.sqrt(0.5 * (1 + pan))
 
         eq = self.spec.get("eq")
         if eq and (eq.get("low") or eq.get("mid") or eq.get("high")):
@@ -764,7 +891,7 @@ def _coerce(field, value):
         return str(value)
     if field == "tempo":
         return float(value)
-    if field in ("arp", "chord", "scale", "env"):
+    if field in ("arp", "chord", "scale", "env", "lfo"):
         return value            # dict / list — passed through, clamped by _normalise
     return float(value)
 

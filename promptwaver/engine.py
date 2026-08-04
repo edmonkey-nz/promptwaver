@@ -76,21 +76,30 @@ class MidiRouter:
         if not _midi.is_audio_key(key):
             self.engine.set_param(key, value)
             return
-        # ADSR is the one field the synth won't take a scalar path for —
-        # dsp.set_param only understands `voice.<name>.<field>` (three parts)
-        # and applies `env` as a whole dict, so a knob on one stage has to
-        # read the current envelope, change its own stage, and send the lot
-        # back. The UI's own ADSR knobs already work exactly this way.
+        # `env`, `lfo` and `arp` are the fields the synth won't take a scalar
+        # path for — dsp.set_param only understands `voice.<name>.<field>`
+        # (three parts) and applies each of these as a whole dict. So a knob
+        # on one stage or one LFO setting has to read the current dict, change
+        # its own key, and send the lot back. The UI's own controls for these
+        # already work exactly this way.
         m = _midi._NAME_RE.match(key)
-        if m and m.group(2).startswith("env."):
-            name, stage = m.group(1), m.group(2).split(".", 1)[1]
-            for v in self._voices():
-                if v.get("name") == name:
-                    env = dict(v.get("env") or {})
-                    env[stage] = value
-                    self.engine.set_audio_param(f"voice.{name}.env", env)
-                    return
-            return
+        if m and "." in m.group(2):
+            group, field = m.group(2).split(".", 1)
+            if group in ("env", "lfo", "arp"):
+                name = m.group(1)
+                for v in self._voices():
+                    if v.get("name") == name:
+                        d = dict(v.get(group) or {})
+                        d[field] = value
+                        # Moving an LFO's rate or depth implies wanting to
+                        # hear it: a knob that silently does nothing until you
+                        # also find the on switch is a knob that reads broken.
+                        if group == "lfo":
+                            d.setdefault("dest", "level")
+                            d["on"] = True
+                        self.engine.set_audio_param(f"voice.{name}.{group}", d)
+                        return
+                return
         self.engine.set_audio_param(key, value)
 
     def get(self, key: str):

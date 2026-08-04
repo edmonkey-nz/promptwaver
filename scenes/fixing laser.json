@@ -849,7 +849,7 @@
     ],
     "orbit_radius": 4.5,
     "far": 32,
-    "speed": 0.45,
+    "speed": 0.1,
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
@@ -861,13 +861,13 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.0
+    "trail": 0.31
   },
   "pps": null,
   "soundscape": {
     "tempo": 115.0,
     "master": 0.8,
-    "distortion": 0.05,
+    "distortion": 0.13,
     "delay": {
       "time": 0.45,
       "feedback": 0.4,
@@ -937,7 +937,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "tone"
+        }
       },
       {
         "name": "synth_lead",
@@ -949,18 +956,18 @@
           7,
           12
         ],
-        "unison": 2,
-        "detune": 0.018,
+        "unison": 3.0,
+        "detune": 0.044,
         "sub": 0.25,
         "level": 0.28,
         "pan": 0.15,
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 0.5,
+          "rate": 0.25,
           "decay": 0.4
         },
-        "mute": false,
+        "mute": true,
         "tone": 0.4,
         "rate": 0.5,
         "decay": 1.2,
@@ -969,7 +976,13 @@
           3,
           7,
           10
-        ]
+        ],
+        "env": {
+          "attack": 8.31,
+          "decay": 1.2,
+          "sustain": 0.85,
+          "release": 8.2
+        }
       },
       {
         "name": "laser_blips",
@@ -994,13 +1007,20 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.005,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "detune"
+        }
       },
       {
         "name": "air_texture",
         "type": "noise",
-        "level": 0.12,
-        "tone": 0.3,
+        "level": 0.03,
+        "tone": 0.25,
         "pan": -0.2,
         "mute": false,
         "detune": 0.01,
@@ -1016,7 +1036,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.01,
+          "shape": "sine",
+          "depth": 0.52,
+          "dest": "tone"
+        }
       }
     ],
     "swell_amount": 0.492,
@@ -1027,5 +1054,6 @@
     },
     "swell_period": 66.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {}
 }

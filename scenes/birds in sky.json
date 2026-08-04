@@ -524,16 +524,24 @@
       -4
     ],
     "orbit_radius": 9,
-    "far": 30,
+    "far": 37.0,
     "speed": 0.25,
-    "max_strokes": 110,
+    "max_strokes": 175,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.61,
+    "trail": 0.75
   },
   "pps": null,
   "soundscape": {
-    "tempo": 52,
+    "tempo": 52.0,
     "master": 0.75,
     "distortion": 0.05,
     "delay": {
@@ -554,7 +562,25 @@
         "level": 0.5,
         "tone": 0.3,
         "detune": 0.005,
-        "pan": 0.0
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
       },
       {
         "name": "pad",
@@ -569,7 +595,25 @@
         "level": 0.3,
         "tone": 0.4,
         "detune": 0.02,
-        "pan": -0.1
+        "pan": -0.1,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
       },
       {
         "name": "birdcalls",
@@ -586,16 +630,54 @@
         "level": 0.22,
         "rate": 0.15,
         "decay": 1.8,
-        "pan": 0.25
+        "pan": 0.05,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.005,
+          "shape": "random",
+          "depth": 0.82,
+          "dest": "pan"
+        }
       },
       {
         "name": "waves",
         "type": "noise",
         "level": 0.28,
         "tone": 0.35,
-        "pan": -0.15
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
-    ]
+    ],
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.59,
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 0.2,
+  "midi_overrides": {}
 }

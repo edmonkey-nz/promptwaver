@@ -3095,7 +3095,7 @@
     "depth": {
       "mode": "cull"
     },
-    "orbit_radius": 6.0,
+    "orbit_radius": 16.5,
     "orbit_height": 1.5,
     "disable_plane": false,
     "mirror_x": false,
@@ -3123,12 +3123,12 @@
           0,
           7
         ],
-        "unison": 4.0,
+        "unison": 4,
         "detune": 0.007,
         "sub": 0.6,
         "tone": 0.2,
-        "level": 0.7,
-        "pan": 0.0,
+        "level": 0.89,
+        "pan": -0.25,
         "env": {
           "attack": 6.0,
           "decay": 2.0,
@@ -3143,7 +3143,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.72,
+          "dest": "level"
+        }
       },
       {
         "name": "molten_pad",
@@ -3176,7 +3183,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": false,
+          "rate": 0.06,
+          "shape": "random",
+          "depth": 0.5,
+          "dest": "tone"
+        }
       },
       {
         "name": "thruster",
@@ -3207,7 +3221,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.01,
+          "shape": "sine",
+          "depth": 0.75,
+          "dest": "detune"
+        }
       },
       {
         "name": "signal_pulse",
@@ -3231,7 +3252,14 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.145,
+          "shape": "sine",
+          "depth": 0.73,
+          "dest": "tone"
+        }
       },
       {
         "name": "atmosphere",
@@ -3256,9 +3284,9 @@
         ]
       }
     ],
-    "swell_amount": 0.6,
+    "swell_amount": 0.0,
     "eq": {
-      "low": 0.0,
+      "low": 1.5,
       "mid": 0.0,
       "high": 0.0
     },

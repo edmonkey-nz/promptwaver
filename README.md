@@ -619,6 +619,62 @@ the octave below, with a long attack so it swells rather than thuds.
 
 Sine voices are bit-identical to before — there is nothing to bandlimit.
 
+## Per-voice LFO
+
+Every voice can carry an LFO that modulates **one** of its own parameters —
+separate from the global modulation matrix, which routes audio and LFOs at
+*engine* level. This one lives in the soundscape, travels with the scene, and
+only touches the voice it belongs to.
+
+```json
+"lfo": {"on": true, "dest": "tone", "shape": "sine", "rate": 0.06, "depth": 0.5}
+```
+
+| target | what it does | |
+|---|---|---|
+| `level` | tremolo — pulsing, breathing | **smooth** |
+| `pan` | auto-pan across the stereo field | **smooth** |
+| `tone` | a slow filter sweep — the most useful one | stepped |
+| `detune` | drifting chorus thickness | stepped |
+| `sub` | the weight underneath coming and going | stepped |
+| `waveform` | steps between waveforms (the "osc type" case) | stepped |
+| `rate` | speeds a pluck/arp up and down | stepped |
+
+Shapes: `sine`, `triangle`, `saw`, `square`, `random` (sample & hold, hashed
+from the cycle number so a scene sounds the same on every playback).
+
+**Rate is 0–0.5 Hz**, clamped in the DSP as well as the UI so a hand-edited or
+model-authored scene can't sit outside what the controls express. Even 0.5 is
+brisk here — the useful range is **0.02–0.15 Hz**, one cycle every 7 to 50
+seconds. Rate 0 freezes the LFO at its phase offset, which is a tidy way to
+park one. (`dsp.LFO_MAX_RATE` is the single source of truth, shared by the
+clamp, the MIDI range table and the UI knob.)
+
+**Why two classes of target.** `level` and `pan` are applied as per-sample
+arrays over the block, so they stay smooth across the whole range — measured
+tracking 0.05, 0.15, 0.3 and 0.5 Hz exactly, even though one audio block is 190-370ms at the usual blocksizes, and a
+block-granular implementation would die somewhere around 0.3-0.6Hz. The rest
+select a wavetable, a set of frequencies or a note schedule *before* the block
+renders, so they can only change between blocks and start to granulate near
+the top of the dial. That's a consequence of the block size, not a design
+choice, and it's why the UI says so under the controls.
+
+Phase comes from the absolute sample clock, so modulation is identical
+regardless of block size and can't jump when a setting changes mid-flight
+(measured: 0.99+ correlation between a 2048- and a 16384-sample block).
+
+A `level` LFO is unipolar and downward-only — the authored level stays the
+ceiling, so switching one on never makes a voice louder than it was mixed to
+be. Cost with an LFO on every voice: 3.6% of the audio callback budget.
+
+**The director uses them sparingly**, which took both a prompt and a backstop.
+Told to use at most two, it obeyed on a neutral brief but went to four on one
+that leant hard on movement ("evolving pads that never sit still"). So there's
+also a hard ceiling in code ([`_limit_lfos`](promptwaver/director/claude_director.py)):
+never on the foundation voice — the bottom of a mix is what everything else is
+measured against — and at most three in total, later voices losing theirs
+first. It logs when it trims, rather than doing it silently.
+
 ## Oscillators and the arpeggiator
 
 Two new soundscape building blocks, in the mixer per-voice:

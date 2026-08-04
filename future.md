@@ -148,6 +148,7 @@ on the laser without editing the scene.
 
 11) build a audio EQ to paramater effector (eg bass levels affect speed or FoV)
 
+
 12) build a instrument effector to a scenes shape (eg a 'base_drone' output (saw,adsr) affect a scale/rotate/positon of a shape ) - would need a UI element of dropdowns of  instrument and scenes shapes..
 
 13) DONE - add a 'output ratio' in the settings, eg '1:1, 16:9, 16:10, 4:3' so users can
@@ -178,3 +179,38 @@ on the laser without editing the scene.
     which about.md already claimed existed — numpy/aiohttp required, sounddevice+
     PortAudio/anthropic/mido/python-rtmidi+RtMidi optional, Helios DAC SDK for hardware,
     Playwright dev-only, and the Claude API as a service rather than a bundled component.
+
+15) DONE - build a LFO that can be applied per instrument and routed to an instrument's
+    parameters: options: 'amount', 'osc type', 'speed' etc.
+    Per-voice "lfo": {"on","dest","shape","rate","depth"} in the soundscape spec, so it
+    travels with the scene and touches only its own voice (distinct from the global
+    modulation matrix, which routes at engine level). Targets cover the three asked for
+    — 'amount' = level, 'osc type' = waveform, 'speed' = rate — plus pan, tone, detune,
+    sub. Shapes sine/triangle/saw/square/random (sample & hold, hashed from the cycle
+    number so playback is reproducible).
+
+    Rate range is 0-0.5Hz (dsp.LFO_MAX_RATE), clamped in the DSP as well as the UI and
+    MIDI table so a hand-edited scene can't sit outside what the controls express; the
+    useful range is 0.02-0.15Hz. Rate 0 freezes the LFO at its phase offset.
+
+    The design is forced by the block size, not chosen: one audio block is 190-370ms depending on the
+    configured blocksize (8192-16384), so anything evaluated once per block cannot
+    represent an LFO faster than roughly 0.3-0.6Hz. So level and pan are applied as PER-SAMPLE arrays (measured
+    tracking 0.05/0.15/0.3/0.5Hz exactly), while tone/detune/sub/waveform/rate select
+    a wavetable or note schedule before the block renders and can only step between
+    blocks. The UI says so under the controls; the director is told to keep those slow.
+
+    Phase comes from the absolute sample clock — modulation is identical at any block
+    size (0.99+ correlation between 2048 and 16384) and can't jump on a live edit.
+    A level LFO is unipolar/downward-only so switching it on never exceeds the authored
+    level. Cost with every voice modulated: 3.6% of the audio callback budget.
+
+    On "sparingly": the prompt alone wasn't enough. Told at most two, the model obeyed
+    on a neutral brief (2/4) but went to 4/5 on one leaning hard on movement. Tightening
+    the wording got it to 3, so there is also a hard ceiling in code (_limit_lfos):
+    never on the foundation voice, at most 3 total, later voices trimmed first, and it
+    logs each trim rather than doing it silently.
+
+16) add a 'show scene title' button to fade in the scenes title to the output monitor in bottom left corner for 10 secs 
+
+17) write the settings used to make the scene into the json file, (image prompt, audio prompt, settings)

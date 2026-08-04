@@ -77,12 +77,14 @@ Schema:
         "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
         "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
        {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
-        "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0},
+        "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0,
+        "lfo":{"on":true,"dest":"tone","shape":"sine","rate":0.05,"depth":0.5}},
        {"name":"bells","type":"pluck","waveform":"sine","note":72,
         "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
        {"name":"seq","type":"osc","waveform":"triangle","note":60,"chord":[0,4,7,11],
         "level":0.25,"arp":{"on":true,"mode":"up","rate":2.0,"decay":0.3},"pan":-0.2},
-       {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1}
+       {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1,
+        "lfo":{"on":true,"dest":"pan","shape":"triangle","rate":0.03,"depth":0.6}}
      ]
   },
   "modulation": [{"source":"audio_level","dest":"camera.speed","depth":0.6}]
@@ -107,6 +109,31 @@ soundscape at 0.9 is the classic mistake: it sounds cheap and fatiguing.
 For DEEP, HEAVY bass: an "osc" voice at note 24-36, tone 0.15-0.3, unison 2-3
 with detune 0.005-0.01, and "sub": 0.4-0.8 for the octave below. Give it a
 long attack (2-6s) so it swells rather than thuds.
+
+Any voice can carry an LFO that modulates ONE of its own parameters:
+"lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate",
+        "shape":"sine|triangle|saw|square|random", "rate":<Hz>, "depth":0-1}
+  dest "level"  tremolo — pulsing, breathing, heartbeat
+       "pan"    auto-pan — movement across the stereo field
+       "tone"   a slow filter sweep, the most useful one for ambient
+       "detune" drifting chorus thickness
+       "sub"    the weight underneath coming and going
+       "waveform" steps between waveforms — abrupt, use sparingly
+       "rate"   speeds a pluck/arp up and down
+RATE: 0 to 0.5 Hz, and values outside that are clamped. Even 0.5 is brisk for
+this instrument — the useful range is 0.02-0.15 Hz, one cycle every 7 to 50
+seconds. Think "the room breathing", not "an effect pedal". Above about
+0.2 Hz the tone/detune/sub/waveform/rate targets start to granulate, because
+they are recalculated once per audio block; level and pan stay smooth
+throughout.
+USE LFOs SPARINGLY. Most scenes want ONE, and many want none — stillness is
+what makes the one moving thing register. Hard limits:
+  - never more than 2 voices in the whole soundscape, whatever the brief says
+  - NEVER on the foundation/bass voice; the bottom has to stay planted
+  - if you use 2, give them different targets AND unrelated rates, or they
+    beat against each other and the result sounds mechanical
+A brief asking for "evolving" or "never sitting still" is asking for slow
+movement on one or two voices, not movement on all of them.
 Any "pad" or "osc" voice can ARPEGGIATE instead of sustaining by adding
 "arp": {"on":true, "mode":"up|down|updown|random", "rate":<notes/beat>, "decay":<seconds>}
 — it then steps through that voice's "chord" one note at a time rather than
@@ -186,12 +213,14 @@ _SOUNDSCAPE_SCHEMA = """{
        "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
        "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
       {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
-       "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0},
+       "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0,
+        "lfo":{"on":true,"dest":"tone","shape":"sine","rate":0.05,"depth":0.5}},
       {"name":"bells","type":"pluck","waveform":"sine","note":72,
        "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
       {"name":"seq","type":"osc","waveform":"triangle","note":60,"chord":[0,4,7,11],
        "level":0.25,"arp":{"on":true,"mode":"up","rate":2.0,"decay":0.3},"pan":-0.2},
-      {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1}
+      {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1,
+        "lfo":{"on":true,"dest":"pan","shape":"triangle","rate":0.03,"depth":0.6}}
     ]
   }
 }
@@ -496,6 +525,11 @@ class SceneDirector:
             scape = data.get("soundscape", data)   # tolerate either shape
             if not scape.get("voices"):
                 raise ValueError("no voices in response")
+            # Same ceiling the full-scene path gets via _ensure_soundscape —
+            # this route returns a bare dict, so it has to be applied here too
+            # (and BEFORE the cache write, or a trimmed scene would come back
+            # untrimmed on the next load).
+            _limit_lfos(scape)
             if evolution is not None:
                 scape["swell_amount"] = round(max(0.0, min(1.0, float(evolution))) * 0.6, 3)
             self.last_source = "claude"
@@ -583,12 +617,48 @@ class SceneDirector:
         return text, getattr(final, "stop_reason", None)
 
 
+#: Ceiling on how many voices in one soundscape may carry an LFO. The prompt
+#: asks for at most two, and mostly gets it — but a brief that leans hard on
+#: movement ("evolving", "never sits still") pushes the model past its own
+#: instruction, and a soundscape where everything is breathing at once reads
+#: as seasick rather than alive. Enforced here so the ceiling is a fact rather
+#: than a request. Deliberately one higher than the prompt asks for: this is a
+#: backstop against runaway, not a second opinion on musical judgement.
+MAX_LFO_VOICES = 3
+
+
+def _limit_lfos(scape: dict) -> dict:
+    """Clear LFOs beyond what a soundscape can carry without turning to soup.
+
+    Two rules, both about keeping something still to hear the movement
+    against. The foundation voice never modulates — the bottom of a mix is
+    what everything else is measured from, and a wandering bass makes the
+    whole thing feel unmoored. Beyond that, later (less prominent) voices lose
+    theirs first, so what survives is the movement you're most likely to
+    notice.
+    """
+    voices = (scape or {}).get("voices") or []
+    kept = 0
+    for i, v in enumerate(voices):
+        lfo = v.get("lfo")
+        if not isinstance(lfo, dict) or not lfo.get("on"):
+            continue
+        if i == 0 or kept >= MAX_LFO_VOICES:
+            lfo["on"] = False
+            print(f"[promptwaver] director: cleared LFO on '{v.get('name')}' "
+                  f"({'foundation voice' if i == 0 else f'over the {MAX_LFO_VOICES}-voice limit'})")
+        else:
+            kept += 1
+    return scape
+
+
 def _ensure_soundscape(spec: SceneSpec) -> SceneSpec:
     """Guarantee a scene has a soundscape so audio always works, even if a model
     omitted it or an old cached scene predates the field."""
     if not getattr(spec, "soundscape", None):
         from ..audio import default_soundscape
         spec.soundscape = default_soundscape()
+    _limit_lfos(spec.soundscape)
     return spec
 
 

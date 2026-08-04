@@ -114,6 +114,11 @@ VOICE_RANGES = {
     "env.decay": (0.01, 8.0),
     "env.sustain": (0.0, 1.0),
     "env.release": (0.05, 10.0),
+    # Per-voice LFO. Rate matches dsp.LFO_MAX_RATE — this is an ambient
+    # instrument, and a knob that spends most of its travel on speeds nobody
+    # wants is a knob with no useful resolution where it matters.
+    "lfo.rate": (0.0, 0.5),
+    "lfo.depth": (0.0, 1.0),
 }
 
 N_SLOTS = 8          # voice slots addressable from MIDI
