@@ -1,0 +1,2951 @@
+{
+  "name": "welding practice",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "ground_grid": [
+            {
+              "op": "grid",
+              "w": 80,
+              "h": 80,
+              "nx": 16,
+              "ny": 16,
+              "plane": "xz",
+              "c": [
+                0,
+                -2,
+                0
+              ]
+            }
+          ],
+          "steel_tube": [
+            {
+              "op": "box",
+              "size": [
+                0.8,
+                0.8,
+                4
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "welding_table": [
+            {
+              "op": "box",
+              "size": [
+                3,
+                0.3,
+                2
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                1.2,
+                0.2
+              ],
+              "c": [
+                -1.4,
+                -0.7,
+                -0.8
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                1.2,
+                0.2
+              ],
+              "c": [
+                1.4,
+                -0.7,
+                -0.8
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                1.2,
+                0.2
+              ],
+              "c": [
+                -1.4,
+                -0.7,
+                0.8
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                1.2,
+                0.2
+              ],
+              "c": [
+                1.4,
+                -0.7,
+                0.8
+              ]
+            }
+          ],
+          "welding_machine": [
+            {
+              "op": "box",
+              "size": [
+                1.2,
+                1.8,
+                1.2
+              ],
+              "c": [
+                0,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.8,
+                0.6,
+                0.8
+              ],
+              "c": [
+                0,
+                2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.6,
+                2.2,
+                0
+              ],
+              "b": [
+                0.6,
+                3.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.6,
+                2.2,
+                0
+              ],
+              "b": [
+                -0.6,
+                3.5,
+                0
+              ]
+            }
+          ],
+          "stack_tubes": [
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.6,
+                3.5
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.6,
+                3.5
+              ],
+              "c": [
+                0.8,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.6,
+                3.5
+              ],
+              "c": [
+                -0.8,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.6,
+                3.5
+              ],
+              "c": [
+                0,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.6,
+                0.6,
+                3.5
+              ],
+              "c": [
+                0,
+                -0.8,
+                0
+              ]
+            }
+          ],
+          "vertical_support": [
+            {
+              "op": "box",
+              "size": [
+                0.15,
+                6,
+                0.15
+              ],
+              "c": [
+                0,
+                2.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                5.5,
+                0
+              ],
+              "b": [
+                1.5,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                5.5,
+                0
+              ],
+              "b": [
+                -1.5,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                5.5,
+                0
+              ],
+              "b": [
+                0,
+                0,
+                1.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                5.5,
+                0
+              ],
+              "b": [
+                0,
+                0,
+                -1.5
+              ]
+            }
+          ],
+          "spark_burst": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0.3,
+                0.8,
+                0.1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                -0.25,
+                0.6,
+                -0.3
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0.1,
+                0.9,
+                -0.15
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                -0.35,
+                0.7,
+                0.25
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0.2,
+                0.5,
+                0.4
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                -0.15,
+                0.75,
+                -0.2
+              ]
+            }
+          ],
+          "grinding_wheel": [
+            {
+              "op": "circle",
+              "r": 1.2,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 24
+            },
+            {
+              "op": "circle",
+              "r": 0.8,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.4,
+                0,
+                0
+              ],
+              "b": [
+                0.4,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                -0.4
+              ],
+              "b": [
+                0,
+                0,
+                0.4
+              ]
+            }
+          ],
+          "metal_frame": [
+            {
+              "op": "box",
+              "size": [
+                8,
+                0.2,
+                0.2
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                4,
+                0.2
+              ],
+              "c": [
+                3.8,
+                1.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                4,
+                0.2
+              ],
+              "c": [
+                -3.8,
+                1.8,
+                0
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                0.2,
+                3
+              ],
+              "c": [
+                0,
+                0,
+                1.4
+              ]
+            },
+            {
+              "op": "box",
+              "size": [
+                0.2,
+                0.2,
+                3
+              ],
+              "c": [
+                0,
+                0,
+                -1.4
+              ]
+            }
+          ],
+          "hung_tube": [
+            {
+              "op": "box",
+              "size": [
+                0.5,
+                0.5,
+                4.5
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "welding_cable": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.2,
+                  -0.3,
+                  0.3
+                ],
+                [
+                  0.1,
+                  -0.8,
+                  0.5
+                ],
+                [
+                  0.3,
+                  -1.5,
+                  0.8
+                ],
+                [
+                  0.2,
+                  -2.2,
+                  1.1
+                ]
+              ],
+              "closed": false
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "ground_grid",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.15,
+              0.15,
+              0.15
+            ]
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              -5,
+              0,
+              -8
+            ],
+            "scale": 1.2,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              -5.5,
+              -1.5,
+              -8.5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -5,
+              1.2,
+              -8
+            ],
+            "scale": 1.3,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -4.8,
+              1.5,
+              -8.3
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.8,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6,
+              "amp": 0.5
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -5.3,
+              0.9,
+              -7.8
+            ],
+            "scale": 1.1,
+            "color": [
+              1,
+              0.6,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.35
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -2,
+              -1,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -2,
+              -1,
+              -4
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -2,
+              -1,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -2,
+              -1,
+              4
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              3,
+              0.5,
+              -10
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              3,
+              3.5,
+              -10
+            ],
+            "scale": 1.2,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              3,
+              6.5,
+              -10
+            ],
+            "scale": 1.1,
+            "color": [
+              0.46,
+              0.44,
+              0.41
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              6,
+              0,
+              -6
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              8,
+              0,
+              -2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              10,
+              0,
+              2
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              12,
+              0,
+              6
+            ],
+            "scale": 1.2,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              6,
+              2,
+              -6
+            ],
+            "scale": 1.2,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.45
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              8.2,
+              2.1,
+              -2
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.75,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              5,
+              1.5,
+              0
+            ],
+            "scale": 1.5,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              5.3,
+              2.8,
+              0.2
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.65,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 11,
+              "amp": 0.3
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              8,
+              -1,
+              -4
+            ],
+            "scale": 0.9,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              10,
+              -1,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              12,
+              -1,
+              4
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              16,
+              0,
+              -8
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              16,
+              4,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              16.8,
+              4,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              15.2,
+              4,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              16.2,
+              2.5,
+              -7.8
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              24,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              24,
+              1.5,
+              -4
+            ],
+            "scale": 1.3,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              24.3,
+              2.6,
+              -3.8
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.6,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.35
+            }
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              28,
+              0,
+              -2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              28.5,
+              -1.5,
+              -2.5
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              28,
+              1.5,
+              -2
+            ],
+            "scale": 1.2,
+            "color": [
+              1,
+              0.72,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.45
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              27.8,
+              1.8,
+              -2.3
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.8,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              32,
+              0.5,
+              2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              32,
+              3.5,
+              2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              36,
+              0,
+              6
+            ],
+            "scale": 1.1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              38,
+              0,
+              10
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              36.2,
+              2.2,
+              6
+            ],
+            "scale": 1.1,
+            "color": [
+              1,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.42
+            }
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              35,
+              1.5,
+              8
+            ],
+            "scale": 1.4,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              35.3,
+              2.8,
+              8.2
+            ],
+            "scale": 0.85,
+            "color": [
+              1,
+              0.65,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 12,
+              "amp": 0.3
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              38,
+              -1,
+              6
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              40,
+              -1,
+              10
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              20,
+              0,
+              14
+            ],
+            "scale": 1.2,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              20,
+              4,
+              14
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              20.8,
+              4,
+              14
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              8,
+              0,
+              14
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              8.5,
+              -1.5,
+              14.5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              8,
+              1.4,
+              14
+            ],
+            "scale": 1.3,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6,
+              "amp": 0.5
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              7.8,
+              1.7,
+              14.3
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.78,
+              0.12
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.42
+            }
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              0,
+              0.5,
+              14
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              0,
+              3.5,
+              14
+            ],
+            "scale": 1.2,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              -4,
+              0,
+              12
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -4.2,
+              2,
+              12
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.45
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -6,
+              -1,
+              8
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -8,
+              -1,
+              4
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              -8,
+              1.5,
+              6
+            ],
+            "scale": 1.2,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -7.8,
+              2.7,
+              6.2
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.62,
+              0.12
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.35
+            }
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              -14,
+              0,
+              8
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -14,
+              4,
+              8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -13.2,
+              4,
+              8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -14.2,
+              2.5,
+              8.2
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              -20,
+              0,
+              4
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              -20.5,
+              -1.5,
+              4.5
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -20,
+              1.3,
+              4
+            ],
+            "scale": 1.2,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.45
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -19.8,
+              1.6,
+              4.3
+            ],
+            "scale": 0.95,
+            "color": [
+              1,
+              0.8,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              -26,
+              0.5,
+              -2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              -26,
+              3.5,
+              -2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              -32,
+              0,
+              -6
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              -34,
+              0,
+              -10
+            ],
+            "scale": 1.1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -32.2,
+              2.1,
+              -6
+            ],
+            "scale": 1.1,
+            "color": [
+              1,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.42
+            }
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              -33,
+              1.5,
+              -8
+            ],
+            "scale": 1.3,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -32.8,
+              2.8,
+              -7.8
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.63,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 11,
+              "amp": 0.32
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -36,
+              -1,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -38,
+              -1,
+              -12
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              -26,
+              0,
+              -14
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -26,
+              4,
+              -14
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -26.8,
+              4,
+              -14
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              -5.5,
+              2.5,
+              -8.2
+            ],
+            "scale": 1.5,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              28.5,
+              2.5,
+              -2.2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              8.5,
+              2.5,
+              14.2
+            ],
+            "scale": 1.3,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              -20.5,
+              2.5,
+              4.2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              10,
+              3,
+              -6
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.35
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              2,
+              2.5,
+              -2
+            ],
+            "scale": 0.75,
+            "color": [
+              1,
+              0.75,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.3
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              14,
+              1.8,
+              4
+            ],
+            "scale": 0.85,
+            "color": [
+              1,
+              0.65,
+              0.12
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.38
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -10,
+              2.2,
+              6
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.68,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              2,
+              -1,
+              -6
+            ],
+            "scale": 1.1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              4,
+              -1,
+              -2
+            ],
+            "scale": 0.9,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              6,
+              -1,
+              4
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -4,
+              -1,
+              10
+            ],
+            "scale": 1.05,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -10,
+              -1,
+              0
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -12,
+              -1,
+              -6
+            ],
+            "scale": 1.1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              0,
+              0,
+              -12
+            ],
+            "scale": 1.1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              -6,
+              0,
+              0
+            ],
+            "scale": 0.9,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              16,
+              0,
+              6
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              -28,
+              0,
+              2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              12,
+              1.5,
+              -8
+            ],
+            "scale": 1.1,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              -16,
+              1.5,
+              0
+            ],
+            "scale": 1.3,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              12.3,
+              2.5,
+              -7.8
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.62,
+              0.14
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.33
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -15.8,
+              2.6,
+              0.2
+            ],
+            "scale": 0.95,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.38
+            }
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              6,
+              0,
+              -16
+            ],
+            "scale": 0.9,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              -18,
+              0,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              -10,
+              0,
+              -12
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              -10.5,
+              -1.5,
+              -12.5
+            ],
+            "scale": 0.95,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -10,
+              1.2,
+              -12
+            ],
+            "scale": 1.1,
+            "color": [
+              1,
+              0.72,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.43
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -9.8,
+              1.5,
+              -12.3
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.8,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6,
+              "amp": 0.42
+            }
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              -4,
+              0.5,
+              -16
+            ],
+            "scale": 0.9,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              -4,
+              3.5,
+              -16
+            ],
+            "scale": 1.1,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              6,
+              4,
+              -16
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              6.8,
+              4,
+              -16
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -18,
+              4,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "hung_tube",
+            "pos": [
+              -18.8,
+              4,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.48,
+              0.46,
+              0.44
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              -10.5,
+              2.2,
+              -12.2
+            ],
+            "scale": 1.4,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              18,
+              2,
+              -10
+            ],
+            "scale": 0.85,
+            "color": [
+              1,
+              0.65,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.35
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -22,
+              1.9,
+              0
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.4
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              30,
+              2.3,
+              8
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.68,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 10,
+              "amp": 0.36
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -30,
+              2.1,
+              -12
+            ],
+            "scale": 0.88,
+            "color": [
+              1,
+              0.62,
+              0.12
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.38
+            }
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              14,
+              -1,
+              -12
+            ],
+            "scale": 1.05,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -14,
+              -1,
+              -14
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              28,
+              -1,
+              6
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "steel_tube",
+            "pos": [
+              -26,
+              -1,
+              8
+            ],
+            "scale": 1.1,
+            "color": [
+              0.45,
+              0.45,
+              0.5
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              24,
+              0,
+              -12
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "vertical_support",
+            "pos": [
+              2,
+              0,
+              8
+            ],
+            "scale": 1.1,
+            "color": [
+              0.35,
+              0.35,
+              0.38
+            ]
+          },
+          {
+            "shape": "grinding_wheel",
+            "pos": [
+              -8,
+              1.5,
+              -14
+            ],
+            "scale": 1.2,
+            "color": [
+              0.6,
+              0.55,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              -7.7,
+              2.7,
+              -13.8
+            ],
+            "scale": 0.85,
+            "color": [
+              1,
+              0.65,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 9,
+              "amp": 0.34
+            }
+          },
+          {
+            "shape": "metal_frame",
+            "pos": [
+              30,
+              0,
+              -8
+            ],
+            "scale": 1,
+            "color": [
+              0.4,
+              0.38,
+              0.36
+            ]
+          },
+          {
+            "shape": "welding_table",
+            "pos": [
+              20,
+              0,
+              -12
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_machine",
+            "pos": [
+              20.5,
+              -1.5,
+              -12.5
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.4,
+              0.3
+            ]
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              20,
+              1.3,
+              -12
+            ],
+            "scale": 1.1,
+            "color": [
+              1,
+              0.72,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8,
+              "amp": 0.42
+            }
+          },
+          {
+            "shape": "spark_burst",
+            "pos": [
+              19.8,
+              1.6,
+              -12.3
+            ],
+            "scale": 0.95,
+            "color": [
+              1,
+              0.8,
+              0.1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7,
+              "amp": 0.39
+            }
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              26,
+              0.5,
+              -16
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.48,
+              0.45
+            ]
+          },
+          {
+            "shape": "stack_tubes",
+            "pos": [
+              26,
+              3.5,
+              -16
+            ],
+            "scale": 1.1,
+            "color": [
+              0.48,
+              0.46,
+              0.43
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              20.5,
+              2.3,
+              -12.2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          },
+          {
+            "shape": "welding_cable",
+            "pos": [
+              -8,
+              2.4,
+              -14.2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.3,
+              0.3,
+              0.35
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a0f",
+    "#1a1a1f",
+    "#ff7030",
+    "#ffb030",
+    "#ffff40",
+    "#808090",
+    "#505060",
+    "#303035"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "path",
+    "waypoints": [
+      [
+        -5,
+        2,
+        -8
+      ],
+      [
+        3,
+        2,
+        -10
+      ],
+      [
+        12,
+        2,
+        -8
+      ],
+      [
+        20,
+        2,
+        0
+      ],
+      [
+        28,
+        2,
+        8
+      ],
+      [
+        36,
+        2,
+        12
+      ],
+      [
+        38,
+        2,
+        8
+      ],
+      [
+        32,
+        2,
+        0
+      ],
+      [
+        24,
+        2,
+        -4
+      ],
+      [
+        16,
+        2,
+        -8
+      ],
+      [
+        8,
+        2,
+        -12
+      ],
+      [
+        0,
+        2,
+        -14
+      ],
+      [
+        -8,
+        2,
+        -12
+      ],
+      [
+        -16,
+        2,
+        -6
+      ],
+      [
+        -24,
+        2,
+        0
+      ],
+      [
+        -32,
+        2,
+        8
+      ],
+      [
+        -36,
+        2,
+        12
+      ],
+      [
+        -34,
+        2,
+        6
+      ],
+      [
+        -28,
+        2,
+        0
+      ],
+      [
+        -20,
+        2,
+        -4
+      ],
+      [
+        -12,
+        2,
+        -10
+      ],
+      [
+        -8,
+        2,
+        -14
+      ],
+      [
+        0,
+        2,
+        -16
+      ],
+      [
+        8,
+        2,
+        -14
+      ],
+      [
+        16,
+        2,
+        -8
+      ]
+    ],
+    "speed": 0.6,
+    "fov": 62,
+    "near": 0.4,
+    "far": 40,
+    "max_strokes": 120,
+    "depth": {
+      "mode": "cull"
+    }
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 70,
+    "master": 0.75,
+    "distortion": 0.15,
+    "delay": {
+      "time": 0.35,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "sub_bass",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0
+        ],
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.6,
+        "tone": 0.25,
+        "level": 0.55,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 0.8,
+          "sustain": 0.9,
+          "release": 3.0
+        }
+      },
+      {
+        "name": "grinding_drone",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 43,
+        "chord": [
+          0,
+          7,
+          12,
+          15
+        ],
+        "tone": 0.35,
+        "detune": 0.015,
+        "level": 0.4,
+        "pan": -0.15,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.0,
+          "sustain": 0.85,
+          "release": 2.8
+        }
+      },
+      {
+        "name": "arc_lead",
+        "type": "osc",
+        "waveform": "saw",
+        "note": 57,
+        "chord": [
+          0,
+          4,
+          7
+        ],
+        "unison": 3,
+        "detune": 0.012,
+        "sub": 0.1,
+        "tone": 0.55,
+        "level": 0.35,
+        "pan": 0.2,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.4
+        }
+      },
+      {
+        "name": "spark_pluck",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          7,
+          12,
+          15
+        ],
+        "level": 0.25,
+        "rate": 0.7,
+        "decay": 1.2,
+        "tone": 0.65,
+        "pan": -0.25
+      },
+      {
+        "name": "industrial_air",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.3,
+        "pan": 0.1,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "triangle",
+          "rate": 0.04,
+          "depth": 0.5
+        }
+      }
+    ],
+    "swell_amount": 0.462
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "welding tubes of steel  with a stick welder, sparks flying, flashes and strobes. industrial",
+  "audio_prompt": "sound af arc welding, grinding, whomping bass. industrial beats",
+  "generation_settings": {
+    "size": "massive",
+    "warmth": 0.39,
+    "energy": 0.61,
+    "evolution": 0.77
+  },
+  "shape_modulation": []
+}

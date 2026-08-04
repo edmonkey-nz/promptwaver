@@ -688,11 +688,19 @@
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 48,
+    "tempo": 48.0,
     "master": 0.75,
     "distortion": 0.0,
     "delay": {
@@ -720,7 +728,18 @@
           "decay": 2.0,
           "sustain": 0.8,
           "release": 5.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "sub",
@@ -741,7 +760,17 @@
           "decay": 2.0,
           "sustain": 0.85,
           "release": 6.0
-        }
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "drip_bell",
@@ -757,17 +786,54 @@
         "level": 0.2,
         "rate": 0.25,
         "decay": 2.2,
-        "pan": 0.25
+        "pan": 0.25,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": false,
+          "rate": 0.01,
+          "shape": "random",
+          "depth": 0.73,
+          "dest": "tone"
+        }
       },
       {
         "name": "air",
         "type": "noise",
         "level": 0.15,
         "tone": 0.3,
-        "pan": -0.1
+        "pan": -0.1,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.54
+    "swell_amount": 0.54,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {}
 }

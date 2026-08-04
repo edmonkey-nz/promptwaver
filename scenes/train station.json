@@ -1365,7 +1365,7 @@
         -32
       ]
     ],
-    "speed": 0.65,
+    "speed": 0.4,
     "fov": 39.0,
     "near": 0.4,
     "far": 50,
@@ -1385,9 +1385,9 @@
   "soundscape": {
     "tempo": 110.0,
     "master": 0.75,
-    "distortion": 0.17,
+    "distortion": 0.06,
     "delay": {
-      "time": 0.35,
+      "time": 0.87,
       "feedback": 0.32,
       "mix": 0.25
     },
@@ -1415,13 +1415,14 @@
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
-        "unison": 3.0,
+        "unison": 3,
         "scale": [
           0,
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "pad_body",
@@ -1434,7 +1435,7 @@
           12,
           15
         ],
-        "level": 1.0,
+        "level": 0.89,
         "tone": 0.79,
         "detune": 0.008,
         "pan": 0.0,
@@ -1454,7 +1455,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "beep_melody",
@@ -1475,8 +1477,8 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 0.5,
-          "decay": 0.25
+          "rate": 0.25,
+          "decay": 1.2
         },
         "mute": true,
         "rate": 0.5,
@@ -1487,12 +1489,13 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "pluck_details",
         "type": "pluck",
-        "waveform": "square",
+        "waveform": "saw",
         "note": 72,
         "scale": [
           0,
@@ -1501,8 +1504,8 @@
           10,
           14
         ],
-        "level": 0.07,
-        "rate": 0.3,
+        "level": 0.04,
+        "rate": 0.15,
         "decay": 1.2,
         "tone": 0.6,
         "pan": -0.15,
@@ -1512,12 +1515,20 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "distortion": 0.02,
+        "lfo": {
+          "on": true,
+          "rate": 0.015,
+          "shape": "random",
+          "depth": 0.7,
+          "dest": "tone"
+        }
       },
       {
         "name": "whoosh_air",
         "type": "noise",
-        "level": 0.49,
+        "level": 0.2,
         "tone": 0.35,
         "pan": -0.1,
         "mute": false,
@@ -1534,7 +1545,15 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "random",
+          "depth": 0.5,
+          "dest": "level"
+        }
       }
     ],
     "swell_amount": 0.82,
@@ -1546,5 +1565,9 @@
     "swell_period": 103.0
   },
   "audio_link": 1.0,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

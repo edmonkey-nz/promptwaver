@@ -10,6 +10,7 @@ crossfade between scenes.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass, field, asdict
 
@@ -42,6 +43,12 @@ class SceneSpec:
     # for every scene that hasn't been pinned, which is most of them —
     # see midi.py's module docstring for why the global map is the default.
     midi_overrides: dict = field(default_factory=dict)
+    # Generation metadata — the prompts and settings used to create this scene
+    image_prompt: str = ""
+    audio_prompt: str = ""
+    generation_settings: dict = field(default_factory=dict)
+    # Shape modulation: [{"shape": "log", "voice": "ant_body", "param": "level", "dest": "scale", "range": [0.5, 1.5]}]
+    shape_modulation: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -62,6 +69,10 @@ class SceneSpec:
             soundscape=d.get("soundscape", {}),
             audio_link=d.get("audio_link", 1.0),
             midi_overrides=d.get("midi_overrides", {}),
+            image_prompt=d.get("image_prompt", ""),
+            audio_prompt=d.get("audio_prompt", ""),
+            generation_settings=d.get("generation_settings", {}),
+            shape_modulation=d.get("shape_modulation", []),
         )
 
 
@@ -121,13 +132,105 @@ class Scene:
                 p[key] = matrix.value(f"visual.{key}", p[key])
         return p
 
-    def render(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False) -> Frame:
+    def _lfo_value(self, lfo_config: dict, t: float = 0.0) -> float:
+        """Compute current LFO value (-1..1 bipolar, or 0..1 unipolar for level)."""
+        if not lfo_config:
+            return 0.0
+        rate = float(lfo_config.get("rate", 0.06))
+        shape = lfo_config.get("shape", "sine")
+        phase = float(lfo_config.get("phase", 0.0))
+        x = t * rate + phase
+
+        if shape == "triangle":
+            v = 4.0 * abs((x % 1.0) - 0.5) - 1.0
+        elif shape == "saw":
+            v = 2.0 * (x % 1.0) - 1.0
+        elif shape == "square":
+            v = 1.0 if (x % 1.0) < 0.5 else -1.0
+        elif shape == "random":
+            step = math.floor(x)
+            h = math.sin(step * 12.9898) * 43758.5453
+            v = 2.0 * (h - math.floor(h)) - 1.0
+        else:  # sine
+            v = math.sin(2.0 * math.pi * x)
+        return v
+
+    def _apply_shape_modulation(self, base_params, synth):
+        """Apply shape modulation to world nodes based on voice parameters or LFO."""
+        mods = self.spec.shape_modulation
+        if not mods or not synth or not getattr(synth, "online", False):
+            return base_params
+
+        scape = synth.soundscape() or {}
+        voices = {v["name"]: v for v in scape.get("voices", [])}
+
+        p = dict(base_params)
+        nodes = p.get("nodes", [])
+        if not nodes:
+            return p
+
+        # Build a map of shape -> list of modulations
+        shape_mods = {}
+        for mod in mods:
+            shape = mod.get("shape")
+            voice = mod.get("voice")
+            dest = mod.get("dest")
+            source = mod.get("source", "param")  # "param" or "lfo"
+            r = mod.get("range", [0.0, 1.0])
+
+            if voice not in voices or not shape or not dest:
+                continue
+
+            v = voices[voice]
+
+            # Read modulation value from source (param or LFO)
+            if source == "lfo":
+                lfo_cfg = v.get("lfo") or {}
+                if not lfo_cfg.get("on"):
+                    continue
+                lfo_val = self._lfo_value(lfo_cfg)  # -1..1
+                # Map bipolar LFO to 0..1 range
+                val = (lfo_val + 1.0) * 0.5
+            else:  # source == "param"
+                param = mod.get("param")
+                val = v.get(param)
+                if val is None:
+                    continue
+
+            # Map the value to the destination transform range
+            min_val, max_val = r[0], r[1] if len(r) > 1 else r[0]
+            xf = min_val + val * (max_val - min_val)
+
+            if shape not in shape_mods:
+                shape_mods[shape] = {}
+            shape_mods[shape][dest] = xf
+
+        # Apply modulations to nodes
+        if shape_mods:
+            new_nodes = []
+            for node in nodes:
+                node_shape = node.get("shape")
+                if node_shape in shape_mods:
+                    mods_for_shape = shape_mods[node_shape]
+                    node = dict(node)  # shallow copy
+                    if "scale" in mods_for_shape:
+                        node["scale"] = node.get("scale", 1.0) * mods_for_shape["scale"]
+                    # position and rotation modulations could be added here
+                new_nodes.append(node)
+            p["nodes"] = new_nodes
+
+        return p
+
+    def render(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
         frame: Frame = []
         if self.camera is not None:
             self.camera.update(t, dt, matrix)
         for g, base_params in self._gens:
             p = self._resolve(g, base_params, matrix)
             if getattr(g, "is_3d", False):
+                # Apply shape modulation for World generators
+                if g.__class__.__name__ == "World":
+                    p = self._apply_shape_modulation(p, synth)
                 # "Disable scene plane" (Camera controls): world.py's World
                 # generator looks for this key and skips any node whose
                 # shape/primitive name looks like a floor/ground/grid/plane —
@@ -222,10 +325,10 @@ class SceneManager:
             "progress": min(1.0, self._xfade),
         }
 
-    def render(self, t: float, dt: float, matrix=None, disable_plane: bool = False) -> Frame:
+    def render(self, t: float, dt: float, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
         if self.current is None:
             return []
-        frame = self.current.render(t, dt, matrix, disable_plane)
+        frame = self.current.render(t, dt, matrix, disable_plane, synth)
         if self._next is not None:
             # MVP crossfade: dim the outgoing, bring up the incoming, both drawn.
             # A later version resamples both to a common point budget and
@@ -234,7 +337,7 @@ class SceneManager:
             a = min(1.0, self._xfade)
             for p in frame:
                 p.color = tuple(c * (1 - a) for c in p.color)
-            nxt = self._next.render(t, dt, matrix, disable_plane)
+            nxt = self._next.render(t, dt, matrix, disable_plane, synth)
             for p in nxt:
                 p.color = tuple(c * a for c in p.color)
             frame = frame + nxt

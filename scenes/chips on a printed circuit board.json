@@ -797,7 +797,7 @@
           12
         ],
         "level": 0.55,
-        "tone": 0.3,
+        "tone": 0.81,
         "detune": 0.02,
         "pan": 0.0,
         "mute": false,
@@ -812,7 +812,7 @@
           10
         ],
         "env": {
-          "attack": 3,
+          "attack": 3.0,
           "decay": 0.06,
           "sustain": 0.85,
           "release": 2.5
@@ -820,8 +820,15 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 2,
+          "rate": 2.0,
           "decay": 0.55
+        },
+        "lfo": {
+          "on": true,
+          "rate": 0.015,
+          "shape": "random",
+          "depth": 0.69,
+          "dest": "tone"
         }
       },
       {
@@ -848,7 +855,14 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0,
+          "shape": "sine",
+          "depth": 0.73,
+          "dest": "pan"
+        }
       },
       {
         "name": "808_kick",
@@ -898,12 +912,13 @@
       }
     ],
     "eq": {
-      "low": 0.0,
+      "low": -5.0,
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_amount": 0.35,
+    "swell_amount": 0.69,
     "swell_period": 60.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.55,
+  "midi_overrides": {}
 }

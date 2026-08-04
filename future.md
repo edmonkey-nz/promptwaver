@@ -211,6 +211,49 @@ on the laser without editing the scene.
     never on the foundation voice, at most 3 total, later voices trimmed first, and it
     logs each trim rather than doing it silently.
 
-16) add a 'show scene title' button to fade in the scenes title to the output monitor in bottom left corner for 10 secs 
+16) add a 'show scene title' button to fade in the scenes title to the output monitor in bottom left corner for 10 secs and then fade out. (one shot approach)
 
 17) write the settings used to make the scene into the json file, (image prompt, audio prompt, settings)
+
+18) support MULTIPLE MIDI controllers at once, to get more physical sliders/knobs
+
+Currently one at a time: midi.py holds a single `self.port`, and `open_port()` closes
+the existing one before opening the new one, so picking a second controller silently
+disconnects the first.
+
+Two separate pieces of work, and the second is the real one:
+
+  a) Opening several ports is easy — hold a list instead of `self.port`, point them all
+     at the same `_on_msg` callback, and open every non-loopback port by default
+     ('Midi Through' stays excluded, see _pick). Roughly 20 lines.
+
+  b) TELLING THEM APART is the actual design problem. `_on_msg` ignores `msg.channel`
+     entirely — bindings are keyed on the CC number alone. Two controllers both sending
+     CC 7 (the standard Volume CC; cheap controllers ship with near-identical default
+     layouts) would fight over one binding, so you would get more knobs but not more
+     controls. Worth noting the current WORLDE map already uses CC 7, 16, 19, 72, 74,
+     77, 79, 114 — a factory-default second unit would very likely overlap.
+
+Three ways to disambiguate:
+  - BY CHANNEL (the standard answer): set controller A to ch 1, B to ch 2, key bindings
+    on (channel, cc). 16 x 128 addresses. Needs the hardware to be re-channellable —
+    most are, though on cheap units it is sometimes a config utility rather than a
+    front-panel button.
+  - BY PORT: key on (port name, cc). Needs nothing configured on the hardware, but ALSA
+    port names carry a client:port suffix that shifts across reboots and replugs. The
+    saved-port matcher already strips that suffix, so the same trick applies — still
+    inherently more fragile than channels.
+  - BOTH, port as the fallback: channel when the controllers differ, port when they
+    don't. More code, but it works either way round.
+
+Suggested shape: open all available ports, and extend the binding key to "chan:cc",
+with a bare "cc" still meaning "any channel" so EVERY EXISTING MAPPING KEEPS WORKING
+(there are 8 of them in settings.json). Learn then captures whatever channel arrives.
+If the two controllers sit on different channels you get 2x the knobs for free; if they
+collide, changing one controller's channel fixes it without remapping anything.
+Storage stays in settings.json as now; the voice-slot system is unaffected.
+
+Before building, worth confirming: (i) does the second controller allow setting its
+MIDI channel? If it is stuck on ch 1, go the port-based route instead. (ii) do both
+show up in `python run.py --list-midi` when plugged in — some USB hubs are unreliable
+with class-compliant MIDI devices.

@@ -436,6 +436,9 @@ class Engine:
             self.matrix.set_source_scale("audio_level", v)
             if self.scenes.current is not None:
                 self.scenes.current.spec.audio_link = v
+        elif key == "shape_modulation":
+            if self.scenes.current is not None:
+                self.scenes.current.spec.shape_modulation = value or []
         elif key.startswith("route."):
             # key like "route.1.depth" — index into the current scene's
             # modulation list, mutating both the live matrix and the spec so
@@ -507,6 +510,15 @@ class Engine:
         # add every new generation to the library by default
         name = (name or "").strip() or spec.name or keyword
         spec.name = name
+        # capture generation metadata
+        spec.image_prompt = keyword
+        spec.audio_prompt = audio or ""
+        spec.generation_settings = {
+            "size": size,
+            "warmth": warmth,
+            "energy": energy,
+            "evolution": evolution,
+        }
         try:
             self.scenes.save(name, spec)
         except Exception as e:
@@ -933,7 +945,7 @@ class Engine:
             # render + output
             if self._diag_enabled:
                 t_render0 = time.monotonic()
-            frame = self.scenes.render(t, dt, self.matrix, disable_plane=self.disable_plane)
+            frame = self.scenes.render(t, dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
 
             # "Disable Visuals" fade — dims every point's colour toward black
             # over _visual_fade_dur seconds, the same per-point scaling trick
@@ -1028,6 +1040,8 @@ class Engine:
                 self.scenes.current.spec.soundscape if self.scenes.current else None),
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
+            "scene_spec": self.scenes.current.spec.to_dict() if self.scenes.current else None,
+            "shape_modulation": self.scenes.current.spec.shape_modulation if self.scenes.current else [],
             "audio_diag": self.synth.diagnostics() if getattr(self.synth, "online", False) else None,
             "perf_diag": self.perf.summary(),
             "diagnostics_enabled": self._diag_enabled,

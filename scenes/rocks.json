@@ -1,0 +1,2546 @@
+{
+  "name": "rocks",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "ocean_floor": [
+            {
+              "op": "grid",
+              "w": 80,
+              "h": 80,
+              "nx": 16,
+              "ny": 16,
+              "plane": "xz",
+              "c": [
+                0,
+                -6,
+                0
+              ]
+            }
+          ],
+          "boulder_massive": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -2,
+                  -1,
+                  -1.5
+                ],
+                [
+                  -1.8,
+                  0.5,
+                  -1.2
+                ],
+                [
+                  -0.5,
+                  1.8,
+                  -0.8
+                ],
+                [
+                  1.2,
+                  2,
+                  0.2
+                ],
+                [
+                  2.2,
+                  1,
+                  1.5
+                ],
+                [
+                  1.8,
+                  -0.8,
+                  1.8
+                ],
+                [
+                  0.2,
+                  -1.5,
+                  1.2
+                ],
+                [
+                  -1.5,
+                  -1.8,
+                  0.5
+                ],
+                [
+                  -2,
+                  -1,
+                  -1.5
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.2,
+                  0.3,
+                  -0.8
+                ],
+                [
+                  0.8,
+                  1.2,
+                  0
+                ],
+                [
+                  1.5,
+                  0.2,
+                  1
+                ],
+                [
+                  -0.2,
+                  -0.6,
+                  0.8
+                ],
+                [
+                  -1.2,
+                  0.3,
+                  -0.8
+                ]
+              ],
+              "closed": true
+            }
+          ],
+          "compressed_strata": [
+            {
+              "op": "box",
+              "size": [
+                4.5,
+                0.6,
+                2.2
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -2.2,
+                0.35,
+                -1
+              ],
+              "b": [
+                2.2,
+                0.35,
+                1
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -2.2,
+                -0.35,
+                -1
+              ],
+              "b": [
+                2.2,
+                -0.35,
+                1
+              ]
+            }
+          ],
+          "fault_plane": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -3,
+                  -2,
+                  0
+                ],
+                [
+                  -2,
+                  0.5,
+                  0.3
+                ],
+                [
+                  0,
+                  2,
+                  0.8
+                ],
+                [
+                  2.5,
+                  0.8,
+                  -0.2
+                ],
+                [
+                  1.5,
+                  -1.5,
+                  -0.5
+                ],
+                [
+                  -3,
+                  -2,
+                  0
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "line",
+              "a": [
+                -2,
+                0.2,
+                0.2
+              ],
+              "b": [
+                0.5,
+                1.2,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1,
+                -0.8,
+                -0.1
+              ],
+              "b": [
+                1.5,
+                0.5,
+                0.3
+              ]
+            }
+          ],
+          "mineral_vein": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -1.5,
+                  0
+                ],
+                [
+                  0.3,
+                  -0.8,
+                  0.2
+                ],
+                [
+                  0.1,
+                  0.2,
+                  0.4
+                ],
+                [
+                  -0.2,
+                  1,
+                  0.6
+                ],
+                [
+                  0,
+                  1.5,
+                  0.8
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "pressure_ridge": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -2,
+                  -1,
+                  0
+                ],
+                [
+                  -1,
+                  0.3,
+                  -0.3
+                ],
+                [
+                  0,
+                  1.2,
+                  0
+                ],
+                [
+                  1,
+                  0.5,
+                  0.2
+                ],
+                [
+                  1.5,
+                  -0.5,
+                  -0.1
+                ],
+                [
+                  0.8,
+                  -1.2,
+                  -0.4
+                ],
+                [
+                  -2,
+                  -1,
+                  0
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.8,
+                0,
+                -0.2
+              ],
+              "b": [
+                0.8,
+                0.6,
+                0.1
+              ]
+            }
+          ],
+          "shear_fragment": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.5,
+                  -0.5,
+                  -0.8
+                ],
+                [
+                  -0.8,
+                  0.2,
+                  -0.6
+                ],
+                [
+                  0.5,
+                  0.8,
+                  0
+                ],
+                [
+                  1.2,
+                  0,
+                  0.5
+                ],
+                [
+                  0.3,
+                  -0.8,
+                  0.4
+                ],
+                [
+                  -1.5,
+                  -0.5,
+                  -0.8
+                ]
+              ],
+              "closed": true
+            }
+          ],
+          "foliated_wedge": [
+            {
+              "op": "box",
+              "size": [
+                3,
+                0.4,
+                1.8
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.4,
+                0,
+                -0.8
+              ],
+              "b": [
+                1.4,
+                0,
+                0.8
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.4,
+                0.2,
+                -0.8
+              ],
+              "b": [
+                1.4,
+                0.2,
+                0.8
+              ]
+            }
+          ],
+          "stress_crack": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -2,
+                  -1,
+                  0
+                ],
+                [
+                  -1.2,
+                  -0.2,
+                  0.1
+                ],
+                [
+                  -0.5,
+                  0.6,
+                  0.2
+                ],
+                [
+                  0.2,
+                  1.2,
+                  0.3
+                ],
+                [
+                  1,
+                  0.8,
+                  0.4
+                ],
+                [
+                  1.5,
+                  -0.3,
+                  0.2
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "ocean_murk": [
+            {
+              "op": "grid",
+              "w": 60,
+              "h": 60,
+              "nx": 8,
+              "ny": 8,
+              "plane": "xy",
+              "c": [
+                0,
+                -10,
+                0
+              ]
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "ocean_floor",
+            "pos": [
+              0,
+              -6,
+              0
+            ],
+            "color": [
+              0.35,
+              0.38,
+              0.32
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_murk",
+            "pos": [
+              0,
+              2,
+              0
+            ],
+            "color": [
+              0.15,
+              0.2,
+              0.25
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -8,
+              -3.5,
+              2
+            ],
+            "scale": 1.8,
+            "color": [
+              0.4,
+              0.42,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -6,
+              -4,
+              -3
+            ],
+            "scale": 1.5,
+            "color": [
+              0.42,
+              0.4,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -10,
+              -4.2,
+              0
+            ],
+            "scale": 1.2,
+            "color": [
+              0.45,
+              0.43,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -5,
+              -3.8,
+              4
+            ],
+            "scale": 0.9,
+            "color": [
+              0.38,
+              0.41,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -2,
+              -3,
+              6
+            ],
+            "scale": 1.3,
+            "color": [
+              0.5,
+              0.48,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -3,
+              -2,
+              8
+            ],
+            "scale": 2,
+            "color": [
+              0.7,
+              0.68,
+              0.55
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.8,
+              "amp": 0.15
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              0,
+              -3.5,
+              10
+            ],
+            "scale": 1.4,
+            "color": [
+              0.43,
+              0.46,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              2,
+              -3.2,
+              12
+            ],
+            "scale": 1.1,
+            "color": [
+              0.41,
+              0.44,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              4,
+              -2.5,
+              14
+            ],
+            "scale": 1.8,
+            "color": [
+              0.68,
+              0.65,
+              0.52
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.2,
+              "amp": 0.2
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              6,
+              -3.8,
+              16
+            ],
+            "scale": 1.3,
+            "color": [
+              0.44,
+              0.47,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              8,
+              -3.5,
+              18
+            ],
+            "scale": 1.6,
+            "color": [
+              0.39,
+              0.42,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              10,
+              -2.8,
+              20
+            ],
+            "scale": 1.5,
+            "color": [
+              0.55,
+              0.52,
+              0.42
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              12,
+              -3.9,
+              22
+            ],
+            "scale": 1.1,
+            "color": [
+              0.42,
+              0.44,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              14,
+              -3.6,
+              24
+            ],
+            "scale": 1.2,
+            "color": [
+              0.46,
+              0.48,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              16,
+              -3.4,
+              26
+            ],
+            "scale": 1.4,
+            "color": [
+              0.49,
+              0.47,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              18,
+              -2.2,
+              28
+            ],
+            "scale": 2.2,
+            "color": [
+              0.72,
+              0.7,
+              0.58
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.25
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              20,
+              -3.3,
+              30
+            ],
+            "scale": 1.3,
+            "color": [
+              0.4,
+              0.43,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              22,
+              -3.7,
+              32
+            ],
+            "scale": 1.7,
+            "color": [
+              0.38,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              24,
+              -3.5,
+              34
+            ],
+            "scale": 1.2,
+            "color": [
+              0.45,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              26,
+              -4,
+              36
+            ],
+            "scale": 0.95,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              28,
+              -2.6,
+              38
+            ],
+            "scale": 1.6,
+            "color": [
+              0.58,
+              0.55,
+              0.45
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              30,
+              -3.4,
+              40
+            ],
+            "scale": 1.3,
+            "color": [
+              0.47,
+              0.49,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              28,
+              -1.8,
+              42
+            ],
+            "scale": 2,
+            "color": [
+              0.7,
+              0.68,
+              0.56
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1,
+              "amp": 0.22
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              24,
+              -3.6,
+              44
+            ],
+            "scale": 1.5,
+            "color": [
+              0.41,
+              0.43,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              18,
+              -3.2,
+              46
+            ],
+            "scale": 1.3,
+            "color": [
+              0.51,
+              0.49,
+              0.41
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              12,
+              -3.4,
+              48
+            ],
+            "scale": 1.2,
+            "color": [
+              0.42,
+              0.44,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              6,
+              -3.7,
+              50
+            ],
+            "scale": 1.1,
+            "color": [
+              0.39,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              0,
+              -3.9,
+              52
+            ],
+            "scale": 1.4,
+            "color": [
+              0.46,
+              0.47,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -6,
+              -2.4,
+              54
+            ],
+            "scale": 1.9,
+            "color": [
+              0.68,
+              0.66,
+              0.54
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.18
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -12,
+              -3.5,
+              56
+            ],
+            "scale": 1.2,
+            "color": [
+              0.44,
+              0.47,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -18,
+              -3.4,
+              58
+            ],
+            "scale": 1.8,
+            "color": [
+              0.4,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              -22,
+              -2.9,
+              56
+            ],
+            "scale": 1.4,
+            "color": [
+              0.56,
+              0.53,
+              0.43
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -26,
+              -3.8,
+              52
+            ],
+            "scale": 1.05,
+            "color": [
+              0.4,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -28,
+              -3.1,
+              48
+            ],
+            "scale": 1.35,
+            "color": [
+              0.48,
+              0.46,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              -30,
+              -3.3,
+              44
+            ],
+            "scale": 1.1,
+            "color": [
+              0.41,
+              0.43,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -28,
+              -2,
+              40
+            ],
+            "scale": 2.1,
+            "color": [
+              0.71,
+              0.69,
+              0.57
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.9,
+              "amp": 0.21
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              -24,
+              -3.7,
+              36
+            ],
+            "scale": 1.15,
+            "color": [
+              0.43,
+              0.45,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -18,
+              -3.6,
+              32
+            ],
+            "scale": 1.25,
+            "color": [
+              0.45,
+              0.47,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -14,
+              -3.5,
+              28
+            ],
+            "scale": 1.65,
+            "color": [
+              0.39,
+              0.41,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -8,
+              -3.9,
+              24
+            ],
+            "scale": 0.98,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              -2,
+              -3,
+              20
+            ],
+            "scale": 1.5,
+            "color": [
+              0.54,
+              0.51,
+              0.41
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              4,
+              -1.6,
+              16
+            ],
+            "scale": 2.3,
+            "color": [
+              0.73,
+              0.71,
+              0.59
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.3,
+              "amp": 0.23
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              10,
+              -3,
+              12
+            ],
+            "scale": 1.42,
+            "color": [
+              0.5,
+              0.48,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              14,
+              -3.2,
+              8
+            ],
+            "scale": 1.25,
+            "color": [
+              0.4,
+              0.42,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              18,
+              -3.8,
+              4
+            ],
+            "scale": 1.18,
+            "color": [
+              0.44,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              20,
+              -3.4,
+              0
+            ],
+            "scale": 1.55,
+            "color": [
+              0.38,
+              0.4,
+              0.34
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              18,
+              -3.7,
+              -4
+            ],
+            "scale": 1.27,
+            "color": [
+              0.46,
+              0.48,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              14,
+              -4,
+              -8
+            ],
+            "scale": 1.08,
+            "color": [
+              0.42,
+              0.44,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              8,
+              -2.8,
+              -12
+            ],
+            "scale": 1.52,
+            "color": [
+              0.57,
+              0.54,
+              0.44
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              2,
+              -2.2,
+              -16
+            ],
+            "scale": 2.05,
+            "color": [
+              0.69,
+              0.67,
+              0.55
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.85,
+              "amp": 0.19
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -6,
+              -3.3,
+              -20
+            ],
+            "scale": 1.38,
+            "color": [
+              0.49,
+              0.47,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              -12,
+              -3.4,
+              -24
+            ],
+            "scale": 1.14,
+            "color": [
+              0.41,
+              0.43,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              -18,
+              -3.6,
+              -28
+            ],
+            "scale": 1.22,
+            "color": [
+              0.45,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -24,
+              -3.5,
+              -32
+            ],
+            "scale": 1.72,
+            "color": [
+              0.39,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -28,
+              -3.9,
+              -36
+            ],
+            "scale": 1.02,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -26,
+              -3.7,
+              -40
+            ],
+            "scale": 1.29,
+            "color": [
+              0.47,
+              0.49,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -20,
+              -2.3,
+              -44
+            ],
+            "scale": 1.95,
+            "color": [
+              0.67,
+              0.65,
+              0.53
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.2
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              -12,
+              -3,
+              -48
+            ],
+            "scale": 1.48,
+            "color": [
+              0.55,
+              0.52,
+              0.42
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -4,
+              -3.2,
+              -50
+            ],
+            "scale": 1.35,
+            "color": [
+              0.48,
+              0.46,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              4,
+              -3.3,
+              -48
+            ],
+            "scale": 1.16,
+            "color": [
+              0.4,
+              0.42,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              12,
+              -3.8,
+              -44
+            ],
+            "scale": 1.19,
+            "color": [
+              0.43,
+              0.45,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              20,
+              -3.75,
+              -38
+            ],
+            "scale": 1.06,
+            "color": [
+              0.4,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              28,
+              -3.6,
+              -32
+            ],
+            "scale": 1.68,
+            "color": [
+              0.38,
+              0.4,
+              0.34
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              32,
+              -1.9,
+              -26
+            ],
+            "scale": 2.15,
+            "color": [
+              0.7,
+              0.68,
+              0.56
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.2
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              34,
+              -3.5,
+              -20
+            ],
+            "scale": 1.28,
+            "color": [
+              0.46,
+              0.48,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              32,
+              -2.7,
+              -14
+            ],
+            "scale": 1.5,
+            "color": [
+              0.56,
+              0.53,
+              0.43
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              28,
+              -3.1,
+              -8
+            ],
+            "scale": 1.36,
+            "color": [
+              0.49,
+              0.47,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              22,
+              -3.85,
+              -2
+            ],
+            "scale": 1.04,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              16,
+              -3.25,
+              4
+            ],
+            "scale": 1.13,
+            "color": [
+              0.41,
+              0.43,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              10,
+              -3.7,
+              10
+            ],
+            "scale": 1.21,
+            "color": [
+              0.44,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              4,
+              -3.45,
+              16
+            ],
+            "scale": 1.6,
+            "color": [
+              0.39,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -4,
+              -2.1,
+              22
+            ],
+            "scale": 1.88,
+            "color": [
+              0.66,
+              0.64,
+              0.52
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.2,
+              "amp": 0.21
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -10,
+              -3.6,
+              28
+            ],
+            "scale": 1.26,
+            "color": [
+              0.45,
+              0.47,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -16,
+              -3.7,
+              34
+            ],
+            "scale": 1.01,
+            "color": [
+              0.4,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              -22,
+              -2.95,
+              40
+            ],
+            "scale": 1.46,
+            "color": [
+              0.54,
+              0.51,
+              0.41
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -28,
+              -3.15,
+              46
+            ],
+            "scale": 1.32,
+            "color": [
+              0.47,
+              0.45,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              -32,
+              -3.35,
+              52
+            ],
+            "scale": 1.15,
+            "color": [
+              0.41,
+              0.43,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -34,
+              -2.15,
+              58
+            ],
+            "scale": 2.08,
+            "color": [
+              0.69,
+              0.67,
+              0.55
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.95,
+              "amp": 0.22
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -30,
+              -3.55,
+              62
+            ],
+            "scale": 1.7,
+            "color": [
+              0.39,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              -24,
+              -3.75,
+              66
+            ],
+            "scale": 1.2,
+            "color": [
+              0.44,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -16,
+              -3.85,
+              70
+            ],
+            "scale": 1.07,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -8,
+              -3.65,
+              74
+            ],
+            "scale": 1.24,
+            "color": [
+              0.46,
+              0.48,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              0,
+              -3,
+              78
+            ],
+            "scale": 1.51,
+            "color": [
+              0.55,
+              0.52,
+              0.42
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              8,
+              -3.4,
+              76
+            ],
+            "scale": 1.62,
+            "color": [
+              0.38,
+              0.4,
+              0.34
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              16,
+              -3.32,
+              72
+            ],
+            "scale": 1.18,
+            "color": [
+              0.41,
+              0.43,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              24,
+              -2,
+              68
+            ],
+            "scale": 1.92,
+            "color": [
+              0.68,
+              0.66,
+              0.54
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.08,
+              "amp": 0.19
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              32,
+              -3.72,
+              64
+            ],
+            "scale": 1.17,
+            "color": [
+              0.43,
+              0.45,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              36,
+              -3.22,
+              56
+            ],
+            "scale": 1.34,
+            "color": [
+              0.48,
+              0.46,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              34,
+              -3.82,
+              48
+            ],
+            "scale": 1.03,
+            "color": [
+              0.41,
+              0.43,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              28,
+              -3.55,
+              40
+            ],
+            "scale": 1.3,
+            "color": [
+              0.47,
+              0.49,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "stress_crack",
+            "pos": [
+              20,
+              -2.88,
+              32
+            ],
+            "scale": 1.49,
+            "color": [
+              0.56,
+              0.53,
+              0.43
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              10,
+              -3.48,
+              24
+            ],
+            "scale": 1.58,
+            "color": [
+              0.39,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              2,
+              -1.95,
+              16
+            ],
+            "scale": 2.12,
+            "color": [
+              0.71,
+              0.69,
+              0.57
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.02,
+              "amp": 0.2
+            }
+          },
+          {
+            "shape": "shear_fragment",
+            "pos": [
+              -6,
+              -3.28,
+              10
+            ],
+            "scale": 1.12,
+            "color": [
+              0.4,
+              0.42,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "foliated_wedge",
+            "pos": [
+              -14,
+              -3.68,
+              6
+            ],
+            "scale": 1.23,
+            "color": [
+              0.44,
+              0.46,
+              0.37
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -20,
+              -3.8,
+              2
+            ],
+            "scale": 1.09,
+            "color": [
+              0.42,
+              0.44,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "fault_plane",
+            "pos": [
+              -24,
+              -3.25,
+              -2
+            ],
+            "scale": 1.37,
+            "color": [
+              0.49,
+              0.47,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "pressure_ridge",
+            "pos": [
+              -26,
+              -3.62,
+              -6
+            ],
+            "scale": 1.25,
+            "color": [
+              0.45,
+              0.47,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "mineral_vein",
+            "pos": [
+              -24,
+              -2.05,
+              -10
+            ],
+            "scale": 2.02,
+            "color": [
+              0.68,
+              0.66,
+              0.54
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.21
+            }
+          },
+          {
+            "shape": "boulder_massive",
+            "pos": [
+              -18,
+              -3.52,
+              -14
+            ],
+            "scale": 1.64,
+            "color": [
+              0.39,
+              0.41,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "compressed_strata",
+            "pos": [
+              -10,
+              -3.75,
+              -18
+            ],
+            "scale": 1.05,
+            "color": [
+              0.4,
+              0.42,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#2d2e26",
+    "#3e3f34",
+    "#4a4b3d",
+    "#5a5846",
+    "#b4af8c",
+    "#6b6d5a",
+    "#575850"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 5,
+    "attack": 4,
+    "release": 6,
+    "base_note": 36,
+    "chord": [
+      0,
+      7,
+      12,
+      19
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "path",
+    "waypoints": [
+      [
+        -8,
+        -2,
+        0
+      ],
+      [
+        0,
+        -2.5,
+        15
+      ],
+      [
+        12,
+        -2,
+        30
+      ],
+      [
+        24,
+        -2.2,
+        50
+      ],
+      [
+        20,
+        -2.5,
+        70
+      ],
+      [
+        0,
+        -3,
+        75
+      ],
+      [
+        -20,
+        -2.8,
+        70
+      ],
+      [
+        -32,
+        -2.5,
+        50
+      ],
+      [
+        -36,
+        -2,
+        30
+      ],
+      [
+        -28,
+        -2.3,
+        10
+      ],
+      [
+        -12,
+        -2.6,
+        -20
+      ],
+      [
+        8,
+        -2.2,
+        -40
+      ],
+      [
+        32,
+        -2.5,
+        -30
+      ],
+      [
+        20,
+        -2,
+        0
+      ]
+    ],
+    "speed": 0.4,
+    "fov": 62,
+    "near": 0.4,
+    "far": 40,
+    "max_strokes": 120,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "disable_plane": true,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.11
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 54.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "foundation",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 30,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.55,
+        "tone": 0.25,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 5.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "body",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 43,
+        "chord": [
+          0,
+          5,
+          12,
+          17
+        ],
+        "level": 0.4,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": -0.15,
+        "env": {
+          "attack": 4.5,
+          "decay": 1.2,
+          "sustain": 0.85,
+          "release": 3.0
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.05,
+          "depth": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "drift",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 55,
+        "chord": [
+          0,
+          7,
+          14
+        ],
+        "unison": 2,
+        "detune": 0.018,
+        "sub": 0.15,
+        "tone": 0.4,
+        "level": 0.28,
+        "pan": 0.2,
+        "env": {
+          "attack": 3.8,
+          "decay": 2.0,
+          "sustain": 0.75,
+          "release": 2.8
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.39,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.11,
+          "shape": "sine",
+          "depth": 0.8,
+          "dest": "distortion"
+        }
+      },
+      {
+        "name": "minerals",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 67,
+        "scale": [
+          0,
+          3,
+          7,
+          12,
+          15
+        ],
+        "level": 0.22,
+        "rate": 0.3,
+        "decay": 2.2,
+        "tone": 0.6,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "abyss",
+        "type": "noise",
+        "level": 0.08,
+        "tone": 0.2,
+        "pan": -0.2,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "triangle",
+          "rate": 0.08,
+          "depth": 0.5
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.7,
+    "eq": {
+      "low": 2.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [
+    {
+      "shape": "boulder_massive",
+      "voice": "drift",
+      "param": "distortion",
+      "dest": "scale",
+      "range": [
+        2,
+        1.5
+      ],
+      "source": "param"
+    }
+  ]
+}

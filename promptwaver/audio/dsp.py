@@ -22,10 +22,14 @@ A soundscape spec (JSON, stored in the scene):
   "swell_amount": 0.0, "swell_period": 24.0,
   "voices": [
     {"name":"drone","type":"pad","waveform":"saw","note":36,"chord":[0,7,12],
-     "level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,"mute":false},
+     "level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,"mute":false,
+     "distortion":0.0,
+     "lfo":{"on":false,"dest":"level","shape":"sine","rate":0.06,"depth":0.5,"phase":0.0}},
     {"name":"bells","type":"pluck","waveform":"sine","note":72,
-     "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"pan":0.2,"mute":false},
-    {"name":"air","type":"noise","level":0.15,"tone":0.5,"pan":0.0,"mute":false}
+     "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"pan":0.2,"mute":false,
+     "distortion":0.0},
+    {"name":"air","type":"noise","level":0.15,"tone":0.5,"pan":0.0,"mute":false,
+     "distortion":0.0}
   ]
 }
 """
@@ -360,7 +364,7 @@ class Soundscape:
     #               blocks. Fine for the slow sweeps they're for; above ~0.5Hz
     #               they will audibly step, which is why the director is told
     #               to keep those slow.
-    LFO_DESTS_SMOOTH = ("level", "pan")
+    LFO_DESTS_SMOOTH = ("level", "pan", "distortion")
     LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate")
     LFO_DESTS = LFO_DESTS_SMOOTH + LFO_DESTS_STEPPED
     LFO_SHAPES = ("sine", "triangle", "saw", "square", "random")
@@ -524,6 +528,19 @@ class Soundscape:
             else:
                 mono = mono * level
             mono = mono * self._swell_gain(name, block_t)
+
+            # Per-voice effects (applied after level, before pan/sum)
+            distortion = float(v.get("distortion", 0.0))
+            if lfo is not None and lfo[2] == "distortion":
+                # LFO-modulated distortion: apply per-sample with varying amount
+                _, _, _, depth = lfo
+                dist_amt = np.clip(distortion + depth * lfo[0], 0.0, 1.0)
+                g = 1.0 + dist_amt * 8.0
+                mono = np.tanh(mono * g) / np.tanh(np.clip(g, 1.0, 9.0))
+            elif distortion > 0:
+                g = 1.0 + distortion * 8.0
+                mono = np.tanh(mono * g) / np.tanh(g if g > 1 else 1)
+
             pan = float(v.get("pan", 0.0))
             if lfo is not None and lfo[2] == "pan":
                 # Auto-pan around the authored position, per-sample. Clipped
@@ -943,6 +960,7 @@ def _normalise(spec: dict) -> dict:
         v["decay"] = _clamp(v.get("decay"), 0.05, 6.0, 1.2)
         v["unison"] = int(_clamp(v.get("unison"), 1, 7, 1))
         v["sub"] = _clamp(v.get("sub"), 0.0, 1.0, 0.0)
+        v["distortion"] = _clamp(v.get("distortion"), 0.0, 1.0, 0.0)
         arp = v.get("arp")
         if isinstance(arp, dict):
             arp = dict(arp)

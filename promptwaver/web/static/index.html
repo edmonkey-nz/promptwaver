@@ -405,6 +405,7 @@
         <div class="vbuttons">
           <button id="disable-audio">Disable Audio</button>
           <button id="disable-visuals">Disable Visuals</button>
+          <button id="show-title">Show scene title</button>
           <!-- Voice knobs normally follow SLOTS (voice#0, voice#1 …), which
                track the director's foundation-first voice ordering and so
                survive a scene change on their own. This pins them to this
@@ -457,6 +458,14 @@
           <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
           <span class="val" id="v-lfo">0.05</span></div>
         <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </details>
+    <details class="accordion" id="acc-shape-mod" closed>
+      <summary>Shape Modulation</summary>
+      <div class="accordion-body">
+        <div class="hint">Route instrument parameters to shape transforms (scale/rotate/position)</div>
+        <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
+        <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
       </div>
     </details>
     <div class="group">
@@ -901,6 +910,7 @@ function paintState(s){
   syncControls(s);
   renderVu(s);
   renderRoutes(s);
+  renderShapeModulation(s);
   syncAudioTargets(s);
   syncMonitorFilters(s);
   // Diagnostics off (default) hides these two blocks entirely rather than
@@ -1166,6 +1176,155 @@ function renderRoutes(s){
 $("m-link").oninput = () => {
   $("v-mlink").textContent = (+$("m-link").value).toFixed(2);
   send({type:"set", key:"audio_link", value:+$("m-link").value});
+};
+
+let _shapeModSig = "";
+function renderShapeModulation(s){
+  // Extract available shapes from current scene
+  const sc = s.scene_spec || {};
+  const layers = sc.layers || [];
+  const worldLayer = layers.find(l => l.generator === "world");
+  const defs = (worldLayer && worldLayer.params && worldLayer.params.defs) || {};
+  const shapes = Object.keys(defs).sort();
+
+  // Get voices from soundscape
+  const voices = ((s.soundscape || {}).voices || []).map(v => v.name).sort();
+
+  // Build signature to skip unnecessary re-renders
+  const sig = (s.scene || "") + "|" + shapes.join(",") + "|" + voices.join(",") + "|" +
+              JSON.stringify(s.shape_modulation || []);
+  if (sig === _shapeModSig) return;
+  _shapeModSig = sig;
+
+  const box = $("shape-mods");
+  box.innerHTML = "";
+
+  const mods = s.shape_modulation || [];
+  mods.forEach((mod, i) => {
+    const wrap = document.createElement("div");
+    wrap.style.display = "flex"; wrap.style.gap = "6px"; wrap.style.flexWrap = "wrap";
+    wrap.style.alignItems = "center"; wrap.style.fontSize = "12px";
+
+    // Shape select
+    const shapeSelect = document.createElement("select");
+    shapeSelect.style.flex = "0 0 auto";
+    shapes.forEach(s => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      shapeSelect.appendChild(o);
+    });
+    shapeSelect.value = mod.shape || "";
+    shapeSelect.onchange = () => updateShapeMod(i, "shape", shapeSelect.value);
+
+    // Voice select
+    const voiceSelect = document.createElement("select");
+    voiceSelect.style.flex = "0 0 auto";
+    voices.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v;
+      voiceSelect.appendChild(o);
+    });
+    voiceSelect.value = mod.voice || "";
+    voiceSelect.onchange = () => updateShapeMod(i, "voice", voiceSelect.value);
+
+    // Source select (param or lfo)
+    const sourceSelect = document.createElement("select");
+    sourceSelect.style.flex = "0 0 auto";
+    ["param", "lfo"].forEach(s => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      sourceSelect.appendChild(o);
+    });
+    sourceSelect.value = mod.source || "param";
+
+    // Parameter select (shown only when source="param")
+    const paramSelect = document.createElement("select");
+    paramSelect.style.flex = "0 0 auto";
+    ["level", "pan", "tone", "detune", "sub", "distortion"].forEach(p => {
+      const o = document.createElement("option");
+      o.value = p; o.textContent = p;
+      paramSelect.appendChild(o);
+    });
+    paramSelect.value = mod.param || "level";
+    paramSelect.onchange = () => updateShapeMod(i, "param", paramSelect.value);
+
+    sourceSelect.onchange = () => {
+      updateShapeMod(i, "source", sourceSelect.value);
+      paramSelect.style.display = sourceSelect.value === "param" ? "inline-block" : "none";
+    };
+    paramSelect.style.display = sourceSelect.value === "param" ? "inline-block" : "none";
+
+    // Destination select
+    const destSelect = document.createElement("select");
+    destSelect.style.flex = "0 0 auto";
+    ["scale"].forEach(d => {
+      const o = document.createElement("option");
+      o.value = d; o.textContent = d;
+      destSelect.appendChild(o);
+    });
+    destSelect.value = mod.dest || "scale";
+    destSelect.onchange = () => updateShapeMod(i, "dest", destSelect.value);
+
+    // Range inputs
+    const minInput = document.createElement("input");
+    minInput.type = "number"; minInput.step = "0.1";
+    minInput.style.width = "50px"; minInput.placeholder = "min";
+    minInput.value = (mod.range && mod.range[0]) || 0.5;
+    minInput.onchange = () => updateShapeModRange(i, minInput, maxInput);
+
+    const maxInput = document.createElement("input");
+    maxInput.type = "number"; maxInput.step = "0.1";
+    maxInput.style.width = "50px"; maxInput.placeholder = "max";
+    maxInput.value = (mod.range && mod.range[1]) || 1.5;
+    maxInput.onchange = () => updateShapeModRange(i, minInput, maxInput);
+
+    // Remove button
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "✕"; removeBtn.style.flex = "0 0 auto"; removeBtn.style.width = "30px";
+    removeBtn.onclick = () => deleteShapeMod(i);
+
+    wrap.appendChild(shapeSelect);
+    wrap.appendChild(voiceSelect);
+    wrap.appendChild(sourceSelect);
+    wrap.appendChild(paramSelect);
+    wrap.appendChild(destSelect);
+    wrap.appendChild(minInput); wrap.appendChild(maxInput);
+    wrap.appendChild(removeBtn);
+    box.appendChild(wrap);
+  });
+}
+
+function updateShapeMod(i, field, value){
+  const mods = [...(_lastState?.shape_modulation || [])].map((m, j) =>
+    j === i ? {...m, [field]: value} : m);
+  send({type:"set", key:"shape_modulation", value:mods});
+}
+
+function updateShapeModRange(i, minInput, maxInput){
+  const minVal = parseFloat(minInput.value || 0.5);
+  const maxVal = parseFloat(maxInput.value || 1.5);
+  const mods = [...(_lastState?.shape_modulation || [])].map((m, j) =>
+    j === i ? {...m, range: [minVal, maxVal]} : m);
+  send({type:"set", key:"shape_modulation", value:mods});
+}
+
+function deleteShapeMod(i){
+  const mods = [...(_lastState?.shape_modulation || [])].filter((m, j) => j !== i);
+  send({type:"set", key:"shape_modulation", value:mods});
+}
+
+$("shape-mod-add").onclick = () => {
+  const mods = [...(_lastState?.shape_modulation || [])];
+  const sc = _lastState?.scene_spec || {};
+  const layers = sc.layers || [];
+  const worldLayer = layers.find(l => l.generator === "world");
+  const defs = (worldLayer?.params?.defs) || {};
+  const shape = Object.keys(defs).sort()[0] || "";
+  const voices = (_lastState?.soundscape?.voices || []).map(v => v.name);
+  const voice = voices[0] || "";
+
+  mods.push({shape, voice, param: "level", dest: "scale", range: [0.5, 1.5]});
+  send({type:"set", key:"shape_modulation", value:mods});
 };
 
 function syncAudioTargets(s){
@@ -1496,6 +1655,7 @@ function renderSoundscape(s){
     }
     if (v.type==="pad" || v.type==="noise")
       el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")}));
+      el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
     if (v.type==="pluck")
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
     if (v.type==="osc"){
@@ -1615,7 +1775,7 @@ function renderSoundscape(s){
       // "smooth" destinations are per-sample and work at any rate; the rest
       // are resolved once per audio block, so they step above ~0.5Hz. Marked
       // in the list so the pairing is visible when choosing.
-      mkSel("target", "dest", ["level", "pan", "tone", "detune", "sub", "waveform", "rate"]);
+      mkSel("target", "dest", ["level", "pan", "distortion", "tone", "detune", "sub", "waveform", "rate"]);
       mkSel("shape", "shape", ["sine", "triangle", "saw", "square", "random"]);
 
       const mkKnob = (label, key, min, max, step, dflt, fmt) =>
@@ -1633,7 +1793,7 @@ function renderSoundscape(s){
       const note = document.createElement("div");
       note.style.cssText = "font-size:10px;color:var(--dim);line-height:1.4";
       note.textContent = "0.02-0.15 Hz is the ambient range (one cycle every "
-        + "7-50s). level and pan stay smooth throughout; the others are set "
+        + "7-50s). level, pan, and distortion stay smooth throughout; the others are set "
         + "once per audio block, so they granulate near the top of the dial.";
       fields.appendChild(note);
 
@@ -1956,6 +2116,9 @@ $("disable-audio").onclick = () => {
 };
 $("disable-visuals").onclick = () => {
   send({type:"set_visuals_disabled", value: !_lastState?.visuals_disabled, fade: 2.0});
+};
+$("show-title").onclick = () => {
+  send({type:"show_title"});
 };
 
 // Output windows: separate, chrome-less browser windows for a projector or

@@ -82,7 +82,7 @@ def make_app(engine) -> web.Application:
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    reply = await _handle(engine, json.loads(msg.data))
+                    reply = await _handle(engine, json.loads(msg.data), request.app)
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
         finally:
@@ -142,7 +142,7 @@ def make_app(engine) -> web.Application:
     return app
 
 
-async def _handle(engine, m: dict):
+async def _handle(engine, m: dict, app=None):
     t = m.get("type")
     loop = asyncio.get_event_loop()
     if t == "set":
@@ -228,6 +228,16 @@ async def _handle(engine, m: dict):
         engine.save_scene(m["name"])
     elif t == "scene_delete":
         engine.scenes.delete(m["name"])
+    elif t == "show_title":
+        if app:
+            title = ""
+            if engine.scenes.current:
+                title = engine.scenes.current.spec.name
+            for ws in list(app["clients"].keys()):
+                try:
+                    await ws.send_str(json.dumps({"type": "show_title", "title": title}))
+                except Exception:
+                    pass
     elif t == "set_api_key":
         engine.director.set_api_key(m.get("key", ""))
         return {"type": "api_result", "action": "save", "ok": engine.director.online,

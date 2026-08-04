@@ -16,12 +16,16 @@
           font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#a04040;
           display:none;pointer-events:none;user-select:none}
   #status.show{display:block}
+  #title{position:fixed;bottom:24px;left:24px;font:14px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#e7eaf0;
+        opacity:0;transition:opacity 0.5s ease-in-out;pointer-events:none;user-select:none}
+  #title.show{opacity:1}
 </style>
 </head>
 <body>
 <canvas id="out"></canvas>
 <div id="hint">PromptWaver output — drag this window to your projector/second screen, then press F11 for fullscreen</div>
 <div id="status">disconnected — retrying…</div>
+<div id="title"></div>
 <script>
 const cv = document.getElementById("out"), cx = cv.getContext("2d");
 const statusEl = document.getElementById("status");
@@ -158,6 +162,9 @@ function paint(scene){
   if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);
 }
 
+const titleEl = document.getElementById("title");
+let titleTimeout = null;
+
 let ws = null;
 function connect(){
   ws = new WebSocket(`ws://${location.host}/ws?hq=1`);
@@ -174,6 +181,13 @@ function connect(){
       filters.mirrorY = !!s.mirror_y;
       filters.aspect = s.output_aspect || 1;
       paint(m.preview);
+    } else if (m.type === "show_title") {
+      clearTimeout(titleTimeout);
+      titleEl.textContent = m.title;
+      titleEl.classList.add("show");
+      titleTimeout = setTimeout(() => {
+        titleEl.classList.remove("show");
+      }, 10000);
     }
   };
 }
