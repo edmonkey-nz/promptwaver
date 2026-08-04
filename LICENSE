@@ -1,5 +1,8 @@
 MIT License
 
+PromptWaver — a realtime immersive audio/visual instrument.
+https://github.com/edmonkeynz/promptwaver
+
 Copyright (c) 2026 Eddie
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,3 +22,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+SAFETY NOTICE
+
+This software drives laser projection hardware. Laser light can cause
+permanent eye injury and can start fires. Nothing above should be read as a
+claim that this software is safe for any particular installation — the "AS IS"
+and limitation-of-liability terms apply to the beam as much as to the code.
+You are responsible for your own rig and for the laser-display rules that
+apply where you are.
+
+Third-party components and their licences are listed in
+THIRD_PARTY_LICENSES.md.

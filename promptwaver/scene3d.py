@@ -507,7 +507,14 @@ def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     starts, ends = edges[0::2], edges[1::2]      # [start, end) index pairs, end exclusive
 
     zc = np.maximum(z, 1e-3)
-    px = x / zc * f * aspect
+    # DIVIDE by aspect, not multiply. `aspect` is width/height of the output
+    # viewport, and x in [-1,1] has to span that whole width — so a wider
+    # viewport must show MORE world horizontally, not less, or everything
+    # comes out stretched. (Aspect was hardcoded to 1.0 until output ratios
+    # existed, where the two conventions are identical, which is how this sat
+    # backwards unnoticed.) `fov` stays the VERTICAL field of view, so
+    # changing the ratio widens the view rather than cropping it.
+    px = x / zc * f / aspect
     py = y / zc * f
 
     # A laser stroke's point count is small (a handful to a few dozen), so

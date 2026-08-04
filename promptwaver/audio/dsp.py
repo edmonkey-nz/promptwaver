@@ -48,8 +48,10 @@ def midi_to_hz(n: float) -> float:
     return 440.0 * 2.0 ** ((n - 69) / 12.0)
 
 
-def _osc(phase: np.ndarray, waveform: str) -> np.ndarray:
-    """Oscillator from phase in [0,1). Vectorised."""
+def _osc_raw(phase: np.ndarray, waveform: str) -> np.ndarray:
+    """The naive oscillator: exact shape, infinite harmonics. Kept for the
+    sub-oscillator (always sine, so nothing to alias) and as the reference
+    the bandlimited tables are built to match."""
     if waveform == "saw":
         return 2.0 * (phase % 1.0) - 1.0
     if waveform == "square":
@@ -57,6 +59,122 @@ def _osc(phase: np.ndarray, waveform: str) -> np.ndarray:
     if waveform == "triangle":
         return 4.0 * np.abs((phase % 1.0) - 0.5) - 1.0
     return np.sin(2.0 * np.pi * phase)          # sine (default)
+
+
+# --- bandlimited oscillators with a brightness control ------------------------
+#
+# The naive shapes above have two problems that together are most of what
+# reads as "cheap digital" rather than "warm synth":
+#
+#   1. Infinite harmonics at a finite sample rate means everything above
+#      Nyquist folds back down as inharmonic tones. That is not a musical
+#      choice, it is a sampling artefact, and no amount of prompting removes it.
+#   2. No brightness control at all. `tone` was only ever read by `pad` and
+#      `noise`; on `osc` and `pluck` — the voices a director reaches for when
+#      asked for bass and leads — writing `tone` did nothing whatsoever.
+#
+# The module's founding constraint (see the docstring at the top) is no
+# per-sample IIR recursion, because pure numpy cannot vectorise one. A
+# resonant lowpass is therefore off the table. But the same warmth can be had
+# additively: build one cycle of the waveform from a truncated harmonic series
+# with a rolloff, and the result is bandlimited AND has a brightness knob.
+#
+# Doing that sum every block would be far too expensive (measured: 32 partials
+# across a 3-note chord is ~11% of the audio callback budget, and unison
+# multiplies it). Instead the cycle is built ONCE into a small table and read
+# back by phase, so the per-block cost stays a couple of array ops — the same
+# order as the naive oscillator it replaces.
+_TABLE_N = 2048            # samples per cycle; quantisation noise is ~-66dB here
+_MAX_PARTIALS = 64
+_TABLE_CACHE: dict = {}
+
+
+def _harmonic_amps(waveform: str, n: int) -> np.ndarray:
+    """Amplitude of each sine partial for an ideal waveform, k = 1..n."""
+    ks = np.arange(1, n + 1, dtype=np.float64)
+    odd = (ks % 2 == 1)
+    if waveform == "saw":
+        return 1.0 / ks
+    if waveform == "square":
+        return np.where(odd, 1.0 / ks, 0.0)
+    if waveform == "triangle":
+        # odd harmonics, 1/k^2, alternating sign
+        sign = np.where(((ks - 1) // 2) % 2 == 0, 1.0, -1.0)
+        return np.where(odd, sign / (ks * ks), 0.0)
+    a = np.zeros(n)
+    a[0] = 1.0
+    return a                                     # sine
+
+
+def _partial_count(waveform: str, f0: float, sr: int) -> int:
+    """How many partials fit under Nyquist at this pitch. Purely an
+    anti-aliasing limit — brightness is the rolloff's job (see `_wavetable`),
+    not truncation's, so this doesn't depend on `tone`. Keeping the two
+    separate also means far fewer distinct tables to cache."""
+    if waveform == "sine":
+        return 1
+    fits = int(sr * 0.5 / max(f0, 1.0))
+    return int(max(1, min(fits, _MAX_PARTIALS)))
+
+
+def _wavetable(waveform: str, tone_q: int, n: int) -> np.ndarray:
+    """One normalised cycle. Cached: the key space is small in practice (a
+    handful of waveforms x quantised tone x partial count), and a scene's
+    voices ask for the same table on every block for as long as it plays."""
+    key = (waveform, tone_q, n)
+    tbl = _TABLE_CACHE.get(key)
+    if tbl is not None:
+        return tbl
+    tone = tone_q / 100.0
+    ks = np.arange(1, n + 1, dtype=np.float64)
+    # Rolloff shaped like a lowpass sweeping through the harmonic series,
+    # rather than a per-partial decay. A `tone ** (k-1)` curve (which is what
+    # `pad` uses, and gets away with because it caps at 8 partials) collapses
+    # almost immediately across 64: measured, everything from tone 0.15 to 0.6
+    # came out identically dark, so five sixths of the control did nothing.
+    # A cutoff in harmonic number spreads the range evenly and behaves the way
+    # a filter knob is expected to.
+    kc = 1.0 + tone * (_MAX_PARTIALS - 1)        # cutoff, in harmonic number
+    rolloff = 1.0 / (1.0 + (ks / kc) ** 4)
+    amps = _harmonic_amps(waveform, n) * rolloff
+    x = np.arange(_TABLE_N, dtype=np.float64) / _TABLE_N
+    tbl = (amps[:, None] * np.sin(2.0 * np.pi * ks[:, None] * x[None, :])).sum(axis=0)
+    peak = float(np.max(np.abs(tbl)))
+    # Normalise so lowering `tone` darkens without also turning the voice
+    # down — a brightness control that loses level would just get compensated
+    # for with `level`, which is not what it is for.
+    if peak > 1e-9:
+        tbl = tbl / peak
+    tbl = tbl.astype(np.float32)
+    if len(_TABLE_CACHE) < 512:                  # bounded; keys are few in practice
+        _TABLE_CACHE[key] = tbl
+    return tbl
+
+
+def _osc(phase: np.ndarray, waveform: str, tone: float = 1.0,
+         f0: float = 0.0, sr: int = SR) -> np.ndarray:
+    """Bandlimited oscillator from phase in cycles, with a brightness control.
+
+    `tone` 1.0 is the full waveform (every harmonic that fits under Nyquist);
+    lower values roll the upper partials off for a warmer, rounder tone.
+    `f0` is the fundamental, needed to know how many harmonics fit — pass 0
+    to fall back to the naive shape (only used where there is nothing to
+    alias, i.e. a pure sine).
+    """
+    if waveform == "sine" or f0 <= 0.0:
+        return _osc_raw(phase, waveform)
+    n = _partial_count(waveform, f0, sr)
+    if n <= 1:
+        return np.sin(2.0 * np.pi * phase)
+    tbl = _wavetable(waveform, int(round(np.clip(tone, 0.0, 1.0) * 100)), n)
+    # Linear interpolation between table entries — nearest-neighbour would
+    # add its own broadband quantisation hiss, which is the sort of grit this
+    # is meant to be removing.
+    x = (phase % 1.0) * _TABLE_N
+    i0 = x.astype(np.int32)
+    frac = (x - i0).astype(np.float32)
+    i1 = (i0 + 1) & (_TABLE_N - 1)               # _TABLE_N is a power of two
+    return tbl[i0] * (1.0 - frac) + tbl[i1] * frac
 
 
 def _eq_gain_db(freqs: np.ndarray, low_db: float, mid_db: float, high_db: float,
@@ -370,11 +488,19 @@ class Soundscape:
         unison = int(np.clip(v.get("unison", 1), 1, 7))
         detune = float(v.get("detune", 0.01))
         sub = float(np.clip(v.get("sub", 0.0), 0.0, 1.0))
+        # `tone` used to be silently ignored here — an osc voice had no
+        # brightness control at all, which is most of why leads and basses
+        # came out thin and buzzy. 1.0 keeps the full waveform.
+        tone = float(np.clip(v.get("tone", 1.0), 0.0, 1.0))
         spread = np.linspace(-detune, detune, unison) if unison > 1 else np.array([0.0])
         freqs = np.array([midi_to_hz(root + semi) for semi in chord], dtype=np.float64)
         fu = (freqs[:, None] * (1.0 + spread[None, :])).ravel()     # every (chord note, unison layer)
         ph = fu[:, None] * t[None, :]
-        out = _osc(ph, wf).sum(axis=0) / unison
+        # One table for the whole stack, sized off the HIGHEST note in the
+        # chord so nothing in it can alias. A chord spanning more than an
+        # octave costs its lowest note some upper harmonics; erring that way
+        # is right, since the alternative is folded inharmonic tones.
+        out = _osc(ph, wf, tone, float(fu.max()), self.sr).sum(axis=0) / unison
         if sub > 0:
             sub_ph = (freqs / 2.0)[:, None] * t[None, :]
             out = out + sub * _osc(sub_ph, "sine").sum(axis=0)
@@ -396,7 +522,8 @@ class Soundscape:
     # thousands of notes within a single block in the first place.
     MIN_ONSET_INTERVAL_S = 0.04       # ~25 onsets/sec ceiling, plenty for ambient
 
-    def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay):
+    def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay,
+                        tone=1.0):
         """Append onsets landing in this block for `voice_name`, then enforce
         the shared MAX_ACTIVE_NOTES cap. `freq_fn(step)` returns the Hz for
         onset index `step`. Shared by both `pluck` (indexes a scale) and `arp`
@@ -410,7 +537,8 @@ class Soundscape:
         for onset in range(first, end, interval):
             step = onset // interval
             self._active_notes.append(dict(
-                start=onset, freq=freq_fn(step), wf=wf, decay=decay, voice=voice_name))
+                start=onset, freq=freq_fn(step), wf=wf, decay=decay,
+                voice=voice_name, tone=tone))
         if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
             # evict oldest first — inaudible in an ambient context, and far
             # cheaper than letting render cost keep climbing
@@ -433,7 +561,11 @@ class Soundscape:
             if age[-1] <= note["decay"] * 6:
                 alive.append(note)
             ph = note["freq"] * (idx / self.sr)
-            out += (env * _osc(ph, note["wf"])).astype(np.float32)
+            # Per-note table: notes are already rendered one at a time here,
+            # so each gets partials sized to its own pitch — a low pluck keeps
+            # its harmonics instead of being capped by the highest note.
+            out += (env * _osc(ph, note["wf"], note.get("tone", 1.0),
+                               note["freq"], self.sr)).astype(np.float32)
         self._active_notes = alive
         return out * 0.6
 
@@ -446,11 +578,16 @@ class Soundscape:
         wf = v.get("waveform", "sine")
         decay = float(v.get("decay", 1.2))
 
+        # `tone` reaches pluck for the first time here — previously it was
+        # read only by pad/noise, so a "warm" brief could ask for a mellow
+        # pluck and get the same bright one regardless.
+        tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
+
         def freq_fn(step):
             semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
             return midi_to_hz(root + semi)
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay)
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
         return self._render_note_events(v["name"], n0, frames)
 
     @staticmethod
@@ -490,10 +627,12 @@ class Soundscape:
         decay = float(arp.get("decay", 0.35))
         mode = arp.get("mode", "up")
 
+        tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
+
         def freq_fn(step):
             return midi_to_hz(root + self._arp_note(chord, mode, step))
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay)
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
         return self._render_note_events(v["name"], n0, frames)
         self._active_notes = alive
         return out * 0.6

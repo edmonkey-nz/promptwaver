@@ -147,6 +147,23 @@ class MidiRouter:
         return float(cur) if isinstance(cur, (int, float)) else None
 
 
+#: Output viewport ratios offered in Settings, widest last. 1:1 is the laser's
+#: native shape (galvos scan a square field); the rest are for data projectors
+#: and monitors.
+OUTPUT_RATIOS = ("1:1", "4:3", "16:10", "16:9", "21:9")
+
+
+def ratio_to_aspect(ratio: str) -> float:
+    """"16:9" -> 1.777…, i.e. width / height. Anything unparseable falls back
+    to square, which is the shape everything behaved as before ratios existed."""
+    try:
+        w, h = ratio.split(":")
+        a = float(w) / float(h)
+        return a if 0.2 <= a <= 5.0 else 1.0
+    except Exception:
+        return 1.0
+
+
 def _apply_scape_param(scape: dict, path: str, value):
     """Mirror a live synth param edit into a soundscape dict (for saving)."""
     parts = path.split(".")
@@ -210,6 +227,13 @@ class Engine:
         self.scenes = SceneManager(library_dir)
         self.director = SceneDirector(cache_dir, model=model)
         from . import settings as _settings
+        # Output viewport ratio (Settings > Output). A rig property, not a
+        # scene one — like keystone, it describes the surface being projected
+        # onto and stays put across scene switches, so it lives in
+        # settings.json rather than in any scene file. Widening it widens the
+        # camera's horizontal field of view; `fov` remains the VERTICAL angle,
+        # so changing ratio reveals more at the sides rather than cropping.
+        self.output_ratio = str(_settings.get("output_ratio", "1:1"))
         self._audio_cfg = {
             "device": _settings.get("audio_device"),
             "blocksize": int(_settings.get("audio_blocksize", 8192)),
@@ -364,6 +388,8 @@ class Engine:
             self.audio_fade = max(0.0, min(16.0, float(value)))
         elif key == "start_fade":
             self.start_fade = max(0.0, min(8.0, float(value)))
+        elif key == "output_ratio":
+            self.set_output_ratio(str(value))
         elif key == "hue_override":
             self.hue_override_on = bool(value)
         elif key == "disable_plane":
@@ -576,6 +602,32 @@ class Engine:
                 self.output.blank()
         self._enqueue(apply)
 
+    def set_output_ratio(self, ratio: str):
+        """Set the output viewport shape and push it at the live camera(s).
+
+        Applied here rather than baked into scene files: the ratio describes
+        the surface you're projecting onto, so it has to survive a scene load
+        — which is also why `_install_spec` re-applies it to every incoming
+        scene."""
+        from . import settings as _settings
+        ratio = ratio if ratio in OUTPUT_RATIOS else "1:1"
+        self.output_ratio = ratio
+        _settings.set("output_ratio", ratio)
+        self._apply_aspect()
+
+    def _apply_aspect(self):
+        a = ratio_to_aspect(self.output_ratio)
+        for sc in (self.scenes.current, self.scenes._next):
+            cam = getattr(sc, "camera", None) if sc else None
+            if cam is not None:
+                cam.aspect = a
+        # The DAC needs it too — the galvo field is square, so a wide viewport
+        # gets letterboxed there (see PathPlanner). Without this the beam would
+        # draw a stretched version of what the browser shows.
+        planner = getattr(self.output, "planner", None)
+        if planner is not None:
+            planner.aspect = a
+
     def set_keystone(self, h: float | None = None, v: float | None = None):
         """Live horizontal/vertical keystone for the laser (Settings >
         Keystone) — was launch-only (--keystone-h/-v); this makes it
@@ -784,6 +836,10 @@ class Engine:
         # hadn't loaded. There's nothing on screen to fade from in that state
         # anyway, so snap to it and let Start reveal the right scene.
         self.scenes.set_scene(spec, crossfade=self.crossfade if self.active else 0.0)
+        # The output ratio belongs to the rig, not the scene, so a freshly
+        # built camera has to be told about it or every scene load would
+        # silently revert the viewport to square.
+        self._apply_aspect()
         self._apply_modulation(spec)
         # per-scene PPS override if set, else the global hardware ceiling
         self.pps = min(spec.pps, self.director.max_pps) if spec.pps else self.director.max_pps
@@ -973,6 +1029,9 @@ class Engine:
             "crossfade": self.crossfade,
             "audio_fade": self.audio_fade,
             "start_fade": self.start_fade,
+            "output_ratio": self.output_ratio,
+            "output_ratios": list(OUTPUT_RATIOS),
+            "output_aspect": round(ratio_to_aspect(self.output_ratio), 4),
             "hue_override": self.hue_override_on,
             "disable_plane": self.disable_plane,
             "mirror_x": self.mirror_x,

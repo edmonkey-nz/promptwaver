@@ -135,6 +135,46 @@ on the laser without editing the scene.
     it toggles, and the value reappears on hover/focus of its control, because hiding it
     outright makes fine adjustment guesswork.
 
+10b) DONE - deeper bass / warmer synths (was: is this a prompt slider, lo-fi <> hi-fi?)
+   Diagnosed before building: it was NOT a prompt problem. There is no filter anywhere
+   in the synth, and `tone` was read only by pad/noise — on osc and pluck, the voices
+   used for bass and leads, writing it did nothing. So no prompt could have fixed it.
+   A resonant lowpass is ruled out by the module's founding constraint (no per-sample
+   IIR, pure numpy can't vectorise one), so warmth is done additively instead:
+   bandlimited wavetables built from a truncated harmonic series with a cutoff-shaped
+   rolloff, cached and read back by phase. Aliasing 2.79% -> 0.00%; cost 2.2% of the
+   audio callback budget. `tone` now works on every voice type, and the existing
+   cold<>warm slider drives it — so no fourth slider was needed. See README "Tone".
+
 11) build a audio EQ to paramater effector (eg bass levels affect speed or FoV)
 
 12) build a instrument effector to a scenes shape (eg a 'base_drone' output (saw,adsr) affect a scale/rotate/positon of a shape ) - would need a UI element of dropdowns of  instrument and scenes shapes..
+
+13) DONE - add a 'output ratio' in the settings, eg '1:1, 16:9, 16:10, 4:3' so users can
+    set the render viewport ratio.
+    Settings > Output, offering 1:1 / 4:3 / 16:10 / 16:9 / 21:9. Stored in settings.json
+    as a rig property (like keystone) so it survives scene loads — _install_spec
+    re-applies it to each freshly built camera. Widening it REVEALS more at the sides:
+    fov stays the vertical angle and the horizontal one grows, so proportions hold.
+    Applied to all three outputs so they agree — preview canvas reshapes, output windows
+    letterbox into the window, and the DAC letterboxes into the galvos' square field
+    (they scan a square whatever the ratio, so 1:1 is a laser's native shape).
+    Found on the way: Camera.aspect existed but was hardcoded to 1.0 and
+    _clip_and_project MULTIPLIED by it — backwards, would have shown less world on a
+    wider screen. Harmless while it was always 1.0, which is why nobody noticed.
+    _cone_cos in world.py had to flip to match, or the frustum cull would clip corners.
+
+14) DONE(ish) - update the licence file - remove ref to laserflow too.
+    There was no laserflow reference in LICENSE to remove — it read "Copyright (c) 2026
+    Eddie" and nothing else. The actual laserflow reference is the GIT AUTHOR:
+        user.name  = LaserFlow Dev
+        user.email = dev@laserflow.local
+    That stamps every commit, including all of this one's. Left alone deliberately —
+    changing someone's git identity isn't a call to make for them. To change it:
+        git config user.name "..."; git config user.email "..."
+    (past commits keep the old author unless history is rewritten).
+    LICENSE itself now names the project, and gained a safety notice making clear the
+    AS-IS terms cover the beam as much as the code. Added THIRD_PARTY_LICENSES.md,
+    which about.md already claimed existed — numpy/aiohttp required, sounddevice+
+    PortAudio/anthropic/mido/python-rtmidi+RtMidi optional, Helios DAC SDK for hardware,
+    Playwright dev-only, and the Claude API as a service rather than a bundled component.

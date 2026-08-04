@@ -60,7 +60,8 @@ class PathPlanner:
     """
 
     def __init__(self, max_step=0.03, invert_x=False, invert_y=False,
-                 keystone_h=0.0, keystone_v=0.0, blank_dwell=3, corner_dwell=2):
+                 keystone_h=0.0, keystone_v=0.0, blank_dwell=3, corner_dwell=2,
+                 aspect=1.0):
         self.max_step = max_step
         self.invert_x = invert_x
         self.invert_y = invert_y
@@ -68,12 +69,26 @@ class PathPlanner:
         self.keystone_v = keystone_v
         self.blank_dwell = blank_dwell
         self.corner_dwell = corner_dwell
+        # Output viewport ratio. The galvos scan a SQUARE field, so a wide
+        # viewport has to be letterboxed into it — otherwise a 16:9 scene
+        # would come out vertically stretched on the beam while looking
+        # correct in the browser. Squeezing y (rather than cropping x) keeps
+        # the whole image, just in a band.
+        self.aspect = aspect
 
     def _to_dac_vec(self, xy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Vectorised version of the old per-point `_to_dac`: keystone, clip,
         scale to 12-bit DAC range, applied to a whole (N,2) array at once."""
         x = xy[:, 0].astype(np.float64, copy=True)
         y = xy[:, 1].astype(np.float64, copy=True)
+        # Letterbox into the galvos' square field BEFORE keystone, so keystone
+        # still corrects the physical mounting of the image that actually gets
+        # drawn rather than of a shape that never reaches the beam.
+        a = self.aspect or 1.0
+        if a > 1.0:
+            y = y / a                      # wide viewport -> horizontal band
+        elif a < 1.0:
+            x = x * a                      # tall viewport -> vertical band
         if self.invert_x:
             x = -x
         if self.invert_y:

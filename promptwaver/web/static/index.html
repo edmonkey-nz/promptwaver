@@ -447,7 +447,7 @@
         <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
         <span class="val" id="v-hueoverride">0.50</span></div>
     </div>
- <details class="accordion" id="acc-modulation" open>
+ <details class="accordion" id="acc-modulation" closed>
       <summary>Modulation</summary>
       <div class="accordion-body">
         <div class="field"><label>audio ↔ visual</label>
@@ -619,6 +619,13 @@
       <div class="field"><label>max PPS</label>
         <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
       <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget. Per-scene override is in the Global section.</div>
+      <div class="field" style="margin-top:8px"><label>output ratio</label>
+        <select id="o-ratio" style="flex:1"></select></div>
+      <div class="hint">the shape of the surface you're projecting onto. A rig
+        setting like keystone, so it survives scene changes. Widening it shows
+        <b>more at the sides</b> rather than cropping — the field of view stays
+        vertical. <b>1:1</b> is a laser's native shape; the galvos scan a square,
+        so a wider ratio is letterboxed into it.</div>
     </div>
 
     <div class="group">
@@ -862,6 +869,7 @@ function paintState(s){
   if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
     $("o-maxpps").value = s.max_pps;
   }
+  syncOutputRatio(s);
   if (document.activeElement !== $("diag-enabled-toggle") && typeof s.diagnostics_enabled === "boolean") {
     $("diag-enabled-toggle").checked = s.diagnostics_enabled;
   }
@@ -1639,6 +1647,33 @@ function applyMirror(ctx, canvas, mirrorX, mirrorY){
     ctx.restore();
   }
 }
+
+// Output viewport ratio (Settings > Output). The preview canvas is reshaped to
+// match, so [-1,1] normalised space maps onto it directly and what's on screen
+// is the shape the projector will actually show — the same WYSIWYG contract
+// keystone already keeps with the DAC.
+let _ratioFp = "";
+function syncOutputRatio(s){
+  const sel = $("o-ratio");
+  const fp = (s.output_ratios || []).join(",") + "|" + s.output_ratio;
+  if (fp === _ratioFp) return;
+  _ratioFp = fp;
+  if (sel.options.length !== (s.output_ratios || []).length) {
+    sel.innerHTML = (s.output_ratios || [])
+      .map(r => `<option value="${r}">${r}</option>`).join("");
+  }
+  if (document.activeElement !== sel && s.output_ratio) sel.value = s.output_ratio;
+  const a = s.output_aspect || 1;
+  // Keep the backing store's pixel count roughly constant across ratios so a
+  // wide viewport doesn't quietly cost more to draw than a square one.
+  const base = 600;
+  const w = Math.round(base * Math.sqrt(a)), h = Math.round(base / Math.sqrt(a));
+  const c = $("view");
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  c.style.aspectRatio = `${a} / 1`;
+}
+$("o-ratio").onchange = () =>
+  send({type:"set", key:"output_ratio", value:$("o-ratio").value});
 
 const cv = $("view"), cx = cv.getContext("2d");
 // Same bilinear keystone formula as output/ilda.py's PathPlanner._to_dac_vec

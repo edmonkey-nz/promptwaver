@@ -569,6 +569,56 @@ JavaScript error every time — never actually sending the change. Caught this
 one myself by actually exercising the mixer in a simulated browser (not just
 checking that the HTML contained the right markup) before shipping.
 
+## Tone — the brightness control on every voice
+
+`tone` (0–1) behaves like a filter cutoff and is the main thing separating a
+warm, round soundscape from a thin, buzzy one. It applies to **every** voice
+type.
+
+It didn't used to. `tone` was read only by `pad` and `noise`; on `osc` and
+`pluck` — exactly the voices a director reaches for when asked for bass and
+leads — writing it did nothing at all. Those voices used naive oscillators
+(`2*(phase%1)-1`), which have two problems: no brightness control, and
+infinite harmonics at a finite sample rate, so everything above Nyquist folds
+back as inharmonic tones. That folding is a sampling artefact, not a musical
+choice, and no amount of prompting removes it.
+
+A resonant lowpass is ruled out by this module's founding constraint — no
+per-sample IIR recursion, because pure numpy can't vectorise one (see
+[dsp.py](promptwaver/audio/dsp.py)'s docstring). The same warmth is available
+additively instead: build one cycle from a truncated harmonic series with a
+rolloff, and the result is bandlimited *and* has a brightness knob.
+
+Summing those partials every block would be far too expensive (32 partials
+across a 3-note chord measured ~11% of the audio callback budget, and unison
+multiplies it), so the cycle is built once into a small cached wavetable and
+read back by phase. Measured on `chocolate factory`:
+
+| | |
+|---|---|
+| aliasing on a high saw | 2.79% → **0.00%** inharmonic |
+| audio callback cost | 8.3ms of a 372ms budget (**2.2%**) |
+| worst case (unison 7, 4-note chord) | 8.5ms (2.3%) |
+| wavetable cache | 19 tables |
+
+The rolloff is shaped like a cutoff sweeping through the harmonic series
+rather than a per-partial decay. `pad`'s original `tone**(k-1)` curve gets
+away with it because it caps at 8 partials, but across 64 it collapses almost
+immediately — everything from 0.15 to 0.6 measured identically dark, so five
+sixths of the control did nothing.
+
+Ranges the director is told to use: **0.1–0.3** dark and mellow, **0.4–0.6**
+warm but present, **0.7–1.0** bright and cutting. The **cold ↔ warm** slider
+in the Generate panel drives this directly — measured across a generated pair,
+mean tone 0.26 (warm) versus 0.65 (cold), a 340× difference in the 800Hz–3kHz
+band.
+
+For deep, heavy bass the director is given a recipe: an `osc` voice at note
+24–36, `tone` 0.15–0.3, `unison` 2–3 with light detune, and `sub` 0.4–0.8 for
+the octave below, with a long attack so it swells rather than thuds.
+
+Sine voices are bit-identical to before — there is nothing to bandlimit.
+
 ## Oscillators and the arpeggiator
 
 Two new soundscape building blocks, in the mixer per-voice:
@@ -884,6 +934,33 @@ The UI's director line reports the source of the last scene: *composed by Claude
 - **Output detail profiles**: laser and data projector want very different
   `camera.far` / `max_strokes`; currently changed by hand on every switch.
 - **Key storage**: move `settings.json` key to OS keyring before public release.
+
+## Output ratio
+
+**Settings → Output → output ratio** (`1:1`, `4:3`, `16:10`, `16:9`, `21:9`)
+sets the shape of the surface you're projecting onto. It's a rig setting like
+keystone — stored in `settings.json`, not in any scene — so it survives scene
+loads rather than being reverted by each one.
+
+Widening it **reveals more at the sides** rather than cropping: `fov` stays the
+*vertical* field of view, and the horizontal angle grows to fill the extra
+width. Geometry keeps its proportions — a circle stays a circle.
+
+It reaches all three outputs so they agree:
+
+- **preview canvas** is reshaped to the ratio, keeping its pixel count roughly
+  constant so a wide viewport doesn't quietly cost more to draw
+- **output windows** letterbox the viewport into the window. Set the ratio to
+  match your screen and the bars disappear; leaving it at `1:1` on a widescreen
+  pillarboxes, which is correct rather than a bug
+- **the laser** letterboxes into the galvos' square scan field, because they
+  scan a square regardless. `1:1` is a laser's native shape — a wider ratio
+  trades vertical scan range for the wider image
+
+One thing this fixed on the way: `Camera.aspect` existed but was hardcoded to
+1.0, and `_clip_and_project` *multiplied* by it. That's backwards — it would
+have shown less world on a wider screen. Harmless while it was always 1.0
+(both conventions agree there), which is how it sat unnoticed.
 
 ## About panel and display preferences
 

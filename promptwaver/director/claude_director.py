@@ -77,9 +77,9 @@ Schema:
         "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
         "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
        {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
-        "unison":3,"detune":0.015,"sub":0.2,"level":0.4,"pan":0.0},
+        "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0},
        {"name":"bells","type":"pluck","waveform":"sine","note":72,
-        "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"pan":0.2},
+        "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
        {"name":"seq","type":"osc","waveform":"triangle","note":60,"chord":[0,4,7,11],
         "level":0.25,"arp":{"on":true,"mode":"up","rate":2.0,"decay":0.3},"pan":-0.2},
        {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1}
@@ -91,9 +91,22 @@ Schema:
 Soundscape guidance: ambient and calm. Voice types:
   "pad"   sustained drone chord, warmth from harmonic partials (params: chord, tone, detune)
   "osc"   unison multi-oscillator — thicker/simpler than pad, good for a lead or bass
-          texture (params: chord, unison 1-7, detune, sub 0-1 for an octave-down layer)
-  "pluck" sparse notes stepping through a scale (params: scale, rate, decay)
+          texture (params: chord, unison 1-7, detune, tone, sub 0-1 for an octave-down layer)
+  "pluck" sparse notes stepping through a scale (params: scale, rate, decay, tone)
   "noise" wind/air texture (params: tone)
+
+"tone" (0-1) is the brightness of EVERY voice type — it behaves like a filter
+cutoff, so it is the main control over whether a soundscape sounds warm and
+round or thin and buzzy. Use it deliberately:
+  0.1-0.3   dark, mellow, felt more than heard — deep basses, soft pads
+  0.4-0.6   warm but present — most sustained voices want to live here
+  0.7-1.0   bright, edgy, cutting — leads and bell-like accents only
+Default to the warm middle unless the scene really calls for edge. A whole
+soundscape at 0.9 is the classic mistake: it sounds cheap and fatiguing.
+
+For DEEP, HEAVY bass: an "osc" voice at note 24-36, tone 0.15-0.3, unison 2-3
+with detune 0.005-0.01, and "sub": 0.4-0.8 for the octave below. Give it a
+long attack (2-6s) so it swells rather than thuds.
 Any "pad" or "osc" voice can ARPEGGIATE instead of sustaining by adding
 "arp": {"on":true, "mode":"up|down|updown|random", "rate":<notes/beat>, "decay":<seconds>}
 — it then steps through that voice's "chord" one note at a time rather than
@@ -173,9 +186,9 @@ _SOUNDSCAPE_SCHEMA = """{
        "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
        "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
       {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
-       "unison":3,"detune":0.015,"sub":0.2,"level":0.4,"pan":0.0},
+       "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0},
       {"name":"bells","type":"pluck","waveform":"sine","note":72,
-       "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"pan":0.2},
+       "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
       {"name":"seq","type":"osc","waveform":"triangle","note":60,"chord":[0,4,7,11],
        "level":0.25,"arp":{"on":true,"mode":"up","rate":2.0,"decay":0.3},"pan":-0.2},
       {"name":"air","type":"noise","level":0.15,"tone":0.4,"pan":-0.1}
@@ -272,14 +285,20 @@ def _character_hints(warmth: float | None, energy: float | None) -> str:
     if warmth is not None:
         if warmth >= 0.7:
             lines.append(
-                "Tone: warm and mellow. Favour \"pad\"/\"sub\" voices over \"pluck\" "
-                "— at most one sparse pluck/bell accent, the rest sustained. Lower "
-                "tone values (0.2-0.5) and a longer attack (4-10s) for a slow, warm "
-                "build rather than an immediately-present sound.")
+                "Tone: warm and mellow. Favour \"pad\"/\"sub\"/\"osc\" voices over "
+                "\"pluck\" — at most one sparse pluck/bell accent, the rest "
+                "sustained. Set \"tone\" 0.15-0.4 on EVERY voice (it works on all "
+                "of them and is the difference between a round analogue warmth and "
+                "a thin digital buzz), and a longer attack (4-10s) for a slow build "
+                "rather than an immediately-present sound. Put real weight "
+                "underneath: a low \"osc\" or \"sub\" at note 24-36 with \"sub\" "
+                "0.4-0.8 mixed in.")
         elif warmth <= 0.3:
             lines.append(
                 "Tone: bright and crisp. Pluck/arp textures and higher tone values "
-                "(0.6-0.9) are welcome — present and percussive rather than soft.")
+                "(0.6-0.9) are welcome — present and percussive rather than soft. "
+                "Keep at least the lowest voice below 0.5 so the bottom end still "
+                "has body rather than buzzing.")
     if energy is not None:
         if energy >= 0.7:
             lines.append(

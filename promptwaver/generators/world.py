@@ -92,13 +92,14 @@ def _cone_cos(fov_deg: float, aspect: float) -> float:
     """cos of the half-angle of the smallest cone about the view axis that
     still contains the whole view frustum.
 
-    The camera projects with `f = 1/tan(fov/2)` and keeps `|x/z*f*aspect| <= 1`
+    The camera projects with `f = 1/tan(fov/2)` and keeps `|x/z*f/aspect| <= 1`
     and `|y/z*f| <= 1` — a rectangle. Its most distant direction is the corner,
-    at `tan(half) = tan(fov/2) * sqrt(1 + 1/aspect^2)`. Testing against
-    `fov/2` alone would cut the corners off the frame."""
+    at `tan(half) = tan(fov/2) * sqrt(1 + aspect^2)`. Testing against `fov/2`
+    alone would cut the corners off the frame — and a wide output ratio makes
+    that far worse, since the cone has to reach further sideways."""
     t = math.tan(math.radians(fov_deg) * 0.5)
     a = aspect if aspect else 1.0
-    corner = math.atan(t * math.sqrt(1.0 + 1.0 / (a * a)))
+    corner = math.atan(t * math.sqrt(1.0 + a * a))
     return math.cos(min(math.pi * 0.5 - 1e-6, corner * _CONE_MARGIN))
 
 

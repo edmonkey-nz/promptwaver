@@ -54,6 +54,11 @@ hintEl.textContent = `PromptWaver output ${outputId} — drag this window to you
 // engine state at all.
 const filters = {
   glow: 0, trail: 0, mirrorX: false, mirrorY: false,
+  // Output viewport ratio (Settings > Output), width/height. Comes from the
+  // engine rather than this window's own shape: normalised -1..1 space now
+  // represents a viewport of THIS ratio, so the letterbox below has to fit
+  // that shape into the window instead of assuming a square.
+  aspect: 1,
   flipX: localStorage.getItem(`pw_filter_flipx_${outputId}`) === "1",
   flipY: localStorage.getItem(`pw_filter_flipy_${outputId}`) === "1",
   // This window's OWN keystone (Settings > Output monitors) — independent
@@ -120,15 +125,20 @@ function paint(scene){
   cx.fillStyle = filters.trail > 0 ? `rgba(0,0,0,${(1 - filters.trail).toFixed(3)})` : "#000";
   cx.fillRect(0, 0, w, h);
   if (!scene || !scene.length) return;
-  // fit the normalized -1..1 scene into the window, preserving aspect ratio
-  // (letterboxed) rather than stretching to an arbitrary window shape
-  const s = Math.min(w, h) * 0.5;
+  // Fit the -1..1 viewport into the window letterboxed, never stretched — but
+  // the viewport is `filters.aspect` wide per unit tall, not necessarily
+  // square, so scale x and y separately. Set the ratio to match the screen and
+  // the bars disappear; leave it at 1:1 on a widescreen and you get pillarbox,
+  // which is correct rather than a bug.
+  const a = filters.aspect || 1;
+  let sx = w * 0.5, sy = sx / a;
+  if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
   const cx0 = w / 2, cy0 = h / 2;
   const map = (x, y) => {
     const [xk, yk] = applyKeystone(x, y, filters.keystoneH, filters.keystoneV);
-    return [cx0 + xk * s, cy0 - yk * s];
+    return [cx0 + xk * sx, cy0 - yk * sy];
   };
-  cx.lineWidth = Math.max(1, s / 260);
+  cx.lineWidth = Math.max(1, Math.min(sx, sy) / 260);
   cx.lineJoin = "round";
   // Single shadowBlur pass — see index.html's matching comment: a multi-pass
   // additive version (stroking 2-3x per stroke with shadowBlur set) made the
@@ -162,6 +172,7 @@ function connect(){
       filters.trail = s.trail ?? 0;
       filters.mirrorX = !!s.mirror_x;
       filters.mirrorY = !!s.mirror_y;
+      filters.aspect = s.output_aspect || 1;
       paint(m.preview);
     }
   };
