@@ -24,6 +24,8 @@ import os
 from aiohttp import web, WSMsgType
 
 _STATIC = os.path.join(os.path.dirname(__file__), "static")
+# promptwaver/web/server.py -> the repo root, where about.md and settings.json live
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def make_app(engine) -> web.Application:
@@ -51,6 +53,24 @@ def make_app(engine) -> web.Application:
         # client watching the same state/preview broadcast the control UI
         # does, so it works identically whether or not --laser is enabled.
         return _no_cache(web.FileResponse(os.path.join(_STATIC, "output.html")))
+
+    async def about(request):
+        """Serve about.md as text for the About modal to render.
+
+        Read per request rather than cached at startup so editing the file
+        shows up on the next open without a restart — it's a document, not a
+        hot path, and it's opened by hand a handful of times a session.
+        """
+        path = os.path.join(_PROJECT_ROOT, "about.md")
+        try:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+        except FileNotFoundError:
+            text = ("# About\n\nCreate `about.md` in the project root and it "
+                    "will be shown here.")
+        except Exception as e:
+            text = f"# About\n\nCould not read about.md: {e}"
+        return _no_cache(web.json_response({"text": text}))
 
     async def ws_handler(request):
         ws = web.WebSocketResponse()
@@ -114,6 +134,7 @@ def make_app(engine) -> web.Application:
 
     app.router.add_get("/", index)
     app.router.add_get("/output", output_page)
+    app.router.add_get("/about", about)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static/", _STATIC)
     app.on_startup.append(on_start)

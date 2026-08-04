@@ -885,6 +885,24 @@ The UI's director line reports the source of the last scene: *composed by Claude
   `camera.far` / `max_strokes`; currently changed by hand on every switch.
 - **Key storage**: move `settings.json` key to OS keyring before public release.
 
+## About panel and display preferences
+
+The **?** button beside the gear opens an About panel that renders
+[`about.md`](about.md) from the project root. It's read per request rather than
+cached at startup, so editing that file shows up on the next open with no
+restart — it's a document, not a hot path. The renderer is a small markdown
+subset (headings, lists, rules, inline code / bold / italic / links) that
+escapes the source *before* adding any markup, since the result goes through
+`innerHTML`.
+
+**Settings → Display → hide slider values** clears the numeric readouts beside
+every slider and knob, for a calmer surface on stage. On by default. It uses
+`visibility` rather than `display`, so nothing reflows as it toggles, and each
+value reappears while you hover or drag its control — hiding them outright
+makes fine adjustment guesswork. The preference lives in `localStorage` rather
+than `settings.json`, because it's a per-browser cosmetic choice and not
+something that changes what the hardware does.
+
 ## Development
 
 Opens straight into VSCode: `.vscode/settings.json` points the Python

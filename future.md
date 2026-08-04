@@ -118,9 +118,22 @@ Proposal: a named output profile in settings.json holding far/max_strokes multip
 profile switch in the UI — so a scene authored on the projector still reads correctly
 on the laser without editing the scene.
 
-9) Add 'about' modal - needs to open and just render a 'about.md' file. provide a 'about' button in header region.
+9) DONE - Add 'about' modal - needs to open and just render a 'about.md' file. provide a 'about' button in header region.
+   about.md added at the project root; served by a /about route (read per request, so
+   editing it shows up on the next open without a restart). "?" button beside the gear
+   in the header. Rendered by a small markdown subset in index.html — headings, lists,
+   rules, inline code/bold/italic/links — which escapes the source BEFORE adding any
+   markup, since the result goes through innerHTML. Hard-wrapped lines join into one
+   paragraph (or one bullet: a wrapped list item was breaking out of its <li> and
+   continuing as a paragraph underneath, caught by looking at the rendered page).
 
-10) slider values hidden - provide a checkbox in settings modal to hide all slider values (on/hidden by default)
+10) DONE - slider values hidden - provide a checkbox in settings modal to hide all slider
+    values (on/hidden by default)
+    Settings > Display > "hide slider values", default on, kept in localStorage rather
+    than settings.json — it is a per-browser cosmetic preference, not something that
+    changes what the hardware does. Uses visibility (not display) so nothing reflows as
+    it toggles, and the value reappears on hover/focus of its control, because hiding it
+    outright makes fine adjustment guesswork.
 
 11) build a audio EQ to paramater effector (eg bass levels affect speed or FoV)
 

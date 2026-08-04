@@ -2811,13 +2811,20 @@
     "max_strokes": 120,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 110,
-    "master": 0.75,
-    "distortion": 0.05,
+    "tempo": 110.0,
+    "master": 0.57,
+    "distortion": 0.0,
     "delay": {
       "time": 0.35,
       "feedback": 0.3,
@@ -2835,15 +2842,32 @@
           12,
           19
         ],
-        "level": 0.5,
-        "tone": 0.5,
+        "level": 0.41,
+        "tone": 0.22,
         "detune": 0.008,
-        "pan": 0,
+        "pan": -0.15,
         "env": {
           "attack": 2.5,
-          "decay": 1,
+          "decay": 5.16,
           "sustain": 0.8,
           "release": 3
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.3
         }
       },
       {
@@ -2857,21 +2881,31 @@
           10
         ],
         "unison": 2,
-        "detune": 0.012,
+        "detune": 0.004,
         "sub": 0.3,
-        "level": 0.35,
+        "level": 0.6,
         "pan": 0.15,
         "arp": {
           "on": true,
-          "mode": "up",
-          "rate": 4,
-          "decay": 0.4
-        }
+          "mode": "random",
+          "rate": 1.25,
+          "decay": 0.05
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "stamper_sequence",
         "type": "pluck",
-        "waveform": "triangle",
+        "waveform": "square",
         "note": 60,
         "scale": [
           0,
@@ -2881,21 +2915,50 @@
           10,
           12
         ],
-        "level": 0.25,
-        "rate": 2.2,
+        "level": 0.11,
+        "rate": 0.25,
         "decay": 0.6,
-        "pan": -0.2
+        "pan": -0.2,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "steam_air",
         "type": "noise",
-        "level": 0.18,
+        "level": 0.33,
         "tone": 0.35,
-        "pan": 0.1
+        "pan": 0.1,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.516
+    "swell_amount": 0.54,
+    "eq": {
+      "low": 6.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
-  "audio_link": 1.0,
+  "audio_link": 0.0,
   "midi_overrides": {}
 }
