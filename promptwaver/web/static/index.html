@@ -63,18 +63,34 @@
      makes fine adjustment guesswork. */
   body.hide-values .val,
   body.hide-values .kval{visibility:hidden}
-  body.hide-values .field:hover .val,
-  body.hide-values .field:focus-within .val,
   body.hide-values .knob:hover .kval,
   body.hide-values .knob:focus-within .kval,
   body.hide-values .vchannel:hover .val,
   body.hide-values .vchannel:focus-within .val{visibility:visible}
+  /* A row slider sits between a fixed-width label and a fixed-width readout,
+     and in the narrow side column that left it about 40px of track — not
+     enough to actually drag. With values hidden that readout is dead space,
+     so collapse it and give the width to the slider. On hover it returns as
+     an OVERLAY rather than re-entering the flow, so the track doesn't shrink
+     out from under the cursor at the moment you reach for it. */
+  body.hide-values .field{position:relative}
+  body.hide-values .field .val{flex-basis:0;overflow:hidden}
+  body.hide-values .field:hover .val,
+  body.hide-values .field:focus-within .val{
+    visibility:visible;position:absolute;right:0;top:50%;transform:translateY(-50%);
+    flex-basis:auto;overflow:visible;background:var(--panel);
+    padding:1px 0 1px 7px;pointer-events:none}
+  /* clear of the MIDI tag's gutter, so the two never sit on top of each other */
+  body.hide-values .field.has-midi:hover .val,
+  body.hide-values .field.has-midi:focus-within .val{right:34px}
   header .meta{font-family:var(--mono);color:var(--dim);font-size:12px}
   /* Page scrolls naturally (body, not per-panel scrollboxes) — a tall
      Library or several open accordions push the page down instead of being
      clipped inside a fixed-height box. */
   main{display:flex;flex-direction:column}
-  .toprow{display:grid;grid-template-columns:20% 65% 15%;gap:0;
+  /* Last column widened (15% -> 16.5%) at the middle column's expense: its
+     sliders sit in the narrowest space on the page and were barely draggable. */
+  .toprow{display:grid;grid-template-columns:20% 63.5% 16.5%;gap:0;
           min-height:720px;border-bottom:1px solid var(--line)}
   .bottomrow{display:grid;grid-template-columns:7fr 1fr;gap:0}
   @media(max-width:1100px){
@@ -104,8 +120,18 @@
   .group{display:flex;flex-direction:column;gap:10px}
   .group h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
             text-transform:uppercase;color:var(--dim)}
-  .field{display:flex;align-items:center;gap:10px;min-width:0}
+  .field{display:flex;align-items:center;gap:10px;min-width:0;position:relative}
   .field label{flex:0 0 84px;font-size:12px;color:var(--dim)}
+  /* A MIDI tag is status, not a row item — in the flow it was taking ~42px of
+     a row that only has ~200px to start with, which is most of why the side
+     column's sliders were too narrow to drag. Parked in a fixed gutter at the
+     right instead, so it costs the same space on every row and none of it
+     comes out of the track. Only rows that actually have one pay for it. */
+  .field.has-midi{padding-right:30px}
+  .field.has-midi .mlearn{position:absolute;right:0;top:50%;
+                          transform:translateY(-50%);padding:0}
+  /* The narrow side column can't afford the full label width. */
+  .sidecol .field label{flex-basis:72px}
   .field input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:3px}
   .field .val{flex:0 0 46px;text-align:right;font-family:var(--mono);
               font-size:12px;color:var(--cyan)}
@@ -210,6 +236,9 @@
     transition:transform .15s;color:var(--dim)}
   details.accordion[open] summary::after{transform:rotate(90deg)}
   details.accordion .accordion-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+  /* the side column has the least room on the page — don't spend 24px of it
+     on the accordion's own inset */
+  .sidecol details.accordion .accordion-body{padding:0 6px 12px}
   details.accordion + details.accordion{margin-top:0}
 
   .statusdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);
@@ -293,11 +322,9 @@
     <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
       <div class="field"><label>mode</label>
-        <select id="c-mode">
-          <option value="orbit">orbit</option>
-          <option value="drift">drift</option>
-          <option value="fly">fly</option>
-        </select></div>
+        <!-- populated from state.camera.modes — which modes work depends on
+             the scene; see Scene.camera_modes -->
+        <select id="c-mode"></select></div>
       <div class="field"><label>speed</label>
         <input type="range" id="c-speed" min="0" max="2" step="0.05" value="0.6">
         <span class="val" id="v-cspeed">0.60</span></div>
@@ -807,13 +834,29 @@ function paintState(s){
   // show camera controls for 3D scenes, motion controls for flat ones
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
   $("g-motion").style.display = s.scene_3d ? "none" : "flex";
-  // Camera slider VALUES now track the engine continuously via syncControls
+  // Camera slider VALUES track the engine continuously via syncControls
   // (below) rather than being copied across once per scene change — a MIDI
-  // knob moves them too, not just a scene load. Only the mode dropdown, which
-  // isn't a numeric control, still needs the once-per-scene copy.
-  if (s.camera && $("g-camera").dataset.scene !== s.scene) {
-    $("g-camera").dataset.scene = s.scene;
-    $("c-mode").value = s.camera.mode;
+  // knob moves them too, not just a scene load. The mode dropdown isn't a
+  // numeric control, so it's rebuilt whenever the scene's available modes
+  // change: a scene with no waypoints has no "path", and a bounded world has
+  // no working "fly" (see Scene.camera_modes).
+  if (s.camera) {
+    const fp = (s.camera.modes || []).join(",");
+    if ($("c-mode").dataset.modes !== fp) {
+      $("c-mode").dataset.modes = fp;
+      $("c-mode").innerHTML = (s.camera.modes || [])
+        .map(m => `<option value="${m}">${m}</option>`).join("");
+    }
+    // The engine is the source of truth for the current mode. If a scene is
+    // in a mode the dropdown doesn't offer, show it anyway rather than
+    // silently displaying something the camera isn't doing.
+    if (document.activeElement !== $("c-mode") && s.camera.mode) {
+      if (!(s.camera.modes || []).includes(s.camera.mode)) {
+        $("c-mode").insertAdjacentHTML("beforeend",
+          `<option value="${s.camera.mode}">${s.camera.mode}</option>`);
+      }
+      $("c-mode").value = s.camera.mode;
+    }
   }
   // max PPS: reflect the persisted ceiling unless the user is actively editing
   if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
@@ -1647,7 +1690,12 @@ function paintPreview(scene){
 function slider(id, key, label, fmt=(v)=>(+v).toFixed(2), midiKey, readPath){
   const s=$(id), v=$("v-"+label);
   s.oninput = () => { v.textContent = fmt(s.value); send({type:"set",key,value:+s.value}); };
-  if (midiKey !== null) v.insertAdjacentElement("afterend", learnBtn(midiKey === undefined ? key : midiKey));
+  if (midiKey !== null) {
+    v.insertAdjacentElement("afterend", learnBtn(midiKey === undefined ? key : midiKey));
+    // Marks the row as needing the tag gutter — see .field.has-midi. Set from
+    // here rather than with :has() so it doesn't depend on browser support.
+    s.closest(".field")?.classList.add("has-midi");
+  }
   registerCtl(readPath === undefined ? key : readPath, s, v, fmt);
 }
 
@@ -1761,6 +1809,10 @@ $("hue-override-val").oninput = () => {
 $("v-hueoverride").insertAdjacentElement("afterend", learnBtn("hue_value"));
 $("v-mlink").insertAdjacentElement("afterend", learnBtn("audio_link"));
 $("v-gmaster").insertAdjacentElement("afterend", learnBtn("master"));
+// same tag gutter as slider() gives its rows (g-master is a vertical channel,
+// not a .field, so it keeps the tag in the flow)
+$("hue-override-val").closest(".field")?.classList.add("has-midi");
+$("m-link").closest(".field")?.classList.add("has-midi");
 registerCtl("hue_value",  $("hue-override-val"), $("v-hueoverride"), v=>(+v).toFixed(2));
 registerCtl("audio_link", $("m-link"),           $("v-mlink"),       v=>(+v).toFixed(2));
 registerCtl("master",     $("g-master"),         $("v-gmaster"),     v=>(+v).toFixed(2));

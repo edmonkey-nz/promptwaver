@@ -778,7 +778,12 @@ class Engine:
         # it moves anything — otherwise the first knob touched after a scene
         # change snaps that parameter to wherever the hardware happens to be.
         self.midi.rearm_takeover()
-        self.scenes.set_scene(spec, crossfade=self.crossfade)
+        # A crossfade only advances as frames are rendered, and the loop skips
+        # rendering entirely while stopped — so a scene loaded before pressing
+        # Start would sit as a pending transition and look like it simply
+        # hadn't loaded. There's nothing on screen to fade from in that state
+        # anyway, so snap to it and let Start reveal the right scene.
+        self.scenes.set_scene(spec, crossfade=self.crossfade if self.active else 0.0)
         self._apply_modulation(spec)
         # per-scene PPS override if set, else the global hardware ceiling
         self.pps = min(spec.pps, self.director.max_pps) if spec.pps else self.director.max_pps
@@ -920,7 +925,11 @@ class Engine:
         if cam is not None:
             camera = {"mode": cam.mode, "speed": round(cam.base_speed, 2),
                       "orbit_radius": cam.orbit_radius, "fov": cam.fov,
-                      "far": cam.far, "max_strokes": cam.max_strokes}
+                      "far": cam.far, "max_strokes": cam.max_strokes,
+                      # The UI builds its mode dropdown from this rather than
+                      # a fixed list — see Scene.camera_modes for why the
+                      # available modes depend on the scene.
+                      "modes": self.scenes.current.camera_modes()}
         return {
             "version": __import__("promptwaver").__version__,
             "active": self.active,

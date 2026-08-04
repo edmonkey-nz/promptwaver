@@ -85,6 +85,34 @@ class Scene:
             from .scene3d import make_camera
             self.camera = make_camera(spec.camera)
 
+    def camera_modes(self) -> list[str]:
+        """Which camera modes actually work for this scene.
+
+        Not every mode suits every scene, and offering one that can't work is
+        worse than hiding it:
+
+        `fly` advances the camera along +Z and WRAPS the world against the
+        generator's `field_depth`, for an endless corridor of a field. A
+        bounded generator has nothing to wrap — `World` sets 1000.0, meaning
+        "effectively no wrap" — so flying just leaves the composed scene
+        behind, while costing more to render than the modes that suit it
+        (it's excluded from the stroke-budget-bounded transform for the same
+        reason: its camera position is a travelled distance, not a place).
+
+        `path` needs a route to walk. Without waypoints it silently falls
+        back to drift, so listing it would be a control that does nothing.
+        """
+        modes = ["orbit", "drift"]
+        if self.is_3d:
+            fd = min((getattr(g, "field_depth", 1e9) for g, _ in self._gens
+                      if getattr(g, "is_3d", False)), default=1e9)
+            if fd < 500:
+                modes.append("fly")
+        wp = (self.spec.camera or {}).get("waypoints")
+        if wp and len(wp) >= 3:
+            modes.append("path")
+        return modes
+
     def _resolve(self, generator, base_params, matrix):
         p = dict(generator.defaults)
         p.update(base_params)
