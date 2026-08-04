@@ -223,7 +223,42 @@ SCENE_SIZE = {
               "travel distance between features — err on the side of more "
               "empty space and fewer, more spread-out landmarks rather than "
               "cramming more objects into the same small volume."),
+    # Unlike the tiers above, this one raises object COUNT as well as extent,
+    # and pairs the layout with a travelling camera. Those two go together:
+    # a big world with few objects is the worst case for a laser (measured —
+    # a drifting camera over route-shaped geometry got 1 stroke a frame and
+    # 89% dark frames), and route-following geometry only reads from a camera
+    # that follows the same route.
+    "massive": (
+        "Scale: MASSIVE — a place to travel through for minutes, not a tableau.\n"
+        "This OVERRIDES the object-count guidance above: author 120-220 nodes, "
+        "not 6-14.\n\n"
+        "Compose it as a long CLOSED ROUTE through the environment, and place "
+        "the geometry ALONG that route rather than scattered through a volume. "
+        "Spread it over roughly -40..40 on each axis.\n\n"
+        "Keep the node count affordable by REUSING geometry: author 6-10 named "
+        "shapes in \"defs\" and instance them many times at varied positions, "
+        "scales, rotations and colours. Author 8 shapes and place them 200 "
+        "times — never 200 distinct shapes.\n\n"
+        "Set the camera to travel that same route:\n"
+        "  \"camera\": {\"mode\":\"path\",\n"
+        "              \"waypoints\": [[x,y,z], ... 8-14 points forming a loop "
+        "that comes back around to where it started, so it can be walked "
+        "indefinitely. Do NOT repeat the first point at the end — the loop is "
+        "closed automatically],\n"
+        "              \"speed\":0.5, \"fov\":62, \"near\":0.4, \"far\":40,\n"
+        "              \"max_strokes\":120, \"depth\":{\"mode\":\"cull\"}}\n\n"
+        "Keep objects within about 3-8 units either side of the route, on both "
+        "sides and overhead, so something is always in frame as the camera "
+        "moves. A stretch of route with nothing beside it is a dark laser."),
 }
+
+# Token floor per size. `massive` asks for an order of magnitude more nodes
+# than the other tiers, and a node is ~24 tokens of JSON — 200 of them plus a
+# def library, soundscape and camera does not fit in the effort tier's normal
+# budget, and overflowing it means a truncated response and a silent fall back
+# to the local director. Unused headroom costs nothing but latency.
+SIZE_MIN_TOKENS = {"massive": 32000}
 
 # "Character" sliders (Generate modal), 0..1 centered at 0.5. warmth/energy
 # are soft prompt hints — like EFFORT/SCENE_SIZE, they bias choices Claude
@@ -485,12 +520,13 @@ class SceneDirector:
         # completion (it doesn't know the final length in advance), but a
         # streaming call reports tokens as they're generated, which we compare
         # against this effort tier's token budget to drive an approximate bar.
-        budget_chars = tier["max_tokens"] * 4
+        max_tokens = max(tier["max_tokens"], SIZE_MIN_TOKENS.get(size, 0))
+        budget_chars = max_tokens * 4
         try:
             text, stop_reason = self._stream_or_call(content, budget_chars)
             if stop_reason == "max_tokens":
                 self.last_error = ("response truncated — try a lower effort or raise "
-                                   f"PROMPTWAVER_MAX_TOKENS (tier budget {tier['max_tokens']})")
+                                   f"PROMPTWAVER_MAX_TOKENS (budget {max_tokens})")
                 print(f"[promptwaver] director: {self.last_error}")
                 return None, False
             data = json.loads(_extract_json(text))

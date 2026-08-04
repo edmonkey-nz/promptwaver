@@ -117,3 +117,11 @@ Proposal: a named output profile in settings.json holding far/max_strokes multip
 (or absolute overrides) applied on top of whatever the scene specifies, with a
 profile switch in the UI — so a scene authored on the projector still reads correctly
 on the laser without editing the scene.
+
+9) Add 'about' modal - needs to open and just render a 'about.md' file. provide a 'about' button in header region.
+
+10) slider values hidden - provide a checkbox in settings modal to hide all slider values (on/hidden by default)
+
+11) build a audio EQ to paramater effector (eg bass levels affect speed or FoV)
+
+12) build a instrument effector to a scenes shape (eg a 'base_drone' output (saw,adsr) affect a scale/rotate/positon of a shape ) - would need a UI element of dropdowns of  instrument and scenes shapes..

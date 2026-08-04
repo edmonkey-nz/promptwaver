@@ -44,6 +44,159 @@ class DepthCue:
         return c
 
 
+class PathSpline:
+    """A closed Catmull-Rom spline through waypoints, parameterised by ARC
+    LENGTH rather than by the raw spline parameter.
+
+    Arc length matters: a Catmull-Rom segment is not traversed at uniform
+    speed for uniform `t`, so parameterising by `t` makes the camera visibly
+    accelerate wherever the author happened to space waypoints further apart.
+    That reads as the path being wrong, not the spacing being uneven. The
+    table is built once — a scene's waypoints don't change at runtime.
+
+    Closed via wraparound control points, so position AND tangent are
+    continuous across the seam. Merely repeating the first waypoint at the
+    end joins the position but not the heading, which shows up as a flick of
+    the view once per lap — the one artefact a looping journey can't hide.
+
+    The camera aims at a point a fixed arc length further along the path
+    (`Camera.lookahead`) rather than down the straight tangent, so the view
+    leads into turns instead of swinging wide of them. How far ahead is a
+    dial between walking and orbiting, and how much it matters depends
+    entirely on how the scene's geometry is arranged. Two measurements,
+    both against a 110-stroke budget:
+
+      A 13-node room authored for a drifting camera (geometry in the middle,
+      path wandering through it) — strokes on screen:
+
+        lookahead   2 -> 20    4 -> 30    8 -> 49    11 -> 76    14 -> 102
+
+      A 265-node circuit with geometry distributed ALONG the path, which is
+      what a journey scene actually looks like:
+
+        every lookahead from 2 to 45 -> 110 (saturated), 0% empty frames
+
+    So coverage is a property of the scene, not of the camera: in a scene
+    built to be walked through, "look where you're going" is perfectly full
+    and the setting is purely about feel. It only becomes a survival
+    question when a path is run through a scene composed for drift, where a
+    short lookahead stares into the empty middle of the room.
+
+    The same pairing runs the other way — drift on that 265-node circuit
+    manages 1 stroke a frame and 91% empty, because it orbits the middle of
+    a ring. Camera mode and geometry layout have to be chosen together.
+    """
+
+    def __init__(self, points, samples_per_seg: int = 32):
+        p = np.asarray(points, np.float32).reshape(-1, 3)
+        # Drop coincident neighbours, including a final point repeating the
+        # first. The loop is closed by wraparound indexing, so an explicitly
+        # repeated endpoint is a duplicate control point: it makes a
+        # zero-length segment, and the tangent through a doubled point is
+        # ill-defined. Authors close loops by hand all the time (the director
+        # does), so this has to be tolerated rather than assumed away.
+        keep = [0]
+        for i in range(1, len(p)):
+            if float(np.linalg.norm(p[i] - p[keep[-1]])) > 1e-4:
+                keep.append(i)
+        if len(keep) > 2 and float(np.linalg.norm(p[keep[-1]] - p[keep[0]])) <= 1e-4:
+            keep.pop()
+        p = p[keep]
+        self.points = p
+        self.n = len(p)
+        # Sample every segment, accumulating chord length, and keep a global
+        # parameter u = segment + local_t alongside it. u is continuous
+        # across segment boundaries (i + 1.0 is the same place as (i+1) +
+        # 0.0), which is what makes it safe to interpolate across them.
+        cum = [0.0]
+        us = [0.0]
+        prev = self._eval(0, 0.0)[0]
+        for i in range(self.n):
+            for k in range(1, samples_per_seg + 1):
+                t = k / samples_per_seg
+                pos = self._eval(i, t)[0]
+                d = float(np.linalg.norm(pos - prev))
+                cum.append(cum[-1] + d)
+                us.append(i + t)
+                prev = pos
+        self._cum = np.asarray(cum, np.float64)
+        self._us = np.asarray(us, np.float64)
+        self.length = float(self._cum[-1])
+
+    def _eval(self, i: int, t: float):
+        """Position and tangent on segment `i` at local parameter `t`."""
+        n = self.n
+        p0 = self.points[(i - 1) % n]
+        p1 = self.points[i % n]
+        p2 = self.points[(i + 1) % n]
+        p3 = self.points[(i + 2) % n]
+        t2 = t * t
+        t3 = t2 * t
+        a = 2.0 * p1
+        b = -p0 + p2
+        c = 2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3
+        d = -p0 + 3.0 * p1 - 3.0 * p2 + p3
+        pos = 0.5 * (a + b * t + c * t2 + d * t3)
+        tan = 0.5 * (b + 2.0 * c * t + 3.0 * d * t2)
+        return pos, tan
+
+    def at(self, s: float):
+        """(position, unit tangent, u) at arc-length `s`, wrapping the loop."""
+        if self.length <= 1e-6:
+            return self.points[0].copy(), np.array([0, 0, 1], np.float32), 0.0
+        s = s % self.length
+        j = int(np.searchsorted(self._cum, s, side="right"))
+        j = min(max(j, 1), len(self._cum) - 1)
+        c0, c1 = self._cum[j - 1], self._cum[j]
+        frac = 0.0 if c1 - c0 <= 1e-9 else (s - c0) / (c1 - c0)
+        u = self._us[j - 1] + (self._us[j] - self._us[j - 1]) * frac
+        i = int(u) % self.n
+        pos, tan = self._eval(i, u - int(u))
+        ln = float(np.linalg.norm(tan))
+        tan = tan / ln if ln > 1e-9 else np.array([0, 0, 1], np.float32)
+        return pos, tan, u
+
+
+def _basis(fwd):
+    """A stable right/up basis around a forward vector. Falls back to a
+    different world-up when the path is heading straight up or down, where
+    the usual cross product degenerates."""
+    world_up = np.array([0.0, 1.0, 0.0], np.float32)
+    if abs(float(fwd @ world_up)) > 0.999:
+        world_up = np.array([0.0, 0.0, 1.0], np.float32)
+    right = np.cross(fwd, world_up)
+    rn = float(np.linalg.norm(right))
+    right = right / rn if rn > 1e-9 else np.array([1.0, 0.0, 0.0], np.float32)
+    return right, np.cross(right, fwd)
+
+
+def _drift_axis(base: float, p: float, f2: float, phase: float, wander: float) -> float:
+    """One drift axis: the original sinusoid, optionally roughened.
+
+    At `wander` 0 this returns `base` untouched, so every scene saved before
+    this existed keeps exactly the motion it was tuned with — the drift
+    rates are part of how those scenes look, not an implementation detail to
+    quietly improve. Above 0 it mixes in a second, much slower component at
+    an unrelated rate: the three original rates (0.11/0.09/0.13) are close
+    enough to a simple ratio that the wander visibly retraces itself within a
+    minute or two, which matters a lot more on something left running than on
+    something glanced at. Renormalised so raising `wander` widens the path
+    without also inflating its radius.
+    """
+    if wander <= 0.0:
+        return base
+    return (base + wander * 0.6 * math.sin(p * f2 + phase)) / (1.0 + wander * 0.6)
+
+
+def _wander(t: float, phase, f0: float, f1: float) -> float:
+    """Two sinusoids at deliberately unrelated rates, summed to roughly
+    [-1, 1]. Their combined period is long enough not to read as a loop —
+    a single sinusoid (or two at a simple ratio) is recognisably periodic
+    within a minute or so, which is exactly the length of thing this has to
+    stay interesting across."""
+    return (math.sin(t * f0 + phase[0]) + 0.6 * math.sin(t * f1 + phase[1])) / 1.6
+
+
 class Camera:
     """A drifting fly-through camera. Position advances along +Z; gentle yaw/pitch
     sway gives the floating feel. `speed` is read from the modulation matrix each
@@ -52,7 +205,8 @@ class Camera:
     def __init__(self, *, fov=60.0, near=0.4, far=14.0, speed=0.6,
                  height=1.0, sway=0.12, depth: DepthCue | None = None,
                  max_strokes=90, aspect=1.0, mode="fly",
-                 target=(0.0, 0.0, 0.0), orbit_radius=9.0, orbit_height=1.5):
+                 target=(0.0, 0.0, 0.0), orbit_radius=9.0, orbit_height=1.5,
+                 waypoints=None, look_at=None, lookahead=3.0, seed=0, wander=0.0):
         self.fov = fov
         self.near = near
         self.far = far
@@ -62,7 +216,7 @@ class Camera:
         self.depth = depth or DepthCue()
         self.max_strokes = max_strokes
         self.aspect = aspect
-        self.mode = mode                       # "fly" | "orbit" | "drift"
+        self.mode = mode                       # "fly" | "orbit" | "drift" | "path"
         self.target = np.asarray(target, np.float32)
         self.orbit_radius = orbit_radius
         self.orbit_height = orbit_height
@@ -73,6 +227,42 @@ class Camera:
         self._angle = 0.0
         self._drift_t = 0.0                    # integrated phase (drift mode)
 
+        # 0 keeps drift bit-identical to how it has always behaved; see
+        # _drift_axis. Path mode's own sway is separate and always on.
+        self.wander = float(wander)
+
+        # --- path mode ---
+        self.look_at = list(look_at) if look_at else None
+        self.path = None
+        self._path_s = 0.0                     # arc length travelled
+        self.lookahead = float(lookahead) if lookahead is not None else None
+        if waypoints and len(waypoints) >= 3:
+            self.path = PathSpline(waypoints)
+            if self.lookahead is None:
+                # A fraction of the LAP rather than an absolute distance,
+                # because scene scale varies hugely — 4 units is a third of
+                # the way across a small room and two paces in a castle.
+                # A tenth reads as walking, which is what this mode is for.
+                # Raise it toward 0.25 for a scene whose geometry sits in the
+                # middle rather than along the path (see the class docstring);
+                # push it to 0.5 and you are looking straight across the
+                # circuit, which is orbit with extra steps.
+                self.lookahead = self.path.length * 0.10
+        else:
+            if self.lookahead is None:
+                self.lookahead = 3.0
+            if self.mode == "path":
+                # A path scene with no usable waypoints would otherwise
+                # render from wherever `pos` was initialised and never move —
+                # silently broken. Drift still shows the scene.
+                print("[promptwaver] camera mode 'path' needs >=3 waypoints "
+                      "— falling back to drift")
+                self.mode = "drift"
+        # Per-camera phase offsets so two scenes never wander in step. Fixed
+        # `seed` (not time) keeps a saved journey reproducible frame for frame.
+        rng = np.random.default_rng(int(seed) & 0xFFFFFFFF)
+        self._phase = rng.uniform(0.0, 2 * math.pi, 8).tolist()
+
     def update(self, t: float, dt: float, matrix=None):
         speed = self.base_speed
         if matrix is not None:
@@ -81,6 +271,56 @@ class Camera:
             self.z += speed * dt
             self._yaw = math.sin(t * 0.11) * self.sway
             self._pitch = math.sin(t * 0.07 + 1.0) * self.sway * 0.4
+        elif self.mode == "path" and self.path is not None:
+            # Integrate DISTANCE from speed, for the same reason drift
+            # integrates phase (see below): a modulation route driving
+            # `camera.speed` changes it every frame, and multiplying raw `t`
+            # by a moving speed jumps position discontinuously. Integrating
+            # means audio changes the rate of travel, never the place.
+            #
+            # Because it's arc length into a closed loop, this also needs no
+            # end handling at all — `PathSpline.at` wraps, so the walk simply
+            # continues round the circuit.
+            self._path_s += speed * dt
+            on_path, fwd, u = self.path.at(self._path_s)
+            right, up = _basis(fwd)
+
+            # Sway rides on TIME, not on distance travelled: it's the float of
+            # the body, not the walk. Tied to distance it would freeze solid
+            # whenever audio drove the speed to zero, which is exactly when a
+            # held, still frame most wants to keep breathing.
+            lat = _wander(t, self._phase[0:2], 0.0731, 0.1373)
+            ver = _wander(t, self._phase[2:4], 0.0587, 0.1094)
+            self.pos = (on_path + right * (lat * self.sway * 3.0)
+                        + up * (ver * self.sway * 1.5))
+
+            # Aim at a point further ALONG THE PATH, not along the straight
+            # tangent. On a closed circuit this is what decides whether
+            # anything is on screen at all: a short lookahead stares into
+            # whatever is directly in front (measured at ~14 strokes of a
+            # 110 budget, i.e. a nearly dark beam), while a lookahead of
+            # roughly a third of a lap aims across the space and keeps the
+            # scene's bulk in the cone (~100 strokes). Following the curve
+            # also means the view leads into turns instead of swinging wide
+            # of them.
+            ahead = self.path.at(self._path_s + self.lookahead)[0]
+            tgt = ahead
+            if self.look_at:
+                i = int(u) % self.path.n
+                frac = u - int(u)
+                a = self.look_at[i] if i < len(self.look_at) else None
+                b_i = (i + 1) % self.path.n
+                b = self.look_at[b_i] if b_i < len(self.look_at) else None
+                ta = np.asarray(a, np.float32) if a is not None else ahead
+                tb = np.asarray(b, np.float32) if b is not None else ahead
+                tgt = ta + (tb - ta) * frac
+            # A little independent wobble on the aim, so the head turns
+            # slightly rather than the whole view sliding rigidly sideways.
+            self.target = (tgt
+                           + right * (_wander(t, self._phase[4:6], 0.0431, 0.0917)
+                                      * self.sway * 1.2)
+                           + up * (_wander(t, self._phase[6:8], 0.0367, 0.0813)
+                                   * self.sway * 0.6))
         elif self.mode == "orbit":
             self._angle += speed * dt * 0.15
             r = self.orbit_radius
@@ -99,10 +339,12 @@ class Camera:
             self._drift_t += speed * dt
             p = self._drift_t
             r = self.orbit_radius
+            w = self.wander
             self.pos = self.target + np.array([
-                math.sin(p * 0.11) * r,
-                self.orbit_height + math.sin(p * 0.09) * r * 0.4,
-                math.cos(p * 0.13) * r], np.float32)
+                _drift_axis(math.sin(p * 0.11), p, 0.043, self._phase[0], w) * r,
+                self.orbit_height
+                + _drift_axis(math.sin(p * 0.09), p, 0.037, self._phase[1], w) * r * 0.4,
+                _drift_axis(math.cos(p * 0.13), p, 0.051, self._phase[2], w) * r], np.float32)
 
     def _focal(self):
         return 1.0 / math.tan(math.radians(self.fov) * 0.5)
@@ -379,4 +621,13 @@ def make_camera(spec: dict) -> Camera:
         orbit_height=spec.get("orbit_height", 1.5),
         max_strokes=spec.get("max_strokes", 90),
         depth=depth,
+        # Path mode (mode="path"): a closed circuit of >=3 waypoints. `look_at`
+        # is a parallel list whose entries are either a point to watch while
+        # passing that waypoint, or null to just look where you're going.
+        waypoints=spec.get("waypoints"),
+        look_at=spec.get("look_at"),
+        # None (the default) means "a quarter of the lap" — see Camera.__init__
+        lookahead=spec.get("lookahead"),
+        wander=spec.get("wander", 0.0),
+        seed=spec.get("seed", 0),
     )
