@@ -72,6 +72,19 @@ def make_app(engine) -> web.Application:
             text = f"# About\n\nCould not read about.md: {e}"
         return _no_cache(web.json_response({"text": text}))
 
+    async def welcome(request):
+        """Serve welcome.md as text for the Welcome modal to render."""
+        path = os.path.join(_PROJECT_ROOT, "welcome.md")
+        try:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+        except FileNotFoundError:
+            text = ("# Welcome to PromptWaver\n\nCreate `welcome.md` in the project root "
+                    "and it will be shown here.")
+        except Exception as e:
+            text = f"# Welcome\n\nCould not read welcome.md: {e}"
+        return _no_cache(web.json_response({"text": text}))
+
     async def ws_handler(request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
@@ -135,6 +148,7 @@ def make_app(engine) -> web.Application:
     app.router.add_get("/", index)
     app.router.add_get("/output", output_page)
     app.router.add_get("/about", about)
+    app.router.add_get("/welcome", welcome)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static/", _STATIC)
     app.on_startup.append(on_start)

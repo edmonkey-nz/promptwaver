@@ -257,3 +257,10 @@ Before building, worth confirming: (i) does the second controller allow setting 
 MIDI channel? If it is stuck on ch 1, go the port-based route instead. (ii) do both
 show up in `python run.py --list-midi` when plugged in — some USB hubs are unreliable
 with class-compliant MIDI devices.
+
+
+19) on loading the first time: a)don't default to any scene, b)create a modal with add some basic instructions (help.md) over the middle of the UI with a 'Click to begin' button that closes the modal. b) set the crossfade value = 0.
+
+20) generate scene modal - this needs some work. stage one when the modal appears shoudl be a choice " create new scene' or 'update exisiting audio for current scene'. from there show the relevant fields for the chosen task.  if the 'generate scene' button is clicked, the modal UI needs to be made inactive, until its finished generating. dim out the modal fields and text, and overlay the loading throbber over the modal in a bigger and more obvious way, with the progress bar. so people arent confused as to whats happening. 
+
+21) move the 'scene settings' buttons into a new column in the last row, bewtween the scene list and the 'scene generation' column. 

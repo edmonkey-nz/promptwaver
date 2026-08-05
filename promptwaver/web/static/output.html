@@ -58,6 +58,8 @@ hintEl.textContent = `PromptWaver output ${outputId} — drag this window to you
 // engine state at all.
 const filters = {
   glow: 0, trail: 0, mirrorX: false, mirrorY: false,
+  // Post-processing effects
+  kaleidoscopeSegments: 0,  // 0=off, 3-12=number of radial segments
   // Output viewport ratio (Settings > Output), width/height. Comes from the
   // engine rather than this window's own shape: normalised -1..1 space now
   // represents a viewport of THIS ratio, so the letterbox below has to fit
@@ -122,6 +124,44 @@ function applyFlip(ctx, canvas, flipX, flipY){
   ctx.restore();
 }
 
+// Kaleidoscope: wedge-based radial symmetry with alternating mirrors
+function applyKaleidoscope(ctx, canvas, segments){
+  if (segments < 3) return;
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2;
+  const radius = Math.sqrt(cx * cx + cy * cy) * 1.5;
+
+  ctx.save();
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = "source-over";
+
+  const angleStep = (Math.PI * 2) / segments;
+  for (let i = 0; i < segments; i++) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angleStep * i);
+
+    // Create a triangular clipping region (wedge/pie slice)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(radius * Math.cos(0), radius * Math.sin(0));
+    ctx.arc(0, 0, radius, 0, angleStep, false);
+    ctx.lineTo(0, 0);
+    ctx.closePath();
+    ctx.clip();
+
+    // Alternate between normal and horizontally-flipped versions
+    if (i % 2 === 1) {
+      ctx.scale(-1, 1);
+    }
+
+    ctx.translate(-cx, -cy);
+    ctx.drawImage(canvas, 0, 0, w, h);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 function paint(scene){
   const w = cv.width, h = cv.height;
   cx.shadowBlur = 0;   // never let a glow from the previous frame bleed into the clear/fade below
@@ -158,6 +198,7 @@ function paint(scene){
     st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
     cx.stroke();
   }
+  if (filters.kaleidoscopeSegments > 2) applyKaleidoscope(cx, cv, Math.round(filters.kaleidoscopeSegments));
   if (filters.mirrorX || filters.mirrorY) applyMirror(cx, cv, filters.mirrorX, filters.mirrorY);
   if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);
 }
@@ -179,6 +220,7 @@ function connect(){
       filters.trail = s.trail ?? 0;
       filters.mirrorX = !!s.mirror_x;
       filters.mirrorY = !!s.mirror_y;
+      filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
       filters.aspect = s.output_aspect || 1;
       paint(m.preview);
     } else if (m.type === "show_title") {

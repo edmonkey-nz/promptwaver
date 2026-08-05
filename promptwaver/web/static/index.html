@@ -32,7 +32,7 @@
     padding:6vh 24px;overflow-y:auto}
   .modal-backdrop.open{display:flex}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;
-    max-width:640px;width:100%;padding:20px;display:flex;flex-direction:column;gap:14px}
+    max-width:832px;width:100%;padding:40px;display:flex;flex-direction:column;gap:24px}
   .modal-head{display:flex;align-items:center;justify-content:space-between}
   .modal-head h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.1em;
     text-transform:uppercase;color:var(--ink)}
@@ -42,15 +42,15 @@
 
   /* About — prose, so it gets its own measure and rhythm rather than the
      dense control-surface spacing the rest of the modals use. */
-  .about-body{font-size:13px;line-height:1.65;color:var(--dim);max-width:62ch}
+  .about-body{font-size:13px;line-height:1.7;color:var(--dim);width:100%}
   .about-body h1{font-size:17px;color:var(--ink);font-weight:600;
                  letter-spacing:.02em;margin:2px 0 10px}
   .about-body h2{font-size:11px;color:var(--cyan);font-weight:600;
-                 letter-spacing:.14em;text-transform:uppercase;margin:22px 0 8px}
-  .about-body h3{font-size:13px;color:var(--ink);font-weight:600;margin:16px 0 6px}
-  .about-body p{margin:9px 0}
-  .about-body ul{margin:9px 0;padding-left:20px}
-  .about-body li{margin:5px 0}
+                 letter-spacing:.14em;text-transform:uppercase;margin:20px 0 12px}
+  .about-body h3{font-size:13px;color:var(--ink);font-weight:600;margin:18px 0 10px}
+  .about-body p{margin:12px 0;line-height:1.7}
+  .about-body ul{margin:12px 0;padding-left:24px}
+  .about-body li{margin:8px 0;line-height:1.7}
   .about-body strong{color:var(--ink);font-weight:600}
   .about-body a{color:var(--cyan)}
   .about-body code{font-family:var(--mono);font-size:12px;background:var(--panel2);
@@ -92,7 +92,7 @@
      sliders sit in the narrowest space on the page and were barely draggable. */
   .toprow{display:grid;grid-template-columns:20% 63.5% 16.5%;gap:0;
           min-height:720px;border-bottom:1px solid var(--line)}
-  .bottomrow{display:grid;grid-template-columns:7fr 1fr;gap:0}
+  .bottomrow{display:grid;grid-template-columns:1fr 1fr;gap:0}
   @media(max-width:1100px){
     .toprow{grid-template-columns:1fr;min-height:0}
     .bottomrow{grid-template-columns:1fr}
@@ -136,17 +136,17 @@
   .field .val{flex:0 0 46px;text-align:right;font-family:var(--mono);
               font-size:12px;color:var(--cyan)}
   .row{display:flex;gap:8px}
-  label.flabel{font-size:11px;color:var(--dim);letter-spacing:.04em}
-  .char-block{display:flex;flex-direction:column;gap:10px}
+  label.flabel{font-size:11px;color:var(--dim);letter-spacing:.04em;margin-top:6px;margin-bottom:8px;display:block}
+  .char-block{display:flex;flex-direction:column;gap:16px;margin-top:8px}
   .char-row{display:flex;align-items:center;gap:8px}
   .char-row .char-lbl{font-size:11px;color:var(--dim);flex:0 0 60px;
     text-transform:uppercase;letter-spacing:.03em}
   .char-row .char-lbl.right{text-align:right}
   .char-row input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:3px}
   input[type=text],textarea{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);
-       color:var(--ink);border-radius:8px;padding:8px 10px;font-size:13px;
+       color:var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6;
        font-family:var(--sans);resize:vertical}
-  textarea{width:100%;min-height:64px;line-height:1.4}
+  textarea{width:100%;min-height:80px;line-height:1.6}
   input[type=text]:focus,textarea:focus{outline:none;border-color:var(--cyan)}
   select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
          border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono);
@@ -202,6 +202,10 @@
   .mlearn.learning{opacity:1;color:var(--amber);animation:mpulse 1s infinite}
   @keyframes mpulse{0%,100%{opacity:1}50%{opacity:.25}}
   @media (prefers-reduced-motion: reduce){ .mlearn.learning{animation:none} }
+  @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .voice.fade-out{animation:fadeOut 0.5s ease-out forwards}
+  .voice.fade-in{animation:fadeIn 0.5s ease-in forwards}
   .midi-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px}
   .midi-row select{font-size:11px;padding:4px 6px;max-width:100%;flex:1;min-width:120px}
   .mdot{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block;
@@ -318,6 +322,7 @@
     <div class="readouts">
       <span>fps <b id="r-fps">—</b></span>
     </div>
+    <div id="scene-name" style="text-align:left;font-size:13px;font-weight:700;:var(--dim);margin-top:8px;font-family:var(--mono)"></div>
 
     <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
@@ -360,6 +365,9 @@
         <label style="display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="mf-mirror-y"> mirror y</label>
       </div>
+      <div class="field"><label>kaleidoscope</label>
+        <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
+        <span class="val" id="v-mfkaleidoscope">off</span></div>
     </div>
 
     <div class="group" id="g-motion" style="width:100%">
@@ -378,9 +386,16 @@
   </section>
 
   <section class="soundcol">
+    <details class="accordion" id="acc-library" open>
+      <summary>Scene library</summary>
+      <div class="accordion-body">
+        <div class="lib" id="lib" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </details>
     <div class="synthblock" id="synthblock">
-      <div class="synthhead">
-        <h2>Soundscape</h2>
+      <div class="synthhead" style="display:flex;align-items:center;justify-content:space-between">
+        <h2 style="margin:0">Soundscape</h2>
+        <button id="soundscape-save-icon" title="Save Soundscape settings" style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center">💾</button>
       </div>
       <div class="synthglobals" id="synthglobals"></div>
       <div class="voices" id="voices"></div>
@@ -415,7 +430,9 @@
           <button id="pin-midi" title="Freeze this scene's voice knobs to its voice names">Pin MIDI map</button>
         </div>
       </div>
-
+<details class="accordion" id="acc-faders" closed>
+      <summary>Faders</summary>
+      <div class="accordion-body">
       <!-- Always visible (not display:none-toggled) so a scene switch
            starting/ending doesn't pop this in and out of the layout,
            shoving the crossfade/audio-fade fields below it around. Shows
@@ -429,8 +446,8 @@
       </div>
 
       <div class="field"><label>crossfade</label>
-        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="2">
-        <span class="val" id="v-xf">2.0</span></div>
+        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="0">
+        <span class="val" id="v-xf">0.0</span></div>
       <div class="field"><label>audio fade</label>
         <input type="range" id="s-afade" min="0" max="16" step="0.5" value="2">
         <span class="val" id="v-safade">2.0</span></div>
@@ -448,6 +465,8 @@
         <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
         <span class="val" id="v-hueoverride">0.50</span></div>
     </div>
+    </div>
+    </details>
  <details class="accordion" id="acc-modulation" closed>
       <summary>Modulation</summary>
       <div class="accordion-body">
@@ -460,7 +479,7 @@
         <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
     </details>
-    <details class="accordion" id="acc-shape-mod" closed>
+    <details class="accordion" id="acc-shape-mod" open>
       <summary>Shape Modulation</summary>
       <div class="accordion-body">
         <div class="hint">Route instrument parameters to shape transforms (scale/rotate/position)</div>
@@ -468,12 +487,15 @@
         <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
       </div>
     </details>
+
     <div class="group">
       <h2>Scene settings</h2>
-      <button id="save-soundscape">Save Soundscape settings</button>
-      <button id="save-camera">Save Camera settings</button>
-      <button id="save-all-scene">Save all scene settings</button>
-      <button id="save-as-open">Save as…</button>
+      <button class="go" id="gen-open" style="width:100%;margin-bottom:8px">Generate scene…</button>
+      <button class="go" id="audio-regen-open" style="width:100%;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
+      <button id="save-soundscape" style="width:100%">Save Soundscape settings</button>
+      <button id="save-camera" style="width:100%">Save Camera settings</button>
+      <button id="save-all-scene" style="width:100%">Save all scene settings</button>
+      <button id="save-as-open" style="width:100%">Save as…</button>
     </div>
 
     <details class="accordion" id="acc-diag">
@@ -520,87 +542,85 @@
   </aside>
  </div>
 
- <div class="bottomrow">
-  <section class="libcol">
-    <div class="group">
-      <h2>Scene library</h2>
-      <div class="lib" id="lib"></div>
-    </div>
-  </section>
-
-  <section class="gencol">
-    <div class="group">
-      <h2>Scene creation</h2>
-      <button class="go" id="gen-open" style="width:100%">Generate scene…</button>
-              <div class="hint">you can also generate new audio from a new prompt using this button.</div>
-
-    </div>
-  </section>
- </div>
 </main>
 
 <div class="modal-backdrop" id="modal-generate">
-  <div class="modal">
+  <div class="modal" id="gen-modal">
     <div class="modal-head">
       <h2>Generate scene</h2>
       <button class="modal-close" id="gen-close">&times;</button>
     </div>
-    <label class="flabel" for="scenename">name</label>
-    <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
-    <label class="flabel" for="kw">scene prompt</label>
-    <textarea id="kw" placeholder="exploring underwater with dozens of large jellyfish, long pink trailing tentacles, shafts of light from above…"></textarea>
-    <label class="flabel" for="audiokw">audio prompt</label>
-    <textarea id="audiokw" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:44px"></textarea>
 
-    <label class="flabel">generative attributes<span style="color:var(--dim);font-weight:400;text-transform:none">— biases Claude's choices; "evolving" is a guarantee, the others are a nudge</span></label>
-    <div class="char-block">
-      <div class="char-row"><span class="char-lbl">cold</span>
-        <input type="range" id="d-warmth" min="0" max="1" step="0.01" value="0.5">
-        <span class="char-lbl right">warm</span></div>
-      <div class="char-row"><span class="char-lbl">calm</span>
-        <input type="range" id="d-energy" min="0" max="1" step="0.01" value="0.5">
-        <span class="char-lbl right">energetic</span></div>
-      <div class="char-row"><span class="char-lbl">static</span>
-        <input type="range" id="d-evolution" min="0" max="1" step="0.01" value="0.5">
-        <span class="char-lbl right">evolving</span></div>
+    <!-- Create new scene fields -->
+    <div id="gen-new-fields">
+      <label class="flabel" for="scenename">name</label>
+      <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
+      <label class="flabel" for="kw">scene prompt</label>
+      <textarea id="kw" placeholder="exploring underwater with dozens of large jellyfish, long pink trailing tentacles, shafts of light from above…"></textarea>
+      <label class="flabel" for="audiokw">audio prompt</label>
+      <textarea id="audiokw" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:44px"></textarea>
+
+      <label class="flabel">generative attributes<span style="color:var(--dim);font-weight:400;text-transform:none">— biases Claude's choices; "evolving" is a guarantee, the others are a nudge</span></label>
+      <div class="char-block">
+        <div class="char-row"><span class="char-lbl">cold</span>
+          <input type="range" id="d-warmth" min="0" max="1" step="0.01" value="0.5">
+          <span class="char-lbl right">warm</span></div>
+        <div class="char-row"><span class="char-lbl">calm</span>
+          <input type="range" id="d-energy" min="0" max="1" step="0.01" value="0.5">
+          <span class="char-lbl right">energetic</span></div>
+        <div class="char-row"><span class="char-lbl">static</span>
+          <input type="range" id="d-evolution" min="0" max="1" step="0.01" value="0.5">
+          <span class="char-lbl right">evolving</span></div>
+      </div>
+
+      <div class="field"><label>model</label>
+        <select id="d-model">
+          <option value="haiku">Haiku · fast/cheap</option>
+          <option value="sonnet">Sonnet · better</option>
+          <option value="opus">Opus · best</option>
+        </select></div>
+      <div class="field"><label>effort</label>
+        <select id="d-effort">
+          <option value="low">low</option>
+          <option value="med">medium</option>
+          <option value="high">high · richest</option>
+        </select></div>
+      <div class="field"><label>scene size</label>
+        <select id="d-size">
+          <option value="small" selected>small</option>
+          <option value="medium">medium</option>
+          <option value="large">large</option>
+          <option value="massive">massive · walkthrough</option>
+        </select></div>
+      <div class="hint">small/medium/large change how far apart things are. <b>massive</b> also
+        raises the object count and composes the scene as a closed route with a camera that
+        travels it — minutes of walking rather than a tableau. Slower to generate, and it
+        spends a lot more tokens.</div>
+      <button class="go" id="gen" style="width:100%">Generate new scene</button>
     </div>
 
-    <div class="field"><label>model</label>
-      <select id="d-model">
-        <option value="haiku">Haiku · fast/cheap</option>
-        <option value="sonnet">Sonnet · better</option>
-        <option value="opus">Opus · best</option>
-      </select></div>
-    <div class="field"><label>effort</label>
-      <select id="d-effort">
-        <option value="low">low</option>
-        <option value="med">medium</option>
-        <option value="high">high · richest</option>
-      </select></div>
-    <div class="field"><label>scene size</label>
-      <select id="d-size">
-        <option value="small" selected>small</option>
-        <option value="medium">medium</option>
-        <option value="large">large</option>
-        <option value="massive">massive · walkthrough</option>
-      </select></div>
-    <div class="hint">small/medium/large change how far apart things are. <b>massive</b> also
-      raises the object count and composes the scene as a closed route with a camera that
-      travels it — minutes of walking rather than a tableau. Slower to generate, and it
-      spends a lot more tokens.</div>
-    <div class="hint">bigger 3D environments to fly through — object/detail count is set by effort, not this</div>
-    <button class="go" id="gen">Generate</button>
-    <div class="progress" id="genprog"><div class="bar" id="genbar"></div></div>
-    <div class="hint" id="dirhint-modal">keyword → scene (added to the library)</div>
+    <div class="progress" id="genprog" style="display:none"><div class="bar" id="genbar"></div></div>
+    <div class="hint" id="dirhint-modal" style="display:none"></div>
+  </div>
+</div>
 
-    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-top:4px">
-      <input type="checkbox" id="audioonly"> regenerate audio only, for an existing scene
-    </label>
-    <div id="audioonlyrow" style="display:none;flex-direction:column;gap:8px">
-      <select id="audiotarget"></select>
-      <button class="go" id="applyaudio">Generate new audio for scene</button>
-      <div class="hint">uses the 'audio prompt' above; leaves that scene's visuals untouched</div>
+<div class="modal-backdrop" id="modal-audio-regen">
+  <div class="modal" id="audio-regen-modal">
+    <div class="modal-head">
+      <h2>Regenerate audio</h2>
+      <button class="modal-close" id="audio-regen-close">&times;</button>
     </div>
+
+    <div class="field"><label>scene to update</label>
+      <select id="audiotarget-regen"></select></div>
+    <label class="flabel" for="audiokw-regen">audio prompt</label>
+    <textarea id="audiokw-regen" placeholder="slow deep drones, distant whale calls, soft dripping bells…" style="min-height:80px"></textarea>
+    <div class="hint">the visuals of this scene will stay the same; only the audio will be regenerated</div>
+
+    <button class="go" id="apply-audio-regen" style="width:100%;margin-top:12px">Generate new audio</button>
+
+    <div class="progress" id="audio-regen-prog" style="display:none"><div class="bar" id="audio-regen-bar"></div></div>
+    <div class="hint" id="audio-regen-hint" style="display:none"></div>
   </div>
 </div>
 
@@ -724,6 +744,16 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="modal-welcome">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Welcome to PromptWaver</h2>
+    </div>
+    <div class="about-body" id="welcome-body">loading…</div>
+    <button class="go" id="welcome-start" style="margin-top:12px">Click to begin</button>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-saveas">
   <div class="modal">
     <div class="modal-head">
@@ -746,7 +776,11 @@ const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
 const esc = s => String(s).replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-ws.onopen = () => { $("meta").textContent = ""; $("engine-dot").classList.add("on"); };
+ws.onopen = () => {
+  $("meta").textContent = "";
+  $("engine-dot").classList.add("on");
+  initWelcome();
+};
 ws.onclose = () => { $("meta").textContent = ""; $("engine-dot").classList.remove("on"); };
 
 // dirhint is mirrored in two places: the compact hint under the "Generate
@@ -757,10 +791,11 @@ ws.onmessage = e => {
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
-      endApply();
-      setDirhint(m.ok && m.source === "claude" ? "audio updated on scene ✓"
+      endAudioRegenApply();
+      const msg = m.ok && m.source === "claude" ? "audio updated on scene ✓"
         : m.ok && m.source === "cache" ? "audio updated from cache ✓"
-        : "audio fallback — " + (m.error || "no key"));
+        : "audio fallback — " + (m.error || "no key");
+      $("audio-regen-hint").textContent = msg;
       return;
     }
     $("genbar").style.width = "100%";
@@ -804,6 +839,10 @@ function paintState(s){
   mt.dataset.active = s.active ? "1" : "0";
   mt.textContent = s.active ? "■ Stop" : "▶ Start";
   mt.className = s.active ? "amber" : "go";
+  // Hide laser button if no DAC is connected (only show for helios/actual DAC outputs)
+  const laserBtn = $("laser-toggle");
+  const isDacConnected = s.output && s.output !== "dummy";
+  laserBtn.style.display = isDacConnected ? "block" : "none";
   $("claude-dot").classList.toggle("on", !!s.director_online);
   if (!$("d-model").dataset.init && s.director_choice) {
     $("d-model").dataset.init = "1";
@@ -833,9 +872,16 @@ function paintState(s){
       el.className = "item";
       el.dataset.name = name;
       el.innerHTML = `<span>${name}</span><span class="x">✕</span>`;
-      el.querySelector("span:first-child").onclick = () => send({type:"scene_load",name});
-      el.querySelector(".x").onclick = ev => { ev.stopPropagation();
-        if (confirm(`Delete "${name}"?`)) send({type:"scene_delete",name}); };
+      el.onclick = () => {
+        send({type:"scene_load",name});
+        // Close library accordion when scene is loaded
+        const libAccordion = $("acc-library");
+        if (libAccordion && libAccordion.open) libAccordion.open = false;
+      };
+      el.querySelector(".x").onclick = ev => { ev.stopPropagation(); };
+      el.querySelector(".x").addEventListener("click", () => {
+        if (confirm(`Delete "${name}"?`)) send({type:"scene_delete",name});
+      });
       lib.appendChild(el);
     });
   }
@@ -900,6 +946,7 @@ function paintState(s){
   if (document.activeElement !== $("c-disable-plane")) {
     $("c-disable-plane").checked = !!s.disable_plane;
   }
+  updateSceneName(s);
   renderXfade(s);
   // before renderSoundscape: it rebuilds the voice strip on a scene change,
   // and the learn buttons it creates need the current map to paint from
@@ -1034,6 +1081,11 @@ function renderDiagnostics(s){
   if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-latency")) {
     $("a-latency").value = s.audio_cfg.latency ?? "high";
   }
+}
+
+function updateSceneName(s){
+  const sceneNameEl = $("scene-name");
+  sceneNameEl.textContent = s.scene || "(no scene)";
 }
 
 function renderPerf(s){
@@ -1328,7 +1380,7 @@ $("shape-mod-add").onclick = () => {
 };
 
 function syncAudioTargets(s){
-  const sel = $("audiotarget");
+  const sel = $("audiotarget-regen");
   const sig = (s.library||[]).join(",");
   if (sel.dataset.sig === sig) return;
   sel.dataset.sig = sig;
@@ -1340,25 +1392,24 @@ function syncAudioTargets(s){
   });
   if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
 }
-$("audioonly").onchange = () => {
-  $("audioonlyrow").style.display = $("audioonly").checked ? "flex" : "none";
-};
 let applying = false;
-function endApply(){
-  applying = false;
-  $("applyaudio").disabled = false;
-  $("applyaudio").textContent = "Apply to scene";
+let applyingAudio = false;
+function endAudioRegenApply(){
+  applyingAudio = false;
+  enableAudioRegenModal();
 }
 const charValues = () => ({
   warmth: +$("d-warmth").value, energy: +$("d-energy").value, evolution: +$("d-evolution").value,
 });
-$("applyaudio").onclick = () => {
-  const scene = $("audiotarget").value;
-  const audio = $("audiokw").value.trim();
-  if (!scene || !audio || applying) return;
-  applying = true;
-  $("applyaudio").disabled = true;
-  $("applyaudio").innerHTML = '<span class="spinner"></span>';
+$("apply-audio-regen").onclick = () => {
+  const scene = $("audiotarget-regen").value;
+  const audio = $("audiokw-regen").value.trim();
+  if (!scene || !audio || applyingAudio || generating) return;
+  applyingAudio = true;
+  disableAudioRegenModal();
+  $("audio-regen-prog").style.display = "block";
+  $("audio-regen-prog").classList.add("active");
+  $("audio-regen-hint").style.display = "block";
   send({type:"apply_audio", scene, audio, ...charValues()});
 };
 
@@ -1596,11 +1647,6 @@ function renderSoundscape(s){
     block.style.opacity = sc ? "1" : ".5";
   } else { block.style.opacity = "1"; }
   if (!sc) { $("synthglobals").innerHTML=""; $("voices").innerHTML=""; return; }
-  // Rebuild only when the STRUCTURE changes, so live dragging doesn't wipe
-  // the control you're holding. An LFO's on/target counts as structure —
-  // toggling it from a MIDI knob has to show up here, and it changes which
-  // fields are visible — but its rate/depth deliberately don't, or every
-  // knob turn would tear down the strip mid-drag.
   const sig = s.scene + "|" + (sc.voices||[]).map(v =>
     [v.name, v.type, (v.lfo||{}).on ? 1 : 0, (v.lfo||{}).dest || ""].join(":")).join(",");
   if (sig === _scapeSig) return;
@@ -1622,13 +1668,7 @@ function renderSoundscape(s){
   g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
 
   const vc = $("voices"); vc.innerHTML="";
-  // Drop stale slot buttons before rebuilding: a scene with fewer voices than
-  // the last one would otherwise leave entries pointing at detached nodes.
   for (const k of [..._learnBtns.keys()]) if (k.startsWith("voice#")) _learnBtns.delete(k);
-  // `vi` is the voice's SLOT — what MIDI binds to, so a knob keeps meaning
-  // "the low end" after a scene change even though the name changed. The
-  // director is asked to order voices foundation-first for exactly this
-  // reason (see claude_director.py's VOICE ORDER block).
   (sc.voices||[]).forEach((v, vi) => {
     const mk = (field) => `voice#${vi}.${field}`;
     const el = document.createElement("div");
@@ -1665,7 +1705,6 @@ function renderSoundscape(s){
     }
     el.appendChild(knob("pan",`voice.${v.name}.pan`,-1,1,0.05, v.pan ?? 0, x=>x.toFixed(2), {midi: mk("pan")}));
 
-    // ADSR envelope — available on sustained voices (pad/osc)
     if (v.type==="pad" || v.type==="osc"){
       const env = v.env || {attack:3.0, decay:1.2, sustain:0.85, release:2.5};
       const envWrap = document.createElement("div");
@@ -1676,10 +1715,6 @@ function renderSoundscape(s){
       envWrap.appendChild(envLabel);
       const envRow = document.createElement("div");
       envRow.style.cssText = "display:flex;flex-direction:column;gap:6px";
-      // Each stage is independently MIDI-mappable. The synth only accepts
-      // `env` as a whole dict (dsp.set_param takes three-part paths), so a
-      // single stage is a read-modify-write on both routes: here for the
-      // mouse, and MidiRouter.set for a knob.
       const mkEnvKnob = (label, field, min, max, step) =>
         knob(label, `voice.${v.name}.env.${field}`, min, max, step, env[field], x=>x.toFixed(2), {
           midi: mk("env." + field),
@@ -1695,7 +1730,6 @@ function renderSoundscape(s){
       el.appendChild(envWrap);
     }
 
-    // arpeggiator — available on chord-based voices (pad/osc)
     if (v.type==="pad" || v.type==="osc"){
       const arp = v.arp || {on:false, mode:"up", rate:2.0, decay:0.3};
       const arpWrap = document.createElement("div");
@@ -1720,9 +1754,6 @@ function renderSoundscape(s){
       const ml = document.createElement("label"); ml.className="flabel"; ml.textContent="pattern";
       arpFields.appendChild(ml); arpFields.appendChild(modeSel);
 
-      // midi:null — arp rate/decay aren't in the MIDI range table, so a
-      // learn button here would bind a CC that then does nothing. (They were
-      // getting one keyed on the internal `__arp_*` placeholder.)
       const mkArpKnob = (label, field, min, max, step, dflt) =>
         knob(label, `voice.${v.name}.arp.${field}`, min, max, step, arp[field] ?? dflt, x=>x.toFixed(2), {
           midi: null,
@@ -1737,7 +1768,6 @@ function renderSoundscape(s){
       el.appendChild(arpWrap);
     }
 
-    // Per-voice compressor — smooths transients, reduces crackle
     {
       const comp = v.compress || {on:false, threshold:0.6, ratio:4.0};
       const compWrap = document.createElement("div");
@@ -1771,8 +1801,6 @@ function renderSoundscape(s){
       el.appendChild(compWrap);
     }
 
-    // Per-voice LFO — available on every voice type, since even a noise bed
-    // benefits from a slow tremolo or a wandering pan.
     {
       const lfo = v.lfo || {on:false, rate:0.06, shape:"sine", depth:0.5, dest:"level"};
       const w = document.createElement("div");
@@ -1787,10 +1815,6 @@ function renderSoundscape(s){
       fields.style.cssText = "display:flex;flex-direction:column;gap:6px";
       const toggle = (o) => { fields.style.display = o ? "flex" : "none"; };
       toggle(!!lfo.on);
-      // Every control sends the WHOLE lfo dict — the synth takes it as one
-      // object (dsp.set_param only understands three-part voice paths), and
-      // merging onto the live value rather than this closure's copy keeps a
-      // MIDI-driven change from being undone by the next click here.
       const live = () => ({...lfo, ...((liveVoice(v.name) || {}).lfo || {})});
       const push = (patch) => sendAudio(`voice.${v.name}.lfo`,
                                         {...live(), ...patch, on: on.checked});
@@ -1806,9 +1830,6 @@ function renderSoundscape(s){
         fields.appendChild(l); fields.appendChild(s);
         return s;
       };
-      // "smooth" destinations are per-sample and work at any rate; the rest
-      // are resolved once per audio block, so they step above ~0.5Hz. Marked
-      // in the list so the pairing is visible when choosing.
       mkSel("target", "dest", ["level", "pan", "distortion", "tone", "detune", "sub", "waveform", "rate"]);
       mkSel("shape", "shape", ["sine", "triangle", "saw", "square", "random"]);
 
@@ -1818,9 +1839,6 @@ function renderSoundscape(s){
           read: `voice.${v.name}.lfo.${key}`,
           onInput: (n) => push({[key]: n}),
         });
-      // 0 to 0.5 Hz — one cycle every two seconds at the top end, which is
-      // already fast for ambient. Three decimals because the useful range is
-      // the bottom fifth of the travel: 0.02-0.15 is where scenes breathe.
       fields.appendChild(mkKnob("rate Hz", "rate", 0, 0.5, 0.005, 0.06, x=>x.toFixed(3)));
       fields.appendChild(mkKnob("amount", "depth", 0, 1, 0.01, 0.5, x=>x.toFixed(2)));
 
@@ -1844,7 +1862,7 @@ function renderSoundscape(s){
 // any of this). Synced across this page and any open Output Window via
 // localStorage + the "storage" event, since they're separate browser
 // windows/tabs with no other shared state.
-const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, keystoneH: 0, keystoneV: 0 };
+const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, kaleidoscopeSegments: 0, keystoneH: 0, keystoneV: 0 };
 // Populated from server state (see paintState's call to this), NOT
 // localStorage — glow/trail/mirror are per-scene settings now (saved via
 // Save Camera settings / Save all scene settings, loaded with the scene
@@ -1872,6 +1890,11 @@ function syncMonitorFilters(s){
   }
   if (document.activeElement !== $("mf-mirror-x")) $("mf-mirror-x").checked = monitorFilters.mirrorX;
   if (document.activeElement !== $("mf-mirror-y")) $("mf-mirror-y").checked = monitorFilters.mirrorY;
+  monitorFilters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
+  if (document.activeElement !== $("mf-kaleidoscope")) {
+    $("mf-kaleidoscope").value = monitorFilters.kaleidoscopeSegments;
+    $("v-mfkaleidoscope").textContent = monitorFilters.kaleidoscopeSegments === 0 ? "off" : monitorFilters.kaleidoscopeSegments + " way";
+  }
   if (document.activeElement !== $("ks-h")) {
     $("ks-h").value = monitorFilters.keystoneH;
     $("v-ksh").textContent = monitorFilters.keystoneH.toFixed(3);
@@ -2003,6 +2026,7 @@ slider("mf-glow", "glow", "mfglow");
 slider("mf-trail", "trail", "mftrail");
 $("mf-mirror-x").onchange = () => send({type:"set", key:"mirror_x", value:$("mf-mirror-x").checked});
 $("mf-mirror-y").onchange = () => send({type:"set", key:"mirror_y", value:$("mf-mirror-y").checked});
+slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0" ? "off" : v+" way", null);
 // layer0.* are 2D-generator authoring params, not things you reach for
 // mid-set, so they get no learn icon (null) — see slider().
 slider("s-speed","layer0.speed","speed",undefined,null);
@@ -2027,16 +2051,16 @@ let generating = false, genTimer = null;
 function startGen(){
   if (generating) return;
   generating = true;
-  $("gen").disabled = true;
-  $("gen").innerHTML = '<span class="spinner"></span>';
+  disableGenModal();
+  $("genprog").style.display = "block";
   $("genprog").classList.add("active");
   $("genbar").style.width = "2%";
+  $("dirhint-modal").style.display = "block";
   genTimer = setTimeout(endGen, 120000);   // safety restore
 }
 function endGen(){
   generating = false;
-  $("gen").disabled = false;
-  $("gen").textContent = "Generate";
+  enableGenModal();
   $("genprog").classList.remove("active");
   $("genbar").style.width = "0%";
   if (genTimer) { clearTimeout(genTimer); genTimer = null; }
@@ -2227,6 +2251,69 @@ $("about-open").onclick = async () => {
 };
 $("about-close").onclick = () => closeModal("modal-about");
 
+// Welcome modal — shows welcome.md on every load
+async function initWelcome(){
+  try {
+    const r = await fetch("/welcome");
+    $("welcome-body").innerHTML = renderMarkdown((await r.json()).text || "");
+  } catch (e) {
+    $("welcome-body").textContent = "Could not load welcome.md — is the server running?";
+  }
+
+  openModal("modal-welcome");
+}
+$("welcome-start").onclick = () => closeModal("modal-welcome");
+
+// Generate scene modal: mode choice
+function resetGenModal(){
+  $("gen-new-fields").style.display = "block";
+  $("genprog").style.display = "none";
+  $("dirhint-modal").style.display = "none";
+  $("gen-modal").style.opacity = "1";
+  $("gen-modal").style.pointerEvents = "auto";
+}
+$("gen-open").onclick = () => {
+  openModal("modal-generate");
+  resetGenModal();
+};
+$("gen-close").onclick = () => {
+  closeModal("modal-generate");
+  resetGenModal();
+};
+
+// Audio regeneration modal
+$("audio-regen-open").onclick = () => {
+  openModal("modal-audio-regen");
+  populateAudioTargets($("audiotarget-regen"));
+};
+$("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
+
+function disableAudioRegenModal(){
+  $("audio-regen-modal").style.opacity = "0.5";
+  $("audio-regen-modal").style.pointerEvents = "none";
+}
+function enableAudioRegenModal(){
+  $("audio-regen-modal").style.opacity = "1";
+  $("audio-regen-modal").style.pointerEvents = "auto";
+}
+
+// Disable modal during generation (dim + disable pointer events)
+function disableGenModal(){
+  $("gen-modal").style.opacity = "0.5";
+  $("gen-modal").style.pointerEvents = "none";
+}
+function enableGenModal(){
+  $("gen-modal").style.opacity = "1";
+  $("gen-modal").style.pointerEvents = "auto";
+}
+
+// Helper to populate audio target select
+function populateAudioTargets(el){
+  const target = el || $("audiotarget");
+  const scenes = _lastState?.library || [];
+  target.innerHTML = scenes.map(s => `<option>${esc(s)}</option>`).join("");
+}
+
 // A small markdown subset: headings, lists, rules, and inline code/bold/
 // italic/links. Everything is HTML-escaped BEFORE any markup is added, so a
 // stray "<" in the file renders as text rather than becoming an element.
@@ -2350,8 +2437,10 @@ function saveWithFeedback(btn, label, payload){
   setTimeout(() => { btn.textContent = "Saved ✓"; }, 200);
   setTimeout(() => { btn.textContent = original; btn.dataset.busy = "0"; }, 1600);
 }
-$("save-soundscape").onclick = () => saveWithFeedback($("save-soundscape"), "Save Soundscape settings",
+const saveSoundscapeSettings = () => saveWithFeedback($("save-soundscape"), "Save Soundscape settings",
   {type:"scene_update", camera:false, soundscape:true});
+$("save-soundscape").onclick = saveSoundscapeSettings;
+$("soundscape-save-icon").onclick = saveSoundscapeSettings;
 $("save-camera").onclick = () => saveWithFeedback($("save-camera"), "Save Camera settings",
   {type:"scene_update", camera:true, soundscape:false});
 $("save-all-scene").onclick = () => saveWithFeedback($("save-all-scene"), "Save all scene settings",

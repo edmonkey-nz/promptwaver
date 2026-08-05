@@ -335,6 +335,11 @@ class Engine:
         self.mirror_y = False
         self.glow = 0.0
         self.trail = 0.0
+        self.kaleidoscope_segments = 0
+        # Modulated versions (live values, updated every tick)
+        self._mod_glow = 0.0
+        self._mod_trail = 0.0
+        self._mod_kaleidoscope_segments = 0
         # library key of the currently-loaded scene, tracked separately from
         # spec.name: a handful of shipped example scenes have a free-text
         # internal name that doesn't match their filename (e.g.
@@ -411,6 +416,8 @@ class Engine:
             self.glow = max(0.0, min(1.0, float(value)))
         elif key == "trail":
             self.trail = max(0.0, min(0.95, float(value)))
+        elif key == "kaleidoscope_segments":
+            self.kaleidoscope_segments = max(0, int(value))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -828,6 +835,7 @@ class Engine:
                     "mirror_y": self.mirror_y,
                     "glow": self.glow,
                     "trail": self.trail,
+                    "kaleidoscope_segments": self.kaleidoscope_segments,
                 })
             if soundscape and getattr(self.synth, "online", False):
                 # capture the live soundscape (GUI tweaks) back into the scene
@@ -879,6 +887,7 @@ class Engine:
         self.mirror_y = bool(cam_cfg.get("mirror_y", False))
         self.glow = float(cam_cfg.get("glow", 0.0))
         self.trail = float(cam_cfg.get("trail", 0.0))
+        self.kaleidoscope_segments = int(cam_cfg.get("kaleidoscope_segments", 0))
 
     def _apply_modulation(self, spec: SceneSpec):
         self.matrix.clear_routes()
@@ -934,6 +943,11 @@ class Engine:
             # feed live audio into the matrix, then update all sources
             self._audio_src.current = self.analysis.level
             self.matrix.update(t, dt)
+            # Apply modulation to effect parameters (kaleidoscope_segments
+            # is LFO-modulatable display filter, live on this tick)
+            self._mod_glow = self.matrix.value("glow", self.glow)
+            self._mod_trail = self.matrix.value("trail", self.trail)
+            self._mod_kaleidoscope_segments = self.matrix.value("kaleidoscope_segments", self.kaleidoscope_segments)
 
             # crossfades render two full scenes for the transition's duration
             # (see SceneManager.render) — captured before render() below,
@@ -1059,8 +1073,9 @@ class Engine:
             "disable_plane": self.disable_plane,
             "mirror_x": self.mirror_x,
             "mirror_y": self.mirror_y,
-            "glow": self.glow,
-            "trail": self.trail,
+            "glow": max(0.0, min(1.0, self._mod_glow)),
+            "trail": max(0.0, min(0.95, self._mod_trail)),
+            "kaleidoscope_segments": max(0, round(self._mod_kaleidoscope_segments)),
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),

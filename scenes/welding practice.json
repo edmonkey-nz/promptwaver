@@ -2826,7 +2826,7 @@
   },
   "pps": null,
   "soundscape": {
-    "tempo": 70,
+    "tempo": 70.0,
     "master": 0.75,
     "distortion": 0.15,
     "delay": {
@@ -2854,7 +2854,17 @@
           "decay": 0.8,
           "sustain": 0.9,
           "release": 3.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "grinding_drone",
@@ -2876,7 +2886,19 @@
           "decay": 1.0,
           "sustain": 0.85,
           "release": 2.8
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "arc_lead",
@@ -2900,7 +2922,17 @@
           "shape": "sine",
           "rate": 0.08,
           "depth": 0.4
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "spark_pluck",
@@ -2918,7 +2950,15 @@
         "rate": 0.7,
         "decay": 1.2,
         "tone": 0.65,
-        "pan": -0.25
+        "pan": -0.25,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "industrial_air",
@@ -2932,10 +2972,32 @@
           "shape": "triangle",
           "rate": 0.04,
           "depth": 0.5
-        }
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.462
+    "swell_amount": 0.462,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
