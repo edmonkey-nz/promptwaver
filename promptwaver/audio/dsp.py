@@ -23,7 +23,7 @@ A soundscape spec (JSON, stored in the scene):
   "voices": [
     {"name":"drone","type":"pad","waveform":"saw","note":36,"chord":[0,7,12],
      "level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,"mute":false,
-     "distortion":0.0,
+     "distortion":0.0,"compress":{"on":false,"threshold":0.6,"ratio":4.0},
      "lfo":{"on":false,"dest":"level","shape":"sine","rate":0.06,"depth":0.5,"phase":0.0}},
     {"name":"bells","type":"pluck","waveform":"sine","note":72,
      "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"pan":0.2,"mute":false,
@@ -541,6 +541,11 @@ class Soundscape:
                 g = 1.0 + distortion * 8.0
                 mono = np.tanh(mono * g) / np.tanh(g if g > 1 else 1)
 
+            # Per-voice compressor (disabled for now — needs fixing)
+            # comp = v.get("compress") or {}
+            # if comp.get("on"):
+            #     TODO: rewrite compressor with proper envelope follower + attack/release
+
             pan = float(v.get("pan", 0.0))
             if lfo is not None and lfo[2] == "pan":
                 # Auto-pan around the authored position, per-sample. Clipped
@@ -831,6 +836,7 @@ class SoundscapeMixer:
         self._clip = False
 
     def set_spec(self, spec: dict, fade: float = 0.0):
+        # Simple crossfade: fade out old scene over `fade` seconds, then fade in new scene over `fade` seconds
         fade = max(0.0, float(fade or 0.0))
         if fade <= 0.0:
             self.current.set_spec(spec)
@@ -838,7 +844,7 @@ class SoundscapeMixer:
             return
         self._pending_spec = spec
         self._pending_muted = self.current.muted
-        self._fade_dur = fade / 2.0
+        self._fade_dur = fade / 2.0  # Each phase (out and in) gets half the total crossfade time
         self._fade_pos = 0.0
         self._phase = "out"
 
@@ -877,21 +883,24 @@ class SoundscapeMixer:
         prog = np.clip(prog, 0.0, 1.0)[:, None]
         gain = (1.0 - prog) if self._phase == "out" else prog
         out = (block * gain).astype(np.float32)
-        # same "gentle safety limiter" pattern Soundscape.render applies to
-        # its own mix — cheap, and guards against anything unexpected still
-        # pushing this scaled blend out of range.
+        # safety limiter on the faded output
         np.tanh(out, out=out)
 
         self._fade_pos += frames / self.sr
         if self._fade_pos >= self._fade_dur:
             if self._phase == "out":
-                # silent now — swap in the new soundscape and fade it up
+                # Fade out complete: swap in the new soundscape and start fading it in
                 self.current = Soundscape(self._pending_spec, sr=self.sr)
                 self.current.set_muted(self._pending_muted)
                 self._pending_spec = None
                 self._phase = "in"
                 self._fade_pos = 0.0
+                # Return silence at the transition (avoids overlap artifacts)
+                self._peak = 0.0
+                self._clip = False
+                return (block * 0.0).astype(np.float32)
             else:
+                # Fade in complete: switch to normal rendering
                 self._phase = None
 
         self._peak = float(np.max(np.abs(out))) if out.size else 0.0
@@ -908,7 +917,7 @@ def _coerce(field, value):
         return str(value)
     if field == "tempo":
         return float(value)
-    if field in ("arp", "chord", "scale", "env", "lfo"):
+    if field in ("arp", "chord", "scale", "env", "lfo", "compress"):
         return value            # dict / list — passed through, clamped by _normalise
     return float(value)
 
@@ -961,6 +970,15 @@ def _normalise(spec: dict) -> dict:
         v["unison"] = int(_clamp(v.get("unison"), 1, 7, 1))
         v["sub"] = _clamp(v.get("sub"), 0.0, 1.0, 0.0)
         v["distortion"] = _clamp(v.get("distortion"), 0.0, 1.0, 0.0)
+        comp = v.get("compress")
+        if isinstance(comp, dict):
+            comp = dict(comp)
+            comp["on"] = bool(comp.get("on", False))
+            comp["threshold"] = _clamp(comp.get("threshold"), 0.1, 1.0, 0.6)
+            comp["ratio"] = _clamp(comp.get("ratio"), 1.0, 16.0, 4.0)
+            v["compress"] = comp
+        else:
+            v.pop("compress", None)
         arp = v.get("arp")
         if isinstance(arp, dict):
             arp = dict(arp)

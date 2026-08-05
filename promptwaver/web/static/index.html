@@ -1737,6 +1737,40 @@ function renderSoundscape(s){
       el.appendChild(arpWrap);
     }
 
+    // Per-voice compressor — smooths transients, reduces crackle
+    {
+      const comp = v.compress || {on:false, threshold:0.6, ratio:4.0};
+      const compWrap = document.createElement("div");
+      compWrap.style.cssText = "border-top:1px solid var(--line);padding-top:8px;margin-top:2px;display:flex;flex-direction:column;gap:6px";
+      const compHead = document.createElement("label");
+      compHead.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)";
+      const compOn = document.createElement("input"); compOn.type = "checkbox"; compOn.checked = !!comp.on;
+      compHead.appendChild(compOn); compHead.appendChild(document.createTextNode("compressor"));
+      compWrap.appendChild(compHead);
+
+      const compFields = document.createElement("div");
+      compFields.style.cssText = "display:flex;flex-direction:column;gap:6px";
+      function toggleCompFields(on){ compFields.style.display = on ? "flex" : "none"; }
+      toggleCompFields(!!comp.on);
+
+      const live = () => ({...comp, ...((liveVoice(v.name) || {}).compress || {})});
+      const push = (patch) => sendAudio(`voice.${v.name}.compress`,
+                                        {...live(), ...patch, on: compOn.checked});
+      compOn.onchange = () => { toggleCompFields(compOn.checked); push({}); };
+
+      const mkCompKnob = (label, field, min, max, step, dflt, fmt) =>
+        knob(label, `voice.${v.name}.compress.${field}`, min, max, step, comp[field] ?? dflt, fmt, {
+          midi: null,
+          read: `voice.${v.name}.compress.${field}`,
+          onInput: (n) => push({[field]: n}),
+        });
+      compFields.appendChild(mkCompKnob("threshold", "threshold", 0.1, 1, 0.05, 0.6, x=>x.toFixed(2)));
+      compFields.appendChild(mkCompKnob("ratio", "ratio", 1, 16, 0.5, 4.0, x=>x.toFixed(1)));
+
+      compWrap.appendChild(compFields);
+      el.appendChild(compWrap);
+    }
+
     // Per-voice LFO — available on every voice type, since even a noise bed
     // benefits from a slow tremolo or a wandering pan.
     {
