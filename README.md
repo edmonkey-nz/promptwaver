@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.60.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.70.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 
@@ -76,13 +76,16 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ```bash
 # Browser preview, offline (no API calls until you generate)
-python run.py --web
+python run.py
 
 # With Claude API key (set ANTHROPIC_API_KEY env var first)
-ANTHROPIC_API_KEY=sk-... python run.py --web
+ANTHROPIC_API_KEY=sk-... python run.py
 
 # With laser hardware
-python run.py --web --laser --pps 11000 --max-step 0.03 --invert-x
+python run.py --laser --pps 11000 --max-step 0.03 --invert-x
+
+# Headless mode (no web interface)
+python run.py --headless
 ```
 
 Open <http://localhost:8080>, type a scene prompt, hit **Generate**. Tweak the look/sound, **Save** it, **Start** playback.

@@ -49,8 +49,10 @@
                  letter-spacing:.14em;text-transform:uppercase;margin:20px 0 12px}
   .about-body h3{font-size:13px;color:var(--ink);font-weight:600;margin:18px 0 10px}
   .about-body p{margin:12px 0;line-height:1.7}
-  .about-body ul{margin:12px 0;padding-left:24px}
-  .about-body li{margin:8px 0;line-height:1.7}
+  .about-body ul,.about-body ol{margin:12px 0;padding-left:24px}
+  .about-body ul{list-style:disc}
+  .about-body ol{list-style:decimal}
+  .about-body li{margin:8px 0;line-height:1.7;color:var(--ink)}
   .about-body strong{color:var(--ink);font-weight:600}
   .about-body a{color:var(--cyan)}
   .about-body code{font-family:var(--mono);font-size:12px;background:var(--panel2);
@@ -314,6 +316,7 @@
   <button id="output-toggle-2" title="A second output window on the same live feed — independently flippable in Settings, for a second screen/projector">🖵 Output 2</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
   <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
+  <button id="fullscreen-toggle" title="Toggle fullscreen">⛶</button>
 </header>
 <main>
  <div class="toprow">
@@ -365,7 +368,7 @@
         <label style="display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="mf-mirror-y"> mirror y</label>
       </div>
-      <div class="field"><label>kaleidoscope</label>
+      <div class="field"><label>kaleidoscope (beta)</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
     </div>
@@ -496,6 +499,7 @@
       <button id="save-camera" style="width:100%">Save Camera settings</button>
       <button id="save-all-scene" style="width:100%">Save all scene settings</button>
       <button id="save-as-open" style="width:100%">Save as…</button>
+      <button id="show-prompts-open" style="width:100%">Show scene prompts</button>
     </div>
 
     <details class="accordion" id="acc-diag">
@@ -624,6 +628,21 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="modal-prompts">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Scene prompts</h2>
+      <button class="modal-close" id="prompts-close">&times;</button>
+    </div>
+
+    <div class="field"><label>Visual prompt</label>
+      <textarea id="prompts-visual" readonly style="min-height:80px;background:var(--panel2);color:var(--dim)"></textarea></div>
+    <div class="field"><label>Audio prompt</label>
+      <textarea id="prompts-audio" readonly style="min-height:80px;background:var(--panel2);color:var(--dim)"></textarea></div>
+    <div class="hint">These prompts were used to generate this scene. Stored in the scene JSON.</div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-settings">
   <div class="modal">
     <div class="modal-head">
@@ -633,6 +652,7 @@
 
     <div class="group">
       <h2 style="font-size:11px">Connection</h2>
+      <div class="hint" style="margin-bottom:12px">Get a free Claude API key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--cyan)">console.anthropic.com</a> ($5 credit). Without it, you can only use pre-built scenes.</div>
       <div class="row">
         <input type="password" id="apikey" placeholder="ANTHROPIC_API_KEY (sk-…)">
       </div>
@@ -2107,6 +2127,14 @@ function updateLaserBtn(on){
 }
 $("laser-toggle").onclick = () => send({type: "set_laser", value: !_laserOn});
 
+$("fullscreen-toggle").onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => console.error(err));
+  } else {
+    document.exitFullscreen();
+  }
+};
+
 // Global section: vertical master fader (mirrors the "master" knob in the
 // Soundscape globals — same underlying value, just always-visible here)
 $("g-master").oninput = () => {
@@ -2228,6 +2256,13 @@ $("apitest").onclick = () => {
 // inside the dialog itself) also closes
 function openModal(id){ $(id).classList.add("open"); }
 function closeModal(id){ $(id).classList.remove("open"); }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".modal-backdrop.open").forEach(el => {
+      el.classList.remove("open");
+    });
+  }
+});
 $("gen-open").onclick = () => openModal("modal-generate");
 $("gen-close").onclick = () => closeModal("modal-generate");
 $("settings-open").onclick = () => openModal("modal-settings");
@@ -2287,6 +2322,20 @@ $("audio-regen-open").onclick = () => {
   populateAudioTargets($("audiotarget-regen"));
 };
 $("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
+
+// Scene prompts modal
+$("show-prompts-open").onclick = () => {
+  const spec = _lastState?.scene_spec;
+  if (!spec) {
+    $("prompts-visual").textContent = "(no scene loaded)";
+    $("prompts-audio").textContent = "";
+  } else {
+    $("prompts-visual").textContent = spec.image_prompt || "(no visual prompt)";
+    $("prompts-audio").textContent = spec.audio_prompt || "(no audio prompt)";
+  }
+  openModal("modal-prompts");
+};
+$("prompts-close").onclick = () => closeModal("modal-prompts");
 
 function disableAudioRegenModal(){
   $("audio-regen-modal").style.opacity = "0.5";

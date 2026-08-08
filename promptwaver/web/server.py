@@ -98,6 +98,8 @@ def make_app(engine) -> web.Application:
                     reply = await _handle(engine, json.loads(msg.data), request.app)
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
+        except (asyncio.CancelledError, ConnectionResetError):
+            pass
         finally:
             request.app["clients"].pop(ws, None)
         return ws

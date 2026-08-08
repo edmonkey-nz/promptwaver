@@ -8,7 +8,7 @@ If you want to create new scenes, you'll need a paid Claude API account. Scene g
 
 Created with Claude AI, but with many many hours of planning, orchestrating, testing and UX by a human. :)
 
-https://github.com/edmonkey-nz/promptwaver for updates and repo.
+<https://github.com/edmonkey-nz/promptwaver> for updates and repo.
 
 
 

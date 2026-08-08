@@ -3,14 +3,17 @@
 
 Examples
 --------
-    # preview in the browser, no hardware, local (offline) director
-    python run.py --web
+    # preview in the browser, no hardware, local (offline) director (default)
+    python run.py
 
-    # drive the Helios, tuned for the CLUB RGB1000 rig
-    python run.py --web --laser --pps 11000 --max-step 0.03 --invert-x
+    # drive the Helios, tuned for the CLUB RGB1000 rig with web interface
+    python run.py --laser --pps 11000 --max-step 0.03 --invert-x
 
     # use Claude as the scene director
-    ANTHROPIC_API_KEY=sk-... python run.py --web
+    ANTHROPIC_API_KEY=sk-... python run.py
+
+    # run headless without web interface
+    python run.py --headless
 
 Then open http://localhost:8080 and type a keyword (e.g. "water flowing").
 """
@@ -18,18 +21,21 @@ Then open http://localhost:8080 and type a keyword (e.g. "water flowing").
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 
 from promptwaver.engine import Engine
 from promptwaver.web import run as run_web
 from promptwaver.director import local_scene
 
+logging.getLogger("aiohttp").setLevel(logging.ERROR)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def parse_args():
     ap = argparse.ArgumentParser(description="PromptWaver — immersive laser + synth instrument")
-    ap.add_argument("--web", action="store_true", help="serve the browser control surface")
+    ap.add_argument("--headless", action="store_true", help="run without the browser control surface")
     ap.add_argument("--web-port", type=int, default=8080)
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--laser", action="store_true", help="enable Helios DAC output")
@@ -79,10 +85,12 @@ def main():
     engine.start()
     print(f"[promptwaver] engine running — output={engine.output.name} "
           f"director={'claude' if engine.director.online else 'local'}")
-    if args.web:
+    if not args.headless:
         print(f"[promptwaver] open http://localhost:{args.web_port}")
         try:
             run_web(engine, host=args.host, port=args.web_port)
+        except (KeyboardInterrupt, SystemExit):
+            pass
         finally:
             engine.stop()
     else:

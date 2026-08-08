@@ -1,0 +1,102 @@
+name: Build Executables
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: promptwaver
+            asset_name: promptwaver-linux-x86_64
+            python-version: '3.11'
+          - os: macos-latest
+            artifact_name: promptwaver
+            asset_name: promptwaver-macos-arm64
+            python-version: '3.11'
+          - os: windows-latest
+            artifact_name: promptwaver.exe
+            asset_name: promptwaver-windows-x86_64.exe
+            python-version: '3.11'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller anthropic sounddevice
+
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller \
+            --onefile \
+            --windowed \
+            --name promptwaver \
+            --icon promptwaver.svg \
+            --collect-all aiohttp \
+            --collect-all numpy \
+            --hidden-import=anthropic \
+            --hidden-import=sounddevice \
+            run.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+          body: |
+            ## PromptWaver ${{ github.ref_name }}
+
+            **Web interface enabled by default** — executables start with `--web` automatically. Use `--headless` to run without web.
+
+            ### Downloads
+            - **Linux**: `promptwaver-linux-x86_64`
+            - **macOS**: `promptwaver-macos-arm64`
+            - **Windows**: `promptwaver-windows-x86_64.exe`
+
+            Run with:
+            ```bash
+            ./promptwaver
+            # or
+            ./promptwaver --laser --pps 11000
+            # Headless mode:
+            ./promptwaver --headless
+            ```
+
+            See [README.md](README.md) for full usage details.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
