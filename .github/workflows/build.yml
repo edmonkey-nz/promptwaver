@@ -11,6 +11,7 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -35,23 +36,30 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev libsndfile1-dev
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller anthropic sounddevice
+          pip install pyinstaller anthropic
+          pip install sounddevice || true
+          pip install pyo || true
 
       - name: Build executable with PyInstaller
         run: |
           pyinstaller \
             --onefile \
-            --windowed \
             --name promptwaver \
-            --icon promptwaver.svg \
             --collect-all aiohttp \
             --collect-all numpy \
             --hidden-import=anthropic \
             --hidden-import=sounddevice \
+            --hidden-import=pyo \
             run.py
 
       - name: Upload artifact
