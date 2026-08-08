@@ -47,8 +47,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller anthropic
-          pip install sounddevice || true
-          pip install pyo || true
+          pip install sounddevice || echo "sounddevice skipped"
+          pip install pyo || echo "pyo skipped"
+
+      - name: Verify PyInstaller
+        run: pyinstaller --version
 
       - name: Build executable with PyInstaller
         run: |
@@ -58,8 +61,6 @@ jobs:
             --collect-all aiohttp \
             --collect-all numpy \
             --hidden-import=anthropic \
-            --hidden-import=sounddevice \
-            --hidden-import=pyo \
             run.py
 
       - name: Upload artifact
