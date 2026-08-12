@@ -22,9 +22,11 @@ The modulation matrix is the spine: sources (LFO, ADSR, audio level, MIDI CC) ar
 
 ### Module map
 
-- `promptwaver/geometry.py` — `Path` (normalized polyline + colour), the unit everything speaks
+- `promptwaver/geometry.py` — `Path` (normalized polyline + colour + glow), the unit everything speaks
 - `promptwaver/modulation.py` — sources (LFO, ADSR `Envelope`, `Value`) + `ModMatrix` routing
-- `promptwaver/generators/` — `flow_field`, `attractor`, `ripples`; `@register` to add more
+- `promptwaver/generators/` — `flow_field`, `attractor`, `ripples`, `pattern2d`; `@register` to add more
+- `promptwaver/patterns2d.py` — flat pattern grammar (ops · cart/polar space · repeat/symmetry)
+- `promptwaver/color.py` — shared hue ramp + saturation-preserving `hue_shift`
 - `promptwaver/scenes.py` — `SceneSpec`, live `Scene`, `SceneManager` (library + crossfade)
 - `promptwaver/director/` — `SceneDirector` (Claude + cache) and local `fallback`
 - `promptwaver/audio/` — `PadSynth` (pyo) and `AudioAnalysis` (sounddevice)
@@ -35,6 +37,59 @@ The modulation matrix is the spine: sources (LFO, ADSR, audio level, MIDI CC) ar
 - `promptwaver/settings.py` — local settings store (API key), gitignored
 - `promptwaver/engine.py` — realtime loop and thread-safe control surface
 - `promptwaver/web/` — aiohttp server + single-page control UI
+
+## Scene kind: 2D or 3D
+
+Every scene is one or the other, and the distinction is **derived from its generators, never stored** — the same rule `Scene.is_3d` follows, so the two cannot drift apart. `SceneManager.library()` reports `{"name", "kind"}` per scene for the library badge, built on the same cache as the name list (rebuilt on save/delete, never per 20Hz poll).
+
+- **3D** — any layer uses a 3D generator (`world`, `ground_grid`, `forest`). A `Camera` exists and the camera panel is shown.
+- **2D** — no 3D generator. **There is no camera at all**; the frame is composed directly in normalized `[-1,1]`. The UI shows the layer panel instead.
+
+This is why 2D is not a fourth camera mode alongside orbit/drift/fly/path: those are properties of a `Camera`, and a flat scene doesn't have one.
+
+## 2D pattern scenes (`pattern2d`)
+
+The flat sibling of `world` — both are declarative interpreters over authored `defs` + `nodes` rather than fixed algorithms with knobs. Because there is no camera, what you author is exactly what fills the output, edge to edge.
+
+```json
+"layers": [{"generator": "pattern2d", "params": {
+  "defs": {
+    "arm":     {"space":"cart",  "ops":[{"op":"line","a":[0.17,0.17],"b":[0.17,0.97]}]},
+    "diamond": {"space":"polar", "ops":[{"op":"ngon","n":4,"r":0.12}]}
+  },
+  "nodes": [
+    {"def":"arm", "color":[0.3,0.8,1.0], "glow":0.85,
+     "repeat":{"kind":"offset","d":0.05,"n":4,"hue_step":0.05},
+     "symmetry":{"mirror":"xy"}},
+    {"def":"arm", "rotate":0.25, "color":[0.45,0.55,1.0], "glow":0.85,
+     "repeat":{"kind":"offset","d":0.05,"n":4,"hue_step":0.05},
+     "symmetry":{"mirror":"xy"}},
+    {"def":"diamond", "color":[0.75,0.35,1.0], "glow":1.0,
+     "repeat":{"kind":"scale","factor":1.55,"n":3,"hue_step":0.09}}
+  ]}}]
+```
+
+Three separate layers (`patterns2d.py`):
+
+- **Ops** — `line`, `polyline`, `circle`, `arc`, `rect`, `ngon`, `star`, `grid`
+- **Space**, per motif — `cart` reads coordinates as authored; `polar` reads a point as `(radius, angle)`, so a straight line becomes an arc or spiral. Segments are subdivided *before* conversion, or the curve would render as its chord
+- **Combinators**, per node — `repeat`: `offset` (parallel bands), `scale` (concentric), `radial`, `ring`, `grid`; `symmetry`: `mirror` x/y/xy and `radial` *n*
+
+Space is local to a motif and combinators are global to a node **on purpose**: that split is what lets one pattern mix idioms — Cartesian mirrored cross-arms alongside a concentric polar rosette. A single global "polar mode" flag could not express it.
+
+**Angles are in turns (0–1), not radians**, everywhere in this grammar. Authored symmetry is nearly always a simple fraction of a circle, and `0.25` survives JSON and a language model's arithmetic far better than `1.5707963`.
+
+Node keys: `def`, `at` `[x,y]` or `at_polar` `[r, turns]`, `scale`, `rotate` (turns), `color`, `glow`, `repeat`, `symmetry`.
+
+The top-level `scale`, `rotate`, `spread` and `glow` params are flat scalars deliberately — `Scene._resolve` pushes every top-level param through the matrix as `visual.<key>`, so all four are audio/LFO-modulatable with no further wiring, while anything nested inside `defs`/`nodes` is not. Top-level `glow` is **added** to each node's own glow rather than acting as a floor: a floor can never exceed the brightest authored shape, so routing audio at it would do nothing on exactly the scenes that bother to author glow.
+
+`max_strokes` bounds the combinatorics — a repeat crossed with a symmetry multiplies fast (40 offsets × 32-fold radial is 1280 copies), and an unbounded pattern would blow the frame budget before anything else noticed.
+
+### Per-shape glow
+
+`Path.glow` (0–1) is authored per node and carried to the canvas alongside the geometry, distinct from the global glow slider that applies to the whole frame.
+
+It is **monitor-only**. The laser's per-point intensity channel is on/off (`output/ilda.py` writes a constant 255), so brightness there is carried by RGB, not blur — consistent with the existing rule that display filters never touch vector data. The value rides in the preview payload only when non-zero, so every scene that doesn't use it produces a byte-identical frame to before, and both the in-page preview and the output window apply it identically.
 
 ## 3D immersive scenes
 
@@ -93,7 +148,19 @@ Shape ops: `line`, `polyline` (raw escape hatch), `circle`, `rect`, `box`, `arc`
 }}]
 ```
 
-Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Try *"inside a painter's studio"* to see a full example.
+Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Generate *"inside a painter's studio"* to see a full example — note that the shipped `scenes/painters_studio.json` is **not** one: it is a single `flow_field` layer from an older build, despite the name.
+
+## The generator registry is self-describing
+
+`generators/base.py` is the single source of truth for what generators exist, what kind each is, and what knobs each has. Each declares `description` and `param_meta` (explicit `(min, max[, step])`); `kind()` derives from `is_3d`; `schema()` and `catalog()` serve it.
+
+Read the catalog rather than adding another place that knows generator names. Two places used to hardcode instead, and between them they stranded most of the generator set: the director's prompt hardcoded `"generator":"world"` so Claude could never select another, and the UI hardcoded three param keys (`layer0.speed/turbulence/hue`) that matched no generator's actual param list — leaving `forest` and `ground_grid` with no reachable controls at all.
+
+- `schema()` exposes only int/float/bool defaults as params, so a generator whose spec is authored *data* rather than knobs (`world`, with its `defs`/`nodes`) correctly reports none and gets no slider panel.
+- Ranges omitted from `param_meta` are inferred from the default's type and magnitude, so a new generator gets a usable panel immediately — but inference can't know that `step_len` wants a finer step than `turbulence`, so declaring it is what makes a control feel right.
+- `Generator.coerce()` casts incoming UI/MIDI values to the declared type; without it an int param arrives as a float and its truncation makes the slider feel like it skips.
+- The UI addresses any layer as `layer<N>.<param>` and renders one section per layer.
+- `catalog()` and `Scene.layer_schemas()` are memoized — both ride the ~20Hz state broadcast, and the catalog is fixed once imports settle.
 
 ## PPS (points per second) control
 

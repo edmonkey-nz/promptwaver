@@ -700,140 +700,127 @@
   },
   "pps": null,
   "soundscape": {
-    "tempo": 48.0,
-    "master": 0.75,
+    "tempo": 60,
+    "master": 0.8,
     "distortion": 0.0,
     "delay": {
-      "time": 0.6,
-      "feedback": 0.4,
+      "time": 0.4,
+      "feedback": 0.35,
       "mix": 0.3
     },
     "voices": [
       {
-        "name": "drone",
+        "name": "deep_earth",
         "type": "pad",
         "waveform": "sine",
-        "note": 36,
+        "note": 28,
         "chord": [
           0,
           7,
           12
         ],
         "level": 0.5,
-        "tone": 0.3,
-        "detune": 0.01,
+        "tone": 0.25,
+        "detune": 0.008,
         "pan": 0.0,
         "env": {
-          "attack": 7.0,
-          "decay": 2.0,
+          "attack": 4.0,
+          "decay": 1.5,
           "sustain": 0.8,
-          "release": 5.0
-        },
-        "mute": false,
-        "rate": 0.5,
-        "decay": 1.2,
-        "unison": 1,
-        "sub": 0.0,
-        "scale": [
-          0,
-          3,
-          7,
-          10
-        ]
-      },
-      {
-        "name": "sub",
-        "type": "osc",
-        "waveform": "triangle",
-        "note": 24,
-        "chord": [
-          0,
-          12
-        ],
-        "unison": 2,
-        "detune": 0.01,
-        "sub": 0.5,
-        "level": 0.3,
-        "pan": 0.05,
-        "env": {
-          "attack": 8.0,
-          "decay": 2.0,
-          "sustain": 0.85,
-          "release": 6.0
-        },
-        "mute": false,
-        "tone": 0.4,
-        "rate": 0.5,
-        "decay": 1.2,
-        "scale": [
-          0,
-          3,
-          7,
-          10
-        ]
-      },
-      {
-        "name": "drip_bell",
-        "type": "pluck",
-        "waveform": "sine",
-        "note": 72,
-        "scale": [
-          0,
-          3,
-          7,
-          10
-        ],
-        "level": 0.2,
-        "rate": 0.25,
-        "decay": 2.2,
-        "pan": 0.25,
-        "mute": false,
-        "tone": 0.4,
-        "detune": 0.01,
-        "unison": 1,
-        "sub": 0.0,
-        "chord": [
-          0
-        ],
-        "lfo": {
-          "on": false,
-          "rate": 0.01,
-          "shape": "random",
-          "depth": 0.73,
-          "dest": "tone"
+          "release": 3.0
         }
       },
       {
-        "name": "air",
-        "type": "noise",
-        "level": 0.15,
-        "tone": 0.3,
-        "pan": -0.1,
-        "mute": false,
-        "detune": 0.01,
-        "rate": 0.5,
-        "decay": 1.2,
-        "unison": 1,
-        "sub": 0.0,
+        "name": "mineral_bed",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 43,
         "chord": [
-          0
+          0,
+          5,
+          9
         ],
+        "level": 0.38,
+        "tone": 0.38,
+        "detune": 0.012,
+        "pan": -0.15,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.0,
+          "sustain": 0.85,
+          "release": 2.8
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.3
+        }
+      },
+      {
+        "name": "drip_pulse",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 55,
+        "chord": [
+          0,
+          3,
+          7
+        ],
+        "unison": 2,
+        "detune": 0.006,
+        "sub": 0.15,
+        "tone": 0.42,
+        "level": 0.32,
+        "pan": 0.12,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.4
+        }
+      },
+      {
+        "name": "crystal_chime",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 67,
         "scale": [
           0,
           3,
           7,
-          10
-        ]
+          10,
+          14
+        ],
+        "level": 0.28,
+        "rate": 0.35,
+        "decay": 2.2,
+        "tone": 0.65,
+        "pan": 0.2
+      },
+      {
+        "name": "moisture",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.32,
+        "pan": -0.1,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "triangle",
+          "rate": 0.025,
+          "depth": 0.5
+        }
       }
     ],
-    "swell_amount": 0.54,
-    "eq": {
-      "low": 0.0,
-      "mid": 0.0,
-      "high": 0.0
-    },
-    "swell_period": 24.0
+    "swell_amount": 0.3
   },
   "audio_link": 1.0,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

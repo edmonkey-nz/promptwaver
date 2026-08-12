@@ -8,6 +8,87 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.71.0]
+
+### 2D pattern scenes (the headline of this release)
+
+A scene is now explicitly **2D** or **3D**, derived from its generators rather
+than stored — the same rule `Scene.is_3d` already followed, so the two can't
+drift apart. A 2D scene has no camera at all: the pattern is composed directly
+in the frame in normalized `[-1,1]` and never moves through space, which is
+what makes it possible to design something edge-to-edge and have it land
+exactly as authored. The scene library badges each entry, and the UI swaps the
+camera panel for the layer panel accordingly.
+
+- **New `pattern2d` generator** — flat symmetric line-art: mandalas,
+  kaleidoscopes, neon lattices. Declarative `defs` + `nodes` like `world`,
+  deliberately *not* another fixed-algorithm generator, because the
+  declarative shape is the one that survived contact with the scene director
+  (32 of 35 library scenes were `world`; two of the procedural three appeared
+  in none at all).
+- **`patterns2d.py` — the flat grammar**, in three separate layers:
+  - ops: `line`, `polyline`, `circle`, `arc`, `rect`, `ngon`, `star`, `grid`
+  - **space**, per motif: `cart` as authored, or `polar` where a point is
+    `(radius, angle)` so a straight line becomes an arc or spiral
+  - **combinators**, per node: `repeat` (offset / scale / radial / ring /
+    grid) and `symmetry` (mirror x/y/xy, radial *n*)
+
+  Keeping space local to a motif and combinators global to a node is what lets
+  one pattern mix both idioms — Cartesian mirrored cross-arms alongside a
+  concentric polar rosette. A single global "polar mode" flag could not
+  express that.
+- **Angles are in turns (0–1), not radians**, throughout the pattern grammar.
+  Authored symmetry is nearly always a simple fraction of a circle, and `0.25`
+  survives JSON and a language model's arithmetic far better than `1.5707963`.
+- **Per-shape glow** — `Path.glow`, authored per node, carried to the canvas.
+  Monitor-only: the laser's per-point intensity channel is on/off, so
+  brightness there is carried by RGB. It rides in the payload only when
+  non-zero, so every existing scene's frame is byte-identical to before.
+  Applied identically in the preview and the output window.
+- Pattern2D's top-level `scale`/`rotate`/`spread`/`glow` are flat scalars on
+  purpose: `Scene._resolve` exposes every top-level param as `visual.<key>`,
+  so all four are audio- and LFO-modulatable with no further wiring.
+- A `max_strokes` ceiling bounds the combinatorics — a repeat crossed with a
+  symmetry multiplies fast, and an unbounded pattern would blow the frame
+  budget before anything else noticed.
+
+### The generator registry is now self-describing
+
+Two places were hardcoding what should have come from the registry, and
+between them they had stranded most of the generator set:
+
+- The director's prompt hardcoded `"generator":"world"`, so Claude could not
+  select any other generator — the only `flow_field` scenes in the library came
+  from the offline fallback.
+- The web UI hardcoded three param keys (`layer0.speed/turbulence/hue`), which
+  matched no generator's actual param list. `flow_field` was half-adjustable;
+  `ripples` and `attractor` had nothing meaningful; `forest` and `ground_grid`
+  had **no reachable controls at all**.
+
+Generators now declare `description`, `param_meta` (explicit min/max/step) and
+inherit `kind()` from `is_3d`; `catalog()` serves the lot.
+
+- The UI builds its layer panel from that schema. Every generator is fully
+  adjustable for the first time, multi-layer scenes get one section per layer,
+  and `pattern2d` got its panel with no new UI code.
+- `Generator.coerce()` casts incoming UI/MIDI values to the declared type —
+  int params like `rings`/`segments`/`rails` previously arrived as floats and
+  truncated, which made those sliders feel like they skipped.
+- `layer<N>.<param>` addresses any layer; the old path was hardcoded to layer 0.
+- `catalog()` and `Scene.layer_schemas()` are memoized — both ride the ~20Hz
+  state broadcast, and the catalog is fixed once imports settle. Measured
+  ~2.1 ms/s of pure rebuild before, ~0.006 ms/s after.
+
+### Fixed
+
+- Three generators each carried a byte-identical copy of the same hue ramp.
+  Consolidated into `color.py` (verified identical across 1001 samples, so no
+  saved scene shifts colour), which also adds the saturation- and
+  value-preserving `hue_shift` the pattern colour ramps need.
+- The canvas now writes `shadowBlur` only when the value actually changes —
+  for a uniform-glow scene that is once per frame instead of once per stroke,
+  fewer state changes than before rather than more.
+
 ## [0.30.0]
 
 ### Performance (the headline of this release)

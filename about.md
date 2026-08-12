@@ -1,6 +1,6 @@
 # PromptWaver
 
-A realtime immersive audio/visual platform that uses prompts to generate low-res 3D wireframe scenes and rich audio synthisizer soundscapes.
+A realtime immersive audio/visual platform that uses prompts to generate low-res 3D wireframe scenes — or flat 2D patterns like mandalas and kaleidoscopes — and rich audio synthisizer soundscapes.
 
 It's developed for projection (data/laser), but still looks great on a monitor. You can control most pararmaters from a MIDI controller if you prefer and MIDI can be mapped while perfoming.
 

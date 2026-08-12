@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.70.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.71.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 
@@ -21,11 +21,13 @@ Claude acts as an offline **scene director**: give it a visual prompt ("water fl
 - **AI-composed scenes** — Claude authors both visuals (3D geometry) and audio (synth patches)
 - **Live mixer** — tweak camera, soundscape, effects in real time; save settings back to scenes
 - **Procedural visuals** — flow fields, attractors, ripples, hand-authored geometry via shape grammar
+- **2D pattern scenes** — flat mandalas/kaleidoscopes composed in the frame, with per-shape glow
 - **Full-featured synth** — pad/pluck/osc/noise voices, ADSR envelopes, arpeggiator, per-voice LFO, EQ, delay, distortion
 - **MIDI control** — learn any control to a hardware knob; slots persist across scene changes
 - **Dual output** — laser + data projector simultaneously with independent keystone/flip per screen
 - **Monitor effects** — glow, trails, kaleidoscope (display-only, laser unaffected)
 - **3D immersive scenes** — orbit/drift/fly camera modes through composed worlds
+- **Scene types** — every scene is 2D (flat, no camera) or 3D (navigable), badged in the library
 - **Scene library** — save, load, crossfade, regenerate audio for existing visuals
 - **Multi-model support** — choose Haiku (fast/cheap), Sonnet (better), or Opus (best)
 

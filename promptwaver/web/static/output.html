@@ -188,16 +188,23 @@ function paint(scene){
   // additive version (stroking 2-3x per stroke with shadowBlur set) made the
   // whole preview unusably slow, since shadowBlur is one of the more
   // expensive canvas 2D ops per call.
-  const glowPx = filters.glow * Math.min(w, h) * 0.05;
+  // Per-stroke glow (st.g) floored by the scene's global glow — kept
+  // identical to index.html's paintPreview so the projector and the in-page
+  // preview never disagree about what a scene looks like.
+  const unit = Math.min(w, h) * 0.05;
+  let curBlur = -1;
   for (const st of scene) {
     const [r, g, b] = st.c;
     const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
     cx.strokeStyle = col;
-    if (glowPx > 0) { cx.shadowBlur = glowPx; cx.shadowColor = col; }
+    const px = Math.round(Math.max(filters.glow, st.g || 0) * unit);
+    if (px !== curBlur) { cx.shadowBlur = px; curBlur = px; }
+    if (px > 0) cx.shadowColor = col;
     cx.beginPath();
     st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
     cx.stroke();
   }
+  cx.shadowBlur = 0;
   if (filters.kaleidoscopeSegments > 2) applyKaleidoscope(cx, cv, Math.round(filters.kaleidoscopeSegments));
   if (filters.mirrorX || filters.mirrorY) applyMirror(cx, cv, filters.mirrorX, filters.mirrorY);
   if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);

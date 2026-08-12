@@ -84,6 +84,7 @@ class Scene:
     def __init__(self, spec: SceneSpec):
         self.spec = spec
         self._gens = []
+        self._layer_schema_cache: list[dict] | None = None
         self.is_3d = False
         for layer in spec.layers:
             g = layer if isinstance(layer, Layer) else Layer(**layer)
@@ -123,6 +124,39 @@ class Scene:
         if wp and len(wp) >= 3:
             modes.append("path")
         return modes
+
+    @property
+    def kind(self) -> str:
+        return "3d" if self.is_3d else "2d"
+
+    def layer_schemas(self) -> list[dict]:
+        """Each layer's generator schema plus this scene's current values.
+
+        The UI builds its layer panel from this instead of hardcoding param
+        keys, which is what previously stranded most generators: only
+        `speed`/`turbulence`/`hue` had controls, so `flow_field` was
+        half-adjustable and `ripples`/`attractor` had nothing meaningful at
+        all. Values fall back to the generator default for any param the
+        scene didn't author.
+
+        Built once per Scene: this rides the ~20Hz state broadcast, and a
+        param change rebuilds the whole Scene anyway (see Engine._apply_param),
+        so there is no way for a cached copy to go stale.
+        """
+        if self._layer_schema_cache is None:
+            out = []
+            for i, (g, base) in enumerate(self._gens):
+                sch = g.schema()
+                sch["index"] = i
+                sch["values"] = {p["key"]: base.get(p["key"], p["default"])
+                                 for p in sch["params"]}
+                out.append(sch)
+            self._layer_schema_cache = out
+        return self._layer_schema_cache
+
+    def coerce_layer_param(self, index: int, key: str, value):
+        """Cast `value` using the declared type of that layer's generator."""
+        return type(self._gens[index][0]).coerce(key, value)
 
     def _resolve(self, generator, base_params, matrix):
         p = dict(generator.defaults)
@@ -264,23 +298,45 @@ class SceneManager:
         self._next: Scene | None = None
         self._xfade = 0.0        # 0..1 progress
         self._xfade_dur = 0.0
-        self._names_cache: list[str] | None = None
+        self._lib_cache: list[dict] | None = None
 
     # library ---------------------------------------------------------------
+    def library(self) -> list[dict]:
+        """`[{"name":..., "kind": "2d"|"3d"}, ...]` for the scene list.
+
+        `state()` (and so this) is polled by the websocket broadcaster at
+        ~20Hz regardless of whether the library changed — an unconditional
+        os.listdir()+sort here was real, avoidable disk I/O on the same
+        process the render thread shares the GIL with, 20 times a second,
+        for a result that only ever changes on save/delete. Cached and
+        invalidated explicitly by the two calls below that can change it.
+
+        `kind` is DERIVED from the layers' generators, not stored in the JSON,
+        so it can't drift from what the scene actually is — the same rule
+        `Scene.is_3d` follows. Reading each file is affordable only because it
+        happens on cache rebuild, never per poll; keep it that way. A file
+        that won't parse is listed as 2d rather than dropped, so a broken
+        scene stays visible (and deletable) in the UI.
+        """
+        if self._lib_cache is None:
+            out = []
+            for f in os.listdir(self.library_dir):
+                if not f.endswith(".json"):
+                    continue
+                name = os.path.splitext(f)[0]
+                try:
+                    with open(os.path.join(self.library_dir, f)) as fh:
+                        d = json.load(fh)
+                    kind = gen.kind_of(
+                        l.get("generator", "") for l in d.get("layers", []))
+                except Exception:
+                    kind = "2d"
+                out.append({"name": name, "kind": kind})
+            self._lib_cache = sorted(out, key=lambda e: e["name"])
+        return self._lib_cache
+
     def names(self) -> list[str]:
-        # `state()` (and so this) is polled by the websocket broadcaster at
-        # ~20Hz regardless of whether the library changed — an unconditional
-        # os.listdir()+sort here was real, avoidable disk I/O on the same
-        # process the render thread shares the GIL with, 20 times a second,
-        # for a result that only ever changes on save/delete. Cached and
-        # invalidated explicitly by the two calls below that can change it.
-        if self._names_cache is None:
-            self._names_cache = sorted(
-                os.path.splitext(f)[0]
-                for f in os.listdir(self.library_dir)
-                if f.endswith(".json")
-            )
-        return self._names_cache
+        return [e["name"] for e in self.library()]
 
     def path_for(self, name: str) -> str:
         safe = "".join(c for c in name if c.isalnum() or c in " _-").strip()
@@ -292,7 +348,7 @@ class SceneManager:
         with open(tmp, "w") as f:
             json.dump(spec.to_dict(), f, indent=2)
         os.replace(tmp, self.path_for(name))
-        self._names_cache = None
+        self._lib_cache = None
 
     def load_spec(self, name: str) -> SceneSpec:
         with open(self.path_for(name)) as f:
@@ -302,7 +358,7 @@ class SceneManager:
         p = self.path_for(name)
         if os.path.exists(p):
             os.remove(p)
-        self._names_cache = None
+        self._lib_cache = None
 
     # switching -------------------------------------------------------------
     def set_scene(self, spec: SceneSpec, crossfade: float = 0.0):

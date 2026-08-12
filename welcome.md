@@ -8,7 +8,7 @@ If you don't have a Claude API account, you'll need one to create scenes, otherw
 
 **Play scenes:**
 
-- Click any scene in the library to load it
+- Click any scene in the library to load it — the **2D**/**3D** badge tells you which kind it is. 3D scenes you fly through and get camera controls; 2D scenes are flat patterns filling the frame, and get pattern controls instead
 - Press the **Start** button in the header region
 - Use settings under the visualiser in the left panel to control the visual output
 - Change any parameters in the **Soundscape** panel to adjust audio synthisis - note theres an intentional small transisiton to soften jarring changes of values

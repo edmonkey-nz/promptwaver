@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..color import hue_rgb as _hue
 from ..geometry import Path, Frame
 from .base import Generator, register
 
 
 @register("attractor")
 class DeJong(Generator):
+    description = "de Jong attractor — a slow organic swirl, smoke or nebula"
     defaults = dict(
         points=600,
         a=1.4, b=-2.3, c=2.4, d=-2.1,
@@ -24,6 +26,18 @@ class DeJong(Generator):
         hue=0.72,
         scale=0.42,
     )
+    # The four coefficients need to swing either side of zero — the figure's
+    # whole character lives in that range, and inference would clamp b/d to
+    # their own negative half.
+    param_meta = {
+        "points": (64, 2000, 1),
+        "a": (-3.0, 3.0, 0.01), "b": (-3.0, 3.0, 0.01),
+        "c": (-3.0, 3.0, 0.01), "d": (-3.0, 3.0, 0.01),
+        "drift": (0.0, 1.0, 0.01),
+        "speed": (0.0, 1.0, 0.01),
+        "hue": (0.0, 1.0, 0.01),
+        "scale": (0.05, 1.0, 0.01),
+    }
 
     def render(self, t: float, p: dict) -> Frame:
         tt = t * p["speed"]
@@ -42,11 +56,3 @@ class DeJong(Generator):
         # de Jong lives roughly in [-2,2]; scale into normalized space
         pts = np.stack([xs, ys], axis=1) * p["scale"] * 0.5
         return [Path(pts, _hue(p["hue"]))]
-
-
-def _hue(h: float):
-    h = h % 1.0
-    r = max(0.0, 1 - abs(h - 0.0) * 3, 1 - abs(h - 1.0) * 3)
-    g = max(0.0, 1 - abs(h - 0.33) * 3)
-    b = max(0.0, 1 - abs(h - 0.66) * 3)
-    return (min(1, r), min(1, g), min(1, b))

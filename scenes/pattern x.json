@@ -1,0 +1,141 @@
+{
+  "name": "pattern x",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "leg": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.14,
+                  0.14
+                ],
+                "b": [
+                  0.92,
+                  0.92
+                ]
+              }
+            ]
+          },
+          "barb": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.34,
+                    0.62
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    0.62,
+                    0.34
+                  ]
+                ]
+              }
+            ]
+          },
+          "core": {
+            "space": "polar",
+            "seg": 18,
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.1,
+                    0.0
+                  ],
+                  [
+                    0.19,
+                    0.125
+                  ],
+                  [
+                    0.1,
+                    0.25
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "leg",
+            "color": [
+              0.25,
+              0.95,
+              0.55
+            ],
+            "glow": 0.8,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 3,
+              "hue_step": 0.07
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "barb",
+            "color": [
+              0.95,
+              0.65,
+              0.15
+            ],
+            "glow": 0.7,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.075,
+              "n": 3,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "core",
+            "color": [
+              1.0,
+              0.45,
+              0.1
+            ],
+            "glow": 1.0,
+            "symmetry": {
+              "radial": 8
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a1408",
+    "#3ef08a",
+    "#ffa724"
+  ],
+  "camera": {
+    "glow": 0.0,
+    "trail": 0.35
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "visual.glow",
+      "depth": 0.4
+    }
+  ],
+  "image_prompt": "[demo] pattern x",
+  "soundscape": {}
+}

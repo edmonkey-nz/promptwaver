@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..color import hue_rgb as _hue
 from ..geometry import Path, Frame
 from .base import Generator, register
 
 
 @register("ripples")
 class Ripples(Generator):
+    description = "expanding concentric rings — rain, droplets, sonar"
     defaults = dict(
         rings=5,
         segments=64,
@@ -20,6 +22,13 @@ class Ripples(Generator):
         spawn=0.9,      # spacing between ring birth phases
         hue=0.58,
     )
+    param_meta = {
+        "rings": (1, 24, 1),
+        "segments": (8, 128, 1),
+        "speed": (0.0, 1.0, 0.01),
+        "spawn": (0.1, 2.0, 0.01),
+        "hue": (0.0, 1.0, 0.01),
+    }
 
     def render(self, t: float, p: dict) -> Frame:
         n = max(1, int(p["rings"]))
@@ -37,11 +46,3 @@ class Ripples(Generator):
             pts = np.stack([cos * radius, sin * radius], axis=1).astype(np.float32)
             out.append(Path(pts, col, closed=True))
         return out
-
-
-def _hue(h: float):
-    h = h % 1.0
-    r = max(0.0, 1 - abs(h - 0.0) * 3, 1 - abs(h - 1.0) * 3)
-    g = max(0.0, 1 - abs(h - 0.33) * 3)
-    b = max(0.0, 1 - abs(h - 0.66) * 3)
-    return (min(1, r), min(1, g), min(1, b))

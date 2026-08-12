@@ -19,6 +19,7 @@ import time
 
 from .modulation import ModMatrix, LFO, Value
 from .scenes import SceneManager, SceneSpec
+from . import generators as gen
 from .director import SceneDirector
 from .audio import make_synth, AudioAnalysis
 from .geometry import test_pattern_frame
@@ -481,13 +482,25 @@ class Engine:
         elif key.startswith("lfo_slow.") or key.startswith("lfo_mid."):
             name, attr = key.split(".", 1)
             setattr(self.matrix.sources[name], attr, float(value))
-        elif key.startswith("layer0.") and self.scenes.current:
-            attr = key.split(".", 1)[1]
-            layer = self.scenes.current.spec.layers[0]
+        elif key.startswith("layer") and "." in key and self.scenes.current:
+            # "layer<N>.<param>" — N was previously hardcoded to 0 and every
+            # value forced to float. Now any layer is addressable and the
+            # value is cast to the type the generator declares, so int params
+            # (rings, segments, rails) don't arrive as floats.
+            head, attr = key.split(".", 1)
+            try:
+                idx = int(head[5:])
+            except ValueError:
+                return
+            sc = self.scenes.current
+            layers = sc.spec.layers
+            if not (0 <= idx < len(layers)):
+                return
+            layer = layers[idx]
             params = layer.params if hasattr(layer, "params") else layer["params"]
-            params[attr] = float(value)
+            params[attr] = sc.coerce_layer_param(idx, attr, value)
             # rebuild so the change takes effect
-            self.scenes.set_scene(self.scenes.current.spec, crossfade=0)
+            self.scenes.set_scene(sc.spec, crossfade=0)
 
     def load_scene(self, name: str):
         def apply():
@@ -1033,7 +1046,15 @@ class Engine:
             "scene": self.scenes.current.spec.name if self.scenes.current else None,
             "library_name": self._current_library_name,
             "library": self.scenes.names(),
-            "generators": __import__("promptwaver.generators", fromlist=["available"]).available(),
+            # name -> "2d"|"3d" for the library list's type badge. Derived from
+            # each scene's generators (see SceneManager.library), never stored.
+            "library_kinds": {e["name"]: e["kind"] for e in self.scenes.library()},
+            # Full registry schema: what generators exist, what kind each is,
+            # and what knobs each has. The UI and the director both read this
+            # rather than hardcoding names — see generators/base.py.
+            "generators": gen.catalog(),
+            "layers": self.scenes.current.layer_schemas() if self.scenes.current else [],
+            "scene_kind": self.scenes.current.kind if self.scenes.current else None,
             "points": getattr(self.output, "last_points", 0),
             "output": self.output.name,
             "audio": getattr(self.synth, "online", False),
@@ -1093,10 +1114,18 @@ class Engine:
             pts = p.points
             if len(pts) > stroke_thin:  # thin dense strokes for the preview
                 pts = pts[:: max(1, len(pts) // stroke_thin)]
-            out.append({
+            st = {
                 "c": [round(float(v), 3) for v in p.color],
                 "p": [[round(float(x), 3), round(float(y), 3)] for x, y in pts],
-            })
+            }
+            # Per-stroke glow rides along only when a scene actually uses it,
+            # so the ~20Hz payload for every existing scene is byte-identical
+            # to before. Quantised to 2dp because the canvas buckets it anyway
+            # (see paintPreview) — full float precision would just cost bytes.
+            g = getattr(p, "glow", 0.0)
+            if g:
+                st["g"] = round(float(g), 2)
+            out.append(st)
             if sum(len(s["p"]) for s in out) > max_points:
                 break
         return out

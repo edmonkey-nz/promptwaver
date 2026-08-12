@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..color import hue_rgb as _hue_to_rgb
 from ..geometry import Path, Frame
 from .base import Generator, register
 
@@ -24,6 +25,7 @@ def _field(x, y, t, turb):
 
 @register("flow_field")
 class FlowField(Generator):
+    description = "drifting particle streaks — water, cloud, smoke, wind"
     defaults = dict(
         particles=48,      # seeds per axis is derived; total ~particles
         steps=10,          # points per streak
@@ -32,6 +34,17 @@ class FlowField(Generator):
         turbulence=0.35,
         hue=0.55,          # 0..1 mapped to an RGB below
     )
+    # `particles` is floored at 9 because the seed grid is sqrt(n) per axis —
+    # below that the grid collapses to a single column and the field reads as
+    # a line rather than a flow.
+    param_meta = {
+        "particles": (9, 400, 1),
+        "steps": (2, 40, 1),
+        "step_len": (0.01, 0.25, 0.005),
+        "speed": (0.0, 1.5, 0.01),
+        "turbulence": (0.0, 1.5, 0.01),
+        "hue": (0.0, 1.0, 0.01),
+    }
 
     def render(self, t: float, p: dict) -> Frame:
         n = max(4, int(p["particles"]))
@@ -56,12 +69,3 @@ class FlowField(Generator):
                 y += np.sin(ang) * p["step_len"]
             out.append(Path(pts, col))
         return out
-
-
-def _hue_to_rgb(h: float):
-    # simple hue ramp (no saturation control needed for the MVP)
-    h = h % 1.0
-    r = max(0.0, 1 - abs(h - 0.0) * 3, 1 - abs(h - 1.0) * 3)
-    g = max(0.0, 1 - abs(h - 0.33) * 3)
-    b = max(0.0, 1 - abs(h - 0.66) * 3)
-    return (min(1, r), min(1, g), min(1, b))

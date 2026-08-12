@@ -105,7 +105,10 @@ def _cone_cos(fov_deg: float, aspect: float) -> float:
 
 @register("world")
 class World(Generator3D):
+    description = "composed scene graph — authored defs placed as nodes"
     field_depth = 1000.0        # bounded scene; effectively no Z-wrap
+    # No param_meta: `nodes`/`defs` are authored data, not knobs, so schema()
+    # reports no adjustable params and the UI shows no slider panel for it.
     defaults = dict(nodes=[], defs={})
 
     def __init__(self, **params):

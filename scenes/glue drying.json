@@ -3046,7 +3046,7 @@
     }
   ],
   "camera": {
-    "mode": "path",
+    "mode": "drift",
     "waypoints": [
       [
         -35,
@@ -3133,7 +3133,8 @@
     "mirror_x": true,
     "mirror_y": false,
     "glow": 0.2,
-    "trail": 0.68
+    "trail": 0.68,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {

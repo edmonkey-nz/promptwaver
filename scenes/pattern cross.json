@@ -1,0 +1,171 @@
+{
+  "name": "pattern cross",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "arm": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.17,
+                  0.17
+                ],
+                "b": [
+                  0.17,
+                  0.97
+                ]
+              }
+            ]
+          },
+          "chevron": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.26,
+                    0.86
+                  ],
+                  [
+                    0.86,
+                    0.26
+                  ]
+                ]
+              }
+            ]
+          },
+          "diamond": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 4,
+                "r": 0.13,
+                "rot": 0.0
+              }
+            ]
+          },
+          "border": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "rect",
+                "w": 1.76,
+                "h": 1.76
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "border",
+            "color": [
+              0.25,
+              0.75,
+              1.0
+            ],
+            "glow": 0.45,
+            "scale": 0.9
+          },
+          {
+            "def": "arm",
+            "color": [
+              0.3,
+              0.8,
+              1.0
+            ],
+            "glow": 0.85,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 4,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            },
+            "scale": 0.9
+          },
+          {
+            "def": "arm",
+            "color": [
+              0.45,
+              0.55,
+              1.0
+            ],
+            "glow": 0.85,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 4,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            },
+            "rotate": 0.25,
+            "scale": 0.9
+          },
+          {
+            "def": "chevron",
+            "color": [
+              0.4,
+              0.6,
+              1.0
+            ],
+            "glow": 0.7,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.055,
+              "n": 3,
+              "hue_step": 0.04
+            },
+            "symmetry": {
+              "mirror": "xy"
+            },
+            "scale": 0.9
+          },
+          {
+            "def": "diamond",
+            "color": [
+              0.75,
+              0.35,
+              1.0
+            ],
+            "glow": 1.0,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.55,
+              "n": 3,
+              "hue_step": 0.09
+            },
+            "scale": 0.9
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#06121f",
+    "#33c8ff",
+    "#a855ff"
+  ],
+  "camera": {
+    "glow": 0.0,
+    "trail": 0.35
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "visual.scale",
+      "depth": 0.08
+    }
+  ],
+  "image_prompt": "[demo] pattern cross",
+  "soundscape": {}
+}

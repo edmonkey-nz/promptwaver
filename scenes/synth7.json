@@ -908,7 +908,7 @@
           7,
           12
         ],
-        "unison": 2.0,
+        "unison": 2,
         "detune": 0.01,
         "sub": 0.91,
         "level": 1.0,
@@ -928,7 +928,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "acid_lead",
@@ -967,7 +968,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "acid_wail",
@@ -982,7 +984,7 @@
         "unison": 3,
         "detune": 0.035,
         "sub": 0.0,
-        "level": 0.39,
+        "level": 0.09,
         "tone": 0.5,
         "pan": -0.2,
         "arp": {
@@ -997,7 +999,7 @@
           "sustain": 0.7,
           "release": 1.2
         },
-        "mute": true,
+        "mute": false,
         "rate": 0.5,
         "decay": 1.2,
         "scale": [
@@ -1005,7 +1007,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "ambient_pad",
@@ -1028,7 +1031,7 @@
           "sustain": 0.82,
           "release": 3.2
         },
-        "mute": true,
+        "mute": false,
         "rate": 0.5,
         "decay": 1.2,
         "unison": 1,
@@ -1038,9 +1041,22 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       }
-    ]
+    ],
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.0,
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

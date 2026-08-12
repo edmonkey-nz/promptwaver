@@ -13,6 +13,7 @@ from .base import Generator3D, register
 
 @register("ground_grid")
 class GroundGrid(Generator3D):
+    description = "a receding ground grid — the floor you fly over"
     field_depth = 16.0
     defaults = dict(
         width=6.0,       # half-width of the floor
@@ -20,6 +21,12 @@ class GroundGrid(Generator3D):
         rungs=16,        # transverse lines across the field
         hue=0.55,
     )
+    param_meta = {
+        "width": (1.0, 20.0, 0.1),
+        "rails": (2, 24, 1),
+        "rungs": (2, 48, 1),
+        "hue": (0.0, 1.0, 0.01),
+    }
 
     def render3d(self, t: float, p: dict):
         w = p["width"]

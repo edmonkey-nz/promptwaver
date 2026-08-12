@@ -172,10 +172,21 @@
   .lib .item{display:flex;align-items:center;justify-content:space-between;gap:6px;
              padding:7px 10px;border:1px solid var(--line);border-radius:8px;
              cursor:pointer;font-family:var(--mono);font-size:12px;min-width:0}
-  .lib .item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lib .item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                              flex:1 1 auto;min-width:0}
   .lib .item:hover{border-color:var(--cyan)}
   .lib .item.active{border-color:var(--cyan);background:rgba(51,224,208,.12)}
   .lib .item.active span:first-child{color:var(--cyan)}
+  /* scene kind badge — derived from the scene's generators, see
+     SceneManager.library(). 2D scenes have no camera at all, so the badge is
+     also telling you which control panel you'll get. */
+  .kind{flex:0 0 auto;font-size:9px;letter-spacing:.08em;padding:1px 5px;
+        border-radius:4px;border:1px solid var(--line);color:var(--dim)}
+  .kind.k3d{color:var(--cyan);border-color:rgba(51,224,208,.35)}
+  .kind.k2d{color:var(--amber);border-color:rgba(242,166,35,.35)}
+  .layer-desc{font-size:11px;color:var(--dim);margin:-2px 0 8px;line-height:1.5}
+  .layer-gen{font-family:var(--mono);font-size:11px;color:var(--dim);
+             text-transform:uppercase;letter-spacing:.06em;margin:8px 0 4px}
   .synthblock{width:100%;border:1px solid var(--line);border-radius:12px;
               background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
   .synthhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
@@ -373,17 +384,13 @@
         <span class="val" id="v-mfkaleidoscope">off</span></div>
     </div>
 
+    <!-- Built at runtime from the generator registry's schema (state.layers),
+         not hardcoded here — see renderLayers(). Hardcoding three param keys
+         is what previously left most generators unreachable. -->
     <div class="group" id="g-motion" style="width:100%">
-      <h2>Motion</h2>
-      <div class="field"><label>flow speed</label>
-        <input type="range" id="s-speed" min="0" max="0.6" step="0.01" value="0.2">
-        <span class="val" id="v-speed">0.20</span></div>
-      <div class="field"><label>turbulence</label>
-        <input type="range" id="s-turb" min="0" max="1" step="0.01" value="0.35">
-        <span class="val" id="v-turb">0.35</span></div>
-      <div class="field"><label>hue</label>
-        <input type="range" id="s-hue" min="0" max="1" step="0.01" value="0.55">
-        <span class="val" id="v-hue">0.55</span></div>
+      <h2 id="layer-title">Layer</h2>
+      <div class="layer-desc" id="layer-desc"></div>
+      <div id="layer-params" style="width:100%"></div>
     </div>
 
   </section>
@@ -884,14 +891,20 @@ function paintState(s){
   if (!as.dataset.touched)
     as.textContent = s.director_online ? `director: ${s.director_model}` : "director: local (no key)";
   const lib = $("lib");
-  if (lib.dataset.sig !== s.library.join(",")) {
-    lib.dataset.sig = s.library.join(",");
+  const kinds = s.library_kinds || {};
+  // The kind is part of the signature: a scene re-saved as a different type
+  // has to relabel, and the name list alone wouldn't have changed.
+  const libSig = s.library.map(n => n + ":" + (kinds[n] || "")).join(",");
+  if (lib.dataset.sig !== libSig) {
+    lib.dataset.sig = libSig;
     lib.innerHTML = "";
     s.library.forEach(name => {
       const el = document.createElement("div");
       el.className = "item";
       el.dataset.name = name;
-      el.innerHTML = `<span>${name}</span><span class="x">✕</span>`;
+      const k = kinds[name] || "";
+      const badge = k ? `<span class="kind k${k}">${k.toUpperCase()}</span>` : "";
+      el.innerHTML = `<span>${name}</span>${badge}<span class="x">✕</span>`;
       el.onclick = () => {
         send({type:"scene_load",name});
         // Close library accordion when scene is loaded
@@ -913,9 +926,14 @@ function paintState(s){
   lib.querySelectorAll(".item").forEach(el => {
     el.classList.toggle("active", el.dataset.name === s.library_name);
   });
-  // show camera controls for 3D scenes, motion controls for flat ones
+  // Camera controls are 3D-only (a flat scene has no camera at all). The
+  // layer panel is shown whenever the scene's generators actually expose
+  // knobs — including 3D ones like forest/ground_grid, which used to be
+  // denied it purely because the panel was labelled "Motion" and assumed a
+  // flat scene.
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
-  $("g-motion").style.display = s.scene_3d ? "none" : "flex";
+  renderLayers(s);
+  $("g-motion").style.display = (s.layers || []).some(L => L.params.length) ? "flex" : "none";
   // Camera slider VALUES track the engine continuously via syncControls
   // (below) rather than being copied across once per scene change — a MIDI
   // knob moves them too, not just a scene load. The mode dropdown isn't a
@@ -1523,6 +1541,14 @@ function registerCtl(readPath, el, span, fmt){
 function readStateValue(path, s){
   if (!s) return undefined;
   if (path.startsWith("camera.")) return s.camera ? s.camera[path.slice(7)] : undefined;
+  // layer<N>.<param> -> state.layers[N].values[param]; matched by the layer's
+  // own `index` rather than array position so it stays correct if the state
+  // ever carries a subset of layers.
+  const lm = /^layer(\d+)\.(.+)$/.exec(path);
+  if (lm){
+    const L = (s.layers || []).find(x => x.index === +lm[1]);
+    return L ? L.values[lm[2]] : undefined;
+  }
   if (path.startsWith("voice.")){
     const [, name, ...rest] = path.split(".");
     const v = (s.soundscape?.voices || []).find(x => x.name === name);
@@ -1530,6 +1556,66 @@ function readStateValue(path, s){
   }
   if (Object.prototype.hasOwnProperty.call(s, path)) return s[path];   // crossfade, glow, hue_value…
   return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), s.soundscape);
+}
+
+// The layer panel is generated from state.layers — each entry is a generator
+// schema (name, kind, description, params with min/max/step) plus this scene's
+// current values. Rebuilt only when the SHAPE changes (which generators, which
+// keys); the values then track continuously through registerCtl/syncControls
+// like every other slider, so MIDI and a second browser tab move them too.
+//
+// No learn icons here, matching the earlier call on the hardcoded versions:
+// these are scene-authoring params, not things you reach for mid-set.
+let _layerSig = "";
+function renderLayers(s){
+  const layers = s.layers || [];
+  const sig = layers.map(L => `${L.index}:${L.name}:${L.params.map(p=>p.key).join("|")}`).join(",");
+  if (sig === _layerSig) return;
+  _layerSig = sig;
+
+  const host = $("layer-params"), title = $("layer-title"), desc = $("layer-desc");
+  host.innerHTML = "";
+  const tunable = layers.filter(L => L.params.length);
+  title.textContent = layers.length ? layers.map(L => L.name).join(" + ") : "Layer";
+
+  if (!tunable.length){
+    desc.textContent = layers.length
+      ? "geometry is authored in the scene — this generator has no knobs of its own"
+      : "no scene loaded";
+    return;
+  }
+  desc.textContent = layers.length === 1 ? (layers[0].description || "") : "";
+
+  for (const L of tunable){
+    if (tunable.length > 1){
+      const h = document.createElement("div");
+      h.className = "layer-gen";
+      h.textContent = L.name;
+      h.title = L.description || "";
+      host.appendChild(h);
+    }
+    for (const p of L.params){
+      const key = `layer${L.index}.${p.key}`;
+      // Decimal places follow the declared step, so an int reads "12" and a
+      // 0.005-step float reads "0.065" instead of both being forced to 2dp.
+      const dp = p.type === "int" ? 0 : Math.max(0, Math.round(-Math.log10(p.step || 0.01)));
+      const fmt = v => (+v).toFixed(dp);
+      const row = document.createElement("div");
+      row.className = "field";
+      row.innerHTML = `<label>${p.key.replace(/_/g, " ")}</label>`
+        + `<input type="range" min="${p.min}" max="${p.max}" step="${p.step}">`
+        + `<span class="val"></span>`;
+      const el = row.querySelector("input"), span = row.querySelector(".val");
+      const v = L.values[p.key] ?? p.default;
+      el.value = v; span.textContent = fmt(v);
+      el.oninput = () => {
+        span.textContent = fmt(el.value);
+        send({type:"set", key, value:+el.value});
+      };
+      host.appendChild(row);
+      registerCtl(key, el, span, fmt);
+    }
+  }
 }
 
 function syncControls(s){
@@ -2010,17 +2096,26 @@ function paintPreview(scene){
   // per frame, made the whole preview unusably slow. Back to the cheap
   // version — glow is more subtle without trails, but it doesn't cost
   // anything close to that.
-  const glowPx = glow * Math.min(w,h) * 0.05;
+  // Per-stroke glow (st.g, authored by pattern2d) takes the scene's global
+  // glow as its floor. Rounded to whole pixels and held in `curBlur` so the
+  // expensive property is only written when it actually changes — with a
+  // uniform-glow scene that is once per frame instead of once per stroke,
+  // which is fewer state changes than the previous version, not more.
+  const unit = Math.min(w,h) * 0.05;
+  let curBlur = -1;
   for (const st of scene){
     const [r,g,b] = st.c;
     const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
     cx.strokeStyle = col;
-    if (glowPx > 0) { cx.shadowBlur = glowPx; cx.shadowColor = col; }
+    const px = Math.round(Math.max(glow, st.g || 0) * unit);
+    if (px !== curBlur) { cx.shadowBlur = px; curBlur = px; }
+    if (px > 0) cx.shadowColor = col;
     cx.beginPath();
     st.p.forEach((pt,i)=>{ const [X,Y]=map(pt[0],pt[1]);
       i? cx.lineTo(X,Y): cx.moveTo(X,Y); });
     cx.stroke();
   }
+  cx.shadowBlur = 0;   // don't leak this frame's glow into the next clear/fade
   if (mirrorX || mirrorY) applyMirror(cx, cv, mirrorX, mirrorY);
 }
 
@@ -2047,11 +2142,9 @@ slider("mf-trail", "trail", "mftrail");
 $("mf-mirror-x").onchange = () => send({type:"set", key:"mirror_x", value:$("mf-mirror-x").checked});
 $("mf-mirror-y").onchange = () => send({type:"set", key:"mirror_y", value:$("mf-mirror-y").checked});
 slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0" ? "off" : v+" way", null);
-// layer0.* are 2D-generator authoring params, not things you reach for
-// mid-set, so they get no learn icon (null) — see slider().
-slider("s-speed","layer0.speed","speed",undefined,null);
-slider("s-turb","layer0.turbulence","turb",undefined,null);
-slider("s-hue","layer0.hue","hue",undefined,null);
+// The three layer0.* sliders that stood here are gone — they hardcoded
+// speed/turbulence/hue, which no generator's param list actually matches.
+// renderLayers() builds the real set from the registry schema instead.
 slider("s-lfo","lfo_slow.rate","lfo");
 slider("s-xf","crossfade","xf",(v)=>(+v).toFixed(1));
 slider("s-afade","audio_fade","safade",(v)=>(+v).toFixed(1),null);

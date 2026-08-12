@@ -1,5 +1,5 @@
 {
-  "name": "forest flythrough",
+  "name": "forest_flythrough",
   "layers": [
     {
       "generator": "ground_grid",
@@ -74,53 +74,101 @@
   "soundscape": {
     "tempo": 60,
     "master": 0.8,
-    "distortion": 0.05,
+    "distortion": 0.0,
     "delay": {
-      "time": 0.45,
+      "time": 0.4,
       "feedback": 0.35,
       "mix": 0.3
     },
     "voices": [
       {
-        "name": "drone",
+        "name": "foundation",
         "type": "pad",
-        "waveform": "saw",
+        "waveform": "sine",
         "note": 36,
         "chord": [
           0,
           7,
-          12,
-          19
+          12
         ],
         "level": 0.5,
         "tone": 0.35,
-        "detune": 0.012,
-        "pan": 0.0
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.0
+        }
       },
       {
-        "name": "bells",
-        "type": "pluck",
-        "waveform": "sine",
-        "note": 72,
-        "scale": [
+        "name": "growth",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 48,
+        "chord": [
           0,
           3,
           7,
           10
         ],
-        "level": 0.28,
-        "rate": 0.5,
-        "decay": 1.6,
-        "pan": 0.25
+        "level": 0.35,
+        "tone": 0.42,
+        "detune": 0.012,
+        "pan": 0.0,
+        "env": {
+          "attack": 5.0,
+          "decay": 2.0,
+          "sustain": 0.75,
+          "release": 2.8
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.35
+        }
       },
       {
-        "name": "air",
+        "name": "fungi",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 60,
+        "scale": [
+          0,
+          2,
+          5,
+          9
+        ],
+        "level": 0.25,
+        "rate": 0.35,
+        "decay": 1.8,
+        "tone": 0.45,
+        "pan": 0.15
+      },
+      {
+        "name": "moisture",
         "type": "noise",
         "level": 0.12,
-        "tone": 0.4,
-        "pan": -0.15
+        "tone": 0.3,
+        "pan": -0.1,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.025,
+          "depth": 0.4
+        }
       }
-    ]
+    ],
+    "swell_amount": 0.3
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

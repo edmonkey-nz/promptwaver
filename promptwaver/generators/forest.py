@@ -33,6 +33,7 @@ def _tree(x, z, height, seed):
 
 @register("forest")
 class Forest(Generator3D):
+    description = "instanced trees either side of the flight path"
     field_depth = 18.0
     defaults = dict(
         trees=14,
@@ -41,6 +42,13 @@ class Forest(Generator3D):
         hue=0.33,
         sway=0.04,       # gentle canopy sway
     )
+    param_meta = {
+        "trees": (1, 60, 1),
+        "spread": (1.0, 15.0, 0.1),
+        "clearance": (0.0, 5.0, 0.1),
+        "hue": (0.0, 1.0, 0.01),
+        "sway": (0.0, 0.3, 0.005),
+    }
 
     def __init__(self, **params):
         super().__init__(**params)

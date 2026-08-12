@@ -22,11 +22,19 @@ class Path:
         color:  (r, g, b) in [0, 1]. Applied to the whole stroke for now;
                 per-point colour is a later extension.
         closed: if True the renderer joins the last point back to the first.
+        glow:   0..1 per-stroke bloom, MONITOR ONLY. The laser has no such
+                control — its per-point intensity channel is on/off (see
+                output/ilda.py), so brightness there is carried by RGB. This
+                rides alongside the geometry rather than in the display-filter
+                block because it is authored per shape by the scene, unlike
+                the global glow slider which applies to the whole frame.
+                Default 0 means every existing generator is unaffected.
     """
 
     points: np.ndarray
     color: tuple[float, float, float] = (1.0, 1.0, 1.0)
     closed: bool = False
+    glow: float = 0.0
 
     def __post_init__(self) -> None:
         self.points = np.asarray(self.points, dtype=np.float32).reshape(-1, 2)
