@@ -1,0 +1,357 @@
+{
+  "name": "rose",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "arm": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.16,
+                  0.16
+                ],
+                "b": [
+                  0.16,
+                  0.93
+                ]
+              }
+            ]
+          },
+          "petal": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.24,
+                  0.0
+                ],
+                "b": [
+                  0.62,
+                  0.05
+                ]
+              }
+            ]
+          },
+          "core": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 6,
+                "r": 0.13
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "arm",
+            "color": [
+              0.4,
+              1.0,
+              0.75
+            ],
+            "glow": 0.85,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 4,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "petal",
+            "color": [
+              0.8,
+              0.35,
+              1.0
+            ],
+            "glow": 0.75,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.04,
+              "n": 2,
+              "hue_step": 0.06
+            },
+            "symmetry": {
+              "radial": 12,
+              "hue_step": 0.02
+            }
+          },
+          {
+            "def": "core",
+            "color": [
+              0.4,
+              1.0,
+              0.75
+            ],
+            "glow": 1.0,
+            "closed": true,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.6,
+              "n": 3,
+              "hue_step": 0.09
+            }
+          }
+        ],
+        "scale": 0.87,
+        "rotate": 0.0,
+        "spread": 0.57,
+        "glow": 0.6,
+        "max_strokes": 420
+      }
+    }
+  ],
+  "palette": [
+    "#05060f",
+    "#33e0d0",
+    "#ff6fd8"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "triangle",
+    "voices": 4,
+    "attack": 3.0,
+    "release": 6.0,
+    "base_note": 45,
+    "chord": [
+      0,
+      7,
+      12,
+      15
+    ]
+  },
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.rotate",
+      "depth": 0.04
+    },
+    {
+      "source": "voice.petals",
+      "dest": "visual.spread",
+      "depth": 0.96
+    },
+    {
+      "source": "lfo_slow",
+      "dest": "visual.spread",
+      "depth": 1.0
+    }
+  ],
+  "camera": {
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": true,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 54.0,
+    "master": 0.78,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.3,
+      "mix": 0.28
+    },
+    "voices": [
+      {
+        "name": "root_bloom",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 33,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.45,
+        "tone": 0.25,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.5,
+          "decay": 1.5,
+          "sustain": 0.85,
+          "release": 5.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "sunwarmth",
+        "type": "pad",
+        "waveform": "saw",
+        "note": 45,
+        "chord": [
+          0,
+          4,
+          7,
+          11
+        ],
+        "level": 0.4,
+        "tone": 0.45,
+        "detune": 0.015,
+        "pan": 0.1,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.2,
+          "sustain": 0.8,
+          "release": 4.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "bees",
+        "type": "osc",
+        "waveform": "square",
+        "note": 57,
+        "chord": [
+          0,
+          7
+        ],
+        "unison": 5,
+        "detune": 0.022,
+        "sub": 0.66,
+        "tone": 0.6,
+        "level": 0.2,
+        "pan": 0.0,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "sine",
+          "rate": 0.09,
+          "depth": 0.7
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.11,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "petals",
+        "type": "pluck",
+        "waveform": "saw",
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          9
+        ],
+        "level": 0.2,
+        "rate": 0.2,
+        "decay": 1.8,
+        "tone": 0.65,
+        "pan": -0.2,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.235,
+          "shape": "sine",
+          "depth": 0.88,
+          "dest": "tone"
+        }
+      },
+      {
+        "name": "meadow_air",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.35,
+        "pan": 0.0,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "triangle",
+          "rate": 0.04,
+          "depth": 0.4
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.72,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "zooming in on a rose flower, seeing its petals opening slowly and the patterns of it",
+  "audio_prompt": "fields of flowers with bees buzzing and warm sun synths, organic and life growing.",
+  "generation_settings": {
+    "size": "small",
+    "warmth": 1,
+    "energy": 0.57,
+    "evolution": 0.53,
+    "kind": "2d"
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

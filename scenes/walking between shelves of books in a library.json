@@ -369,6 +369,210 @@
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 50.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "bass_foundation",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0,
+          7
+        ],
+        "level": 0.55,
+        "tone": 0.25,
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.6,
+        "pan": 0.0,
+        "env": {
+          "attack": 6.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "warmth_pad",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 43,
+        "chord": [
+          0,
+          5,
+          9,
+          12
+        ],
+        "level": 0.69,
+        "tone": 0.3,
+        "detune": 0.012,
+        "pan": 0.0,
+        "env": {
+          "attack": 5.5,
+          "decay": 2.0,
+          "sustain": 0.75,
+          "release": 4.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 0.5,
+          "decay": 0.5
+        }
+      },
+      {
+        "name": "rolling_bass",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 36,
+        "chord": [
+          0,
+          3,
+          7
+        ],
+        "level": 0.91,
+        "tone": 0.35,
+        "unison": 3,
+        "detune": 0.01,
+        "sub": 0.5,
+        "pan": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 1.2,
+          "decay": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "paper_texture",
+        "type": "noise",
+        "level": 0.7,
+        "tone": 0.2,
+        "pan": -0.15,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.7
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.36,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "shuffling_air",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.28,
+        "pan": 0.2,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "triangle",
+          "rate": 0.04,
+          "depth": 0.5
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.7,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
   }
 }

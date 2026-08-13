@@ -8,6 +8,117 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.72.0]
+
+### Visuals react to the instrument's own sound
+
+`audio_level` was wired to the **microphone**. On any machine not playing sound
+into a mic — most of them — every audio→visual route in every generated scene
+sat at zero and looked broken. An instrument that generates its own sound
+should react to that sound.
+
+- **`audio_level` now follows the engine's own output** by default, so every
+  existing scene starts reacting with no edits and no mic. Measured on a
+  library scene: 0.005 (mic, silent) → 0.20 tracking the soundscape.
+- **The mic is still there, explicitly, as `mic_level`**, and a Settings
+  toggle — *visuals react to* — switches which feed `audio_level` follows, for
+  visualising an external source. Persisted in `settings.json`.
+- **Three-band split of the output**: `synth_low` (<250Hz), `synth_mid`,
+  `synth_high` (>2kHz). Computed block-wise via rfft where the mix is
+  finalised — this module forbids per-sample IIR recursion, so a filter bank
+  was out. Costs 1.7% of the audio callback budget.
+- **Per-voice levels as sources** (`voice.<name>`), measured post-level,
+  post-LFO, pre-pan. This is also what makes an **arpeggiator** usable as a
+  modulation source with no special handling: each arp note is a spike in its
+  voice's level, so routing it gives you the arp's rhythm for free. The source
+  list tracks the loaded scene exactly: voices are keyed off the soundscape's
+  own voice list (not off which ones happened to make a sound this block, or a
+  sparse pluck between notes would blink in and out), and voices from other
+  scenes are dropped — except any still referenced by a live route, which is
+  what keeps a crossfade from breaking mid-fade.
+- The audio↔visual slider scales all sound-driven sources together, not just
+  the mic.
+
+### The modulation matrix is editable
+
+It was a list of depth sliders over whatever the director happened to emit —
+you couldn't add a mapping, remove one, or change what drove what.
+
+- Every mapping is now **[source] → [destination] [depth] [✕]**, with **Add
+  mapping**. Sources are grouped into *engine* and *instruments*.
+- **Destinations are derived from the layer schema**, the same registry that
+  builds the layer panel — so a new generator param becomes routable the
+  moment it exists, with no list to update. Camera destinations appear only on
+  3D scenes.
+- Each row carries a **live meter for its own source**, and a *modulation
+  sources* readout lists every source's current value with flat ones greyed
+  as idle. A route whose source never moves was previously indistinguishable
+  from a broken route.
+- Fixed: the depth slider's `max` was derived from its *current* depth, so
+  dragging a route to zero collapsed its own range to 0–0.15 and left it
+  stuck — a control that shrank when you turned it down.
+- Fixed: a `<select>` asked for an option it doesn't have reports `""`, which
+  was being stored as a route that could never fire. Now rejected server-side
+  and reverted client-side.
+
+### Freeze
+
+A header button that eases **all** motion to a standstill over 2 seconds:
+LFO phase, node motion and camera travel decelerate together and in
+proportion, because the scene clock itself is ramped rather than each control
+being stopped on its own schedule. The button shows the ramp counting down.
+
+The matrix still receives real `dt` while `t` is frozen, so `audio_level`
+keeps slewing — a stopped pattern still pulses with the sound, which is
+rather the point of stopping it.
+
+### Per-scene LFO rates
+
+`SceneSpec.lfo` (`{"lfo_slow": 0.05, "lfo_mid": 0.2}`). LFO rate was global
+engine state that no scene remembered: a scene routed from `lfo_slow` played
+back at whatever rate the previous scene left behind, and the value reset on
+restart. Scenes carrying no rate get the engine defaults restored, so one
+scene's rate can no longer leak into the next, and the existing library is
+unaffected. The state payload now carries the rates too — the slider never
+used to follow a scene load.
+
+### MIDI on 2D pattern params
+
+`scale`/`rotate`/`spread`/`glow`/`max_strokes` are performance controls, so
+they get learn icons. This needed more than the icon: `range_for()` returned
+`None` for `layer<N>.<param>`, so a binding wouldn't have scaled at all. Added
+`midi.DYNAMIC_RANGES`, refreshed per scene load from the registry's
+`param_meta`, so a hardware knob and the on-screen slider cover the same range
+by construction. Soft takeover can now read layer values, so a knob no longer
+jumps the pattern on first touch.
+
+### Fixed
+
+- **`spread` did almost nothing.** It scaled node *placement*, but patterns
+  are authored as centred nodes whose structure comes from repeat/symmetry —
+  multiplying `[0,0]` by a number is a no-op. Scaling the repeat's own
+  distance parameters was measured and was still nearly invisible (a 0.038
+  band gap has nothing to give). It now displaces each piece from centre by
+  its own centroid, at constant size, which is the actual difference from
+  `scale`: mean radius across the slider now moves 0.28 → 0.63.
+- **`scale` ceiling raised to 5** (spread to 3) for zooming into detail.
+- **The Generate modal had no throbber.** `.spinner` was defined in the CSS
+  and referenced nowhere; all you got was a 5px progress bar behind a modal
+  dimmed to 50%, for the 10–45s a generation takes. Replaced with a proper
+  overlay, and the same treatment applied to Regenerate audio.
+- **Regenerate audio** now preselects the loaded scene, opens with an empty
+  prompt, and on success closes and reloads the scene — the new patch is
+  written to the scene *file* while the engine keeps playing the old one, so
+  without the reload you never heard it. Only reloads when the regenerated
+  scene is the loaded one.
+- **Shape modulation is 3D-`world`-only and `scale`-only**; its hint claimed
+  scale/rotate/position. Corrected, and a 2D scene now says plainly that the
+  panel has no effect and points at the modulation matrix instead.
+- Modulation panels retitled **3D Scene modulation** / **2D Scene
+  modulation**, each collapsing when the other kind of scene loads — and only
+  on an actual scene-kind change, so a panel opened deliberately doesn't slam
+  shut on the next broadcast.
+
 ## [0.71.0]
 
 ### 2D pattern scenes (the headline of this release)
@@ -51,6 +162,41 @@ camera panel for the layer panel accordingly.
 - A `max_strokes` ceiling bounds the combinatorics — a repeat crossed with a
   symmetry multiplies fast, and an unbounded pattern would blow the frame
   budget before anything else noticed.
+
+### The director can author 2D scenes
+
+- **A second system prompt, `_SYSTEM_2D`.** Separate from the 3D one rather
+  than a branch inside it, because the two are contradictory: `_SYSTEM`
+  requires "a full ENVIRONMENT to navigate inside, not a flat pattern", which
+  is precisely what the 2D director must produce. They share
+  `_SOUNDSCAPE_GUIDE`, extracted so the voice-ordering rules and LFO limits
+  can't silently drift apart between them (verified byte-identical to the
+  pre-extraction prompt, so 3D generation is unchanged).
+- **Scene type picker** in the Generate modal, remembered across sessions.
+  "Scene size" hides for 2D — object count is a 3D notion; a pattern's budget
+  is its stroke count after repeat/symmetry expansion.
+- `kind` is part of the generation cache key: one keyword has a legitimate 2D
+  and 3D answer and they must not collide.
+- The 2D prompt **requires** modulation routes — a static pattern is a poster,
+  not an instrument — and is told to put spin on an LFO and brightness on
+  `audio_level`, since rotation driven by audio jitters while brightness
+  driven by audio is the whole point.
+- Offline fallback gained a seeded 2D pattern, so the feature works with no
+  API key.
+
+### The in-page preview no longer truncates dense scenes
+
+`Engine.preview()` emitted whole strokes until it passed `max_points` and then
+stopped. Fine for 3D — `max_strokes` already holds those to ~90-130 short
+strokes — but flat patterns are stroke-dense by nature, and a 263-stroke
+pattern was arriving as the ~27 strokes that fit: a fragment of the
+composition presented as though it were the whole thing, in the very window
+you author against.
+
+Now it drops **resolution, not strokes** — one uniform stride across the
+frame, always keeping both endpoints so an open stroke can't shorten and a
+closed one can't spring open. A coarser complete picture beats an exact
+fraction of one. 3D payloads grow about 20%; every scene now previews whole.
 
 ### The generator registry is now self-describing
 

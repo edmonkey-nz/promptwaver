@@ -2818,7 +2818,8 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.0
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
@@ -2850,7 +2851,7 @@
           "attack": 2.5,
           "decay": 5.16,
           "sustain": 0.8,
-          "release": 3
+          "release": 3.0
         },
         "mute": false,
         "rate": 0.5,
@@ -2866,9 +2867,10 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 2,
+          "rate": 2.0,
           "decay": 0.3
-        }
+        },
+        "distortion": 0.0
       },
       {
         "name": "machinery_pulse",
@@ -2888,7 +2890,7 @@
         "arp": {
           "on": true,
           "mode": "random",
-          "rate": 1.25,
+          "rate": 0.75,
           "decay": 0.05
         },
         "mute": false,
@@ -2900,7 +2902,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "stamper_sequence",
@@ -2926,7 +2929,8 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "steam_air",
@@ -2948,7 +2952,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       }
     ],
     "swell_amount": 0.54,
@@ -2960,5 +2965,9 @@
     "swell_period": 24.0
   },
   "audio_link": 0.0,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

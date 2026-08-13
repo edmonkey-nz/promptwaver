@@ -17,6 +17,8 @@ import json
 import threading
 import time
 
+import numpy as np
+
 from .modulation import ModMatrix, LFO, Value
 from .scenes import SceneManager, SceneSpec
 from . import generators as gen
@@ -129,6 +131,23 @@ class MidiRouter:
             return float(getattr(src, attr)) if src is not None else None
         if key == "audio_link":
             return float(eng.scenes.current.spec.audio_link) if eng.scenes.current else None
+        if key.startswith("layer") and "." in key:
+            # Soft takeover needs the CURRENT value of a generator param, so a
+            # knob bound to e.g. layer0.scale doesn't jump the pattern when
+            # first touched. Read from the layer schema, which already merges
+            # the scene's authored value over the generator default.
+            sc = eng.scenes.current
+            if sc is None:
+                return None
+            head, attr = key.split(".", 1)
+            try:
+                idx = int(head[5:])
+            except ValueError:
+                return None
+            for layer in sc.layer_schemas():
+                if layer["index"] == idx and attr in layer["values"]:
+                    return float(layer["values"][attr])
+            return None
         m = _midi._NAME_RE.match(key)
         if m:
             name, fields = m.group(1), m.group(2).split(".")
@@ -232,7 +251,29 @@ class Engine:
         self.matrix = ModMatrix()
         self.matrix.add_source("lfo_slow", LFO(rate=0.05, shape="sine"))
         self.matrix.add_source("lfo_mid", LFO(rate=0.2, shape="triangle"))
+        # `audio_level` is the source every generated scene routes from, so it
+        # has to be the one that "just works": it follows the ENGINE'S OWN
+        # OUTPUT by default. It used to be wired to the microphone, which
+        # meant that on any machine not playing sound into a mic — most of
+        # them — every audio->visual route in every scene sat at zero and
+        # looked broken. An instrument that generates its own sound should
+        # react to that sound.
+        #
+        # The mic is still available, explicitly, as `mic_level`, and
+        # `audio_react` switches which one `audio_level` follows for people
+        # visualising an external source.
+        from . import settings as _settings0
+        self.audio_react = _settings0.get("audio_react", "engine")
         self._audio_src = self.matrix.add_source("audio_level", Value(smooth=0.1))
+        self._mic_src = self.matrix.add_source("mic_level", Value(smooth=0.1))
+        self._synth_srcs = {
+            "synth_level": self.matrix.add_source("synth_level", Value(smooth=0.08)),
+            "synth_low": self.matrix.add_source("synth_low", Value(smooth=0.08)),
+            "synth_mid": self.matrix.add_source("synth_mid", Value(smooth=0.08)),
+            "synth_high": self.matrix.add_source("synth_high", Value(smooth=0.06)),
+        }
+        # `voice.<name>` sources, added as soundscapes load — see _feed_voice_sources
+        self._voice_srcs: dict[str, Value] = {}
 
         self.scenes = SceneManager(library_dir)
         self.director = SceneDirector(cache_dir, model=model)
@@ -268,6 +309,14 @@ class Engine:
         self.midi = MidiInput(self.midi_router, _settings, port_hint=midi_port)
 
         self._t0 = time.monotonic()
+        # Scene clock. Accumulated from SCALED dt rather than read off the wall
+        # clock, so `motion` below can decelerate every time-driven thing at
+        # once — LFO phase, node motion, camera travel — instead of each
+        # generator needing its own speed control.
+        self._scene_t = 0.0
+        self.motion = 1.0          # target rate: 1 = normal, 0 = frozen
+        self._motion_cur = 1.0     # actual rate, slewed toward the target
+        self.motion_ramp = 2.0     # seconds to travel the full 0..1 range
         self._running = False
         self._thread = None
         self._lock = threading.Lock()
@@ -403,6 +452,16 @@ class Engine:
             self.audio_fade = max(0.0, min(16.0, float(value)))
         elif key == "start_fade":
             self.start_fade = max(0.0, min(8.0, float(value)))
+        elif key == "motion":
+            # 1 = normal, 0 = frozen. The ramp is in motion_ramp seconds.
+            self.motion = max(0.0, min(1.0, float(value)))
+        elif key == "motion_ramp":
+            self.motion_ramp = max(0.05, min(20.0, float(value)))
+        elif key == "audio_react":
+            v = "mic" if str(value) == "mic" else "engine"
+            self.audio_react = v
+            from . import settings as _s
+            _s.set("audio_react", v)
         elif key == "output_ratio":
             self.set_output_ratio(str(value))
         elif key == "hue_override":
@@ -441,7 +500,7 @@ class Engine:
                 self.pps = min(spec.pps, self.director.max_pps)
         elif key == "audio_link":
             v = max(0.0, float(value))
-            self.matrix.set_source_scale("audio_level", v)
+            self._set_audio_link(v)
             if self.scenes.current is not None:
                 self.scenes.current.spec.audio_link = v
         elif key == "shape_modulation":
@@ -454,13 +513,27 @@ class Engine:
             # saved back via Update scene from config.
             _, idx_s, attr = key.split(".", 2)
             idx = int(idx_s)
-            if self.scenes.current is None or attr != "depth":
+            if self.scenes.current is None or attr not in ("depth", "source", "dest"):
                 return
             mods = self.scenes.current.spec.modulation
-            if 0 <= idx < len(mods):
+            if not (0 <= idx < len(mods)):
+                return
+            if attr == "depth":
                 mods[idx]["depth"] = float(value)
-            if 0 <= idx < len(self.matrix.routes):
-                self.matrix.routes[idx].depth = float(value)
+            else:
+                # Never store an empty source/dest. A <select> asked for an
+                # option it doesn't have reports "", and silently accepting
+                # that writes a route into the scene that can never fire and
+                # renders as a blank row.
+                v = str(value).strip()
+                if not v:
+                    return
+                mods[idx][attr] = v
+            # Rebuild rather than patching the live Route in place: source and
+            # dest are matched by string on every lookup, and keeping the spec
+            # as the single thing that's edited means the matrix can never
+            # drift from what will be saved.
+            self._rebuild_routes()
         elif key.startswith("camera."):
             attr = key.split(".", 1)[1]
             for sc in (self.scenes.current, self.scenes._next):
@@ -482,6 +555,11 @@ class Engine:
         elif key.startswith("lfo_slow.") or key.startswith("lfo_mid."):
             name, attr = key.split(".", 1)
             setattr(self.matrix.sources[name], attr, float(value))
+            # Mirror into the scene so the rate travels with it. Without this
+            # a scene routed from an LFO played back at whatever rate the
+            # previously-loaded scene left behind.
+            if attr == "rate" and self.scenes.current is not None:
+                self.scenes.current.spec.lfo[name] = float(value)
         elif key.startswith("layer") and "." in key and self.scenes.current:
             # "layer<N>.<param>" — N was previously hardcoded to 0 and every
             # value forced to float. Now any layer is addressable and the
@@ -523,10 +601,11 @@ class Engine:
 
     def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None,
                        size: str = "small", warmth: float | None = None,
-                       energy: float | None = None, evolution: float | None = None):
+                       energy: float | None = None, evolution: float | None = None,
+                       kind: str = "3d"):
         # the director call may hit the network; run it off the loop then queue
-        spec = self.director.generate(keyword, audio=audio, size=size,
-                                      warmth=warmth, energy=energy, evolution=evolution)
+        spec = self.director.generate(keyword, audio=audio, size=size, warmth=warmth,
+                                      energy=energy, evolution=evolution, kind=kind)
         # add every new generation to the library by default
         name = (name or "").strip() or spec.name or keyword
         spec.name = name
@@ -538,6 +617,11 @@ class Engine:
             "warmth": warmth,
             "energy": energy,
             "evolution": evolution,
+            # Recorded for the "show scene prompts" panel and to seed a
+            # regeneration. The scene's ACTUAL kind is still derived from its
+            # generators (Scene.is_3d) — this is what was asked for, not the
+            # source of truth for what it is.
+            "kind": kind,
         }
         try:
             self.scenes.save(name, spec)
@@ -850,6 +934,13 @@ class Engine:
                     "trail": self.trail,
                     "kaleidoscope_segments": self.kaleidoscope_segments,
                 })
+                # LFO rates travel with the scene like the rest of the
+                # modulation setup. Captured from the live sources rather than
+                # from spec.lfo so a MIDI-driven change is saved too.
+                for name in self.LFO_DEFAULT_RATES:
+                    src = self.matrix.sources.get(name)
+                    if src is not None:
+                        sc.spec.lfo[name] = round(float(src.rate), 4)
             if soundscape and getattr(self.synth, "online", False):
                 # capture the live soundscape (GUI tweaks) back into the scene
                 cur = self.synth.soundscape()
@@ -902,14 +993,146 @@ class Engine:
         self.trail = float(cam_cfg.get("trail", 0.0))
         self.kaleidoscope_segments = int(cam_cfg.get("kaleidoscope_segments", 0))
 
+    #: Every sound-driven source. The "audio <-> visual" slider scales all of
+    #: them together — it means "how much does sound move the picture", and a
+    #: scene routed from synth_low rather than audio_level shouldn't quietly
+    #: escape the one control that's supposed to govern exactly that.
+    AUDIO_SOURCES = ("audio_level", "mic_level", "synth_level",
+                     "synth_low", "synth_mid", "synth_high")
+
+    def _set_audio_link(self, v: float):
+        for name in self.AUDIO_SOURCES:
+            self.matrix.set_source_scale(name, v)
+        for name in self._voice_srcs:
+            self.matrix.set_source_scale(name, v)
+
+    def _rebuild_routes(self):
+        """Re-derive the live matrix routes from the current scene's spec."""
+        self.matrix.clear_routes()
+        if self.scenes.current is None:
+            return
+        for r in self.scenes.current.spec.modulation:
+            self.matrix.add_route(r.get("source", "lfo_slow"), r.get("dest", ""),
+                                  float(r.get("depth", 1.0)), float(r.get("bias", 0.0)))
+
+    def add_route(self, source: str, dest: str, depth: float = 0.3):
+        def apply():
+            if self.scenes.current is None or not source.strip() or not dest.strip():
+                return
+            self.scenes.current.spec.modulation.append(
+                {"source": source, "dest": dest, "depth": float(depth)})
+            self._rebuild_routes()
+        self._enqueue(apply)
+
+    def remove_route(self, index: int):
+        def apply():
+            if self.scenes.current is None:
+                return
+            mods = self.scenes.current.spec.modulation
+            if 0 <= index < len(mods):
+                mods.pop(index)
+                self._rebuild_routes()
+        self._enqueue(apply)
+
+    def mod_destinations(self) -> list[dict]:
+        """What a route may target, derived rather than hardcoded.
+
+        Generator params come from the layer schema — the same registry that
+        builds the layer panel — so a new generator param becomes routable the
+        moment it exists, with no list to update here. (Scene._resolve already
+        exposes every top-level param as `visual.<key>`; this just makes the
+        UI aware of them.)
+        """
+        out = []
+        seen = set()
+        sc = self.scenes.current
+        if sc is not None:
+            for layer in sc.layer_schemas():
+                for p in layer["params"]:
+                    key = f"visual.{p['key']}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    out.append({"key": key, "label": p["key"], "group": layer["name"]})
+            if sc.is_3d:
+                for k in ("speed", "orbit_radius", "fov", "max_strokes"):
+                    out.append({"key": f"camera.{k}", "label": k, "group": "camera"})
+        for k in ("glow", "trail", "kaleidoscope_segments"):
+            out.append({"key": k, "label": k, "group": "monitor"})
+        return out
+
+    def _feed_voice_sources(self, peaks: dict):
+        """Publish each voice's live output level as `voice.<name>`.
+
+        Registered on demand rather than up front because the voice list is a
+        property of whichever soundscape is loaded — it changes with every
+        scene. Sources for voices that have gone away are left in place but
+        decay to zero; removing them mid-tick would break any route still
+        pointing at one while a crossfade is still sounding it.
+        """
+        link = float(self.scenes.current.spec.audio_link) if self.scenes.current else 1.0
+        for vname, peak in peaks.items():
+            key = f"voice.{vname}"
+            src = self._voice_srcs.get(key)
+            if src is None:
+                src = self._voice_srcs[key] = self.matrix.add_source(key, Value(smooth=0.05))
+                self.matrix.set_source_scale(key, link)
+            src.current = peak
+
+        # Drop voices that aren't in the live soundscape. An earlier version
+        # left them registered and merely decayed them to zero, so the source
+        # list accumulated every voice from every scene loaded this session —
+        # picking a source meant scrolling past instruments belonging to
+        # scenes that aren't even open.
+        #
+        # A voice still referenced by one of the current scene's routes is
+        # kept regardless: during a crossfade the outgoing soundscape stops
+        # reporting peaks a moment before its scene is actually replaced, and
+        # pulling the source out from under a live route in that window would
+        # break it mid-fade.
+        if len(self._voice_srcs) > len(peaks):
+            routed = {r.source for r in self.matrix.routes}
+            for key in [k for k in self._voice_srcs
+                        if k[6:] not in peaks and k not in routed]:
+                self._voice_srcs.pop(key, None)
+                self.matrix.sources.pop(key, None)
+                self.matrix.source_scale.pop(key, None)
+
+    #: Engine defaults, restored for any scene that doesn't carry its own rate.
+    #: Without this reset a rate set by one scene would leak into the next.
+    LFO_DEFAULT_RATES = {"lfo_slow": 0.05, "lfo_mid": 0.2}
+
+    def _apply_lfo(self, spec: SceneSpec):
+        rates = spec.lfo or {}
+        for name, default in self.LFO_DEFAULT_RATES.items():
+            src = self.matrix.sources.get(name)
+            if src is not None:
+                src.rate = float(rates.get(name, default))
+
+    def _refresh_midi_ranges(self):
+        """Publish the current scene's generator param ranges to the MIDI
+        layer, so a knob bound to `layer0.scale` sweeps the same 0.1-5.0 the
+        on-screen slider does. Derived from the registry rather than a table
+        here — see midi.DYNAMIC_RANGES."""
+        from . import midi as _midi
+        ranges = {}
+        if self.scenes.current is not None:
+            for layer in self.scenes.current.layer_schemas():
+                for p in layer["params"]:
+                    ranges[f"layer{layer['index']}.{p['key']}"] = (
+                        float(p.get("min", 0.0)), float(p.get("max", 1.0)))
+        _midi.set_dynamic_ranges(ranges)
+
     def _apply_modulation(self, spec: SceneSpec):
+        self._apply_lfo(spec)
+        self._refresh_midi_ranges()
         self.matrix.clear_routes()
         for r in spec.modulation:
             self.matrix.add_route(r.get("source", "lfo_slow"), r.get("dest", ""),
                                   float(r.get("depth", 1.0)), float(r.get("bias", 0.0)))
         # global audio<->visual coupling level (the "level effect"): scales every
         # route sourced from live audio, independent of each route's own depth
-        self.matrix.set_source_scale("audio_level", float(getattr(spec, "audio_link", 1.0)))
+        self._set_audio_link(float(getattr(spec, "audio_link", 1.0)))
 
     def _write_output(self, frame):
         """Real hardware only sends non-blanked frames once `laser_on` is
@@ -940,10 +1163,10 @@ class Engine:
                     print(f"[promptwaver] action error: {e}")
 
             if not self.active:
-                # Shift the epoch forward by exactly this tick's dt so the
-                # scene clock (t = now - t0) stays frozen at the paused value
-                # rather than jumping forward when Start is clicked again.
-                self._t0 += dt
+                # The scene clock simply doesn't advance while paused — it's
+                # an accumulator now, so it holds its value on its own. (It
+                # used to be `now - _t0`, which needed the epoch shifted by
+                # each paused tick to stop it jumping forward on resume.)
                 self.output.blank()
                 self._last_frame = []
                 sleep = period - (time.monotonic() - now)
@@ -951,10 +1174,41 @@ class Engine:
                     time.sleep(sleep)
                 continue
 
-            t = now - self._t0
+            # Ease the motion rate toward its target, then advance the scene
+            # clock by the scaled dt. Freezing `t` is what actually stops the
+            # picture: LFO phase, node motion and camera angle are all
+            # functions of it, so they decelerate together and in proportion
+            # rather than each snapping to a halt on its own schedule.
+            if self._motion_cur != self.motion:
+                step = dt / max(self.motion_ramp, 1e-4)
+                self._motion_cur = (min(self.motion, self._motion_cur + step)
+                                    if self._motion_cur < self.motion
+                                    else max(self.motion, self._motion_cur - step))
+            eff_dt = dt * self._motion_cur
+            self._scene_t += eff_dt
+            t = self._scene_t
 
-            # feed live audio into the matrix, then update all sources
-            self._audio_src.current = self.analysis.level
+            # feed live audio into the matrix, then update all sources.
+            # REAL dt here, not eff_dt: the audio_level source slews toward the
+            # live mic level over dt, and an envelope releases over dt. Motion
+            # being frozen shouldn't also deafen the instrument — a stopped
+            # pattern still pulses with the sound, which is the point of
+            # stopping it. Only `t` is frozen, which is what the LFOs read.
+            self._mic_src.current = self.analysis.level
+            synth_level = 0.0
+            if getattr(self.synth, "online", False):
+                b = self.synth.bands()
+                synth_level = b.get("level", 0.0)
+                self._synth_srcs["synth_level"].current = synth_level
+                self._synth_srcs["synth_low"].current = b.get("low", 0.0)
+                self._synth_srcs["synth_mid"].current = b.get("mid", 0.0)
+                self._synth_srcs["synth_high"].current = b.get("high", 0.0)
+                self._feed_voice_sources(b.get("voices") or {})
+            # `audio_level` follows whichever feed the user picked. Engine
+            # output is the default because that's what a scene's own routes
+            # are written against.
+            self._audio_src.current = (self.analysis.level
+                                       if self.audio_react == "mic" else synth_level)
             self.matrix.update(t, dt)
             # Apply modulation to effect parameters (kaleidoscope_segments
             # is LFO-modulatable display filter, live on this tick)
@@ -972,7 +1226,10 @@ class Engine:
             # render + output
             if self._diag_enabled:
                 t_render0 = time.monotonic()
-            frame = self.scenes.render(t, dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
+            # eff_dt here: the camera integrates its position by dt, so a
+            # scaled dt is what brings a fly-through to a stop rather than
+            # leaving it coasting at full speed through a frozen world.
+            frame = self.scenes.render(t, eff_dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
 
             # "Disable Visuals" fade — dims every point's colour toward black
             # over _visual_fade_dur seconds, the same per-point scaling trick
@@ -1087,6 +1344,10 @@ class Engine:
             "crossfade": self.crossfade,
             "audio_fade": self.audio_fade,
             "start_fade": self.start_fade,
+            "motion": self.motion,
+            # the slewed value, so the button can show the ramp in flight
+            "motion_now": round(self._motion_cur, 3),
+            "motion_ramp": self.motion_ramp,
             "output_ratio": self.output_ratio,
             "output_ratios": list(OUTPUT_RATIOS),
             "output_aspect": round(ratio_to_aspect(self.output_ratio), 4),
@@ -1100,20 +1361,58 @@ class Engine:
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),
+            # Live value of every modulation source, so the UI can show which
+            # ones are actually moving. Without this, a route whose source is
+            # flat (a silent mic) is indistinguishable from a broken route.
+            "mod_sources": {n: round(self.matrix.source_value(n), 3)
+                            for n in self.matrix.sources},
+            "mic_online": self.analysis.online,
+            "audio_react": self.audio_react,
+            "mod_destinations": self.mod_destinations(),
+            # Dotted keys so the UI's readStateValue finds them directly —
+            # without these the LFO rate slider never reflected a scene load.
+            "lfo_slow.rate": round(getattr(self.matrix.sources.get("lfo_slow"), "rate", 0.05), 4),
+            "lfo_mid.rate": round(getattr(self.matrix.sources.get("lfo_mid"), "rate", 0.2), 4),
             "midi": self.midi.state(),
         }
 
-    def preview(self, max_points: int = 400, stroke_thin: int = 60):
+    def preview(self, max_points: int = 1800, stroke_thin: int = 60):
         """A polyline list for a browser canvas (normalized coords). Default
         args give the light, thinned version used for the small in-page
         control-UI preview; the standalone output window (server.py, a "hq"
         websocket connection) asks for a much higher ceiling since it's the
-        actual thing being watched, not just a status glance."""
+        actual thing being watched, not just a status glance.
+
+        Over budget, this drops RESOLUTION, not strokes. The previous version
+        emitted whole strokes until it passed `max_points` and then stopped,
+        which is fine for a 3D scene — `max_strokes` already holds those to
+        ~90-130 short strokes — but silently truncated flat `pattern2d`
+        scenes, which are stroke-dense by nature: a 263-stroke pattern showed
+        as the ~27 strokes that fit, i.e. a fragment of the composition
+        presented as if it were the whole thing. Since the preview is what
+        you author against, a coarser complete picture beats an exact
+        fraction of one. Two points per stroke are always kept, so the
+        composition's shape survives any amount of thinning.
+        """
+        frame = self._last_frame
+        total = sum(len(p.points) for p in frame)
+        # One stride for the whole frame, so thinning is uniform rather than
+        # penalising whichever strokes happen to come last.
+        stride = 1
+        if total > max_points:
+            stride = max(1, -(-total // max(1, max_points)))   # ceil division
         out = []
-        for p in self._last_frame:
+        for p in frame:
             pts = p.points
             if len(pts) > stroke_thin:  # thin dense strokes for the preview
                 pts = pts[:: max(1, len(pts) // stroke_thin)]
+            if stride > 1 and len(pts) > 2:
+                kept = pts[::stride]
+                # never lose an endpoint: an open stroke that loses its last
+                # point visibly shortens, and a closed one springs open
+                if len(kept) < 2 or not np.array_equal(kept[-1], pts[-1]):
+                    kept = np.vstack([kept, pts[-1:]])
+                pts = kept
             st = {
                 "c": [round(float(v), 3) for v in p.color],
                 "p": [[round(float(x), 3), round(float(y), 3)] for x, y in pts],
@@ -1126,6 +1425,4 @@ class Engine:
             if g:
                 st["g"] = round(float(g), 2)
             out.append(st)
-            if sum(len(s["p"]) for s in out) > max_points:
-                break
         return out

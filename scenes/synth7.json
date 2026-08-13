@@ -876,21 +876,27 @@
       0.5,
       0
     ],
-    "orbit_radius": 12.5,
+    "orbit_radius": 9.5,
     "far": 32,
-    "speed": 0.4,
-    "max_strokes": 110,
+    "speed": 0.05,
+    "max_strokes": 175,
     "depth": {
       "mode": "cull"
     },
     "orbit_height": 1.5,
-    "fov": 60.0,
-    "near": 0.4
+    "fov": 76.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.63,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
     "tempo": 50.0,
-    "master": 1.0,
+    "master": 0.86,
     "distortion": 0.0,
     "delay": {
       "time": 0.65,
@@ -908,17 +914,17 @@
           7,
           12
         ],
-        "unison": 2,
+        "unison": 1.0,
         "detune": 0.01,
         "sub": 0.91,
-        "level": 1.0,
+        "level": 0.4,
         "tone": 0.3,
         "pan": 0.0,
         "env": {
           "attack": 0.8,
           "decay": 0.6,
-          "sustain": 0.88,
-          "release": 9.35
+          "sustain": 0.79,
+          "release": 7.1
         },
         "mute": false,
         "rate": 0.5,
@@ -929,7 +935,7 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.26
       },
       {
         "name": "acid_lead",
@@ -942,10 +948,10 @@
           7,
           10
         ],
-        "unison": 2,
+        "unison": 5.0,
         "detune": 0.04,
         "sub": 0.1,
-        "level": 0.8,
+        "level": 0.64,
         "tone": 0.6,
         "pan": 0.15,
         "arp": {
@@ -958,7 +964,7 @@
           "attack": 0.3,
           "decay": 0.4,
           "sustain": 0.75,
-          "release": 0.8
+          "release": 3.1
         },
         "mute": false,
         "rate": 0.5,
@@ -969,7 +975,7 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.41
       },
       {
         "name": "acid_wail",
@@ -982,7 +988,7 @@
           12
         ],
         "unison": 3,
-        "detune": 0.035,
+        "detune": 0.036,
         "sub": 0.0,
         "level": 0.09,
         "tone": 0.5,
@@ -1008,7 +1014,14 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.26,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "detune"
+        }
       },
       {
         "name": "ambient_pad",
@@ -1031,7 +1044,7 @@
           "sustain": 0.82,
           "release": 3.2
         },
-        "mute": false,
+        "mute": true,
         "rate": 0.5,
         "decay": 1.2,
         "unison": 1,
@@ -1050,7 +1063,7 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_amount": 0.0,
+    "swell_amount": 0.26,
     "swell_period": 24.0
   },
   "audio_link": 1.0,
@@ -1058,5 +1071,9 @@
   "image_prompt": "",
   "audio_prompt": "",
   "generation_settings": {},
-  "shape_modulation": []
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

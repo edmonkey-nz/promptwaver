@@ -109,6 +109,18 @@
           display:flex;flex-direction:column}
   .gencol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
           display:flex;flex-direction:column;gap:18px}
+  /* Generate throbber. The modal used to only dim to 0.5 opacity behind a 5px
+     progress bar, which reads as "nothing is happening" for the 10-45s a
+     generation takes. This covers the modal so the wait is unmistakable. */
+  .gen-overlay{position:absolute;inset:0;z-index:5;display:none;
+               flex-direction:column;align-items:center;justify-content:center;gap:14px;
+               background:rgba(10,12,18,.82);backdrop-filter:blur(2px);border-radius:12px}
+  .gen-overlay.on{display:flex}
+  .gen-overlay .ring{width:54px;height:54px;border-radius:50%;
+                     border:3px solid rgba(51,224,208,.18);border-top-color:var(--cyan);
+                     animation:spin .9s linear infinite}
+  .gen-overlay .msg{font-size:13px;color:var(--ink);letter-spacing:.02em}
+  .gen-overlay .sub{font-size:11px;color:var(--dim);max-width:70%;text-align:center;line-height:1.6}
   .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(4,33,31,.35);
            border-top-color:#04211f;border-radius:50%;animation:spin .7s linear infinite;
            vertical-align:middle}
@@ -185,6 +197,34 @@
   .kind.k3d{color:var(--cyan);border-color:rgba(51,224,208,.35)}
   .kind.k2d{color:var(--amber);border-color:rgba(242,166,35,.35)}
   .layer-desc{font-size:11px;color:var(--dim);margin:-2px 0 8px;line-height:1.5}
+  /* live modulation-source meters */
+  .srcrow{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  .srcrow .nm{flex:0 0 88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .srcrow .mtr{flex:1;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden;min-width:0}
+  .srcrow .mtr i{display:block;height:100%;width:0%;background:var(--cyan);transition:width .08s linear}
+  .srcrow .nv{flex:0 0 34px;text-align:right}
+  .srcrow.idle .nm{opacity:.45}
+  .srcrow.idle .mtr i{background:var(--dim)}
+  /* editable modulation mapping row */
+  .modrow{border:1px solid var(--line);border-radius:8px;padding:8px;
+          display:flex;flex-direction:column;gap:6px}
+  .modrow .top{display:flex;align-items:center;gap:6px}
+  .modrow select{flex:1 1 0;min-width:0;font-size:11px;padding:3px 4px}
+  .modrow .arrow{flex:0 0 auto;color:var(--dim);font-size:11px}
+  .modrow .del{flex:0 0 auto;background:none;border:none;color:var(--dim);
+               cursor:pointer;padding:0 4px;font-size:14px;line-height:1}
+  .modrow .del:hover{color:var(--amber)}
+  .modrow .btm{display:flex;align-items:center;gap:8px}
+  .modrow .btm label{flex:0 0 34px;font-size:10px;color:var(--dim)}
+  .modrow .live{flex:0 0 46px;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden}
+  .modrow .live i{display:block;height:100%;width:0%;background:var(--cyan)}
+  /* segmented scene-type picker in the Generate modal */
+  .seg{flex:1 1 0;display:flex;flex-direction:column;gap:2px;padding:8px 10px;
+       border:1px solid var(--line);border-radius:8px;background:transparent;
+       color:var(--dim);cursor:pointer;font-size:12px;text-align:left;font-family:inherit}
+  .seg span{font-size:10px;opacity:.7}
+  .seg:hover{border-color:var(--cyan)}
+  .seg.active{border-color:var(--cyan);background:rgba(51,224,208,.12);color:var(--cyan)}
   .layer-gen{font-family:var(--mono);font-size:11px;color:var(--dim);
              text-transform:uppercase;letter-spacing:.06em;margin:8px 0 4px}
   .synthblock{width:100%;border:1px solid var(--line);border-radius:12px;
@@ -325,6 +365,7 @@
   <span style="flex:1"></span>
   <button id="output-toggle-1" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output 1</button>
   <button id="output-toggle-2" title="A second output window on the same live feed — independently flippable in Settings, for a second screen/projector">🖵 Output 2</button>
+  <button id="motion-toggle" title="Ease all motion to a standstill over 2 seconds — LFOs, node motion and camera travel together. Audio reactivity keeps running, so the frozen picture still responds to sound." style="min-width:96px">❚❚ Freeze</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
   <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
   <button id="fullscreen-toggle" title="Toggle fullscreen">⛶</button>
@@ -478,7 +519,7 @@
     </div>
     </details>
  <details class="accordion" id="acc-modulation" closed>
-      <summary>Modulation</summary>
+      <summary>2D Scene modulation</summary>
       <div class="accordion-body">
         <div class="field"><label>audio ↔ visual</label>
           <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
@@ -486,13 +527,27 @@
         <div class="field"><label>LFO rate</label>
           <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
           <span class="val" id="v-lfo">0.05</span></div>
-        <div id="routes" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
+        <button id="mod-add" style="align-self:flex-start;margin-top:8px">Add mapping</button>
+        <!-- Live source values. A route whose source never moves is
+             indistinguishable from a broken route without this. -->
+        <div class="hint" style="margin-top:10px">modulation sources <span style="text-transform:none">— live values</span></div>
+        <div id="mod-sources" style="display:flex;flex-direction:column;gap:3px"></div>
+        <div class="hint" id="mic-note" style="display:none;color:var(--amber);margin-top:6px"></div>
       </div>
     </details>
     <details class="accordion" id="acc-shape-mod" open>
-      <summary>Shape Modulation</summary>
+      <summary>3D Scene modulation</summary>
       <div class="accordion-body">
-        <div class="hint">Route instrument parameters to shape transforms (scale/rotate/position)</div>
+        <!-- Scope corrected: the hint used to promise scale/rotate/position,
+             but Scene._apply_shape_modulation only implements scale, and it
+             is called only for 3D `world` layers with the synth running. -->
+        <div class="hint">Route a synth voice's parameters to shape <b>scale</b>. Works on 3D <i>world</i> scenes only, and needs audio running.</div>
+        <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber)">
+          This scene is 2D — shape modulation has no effect here. Use the
+          modulation matrix (<i>visual.scale</i>, <i>visual.rotate</i>,
+          <i>visual.glow</i>, <i>visual.spread</i>) instead.
+        </div>
         <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
         <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
       </div>
@@ -516,6 +571,15 @@
         <div class="diagrid" id="diagstats"></div>
         <div class="field"><label>device</label>
           <select id="a-device"><option value="">system default</option></select></div>
+        <!-- What the `audio_level` modulation source follows. Engine output is
+             the default: every generated scene routes from audio_level, and
+             pointing that at the mic left them all inert. -->
+        <div class="field"><label>visuals react to</label>
+          <select id="a-react">
+            <option value="engine">this scene's own sound (default)</option>
+            <option value="mic">microphone / line in</option>
+          </select></div>
+        <div class="hint" style="margin:-4px 0 8px">Sets what <i>audio_level</i> follows. <i>synth_level</i>, <i>synth_low·mid·high</i> and <i>mic_level</i> stay available to route from by name regardless.</div>
         <div class="field"><label>blocksize</label>
           <select id="a-blocksize">
             <option value="512">512</option><option value="1024">1024</option>
@@ -556,7 +620,12 @@
 </main>
 
 <div class="modal-backdrop" id="modal-generate">
-  <div class="modal" id="gen-modal">
+  <div class="modal" id="gen-modal" style="position:relative">
+    <div class="gen-overlay" id="gen-overlay">
+      <div class="ring"></div>
+      <div class="msg" id="gen-overlay-msg">Composing scene…</div>
+      <div class="sub" id="gen-overlay-sub">Claude is authoring the geometry and soundscape. This usually takes 10–45 seconds.</div>
+    </div>
     <div class="modal-head">
       <h2>Generate scene</h2>
       <button class="modal-close" id="gen-close">&times;</button>
@@ -564,6 +633,16 @@
 
     <!-- Create new scene fields -->
     <div id="gen-new-fields">
+      <!-- Scene kind picks which system prompt authors the scene. The two are
+           contradictory by design (the 3D one explicitly requires "not a flat
+           pattern"), so this is an explicit choice, not something inferred
+           from the prompt text. -->
+      <label class="flabel">scene type</label>
+      <div class="field" style="gap:6px;margin-bottom:10px">
+        <button class="seg active" id="kind-3d" data-kind="3d">3D world<span>fly through it</span></button>
+        <button class="seg" id="kind-2d" data-kind="2d">2D pattern<span>flat, fills the frame</span></button>
+      </div>
+
       <label class="flabel" for="scenename">name</label>
       <input type="text" id="scenename" placeholder="e.g. Whale Song (optional — Claude names it if blank)">
       <label class="flabel" for="kw">scene prompt</label>
@@ -616,7 +695,12 @@
 </div>
 
 <div class="modal-backdrop" id="modal-audio-regen">
-  <div class="modal" id="audio-regen-modal">
+  <div class="modal" id="audio-regen-modal" style="position:relative">
+    <div class="gen-overlay" id="audio-regen-overlay">
+      <div class="ring"></div>
+      <div class="msg">Composing soundscape…</div>
+      <div class="sub">Claude is writing a new soundscape for this scene's existing visuals. Usually 10–30 seconds.</div>
+    </div>
     <div class="modal-head">
       <h2>Regenerate audio</h2>
       <button class="modal-close" id="audio-regen-close">&times;</button>
@@ -823,6 +907,18 @@ ws.onmessage = e => {
         : m.ok && m.source === "cache" ? "audio updated from cache ✓"
         : "audio fallback — " + (m.error || "no key");
       $("audio-regen-hint").textContent = msg;
+      $("audio-regen-hint").style.display = "block";
+      if (m.ok) {
+        closeModal("modal-audio-regen");
+        // The new soundscape is written to the scene FILE; the running engine
+        // is still playing the old one. Reload so you actually hear it —
+        // but only when the regenerated scene is the one that's loaded, so
+        // updating some other scene's audio doesn't yank you out of the one
+        // you're watching.
+        if (_audioRegenTarget && _audioRegenTarget === _lastState?.library_name)
+          send({type:"scene_load", name:_audioRegenTarget});
+      }
+      _audioRegenTarget = null;
       return;
     }
     $("genbar").style.width = "100%";
@@ -866,6 +962,19 @@ function paintState(s){
   mt.dataset.active = s.active ? "1" : "0";
   mt.textContent = s.active ? "■ Stop" : "▶ Start";
   mt.className = s.active ? "amber" : "go";
+  // Freeze. Label reflects the SLEWED rate, not the target, so the 2s ramp is
+  // visible as a percentage counting down rather than the button flipping
+  // instantly to a state the picture hasn't reached yet.
+  const fz = $("motion-toggle");
+  if (typeof s.motion === "number") {
+    fz.dataset.frozen = s.motion === 0 ? "1" : "0";
+    const now = s.motion_now ?? s.motion;
+    const settled = Math.abs(now - s.motion) < 0.01;
+    fz.textContent = settled
+      ? (s.motion === 0 ? "▶ Resume" : "❚❚ Freeze")
+      : `${Math.round(now * 100)}%`;
+    fz.className = s.motion === 0 ? "amber" : "";
+  }
   // Hide laser button if no DAC is connected (only show for helios/actual DAC outputs)
   const laserBtn = $("laser-toggle");
   const isDacConnected = s.output && s.output !== "dummy";
@@ -932,6 +1041,21 @@ function paintState(s){
   // denied it purely because the panel was labelled "Motion" and assumed a
   // flat scene.
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
+  // Shape modulation is 3D-world-only; say so rather than leaving controls
+  // that silently do nothing on a 2D scene.
+  const smna = $("shape-mod-na");
+  const isWorld = (s.layers || []).some(L => L.name === "world");
+  if (smna) smna.style.display = isWorld ? "none" : "block";
+  // Collapse whichever modulation panel doesn't apply to the loaded scene.
+  // Only on an actual scene-kind CHANGE — doing it every broadcast would
+  // slam the panel shut under anyone who opened it deliberately.
+  if (s.scene_kind && _lastKind !== s.scene_kind) {
+    _lastKind = s.scene_kind;
+    const is3d = s.scene_kind === "3d";
+    const shape = $("acc-shape-mod"), matrix = $("acc-modulation");
+    if (shape)  shape.open  = is3d;
+    if (matrix) matrix.open = !is3d;
+  }
   renderLayers(s);
   $("g-motion").style.display = (s.layers || []).some(L => L.params.length) ? "flex" : "none";
   // Camera slider VALUES track the engine continuously via syncControls
@@ -995,6 +1119,8 @@ function paintState(s){
   syncControls(s);
   renderVu(s);
   renderRoutes(s);
+  updateRouteActivity(s);
+  renderModSources(s);
   renderShapeModulation(s);
   syncAudioTargets(s);
   syncMonitorFilters(s);
@@ -1203,6 +1329,7 @@ $("a-apply").onclick = () => {
     blocksize: parseInt($("a-blocksize").value,10),
     latency: $("a-latency").value});
 };
+$("a-react").onchange = () => send({type:"set", key:"audio_react", value:$("a-react").value});
 $("a-rescan").onclick = () => send({type:"rescan_audio_devices"});
 $("a-copy").onclick = async () => {
   const payload = JSON.stringify({
@@ -1233,6 +1360,7 @@ $("perf-copy").onclick = async () => {
   } catch(e) { $("perf-copy").textContent = "copy failed"; }
 };
 let _lastState = null;
+let _lastKind = null;   // scene kind at the last change, for panel auto-collapse
 
 let _routesSig = "";
 function renderRoutes(s){
@@ -1241,32 +1369,175 @@ function renderRoutes(s){
     $("v-mlink").textContent = (s.audio_link ?? 1).toFixed(2);
   }
   const mods = s.modulation || [];
-  const sig = s.scene + "|" + mods.map(r=>r.source+">"+r.dest).join(",");
+  const sources = Object.keys(s.mod_sources || {}).sort();
+  const dests = s.mod_destinations || [];
+  // Rebuild when the mapping SHAPE changes or when the pick-lists do (loading
+  // a scene changes both its routes and which params exist to route at).
+  const sig = s.scene + "|" + mods.map(r=>r.source+">"+r.dest).join(",")
+            + "|" + sources.join(",") + "|" + dests.map(d=>d.key).join(",");
   if (sig === _routesSig) return;
   _routesSig = sig;
   const box = $("routes"); box.innerHTML = "";
+
+  const destOpts = () => {
+    const groups = {};
+    for (const d of dests) (groups[d.group] ||= []).push(d);
+    return Object.entries(groups).map(([g, items]) =>
+      `<optgroup label="${g}">` +
+      items.map(d => `<option value="${d.key}">${d.label}</option>`).join("") +
+      `</optgroup>`).join("");
+  };
+  const srcOpts = () => {
+    // voice.* sources are grouped separately: they're the scene's own
+    // instruments, and there can be a lot of them.
+    const eng = sources.filter(n => !n.startsWith("voice."));
+    const voi = sources.filter(n => n.startsWith("voice."));
+    let h = `<optgroup label="engine">` +
+            eng.map(n => `<option value="${n}">${n}</option>`).join("") + `</optgroup>`;
+    if (voi.length) h += `<optgroup label="instruments">` +
+            voi.map(n => `<option value="${n}">${n.slice(6)}</option>`).join("") + `</optgroup>`;
+    return h;
+  };
+
   mods.forEach((r, i) => {
-    const wrap = document.createElement("div"); wrap.className = "field";
-    const label = document.createElement("label");
-    label.textContent = `${r.source}→${r.dest.split(".").pop()}`;
-    label.style.flex = "0 0 120px"; label.title = `${r.source} → ${r.dest}`;
-    label.style.overflow = "hidden"; label.style.textOverflow = "ellipsis"; label.style.whiteSpace="nowrap";
-    const range = document.createElement("input");
-    range.type = "range";
-    const mag = Math.max(Math.abs(r.depth), 0.05);
-    range.min = 0; range.max = (mag * 3).toFixed(4); range.step = (mag/50).toFixed(5);
+    const row = document.createElement("div");
+    row.className = "modrow";
+    // Stacked rather than side by side: in a sidebar this narrow, two selects
+    // on one line truncate to "lfo_sl"/"sprea", which is unreadable mid-set.
+    row.innerHTML =
+      `<div class="top">
+         <select class="src">${srcOpts()}</select>
+         <span class="live" title="this source's current value"><i></i></span>
+         <button class="del" title="remove this mapping">✕</button>
+       </div>
+       <div class="top">
+         <span class="arrow">→</span>
+         <select class="dst">${destOpts()}</select>
+       </div>
+       <div class="btm">
+         <label>depth</label>
+         <input type="range" min="0" max="1" step="0.005">
+         <span class="val"></span>
+       </div>`;
+    const src = row.querySelector(".src"), dst = row.querySelector(".dst");
+    const range = row.querySelector("input"), val = row.querySelector(".val");
+    // A source or dest the current scene doesn't offer (an older scene, or a
+    // voice that has gone away) would otherwise silently select the first
+    // option and rewrite the route on the next edit. Keep it visible instead.
+    if (!sources.includes(r.source))
+      src.insertAdjacentHTML("afterbegin", `<option value="${r.source}">${r.source} (missing)</option>`);
+    if (!dests.some(d => d.key === r.dest))
+      dst.insertAdjacentHTML("afterbegin", `<option value="${r.dest}">${r.dest} (missing)</option>`);
+    src.value = r.source; dst.value = r.dest;
+    src.title = r.source; dst.title = r.dest;
+    // Fixed 0..1 range, widened only for an unusually large authored depth.
+    // It used to be derived from the CURRENT depth, so dragging a route to
+    // zero collapsed its own slider to 0..0.15 and left it stuck there — a
+    // control that shrinks when you turn it down.
+    range.max = Math.max(1, Math.abs(r.depth) * 2).toFixed(3);
     range.value = r.depth;
-    const val = document.createElement("span"); val.className="val"; val.textContent = (+r.depth).toFixed(3);
+    val.textContent = (+r.depth).toFixed(3);
+    row.dataset.src = r.source;
+
     range.oninput = () => { val.textContent = (+range.value).toFixed(3);
       send({type:"set", key:`route.${i}.depth`, value:+range.value}); };
-    wrap.appendChild(label); wrap.appendChild(range); wrap.appendChild(val);
-    box.appendChild(wrap);
+    // Revert rather than send when a select ends up empty (asked for an
+    // option it doesn't have). The engine refuses the empty value anyway, so
+    // without this the row would sit blank until something else forced a
+    // rebuild — the spec is unchanged, so the rebuild signature never fires.
+    const pick = (el, attr) => () => {
+      if (!el.value) { el.value = r[attr]; return; }
+      send({type:"set", key:`route.${i}.${attr}`, value:el.value});
+    };
+    src.onchange = pick(src, "source");
+    dst.onchange = pick(dst, "dest");
+    row.querySelector(".del").onclick = () => send({type:"mod_remove", index:i});
+    box.appendChild(row);
   });
 }
+
+// Per-row source activity, updated every tick without rebuilding the row —
+// so you can see the mapping firing while you're choosing it.
+function updateRouteActivity(s){
+  const src = s.mod_sources || {};
+  document.querySelectorAll("#routes .modrow").forEach(row => {
+    const bar = row.querySelector(".live i");
+    if (!bar) return;
+    const v = Math.max(0, Math.min(1, src[row.dataset.src] ?? 0));
+    bar.style.width = (v * 100).toFixed(1) + "%";
+  });
+}
+
+$("mod-add").onclick = () => {
+  const s = _lastState || {};
+  const dests = s.mod_destinations || [];
+  if (!dests.length) return;
+  // Default to something that does something visible: overall audio level
+  // onto the first generator param of the current scene.
+  const src = Object.keys(s.mod_sources || {}).includes("audio_level") ? "audio_level" : "lfo_slow";
+  send({type:"mod_add", source:src, dest:dests[0].key, depth:0.3});
+};
 $("m-link").oninput = () => {
   $("v-mlink").textContent = (+$("m-link").value).toFixed(2);
   send({type:"set", key:"audio_link", value:+$("m-link").value});
 };
+
+// Live modulation-source meters. These exist to answer "is this actually
+// doing anything?" without reading the code: a flat bar means the SOURCE
+// isn't moving (a silent mic), which is a different problem from a route at
+// depth zero, and the two are indistinguishable otherwise.
+const SRC_HELP = {
+  audio_level: "follows Settings → visuals react to (default: this scene's own sound)",
+  mic_level:   "microphone / line input",
+  synth_level: "this scene's own soundscape",
+  synth_low:   "soundscape — low band (<250Hz)",
+  synth_mid:   "soundscape — mid band",
+  synth_high:  "soundscape — high band (>2kHz)",
+  lfo_slow:    "slow LFO",
+  lfo_mid:     "medium LFO",
+};
+let _srcSig = "";
+function renderModSources(s){
+  const src = s.mod_sources || {};
+  const names = Object.keys(src).sort();
+  const box = $("mod-sources");
+  if (_srcSig !== names.join(",")) {
+    _srcSig = names.join(",");
+    box.innerHTML = "";
+    for (const n of names){
+      const row = document.createElement("div");
+      row.className = "srcrow"; row.id = "src-" + n;
+      row.title = SRC_HELP[n] || n;
+      row.innerHTML = `<span class="nm">${n}</span><span class="mtr"><i></i></span><span class="nv">0.00</span>`;
+      box.appendChild(row);
+    }
+  }
+  for (const n of names){
+    const row = $("src-" + n); if (!row) continue;
+    const v = Math.max(0, Math.min(1, src[n] ?? 0));
+    row.querySelector("i").style.width = (v * 100).toFixed(1) + "%";
+    row.querySelector(".nv").textContent = v.toFixed(2);
+    // "idle" is about the source being flat, not merely low right now: an
+    // LFO at the bottom of its sweep is fine, a dead mic is not.
+    const seen = (row.dataset.max = Math.max(+row.dataset.max || 0, v).toFixed(3));
+    row.classList.toggle("idle", +seen < 0.02);
+  }
+  if (document.activeElement !== $("a-react") && s.audio_react)
+    $("a-react").value = s.audio_react;
+  // Only warn when audio_level is actually pointed at a dead mic. On the
+  // default (engine output) it follows this scene's own sound, so silence
+  // there just means the transport is stopped, not that anything is wrong.
+  const note = $("mic-note");
+  if (note){
+    const flat = (+($("src-audio_level")?.dataset.max || 0)) < 0.02;
+    const onMic = s.audio_react === "mic";
+    const usesIt = (s.modulation || []).some(r => r.source === "audio_level");
+    note.style.display = (onMic && usesIt && flat) ? "block" : "none";
+    note.innerHTML = s.mic_online === false
+      ? "No audio input device, and <i>audio_level</i> is set to follow the microphone — it will stay at zero. Switch <b>Settings → visuals react to</b> back to this scene's own sound."
+      : "<i>audio_level</i> is following the microphone and it's reading silence, so routes from it do nothing. Switch <b>Settings → visuals react to</b> back to this scene's own sound.";
+  }
+}
 
 let _shapeModSig = "";
 function renderShapeModulation(s){
@@ -1439,11 +1710,13 @@ function endAudioRegenApply(){
 const charValues = () => ({
   warmth: +$("d-warmth").value, energy: +$("d-energy").value, evolution: +$("d-evolution").value,
 });
+let _audioRegenTarget = null;
 $("apply-audio-regen").onclick = () => {
   const scene = $("audiotarget-regen").value;
   const audio = $("audiokw-regen").value.trim();
   if (!scene || !audio || applyingAudio || generating) return;
   applyingAudio = true;
+  _audioRegenTarget = scene;
   disableAudioRegenModal();
   $("audio-regen-prog").style.display = "block";
   $("audio-regen-prog").classList.add("active");
@@ -1564,8 +1837,10 @@ function readStateValue(path, s){
 // keys); the values then track continuously through registerCtl/syncControls
 // like every other slider, so MIDI and a second browser tab move them too.
 //
-// No learn icons here, matching the earlier call on the hardcoded versions:
-// these are scene-authoring params, not things you reach for mid-set.
+// These DO get MIDI learn icons. The earlier call not to give them any was
+// made when the only params here were flow_field's authoring knobs; a 2D
+// pattern's scale/rotate/spread/glow are performance controls you reach for
+// mid-set, so they want a hardware knob like anything else.
 let _layerSig = "";
 function renderLayers(s){
   const layers = s.layers || [];
@@ -1613,6 +1888,10 @@ function renderLayers(s){
         send({type:"set", key, value:+el.value});
       };
       host.appendChild(row);
+      // Learn icon + the gutter class the icon is positioned against, exactly
+      // as slider() does for the fixed controls.
+      span.insertAdjacentElement("afterend", learnBtn(key));
+      row.classList.add("has-midi");
       registerCtl(key, el, span, fmt);
     }
   }
@@ -2161,10 +2440,13 @@ slider("c-max","camera.max_strokes","cmax",(v)=>(+v).toFixed(0));
 $("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
 
 let generating = false, genTimer = null;
-function startGen(){
+function startGen(kindLabel){
   if (generating) return;
   generating = true;
   disableGenModal();
+  $("gen-overlay").classList.add("on");
+  $("gen-overlay-msg").textContent = kindLabel
+    ? `Composing ${kindLabel}…` : "Composing scene…";
   $("genprog").style.display = "block";
   $("genprog").classList.add("active");
   $("genbar").style.width = "2%";
@@ -2174,16 +2456,34 @@ function startGen(){
 function endGen(){
   generating = false;
   enableGenModal();
+  $("gen-overlay").classList.remove("on");
   $("genprog").classList.remove("active");
   $("genbar").style.width = "0%";
   if (genTimer) { clearTimeout(genTimer); genTimer = null; }
 }
+// Scene type. Remembered across sessions: someone building a set of patterns
+// is building several in a row, and re-picking 2D every time is friction.
+let genKind = localStorage.getItem("pw_gen_kind") || "3d";
+function setGenKind(k){
+  genKind = (k === "2d") ? "2d" : "3d";
+  localStorage.setItem("pw_gen_kind", genKind);
+  $("kind-3d").classList.toggle("active", genKind === "3d");
+  $("kind-2d").classList.toggle("active", genKind === "2d");
+  // scene size is a 3D notion (object count); a pattern's budget is its
+  // stroke count after expansion, which the 2D prompt handles itself.
+  const sz = $("d-size").closest(".field");
+  if (sz) sz.style.display = genKind === "2d" ? "none" : "";
+}
+$("kind-3d").onclick = () => setGenKind("3d");
+$("kind-2d").onclick = () => setGenKind("2d");
+setGenKind(genKind);
+
 $("gen").onclick = () => {
   const k = $("kw").value.trim();
   if (!k || generating) return;
-  startGen();
+  startGen(genKind === "2d" ? "2D pattern" : "3D world");
   send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim(),
-        size:$("d-size").value, ...charValues()});
+        size:$("d-size").value, kind:genKind, ...charValues()});
 };
 // multiline field: Ctrl/Cmd+Enter submits, plain Enter makes a new line
 $("kw").addEventListener("keydown", e => {
@@ -2205,6 +2505,13 @@ $("o-scenepps").addEventListener("change", () => commitPps($("o-scenepps"), "sce
 $("master-toggle").onclick = () => {
   const nowActive = $("master-toggle").dataset.active === "1";
   send({type:"set_active", value: !nowActive});
+};
+// Freeze eases the scene clock to zero over motion_ramp seconds, which stops
+// LFOs, node motion and camera travel together. Distinct from Stop, which
+// pauses the engine outright and blanks the output.
+$("motion-toggle").onclick = () => {
+  const frozen = $("motion-toggle").dataset.frozen === "1";
+  send({type:"set", key:"motion", value: frozen ? 1 : 0});
 };
 // Independent of Start/Stop: visuals+audio+preview can run with the laser
 // off — off is the default/safe state regardless of --laser at launch. Off
@@ -2413,6 +2720,21 @@ $("gen-close").onclick = () => {
 $("audio-regen-open").onclick = () => {
   openModal("modal-audio-regen");
   populateAudioTargets($("audiotarget-regen"));
+  // Preselect the scene that's actually loaded — regenerating audio for
+  // whatever happened to be first alphabetically is never what's wanted.
+  // library_name is the file that was loaded, which is what the dropdown
+  // lists (a few shipped scenes have an internal name that differs).
+  const cur = _lastState?.library_name;
+  const sel = $("audiotarget-regen");
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  // Start from an empty prompt rather than the last one: this modal is
+  // reopened to try something different, not to repeat the previous run.
+  $("audiokw-regen").value = "";
+  $("audio-regen-prog").style.display = "none";
+  $("audio-regen-prog").classList.remove("active");
+  $("audio-regen-bar").style.width = "0%";
+  $("audio-regen-hint").style.display = "none";
+  $("audio-regen-hint").textContent = "";
 };
 $("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
 
@@ -2431,17 +2753,21 @@ $("show-prompts-open").onclick = () => {
 $("prompts-close").onclick = () => closeModal("modal-prompts");
 
 function disableAudioRegenModal(){
-  $("audio-regen-modal").style.opacity = "0.5";
+  // Overlay instead of dimming, matching the Generate modal — the throbber
+  // has to stay bright to read as "working".
+  $("audio-regen-overlay").classList.add("on");
   $("audio-regen-modal").style.pointerEvents = "none";
 }
 function enableAudioRegenModal(){
+  $("audio-regen-overlay").classList.remove("on");
   $("audio-regen-modal").style.opacity = "1";
   $("audio-regen-modal").style.pointerEvents = "auto";
 }
 
 // Disable modal during generation (dim + disable pointer events)
 function disableGenModal(){
-  $("gen-modal").style.opacity = "0.5";
+  // No opacity change: the throbber overlay already covers the form, and
+  // dimming the modal would wash the spinner out along with it.
   $("gen-modal").style.pointerEvents = "none";
 }
 function enableGenModal(){

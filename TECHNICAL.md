@@ -81,9 +81,22 @@ Space is local to a motif and combinators are global to a node **on purpose**: t
 
 Node keys: `def`, `at` `[x,y]` or `at_polar` `[r, turns]`, `scale`, `rotate` (turns), `color`, `glow`, `repeat`, `symmetry`.
 
-The top-level `scale`, `rotate`, `spread` and `glow` params are flat scalars deliberately — `Scene._resolve` pushes every top-level param through the matrix as `visual.<key>`, so all four are audio/LFO-modulatable with no further wiring, while anything nested inside `defs`/`nodes` is not. Top-level `glow` is **added** to each node's own glow rather than acting as a floor: a floor can never exceed the brightest authored shape, so routing audio at it would do nothing on exactly the scenes that bother to author glow.
+The top-level `scale`, `rotate`, `spread` and `glow` params are flat scalars deliberately — `Scene._resolve` pushes every top-level param through the matrix as `visual.<key>`, so all four are audio/LFO-modulatable with no further wiring, while anything nested inside `defs`/`nodes` is not. All four carry MIDI learn icons and are bindable to hardware knobs.
+
+Two of them behave in a specific way worth knowing:
+
+- **`glow` is added** to each node's own glow rather than acting as a floor. A floor can never exceed the brightest authored shape, so routing audio at it would do nothing on exactly the scenes that bother to author glow.
+- **`spread` displaces each piece from centre by its own centroid, at constant size.** That is the whole difference from `scale`, which zooms size *and* position. It runs after repeat/symmetry, because the copies are what have distinct positions to spread. An earlier version scaled node placement only — a no-op on the usual case of centred nodes whose structure comes entirely from repeat and symmetry, since that just multiplies `[0,0]` by a number.
 
 `max_strokes` bounds the combinatorics — a repeat crossed with a symmetry multiplies fast (40 offsets × 32-fold radial is 1280 copies), and an unbounded pattern would blow the frame budget before anything else noticed.
+
+### Generating one
+
+The **scene type** picker in the Generate modal (3D world / 2D pattern) selects which system prompt authors the scene. It's an explicit choice rather than something inferred from the prompt text, because the two prompts are contradictory by design: the 3D one requires "a full ENVIRONMENT to navigate inside, **not a flat pattern**". The choice is remembered across sessions, and "scene size" hides for 2D — object count is a 3D notion, whereas a pattern's budget is its stroke count after expansion.
+
+The 2D prompt requires modulation routes on every scene, because a static pattern is a poster rather than an instrument. It's told to put spin on an LFO and brightness/size on `audio_level` — rotation driven by audio jitters, while brightness driven by audio is the entire point.
+
+Offline (no API key), `director/fallback.py` produces a seeded pattern: the keyword hash picks symmetry order, palette and centre motif, while the skeleton — banded 4-fold cross, n-fold petal ring, nested centre — stays fixed, because that structure is what reads as *designed*.
 
 ### Per-shape glow
 
@@ -266,12 +279,40 @@ The arpeggiator schedules notes through the exact same machinery as the `pluck` 
 
 ## Audio ↔ visual mapping
 
-Scenes are generated with **modulation routes** — e.g. `audio_level → camera.speed` — that make the visuals react to the soundscape. Two levels of control:
+Scenes carry **modulation routes** — e.g. `audio_level → camera.speed` — that make the visuals react to the soundscape. Everything here is per-scene and saves via **Update scene from config**.
 
-- **audio ↔ visual** — a single slider (0–2×) that scales *every* audio-driven route at once
-- **Per-route sliders** — one per relationship in the current scene (e.g. `audio_level→speed`), each independently adjustable
+### Sources
 
-Both are live and both save via **Update scene from config** (`audio_link` and each route's `depth` in the scene JSON).
+The audio sources read **the instrument's own output**, not a microphone. That default matters: `audio_level` used to be wired to the mic, so on any machine not playing sound into one, every audio→visual route in every generated scene sat at zero and looked broken.
+
+| source | what it follows |
+|---|---|
+| `audio_level` | whichever feed **Settings → visuals react to** selects (default: engine output) |
+| `synth_level` | the soundscape, always — unaffected by that setting |
+| `synth_low` / `synth_mid` / `synth_high` | three-band split of the output (<250Hz / mid / >2kHz) |
+| `mic_level` | microphone / line input |
+| `voice.<name>` | one per voice in the loaded soundscape |
+| `lfo_slow` / `lfo_mid` | free-running, rate stored per scene |
+
+Bands are computed block-wise by rfft where the mix is finalised (`dsp.Soundscape._update_bands`) — this module forbids per-sample IIR recursion, so a filter bank was ruled out; decimating to ~2048 bins keeps it at ~1.7% of the audio callback budget.
+
+`voice.<name>` is measured post-level, post-LFO, pre-pan, so it's what the voice actually contributes. It also makes an **arpeggiator** usable as a modulation source with no special handling: each arp note is a spike in that voice's level, so routing it gives you the arp's rhythm.
+
+The voice source list tracks the loaded scene exactly. Two details make that work: names come from the soundscape's own voice list rather than from which voices happened to produce output this block (a sparse pluck between notes contributes nothing, and would otherwise blink in and out of the picker), and voices belonging to other scenes are dropped — except any still referenced by a live route, since during a crossfade the outgoing soundscape stops reporting a moment before its scene is replaced.
+
+### The matrix editor
+
+Each mapping is **source → destination** with its own depth, and mappings can be added, repointed and deleted live. **Destinations are derived from the layer schema** — the same registry that builds the layer panel — so a new generator param becomes routable the moment it exists, with no list to maintain. Camera destinations appear only on 3D scenes; monitor effects (`glow`, `trail`, `kaleidoscope_segments`) always.
+
+Every row shows a live meter for its own source, and a *modulation sources* readout lists all current values with flat ones greyed as idle — a route whose source never moves is otherwise indistinguishable from a broken route.
+
+**audio ↔ visual** is a single slider (0–2×) scaling *every* sound-driven source at once, on top of each route's own depth.
+
+### Freeze
+
+Eases all motion to a standstill over `motion_ramp` seconds (2 by default). It ramps the **scene clock** rather than stopping controls individually, so LFO phase, node motion and camera travel decelerate together and in proportion — everything time-driven is a function of `t`.
+
+The matrix still receives real `dt` while `t` is frozen, so `audio_level` keeps slewing and a frozen pattern still pulses with the sound. Distinct from **Stop**, which pauses the engine outright and blanks the output.
 
 ## MIDI control
 
@@ -279,7 +320,7 @@ Hardware knobs drive the same parameter keys the web UI does. Needs `pip install
 
 ```bash
 python run.py --list-midi          # show input ports
-python run.py --web --midi MPK     # match a port by substring
+python run.py --midi MPK           # match a port by substring
 ```
 
 Without `--midi` it picks the saved port, else the first non-loopback device. Change it live in **Settings → MIDI**.
@@ -289,6 +330,10 @@ A **MIDI in** indicator sits in the header: red (no controller), green (port ope
 ### Learn any control
 
 Every slider has a small `midi` tag at the end of its label. Click it, move a knob, done. Shift-click a bound one to unmap it. The tag shows the bound CC (`cc20`), pulses while waiting, and is barely visible when unmapped.
+
+### Generator params take their range from the registry
+
+`layer<N>.<param>` bindings (a 2D pattern's `scale`/`rotate`/`spread`/`glow`, a forest's `trees`) can't have a fixed range table: which params exist, and over what bounds, is a property of whichever generator the loaded scene uses. `midi.DYNAMIC_RANGES` is refreshed on every scene load from the registry's own `param_meta`, so a hardware knob and the on-screen slider cover the same range by construction. Soft takeover reads the current value out of the layer schema, so a knob doesn't jump the pattern when first touched.
 
 ### Sliders follow the hardware
 
@@ -333,13 +378,18 @@ Two levels of storage:
   },
   "modulation": [
     {"source": "lfo_slow", "dest": "visual.speed", "depth": 0.05},
-    {"source": "audio_level", "dest": "visual.turbulence", "depth": 0.4}
+    {"source": "synth_low", "dest": "visual.turbulence", "depth": 0.4}
   ],
+  "lfo": {"lfo_slow": 0.05, "lfo_mid": 0.2},
   "midi_overrides": {"voice.lead.pan": 47}
 }
 ```
 
 `midi_overrides` is optional and empty for most scenes — only appears once **Pin MIDI map** has been used.
+
+`lfo` holds this scene's LFO rates. Optional: an absent or partial block falls back to the engine defaults, which are also **restored** on load, so a rate set by one scene can't leak into the next. (It was global engine state before, meaning a scene routed from `lfo_slow` played back at whatever the previous scene happened to leave behind, and the value reset on restart.)
+
+Every field is read with `.get(key, default)`, so adding one stays backward-compatible with the existing library — keep that property.
 
 ## Cost control
 

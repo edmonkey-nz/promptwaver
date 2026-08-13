@@ -1,5 +1,5 @@
 {
-  "name": "floating in space",
+  "name": "floating_in_space",
   "layers": [
     {
       "generator": "world",
@@ -178,59 +178,216 @@
     "max_strokes": 120,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 60,
+    "tempo": 45.0,
     "master": 0.8,
-    "distortion": 0.05,
+    "distortion": 0.0,
     "delay": {
-      "time": 0.45,
-      "feedback": 0.35,
-      "mix": 0.3
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.35
     },
     "voices": [
       {
-        "name": "drone",
+        "name": "gravity_well",
         "type": "pad",
-        "waveform": "saw",
-        "note": 36,
+        "waveform": "sine",
+        "note": 28,
         "chord": [
           0,
           7,
           12,
           19
         ],
-        "level": 0.5,
-        "tone": 0.35,
-        "detune": 0.012,
-        "pan": 0.0
+        "level": 0.8,
+        "tone": 0.25,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.5,
+          "decay": 1.5,
+          "sustain": 0.9,
+          "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
-        "name": "bells",
-        "type": "pluck",
-        "waveform": "sine",
-        "note": 72,
+        "name": "stellar_shimmer",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 48,
+        "chord": [
+          0,
+          3,
+          7,
+          12
+        ],
+        "level": 0.35,
+        "tone": 0.5,
+        "detune": 0.012,
+        "pan": -0.3,
+        "env": {
+          "attack": 3.0,
+          "decay": 1.0,
+          "sustain": 0.8,
+          "release": 2.8
+        },
+        "lfo": {
+          "on": true,
+          "dest": "detune",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.6
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "flare_burst",
+        "type": "osc",
+        "waveform": "saw",
+        "note": 60,
+        "chord": [
+          0,
+          4,
+          7
+        ],
+        "unison": 2,
+        "detune": 0.02,
+        "sub": 0.15,
+        "tone": 0.6,
+        "level": 0.3,
+        "pan": 0.2,
+        "env": {
+          "attack": 1.2,
+          "decay": 0.8,
+          "sustain": 0.6,
+          "release": 1.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
         "scale": [
           0,
           3,
           7,
           10
         ],
-        "level": 0.28,
-        "rate": 0.5,
-        "decay": 1.6,
-        "pan": 0.25
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
       },
       {
-        "name": "air",
+        "name": "meteor_pings",
+        "type": "pluck",
+        "waveform": "triangle",
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          5,
+          9,
+          12
+        ],
+        "level": 0.05,
+        "rate": 0.35,
+        "decay": 1.1,
+        "tone": 0.65,
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.16,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": false,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
+      },
+      {
+        "name": "cosmic_wind",
         "type": "noise",
         "level": 0.12,
-        "tone": 0.4,
-        "pan": -0.15
+        "tone": 0.35,
+        "pan": 0.1,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.7
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
-    ]
+    ],
+    "swell_amount": 0.46,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": []
 }

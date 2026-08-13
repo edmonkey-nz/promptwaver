@@ -83,7 +83,22 @@ ENGINE_RANGES = {
     "hue_value": (0.0, 1.0),
     "audio_link": (0.0, 2.0),
     "lfo_slow.rate": (0.01, 0.4),
+    "lfo_mid.rate": (0.01, 0.8),
 }
+
+# `layer<N>.<param>` ranges, refreshed by the engine on every scene load from
+# the generator registry's own `param_meta`. They can't be a constant here:
+# which params exist, and over what range, is a property of whichever
+# generator the loaded scene uses. Keeping them in one mutable dict means the
+# registry stays the single source of truth for a param's bounds — the UI
+# slider and a MIDI knob bound to the same param cover the same range by
+# construction.
+DYNAMIC_RANGES: dict[str, tuple] = {}
+
+
+def set_dynamic_ranges(ranges: dict) -> None:
+    DYNAMIC_RANGES.clear()
+    DYNAMIC_RANGES.update(ranges)
 
 # Soundscape globals — these go through Engine.set_audio_param, not set_param.
 AUDIO_RANGES = {
@@ -166,6 +181,8 @@ def range_for(key: str):
     """Value range for a binding key, or None if it isn't a known parameter."""
     if key in ENGINE_RANGES:
         return ENGINE_RANGES[key]
+    if key in DYNAMIC_RANGES:
+        return DYNAMIC_RANGES[key]
     if key in AUDIO_RANGES:
         return AUDIO_RANGES[key]
     m = _SLOT_RE.match(key) or _NAME_RE.match(key)

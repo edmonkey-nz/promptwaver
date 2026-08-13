@@ -268,6 +268,12 @@ class Soundscape:
         self._mute_fade_pos = 0.0
         self.last_peak = 0.0      # post-master output peak of the last rendered block (VU meter)
         self.last_clip = False    # last_peak reached the clip threshold
+        # Three-band energy of the last block — modulation sources, so a scene
+        # can be driven by its own soundscape rather than only by the mic.
+        self.band_low = 0.0
+        self.band_mid = 0.0
+        self.band_high = 0.0
+        self.voice_peaks: dict[str, float] = {}   # per-voice output level
         # "orchestration" swell: a slow, continuous per-voice level LFO (long
         # period, independent random phase per voice) layered on top of each
         # voice's own level — the whole point is that voices *don't* all
@@ -470,6 +476,7 @@ class Soundscape:
         block_t = n0 / self.sr
         block_dt = frames / self.sr
         mix = np.zeros((frames, 2), np.float32)
+        voice_peaks: dict[str, float] = {}
 
         for v in self.spec["voices"]:
             vt = v.get("type", "pad")
@@ -546,6 +553,17 @@ class Soundscape:
             # if comp.get("on"):
             #     TODO: rewrite compressor with proper envelope follower + attack/release
 
+            # Per-voice output level, as a modulation source. Measured here —
+            # post level, post per-voice LFO/distortion, pre pan — so it is
+            # what the voice actually contributes to the mix.
+            #
+            # This is also what makes an ARPEGGIATOR usable as a modulation
+            # source without any special handling: each arp note is a spike in
+            # its voice's level, so routing this at a visual param gives you
+            # the arp's rhythm for free.
+            if mono.size:
+                voice_peaks[name] = float(np.max(np.abs(mono)))
+
             pan = float(v.get("pan", 0.0))
             if lfo is not None and lfo[2] == "pan":
                 # Auto-pan around the authored position, per-sample. Clipped
@@ -585,7 +603,49 @@ class Soundscape:
         # master knob (or muting) is directly visible on the meter.
         self.last_peak = float(np.max(np.abs(mix))) if mix.size else 0.0
         self.last_clip = self.last_peak >= 0.98
+        self.voice_peaks = voice_peaks
+        self._update_bands(mix)
         return mix
+
+    # Band edges in Hz. Low is the drone/sub weight, mid the body of the pads
+    # and plucks, high the air and bell transients.
+    _BAND_EDGES = (250.0, 2000.0)
+
+    def _update_bands(self, mix: np.ndarray) -> None:
+        """Three-band energy of this block's OUTPUT, for the modulation matrix.
+
+        This is what lets a scene's visuals react to the scene's OWN sound.
+        The pre-existing `audio_level` source reads the microphone, so on a
+        machine with no live input every audio->visual route sits at zero and
+        looks broken — which is exactly what it is, for anyone not playing
+        music into the mic.
+
+        A block-wise rfft rather than a filter bank: this module's founding
+        constraint rules out per-sample IIR recursion, and decimating to ~2048
+        bins keeps this at a fraction of a percent of the callback budget
+        while still resolving three bands comfortably.
+        """
+        n = mix.shape[0]
+        if n < 64:
+            return
+        mono = mix[:, 0] + mix[:, 1]
+        step = max(1, n // 2048)
+        x = mono[::step]
+        m = x.shape[0]
+        if m < 32:
+            return
+        sr = self.sr / step
+        power = np.abs(np.fft.rfft(x * np.hanning(m))) ** 2
+        freqs = np.fft.rfftfreq(m, 1.0 / sr)
+        lo_e, hi_e = self._BAND_EDGES
+        # RMS per band via Parseval, then a gain into a usable 0..1 modulation
+        # range. Smoothing is left to the matrix's Value sources, which
+        # already slew and are where the rest of the app expects it.
+        scale = 2.0 / max(m, 1)
+        self.band_low = min(1.0, float(np.sqrt(power[freqs < lo_e].sum())) * scale)
+        self.band_mid = min(1.0, float(np.sqrt(
+            power[(freqs >= lo_e) & (freqs < hi_e)].sum())) * scale)
+        self.band_high = min(1.0, float(np.sqrt(power[freqs >= hi_e].sum())) * scale)
 
     # --- voice renderers ---------------------------------------------------
     def _render_pad(self, v, t, n0, frames):
@@ -862,6 +922,24 @@ class SoundscapeMixer:
     @property
     def last_clip(self) -> bool:
         return self._clip
+
+    def bands(self) -> dict:
+        """Level + three-band energy of the live soundscape, for the
+        modulation matrix. Read straight off the currently-rendering
+        Soundscape; during a crossfade that is whichever half is playing,
+        which is the one you can actually hear."""
+        c = self.current
+        peaks = getattr(c, "voice_peaks", {})
+        # Keyed off the SPEC's voice list, not off which voices happened to
+        # produce output this block: a sparse pluck sitting between notes
+        # contributes nothing, and keying off peaks alone made its modulation
+        # source blink in and out of existence.
+        names = [v["name"] for v in (c.spec.get("voices") or []) if "name" in v]
+        return {"level": self._peak,
+                "low": getattr(c, "band_low", 0.0),
+                "mid": getattr(c, "band_mid", 0.0),
+                "high": getattr(c, "band_high", 0.0),
+                "voices": {n: float(peaks.get(n, 0.0)) for n in names}}
 
     @property
     def muted(self) -> bool:

@@ -26,6 +26,22 @@ Lint/format (config in `pyproject.toml`, line length 100, `E501` deliberately ig
 
 Local settings including the Anthropic API key live in `settings.json` at the repo root (gitignored, untracked). `scenes/*.json` **is** tracked — saving a scene from the UI dirties the working tree.
 
+**Regenerating audio overwrites the target scene's file.** `apply_audio_to_scene` loads the spec, replaces `soundscape`, and saves — so testing that path against a real scene destroys its audio. Copy the file first, or use a throwaway scene.
+
+## Bumping the version
+
+The version is duplicated in **three** places that must move together. Nothing checks them, so a partial bump ships a UI reporting one version and a README claiming another:
+
+| file | what to change |
+|---|---|
+| `promptwaver/__init__.py` | `__version__ = "x.y.z"` — the source of truth |
+| `README.md` (line 3) | the shields.io badge URL, which embeds the number twice-over as `version-x.y.z-33e0d0` |
+| `CHANGELOG.md` | a new `## [x.y.z]` section above the previous one |
+
+Everything else derives and needs no edit: `engine.state()` reads `__version__` and the browser header renders it, `pyproject.toml` declares `dynamic = ["version"]` with no literal, and `.github/workflows/build.yml` takes the release name from `github.ref_name` (the git tag). Releases build from a `v*` tag, so a real release also needs `git tag vx.y.z`.
+
+Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .venv` and check the old number survives only in CHANGELOG history.
+
 ## Architecture
 
 Read `TECHNICAL.md` for the subsystem-level detail. What follows is the load-bearing structure that isn't obvious from any single file.
@@ -50,7 +66,13 @@ Two generators carry most of the weight, and both are **declarative interpreters
 - `world` (3D) — `defs` are shape-grammar geometry expanded by `shapes.py`; nodes place them. 32 of 35 pre-existing library scenes use it and nothing else.
 - `pattern2d` (2D) — flat symmetric line-art via `patterns2d.py`. No camera, composed directly in the frame.
 
-`flow_field`, `attractor`, and `ripples` are the original procedural generators. They were long stranded — the director could not select them and the UI exposed only three param keys — which is why `ripples` and `attractor` appear in zero saved scenes. The registry is now self-describing and the UI builds panels from it, so they are fully adjustable again; the remaining gap is the director's `_SYSTEM` prompt, which still hardcodes `"generator":"world"`.
+`flow_field`, `attractor`, and `ripples` are the original procedural generators. They were long stranded — the director could not select them and the UI exposed only three param keys — which is why `ripples` and `attractor` appear in zero saved scenes. The registry is now self-describing and the UI builds panels from it, so they are fully adjustable by hand again. They are still not *AI-selectable*, though: each director prompt names exactly one generator (`_SYSTEM` → `world`, `_SYSTEM_2D` → `pattern2d`), so a generated scene is always one of those two.
+
+### Two director prompts, chosen explicitly
+
+`_SYSTEM` (3D) and `_SYSTEM_2D` (flat patterns) are **separate prompts**, not a branch inside one, because they give directly contradictory instructions — the 3D one requires "a full ENVIRONMENT to navigate inside, not a flat pattern", which is exactly what the 2D one must produce. They share `_SOUNDSCAPE_GUIDE`, extracted so the voice-ordering and LFO limits can't drift between them.
+
+`SYSTEM_PROMPTS` maps `"2d"`/`"3d"` to the right one. `kind` threads from the UI toggle through `generate_scene` → `generate` → `_from_claude`, and **is part of the cache key** — the same keyword has a legitimate 2D and 3D answer and they must not collide. It's recorded in `generation_settings` as what was *asked for*; the scene's actual kind still derives from its generators.
 
 ### The registry is the source of truth for generator metadata
 
@@ -58,11 +80,19 @@ Generators declare `description` and `param_meta` (explicit ranges); `kind()` de
 
 ### The modulation matrix, and its implicit destination surface
 
-`modulation.py` is the spine: sources (`lfo_slow`, `lfo_mid`, `audio_level`) are sampled once per tick and routed to namespaced destination keys spanning both visual and audio domains.
+`modulation.py` is the spine: sources are sampled once per tick and routed to namespaced destination keys spanning both visual and audio domains.
 
 The non-obvious part is in `Scene._resolve`: **every top-level generator param is automatically a modulation destination** as `visual.<key>`, because resolve pushes each key through `matrix.value(f"visual.{key}", ...)`. Adding a flat scalar param to a generator makes it live-modulatable with no other wiring. Conversely, burying a number inside a nested dict hides it from the matrix — keep modulatable values as top-level scalars.
 
-`shape_modulation` is a separate, narrower mechanism: `world`-only, `scale`-only, and it reads *synth voice params/LFOs* rather than the matrix.
+**The audio sources read the engine's own output, not a microphone.** `audio_level` follows the synth by default (the mic is `mic_level`, selectable via the `audio_react` setting); `synth_low/mid/high` are a three-band rfft split computed in `dsp.Soundscape._update_bands`; `voice.<name>` is per-voice output level, registered dynamically as soundscapes load. Wiring `audio_level` to the mic is what made every generated scene's audio routes look broken on any machine without live input — don't reintroduce that default.
+
+Routes are editable at runtime (add/remove/repoint) and the destination list is **derived from `Scene.layer_schemas()`**, so a new generator param becomes routable with no list to update. `Engine.mod_destinations()` is the one place that assembles it.
+
+`shape_modulation` is a separate, narrower mechanism: `world`-only, `scale`-only, and it reads *synth voice params/LFOs* rather than the matrix. Its UI says so explicitly on 2D scenes rather than presenting controls that do nothing.
+
+### The scene clock is an accumulator, not wall time
+
+`Engine._scene_t` advances by `dt * motion_rate`, and `t` is what every time-driven thing reads. That's what makes **Freeze** work: ramping one number decelerates LFO phase, node motion and camera travel together. Note the deliberate asymmetry — `matrix.update()` gets **real** `dt` while `t` is frozen, so audio-driven sources keep slewing and a frozen pattern still reacts to sound. Don't "fix" that by passing the scaled dt to both.
 
 ### Threading: one render thread, one queue
 
@@ -86,7 +116,11 @@ For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing a
 
 `SceneSpec` is a dataclass serialised straight to `scenes/<name>.json`. `from_dict` reads every field with `.get(key, default)`, so adding a field is backward-compatible with the existing library — old scenes load with the default. Keep that property.
 
-The director (`director/claude_director.py`) makes one cached Claude call per scene and returns JSON; `director/fallback.py` is a deterministic keyword→scene mapping used when no API key is set, so the app stays fully usable offline. `_SYSTEM` is a single large prompt string carrying the entire schema, the shape-grammar vocabulary, and the soundscape guidance — changes to the scene format usually need a matching edit there or Claude will keep emitting the old shape.
+Anything that behaves like a scene setting belongs in the spec, and anything left as engine state silently leaks between scenes. `spec.lfo` exists because LFO rate was global: a scene routed from `lfo_slow` played back at whatever the previous scene left behind. Note the pattern in `Engine._apply_lfo` — it **restores defaults** for absent keys rather than only applying present ones, which is the half that actually stops the leak.
+
+**Regenerating audio writes to the scene file**, while the running engine keeps playing the old soundscape — the UI reloads the scene afterwards so the change is audible. Worth knowing before you test that path against a scene you care about.
+
+The director (`director/claude_director.py`) makes one cached Claude call per scene and returns JSON; `director/fallback.py` is a deterministic keyword→scene mapping used when no API key is set, so the app stays fully usable offline (including a seeded 2D pattern via `_pattern_2d`). Each system prompt carries the entire schema for its scene kind plus the shared soundscape guidance — changes to the scene format usually need a matching edit there, **in both prompts**, or Claude will keep emitting the old shape.
 
 ### Known drift
 

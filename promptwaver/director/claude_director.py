@@ -31,7 +31,7 @@ from .fallback import local_scene
 
 _DEFAULT_MODEL = os.environ.get("PROMPTWAVER_MODEL", "claude-haiku-4-5")
 
-_SYSTEM = """You are the scene director for PromptWaver, an ambient laser + synth
+_SYSTEM_3D_HEAD = """You are the scene director for PromptWaver, an ambient laser + synth
 instrument that draws glowing wireframe VECTOR line-art (no fills, no shading —
 just strokes on black). Given a keyword, return ONE JSON object describing a
 calming, immersive 3D scene the viewer floats through. Output ONLY the JSON — no
@@ -89,7 +89,14 @@ Schema:
   },
   "modulation": [{"source":"audio_level","dest":"camera.speed","depth":0.6}]
 }
+"""
 
+# Shared by the 3D and 2D system prompts. Extracted rather than duplicated:
+# it is the longest part of either prompt and the part most likely to be
+# tuned, and two copies would drift apart silently — the symptom being that
+# 2D scenes quietly stop getting the voice-ordering or LFO limits that 3D
+# scenes get. Verified byte-identical to the pre-extraction prompt.
+_SOUNDSCAPE_GUIDE = """
 Soundscape guidance: ambient and calm. Voice types:
   "pad"   sustained drone chord, warmth from harmonic partials (params: chord, tone, detune)
   "osc"   unison multi-oscillator — thicker/simpler than pad, good for a lead or bass
@@ -154,7 +161,9 @@ Omit any tier the scene doesn't need, but never reorder the ones you do use.
 Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
 names change with every scene, the positions must not — so a stable order is
 what keeps one physical knob meaning "the low end" across every scene.
+"""
 
+_SYSTEM_3D_TAIL = """
 Budget & feel: a laser draws only a few hundred strokes total, so keep the whole
 scene to roughly 6-12 objects and each object simple (a chair is a few boxes and
 lines, not a mesh). Recognizable silhouette beats detail. Spread objects across
@@ -202,6 +211,172 @@ WORKED EXAMPLE (format only — for the keyword "a campfire at night"):
 You MAY also drop in a ready-made primitive with {"primitive":name,"params":{..}}
 instead of a def when one fits: %s. Prefer authoring defs for anything else.""" % (
     ", ".join(available_primitives()),)
+
+_SYSTEM = _SYSTEM_3D_HEAD + _SOUNDSCAPE_GUIDE + _SYSTEM_3D_TAIL
+
+
+# --- 2D pattern director -----------------------------------------------------
+# A SEPARATE system prompt rather than a branch inside the 3D one, because the
+# two give directly contradictory instructions: _SYSTEM requires "a full
+# ENVIRONMENT to navigate inside, not a flat pattern", which is precisely what
+# this one must produce. They share only the soundscape guidance.
+
+_SYSTEM_2D_HEAD = """You are the pattern director for PromptWaver, an ambient laser +
+synth instrument that draws glowing VECTOR line-art (no fills, no shading — just
+strokes on black). Given a keyword, return ONE JSON object describing a FLAT 2D
+pattern: a mandala, kaleidoscope, rosette, or neon lattice that fills the frame
+and does not move through space. Output ONLY the JSON — no prose, no markdown fences.
+
+There is NO CAMERA in a 2D scene. Do not emit a "camera" block. You compose
+directly in normalized coordinates where x and y both run -1..1, (0,0) is the
+centre, and anything beyond about 0.97 is clipped at the frame edge.
+
+ANGLES ARE IN TURNS (0..1), never radians. A quarter turn is 0.25.
+
+You author MOTIFS and then multiply them. This is the whole idea: never write
+out fifty individual strokes. Write one arm, one chevron, one petal — then let
+"repeat" and "symmetry" produce the rest. A good pattern is typically 3-6 nodes
+of authored geometry that expand into 60-300 strokes.
+
+"defs" maps a motif name to {"space": "cart"|"polar", "ops": [ ... ]}.
+
+OPS (coordinates are LOCAL to the motif):
+  line     {"a":[x,y], "b":[x,y]}
+  polyline {"pts":[[x,y],...], "closed":false}
+  circle   {"r":0.5, "c":[x,y], "seg":48}
+  arc      {"r":0.5, "a0":0, "a1":0.25, "c":[x,y], "seg":32}   // a0/a1 in TURNS
+  rect     {"w":0.4, "h":0.4, "c":[x,y]}
+  ngon     {"n":6, "r":0.3, "c":[x,y], "rot":0}                // n=4 is a diamond
+  star     {"n":5, "r1":0.4, "r2":0.18, "c":[x,y], "rot":0}
+  grid     {"w":1.6, "h":1.6, "nx":5, "ny":5, "c":[x,y]}
+
+SPACE — how that motif's own coordinates are read:
+  "cart"   as authored. Straight lines stay straight.
+  "polar"  each point is (radius, angle-in-turns). A straight line then becomes
+           an ARC or a SPIRAL. Use it for petals, curved wedges, spiral arms —
+           anything that should bend around the centre.
+
+Each node then multiplies its motif:
+
+"repeat" (one per node):
+  {"kind":"offset","d":0.045,"n":4,"hue_step":0.06}   parallel copies — THE
+        banded neon-tube look. d is the gap, n the number of lines in the band,
+        hue_step rotates the colour a little per copy.
+  {"kind":"scale","factor":1.5,"n":3,"hue_step":0.1}  concentric copies, each
+        larger than the last — nested diamonds, rings, frames.
+  {"kind":"radial","n":8,"hue_step":0.04}             n copies rotated about
+        the centre — the mandala maker.
+  {"kind":"ring","n":6,"r":0.55,"spin":true}          n copies placed around a
+        circle of radius r.
+  {"kind":"grid","nx":3,"ny":3,"step":[0.5,0.5]}      a lattice of copies.
+
+"symmetry" (applied after repeat, folds the whole node):
+  {"mirror":"x"}    left-right     {"mirror":"y"}   up-down
+  {"mirror":"xy"}   both — 4-fold, the classic cross/star layout
+  {"radial":8, "hue_step":0.03}   n-fold rotational symmetry
+
+Node keys: "def", "at":[x,y] or "at_polar":[radius,turns], "scale", "rotate"
+(turns), "color":[r,g,b] 0..1, "glow" 0..1, "closed", "repeat", "symmetry".
+
+GLOW IS THE LOOK. These patterns read as neon tubing, and "glow" is what sells
+it. Give most nodes 0.5-0.9, and push the focal shape to 1.0. A pattern with no
+glow looks like a wireframe diagram.
+
+Colour: give each node a distinct saturated "color", and use "hue_step" on its
+repeat so a band of parallel lines runs through a small spectrum rather than
+being flat. Deep blues/cyans/magentas/greens read best on black.
+"""
+
+_SYSTEM_2D_TAIL = """
+Layer params (siblings of "defs"/"nodes", all plain numbers — these are the
+LIVE-MODULATABLE controls, so always set them explicitly):
+  "scale" 1.0     whole-pattern zoom
+  "rotate" 0.0    whole-pattern spin, in turns
+  "spread" 1.0    scales node PLACEMENT only, not node size
+  "glow" 0.0      boost ADDED to every node's own glow
+  "max_strokes" 420   hard ceiling; raise for dense patterns, lower for a laser
+
+MODULATION IS REQUIRED. A static pattern is a poster, not an instrument. Always
+return 3-4 routes so the pattern breathes and reacts.
+
+SOURCES — all the audio ones read THIS SCENE'S OWN soundscape by default, so
+the pattern reacts to the music it ships with:
+  "audio_level"  overall loudness — the general-purpose one
+  "synth_low"    low band (<250Hz) — the drone/sub weight, a slow heavy pulse
+  "synth_mid"    mid band — pad and pluck body
+  "synth_high"   high band (>2kHz) — bells and air, the twitchiest
+  "synth_level"  same as audio_level, but pinned to the soundscape even if the
+                 user switches the app over to a live microphone input
+  "lfo_slow"     ~0.05Hz, "lfo_mid" ~0.2Hz — steady, independent of sound
+Prefer the BANDS over plain audio_level where the destination suits one: they
+are what make a pattern look played rather than merely pulsed.
+
+DESTINATIONS:
+  "visual.rotate"  slow continuous spin — the single most effective one
+  "visual.scale"   breathing in and out
+  "visual.glow"    brightness pumping
+  "visual.spread"  the composition opening and closing
+
+Example: [{"source":"lfo_slow","dest":"visual.rotate","depth":1.0},
+          {"source":"audio_level","dest":"visual.glow","depth":0.6},
+          {"source":"synth_low","dest":"visual.scale","depth":0.18},
+          {"source":"synth_high","dest":"visual.spread","depth":0.25}]
+
+Put the spin on an LFO and brightness/size/spread on the audio: rotation driven
+by sound jitters, whereas brightness driven by sound is exactly right. Match
+band to destination — low band to size (it thumps), high band to spread or glow
+(it sparkles). DEPTHS MUST BE NON-ZERO, and 0.15-0.8 is the useful range; a
+depth of 0 is a route that does nothing.
+
+REQUIREMENTS for every 2D scene:
+- Fill the frame. The composition should reach out to roughly 0.9 in at least
+  one direction, and be centred on (0,0) unless the keyword says otherwise.
+- Author motifs SPECIFIC to the keyword, then multiply them. Invent geometry
+  that belongs to the subject.
+- Use symmetry. 4-fold ("mirror":"xy") or 6/8/12-fold ("radial") is what makes
+  these read as designed rather than scattered.
+- Mix scales: a bold outer structure, a mid-layer, and a small dense centre.
+- Set "glow" on nodes and return modulation routes. Both are required.
+- NEVER reuse the motifs from the example below — it shows format only.
+
+WORKED EXAMPLE (format only — for the keyword "neon temple"):
+{"name":"neon temple",
+ "layers":[{"generator":"pattern2d","params":{
+   "defs":{
+     "arm":    {"space":"cart","ops":[{"op":"line","a":[0.16,0.16],"b":[0.16,0.94]}]},
+     "chevron":{"space":"cart","ops":[{"op":"polyline","pts":[[0.30,0.62],[0.52,0.84],[0.74,0.62]]}]},
+     "core":   {"space":"cart","ops":[{"op":"ngon","n":4,"r":0.13}]},
+     "petal":  {"space":"polar","ops":[{"op":"line","a":[0.22,0.0],"b":[0.60,0.06]}]}
+   },
+   "nodes":[
+     {"def":"arm","color":[0.25,0.8,1.0],"glow":0.85,
+      "repeat":{"kind":"offset","d":0.05,"n":4,"hue_step":0.05},
+      "symmetry":{"mirror":"xy"}},
+     {"def":"arm","rotate":0.25,"color":[0.35,0.6,1.0],"glow":0.85,
+      "repeat":{"kind":"offset","d":0.05,"n":4,"hue_step":0.05},
+      "symmetry":{"mirror":"xy"}},
+     {"def":"chevron","color":[0.4,1.0,0.75],"glow":0.7,
+      "repeat":{"kind":"offset","d":0.045,"n":3,"hue_step":0.07},
+      "symmetry":{"mirror":"xy"}},
+     {"def":"petal","color":[1.0,0.45,0.85],"glow":0.8,
+      "repeat":{"kind":"offset","d":0.04,"n":2,"hue_step":0.05},
+      "symmetry":{"radial":12,"hue_step":0.02}},
+     {"def":"core","color":[0.8,0.35,1.0],"glow":1.0,"closed":true,
+      "repeat":{"kind":"scale","factor":1.6,"n":3,"hue_step":0.09}}
+   ],
+   "scale":1.0,"rotate":0.0,"spread":1.0,"glow":0.0,"max_strokes":420
+ }}],
+ "palette":["#05060f","#33e0d0","#ff6fd8"],
+ "modulation":[{"source":"lfo_slow","dest":"visual.rotate","depth":1.0},
+               {"source":"synth_level","dest":"visual.glow","depth":0.6},
+               {"source":"synth_low","dest":"visual.scale","depth":0.18},
+               {"source":"synth_high","dest":"visual.spread","depth":0.25}]}
+"""
+
+_SYSTEM_2D = _SYSTEM_2D_HEAD + _SOUNDSCAPE_GUIDE + _SYSTEM_2D_TAIL
+
+#: keyword -> the system prompt that authors that kind of scene.
+SYSTEM_PROMPTS = {"3d": _SYSTEM, "2d": _SYSTEM_2D}
 
 
 _SOUNDSCAPE_SCHEMA = """{
@@ -451,10 +626,13 @@ class SceneDirector:
 
     def generate(self, keyword: str, use_cache: bool = True, audio: str | None = None,
                  size: str = "small", warmth: float | None = None, energy: float | None = None,
-                 evolution: float | None = None) -> SceneSpec:
+                 evolution: float | None = None, kind: str = "3d") -> SceneSpec:
         size = size if size in SCENE_SIZE else "small"
+        kind = kind if kind in SYSTEM_PROMPTS else "3d"
+        # `kind` is part of the cache key: the same keyword legitimately has a
+        # 3D and a 2D answer, and they must not collide.
         cache = self._cache_path(keyword + "|" + (audio or "") + "|" + size +
-                                 f"|w{warmth}|e{energy}|v{evolution}")
+                                 f"|w{warmth}|e{energy}|v{evolution}|k{kind}")
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
                 self.last_source = "cache"
@@ -466,7 +644,7 @@ class SceneDirector:
         self.last_progress = 0.0
         try:
             if self.online:
-                spec, ok = self._from_claude(keyword, audio, size, warmth, energy)
+                spec, ok = self._from_claude(keyword, audio, size, warmth, energy, kind)
                 if ok:
                     self.last_source = "claude"
                     self.last_error = None
@@ -476,11 +654,11 @@ class SceneDirector:
                     return spec
                 # Claude failed — fall back but do NOT cache, so a retry/fix takes effect
                 self.last_source = "fallback"
-                return _apply_evolution(_ensure_soundscape(local_scene(keyword)), evolution)
+                return _apply_evolution(_ensure_soundscape(local_scene(keyword, kind)), evolution)
 
             self.last_source = "fallback"
             self.last_error = (self._offline_reason or "no API key") + " — using local fallback"
-            return _apply_evolution(_ensure_soundscape(local_scene(keyword)), evolution)
+            return _apply_evolution(_ensure_soundscape(local_scene(keyword, kind)), evolution)
         finally:
             self.last_progress = 1.0
             self.generating = False
@@ -549,8 +727,10 @@ class SceneDirector:
             self.generating = False
 
     def _from_claude(self, keyword: str, audio: str | None = None, size: str = "small",
-                     warmth: float | None = None, energy: float | None = None):
+                     warmth: float | None = None, energy: float | None = None,
+                     kind: str = "3d"):
         """Return (spec, ok). ok=False means fall back (reason in last_error)."""
+        system = SYSTEM_PROMPTS.get(kind, _SYSTEM)
         tier = EFFORT.get(self.effort, EFFORT["med"])
         audio_line = ""
         if audio:
@@ -563,12 +743,27 @@ class SceneDirector:
         size_line = f"\n\n{size_hint}" if size_hint else ""
         character_hint = _character_hints(warmth, energy)
         character_line = f"\n\n{character_hint}" if character_hint else ""
+        # The 3D hint counts OBJECTS; for a flat pattern the equivalent budget
+        # is total strokes after repeat/symmetry expansion, which is a
+        # different quantity, so the effort hint is dropped rather than
+        # mistranslated. A 2D pattern is also display-first (per-shape glow
+        # can't reach a laser at all), so it gets a stroke ceiling instead of
+        # the PPS lecture.
+        if kind == "2d":
+            budget_line = (f"Budget: keep the expanded pattern under about "
+                           f"{max(200, min(900, self.max_pps // 40))} strokes and set "
+                           f"\"max_strokes\" to match. Remember a repeat crossed with a "
+                           f"symmetry multiplies fast: 4 offsets x 12-fold radial is 48 "
+                           f"strokes from ONE authored line.")
+            effort_line = ""
+        else:
+            budget_line = (f"Hardware constraint: the laser draws at a maximum of "
+                           f"{self.max_pps} points per second. Keep total stroke length "
+                           f"and object count efficient for this budget — favour fewer, "
+                           f"cleaner strokes over dense detail.")
+            effort_line = f"Effort: {self.effort}. {tier['hint']}\n\n"
         content = (f"Design a scene for the keyword: {keyword}\n\n"
-                   f"Effort: {self.effort}. {tier['hint']}\n\n"
-                   f"Hardware constraint: the laser draws at a maximum of "
-                   f"{self.max_pps} points per second. Keep total stroke length "
-                   f"and object count efficient for this budget — favour fewer, "
-                   f"cleaner strokes over dense detail." + size_line + character_line + audio_line)
+                   + effort_line + budget_line + size_line + character_line + audio_line)
         # Rough proxy for "percent complete": the API has no notion of overall
         # completion (it doesn't know the final length in advance), but a
         # streaming call reports tokens as they're generated, which we compare
@@ -576,7 +771,7 @@ class SceneDirector:
         max_tokens = max(tier["max_tokens"], SIZE_MIN_TOKENS.get(size, 0))
         budget_chars = max_tokens * 4
         try:
-            text, stop_reason = self._stream_or_call(content, budget_chars)
+            text, stop_reason = self._stream_or_call(content, budget_chars, system)
             if stop_reason == "max_tokens":
                 self.last_error = ("response truncated — try a lower effort or raise "
                                    f"PROMPTWAVER_MAX_TOKENS (budget {max_tokens})")
@@ -593,22 +788,27 @@ class SceneDirector:
             print(f"[promptwaver] director generation failed: {self.last_error}")
             return None, False
 
-    def _stream_or_call(self, content: str, budget_chars: int):
+    def _stream_or_call(self, content: str, budget_chars: int, system: str | None = None):
         """Stream the response (updating self.last_progress as text arrives) if
         the SDK supports it; otherwise fall back to a plain blocking call with no
-        progress signal. Returns (text, stop_reason)."""
+        progress signal. Returns (text, stop_reason).
+
+        `system` defaults to the 3D prompt, which is what the audio-only call
+        has always used — its soundscape guidance is the part that call needs.
+        """
+        system = system or _SYSTEM
         tier_tokens = max(1, budget_chars // 4)
         stream_fn = getattr(self._client.messages, "stream", None)
         if stream_fn is None:
             msg = self._client.messages.create(
                 model=self.model, max_tokens=tier_tokens,
-                system=_SYSTEM, messages=[{"role": "user", "content": content}])
+                system=system, messages=[{"role": "user", "content": content}])
             text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
             return text, getattr(msg, "stop_reason", None)
 
         acc_len = 0
         with stream_fn(model=self.model, max_tokens=tier_tokens,
-                       system=_SYSTEM, messages=[{"role": "user", "content": content}]) as stream:
+                       system=system, messages=[{"role": "user", "content": content}]) as stream:
             for chunk in stream.text_stream:
                 acc_len += len(chunk)
                 self.last_progress = min(0.95, acc_len / max(budget_chars, 1))

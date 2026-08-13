@@ -49,6 +49,12 @@ class SceneSpec:
     generation_settings: dict = field(default_factory=dict)
     # Shape modulation: [{"shape": "log", "voice": "ant_body", "param": "level", "dest": "scale", "range": [0.5, 1.5]}]
     shape_modulation: list = field(default_factory=list)
+    # Per-scene LFO rates, e.g. {"lfo_slow": 0.05, "lfo_mid": 0.2}. These used
+    # to be global engine state that no scene remembered: a scene routed from
+    # lfo_slow would play back at whatever rate the last scene happened to
+    # leave behind, and the value reset on restart. Empty means "use the
+    # engine defaults", so every pre-existing scene keeps its old behaviour.
+    lfo: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -73,6 +79,7 @@ class SceneSpec:
             audio_prompt=d.get("audio_prompt", ""),
             generation_settings=d.get("generation_settings", {}),
             shape_modulation=d.get("shape_modulation", []),
+            lfo=d.get("lfo", {}),
         )
 
 

@@ -187,7 +187,8 @@ async def _handle(engine, m: dict, app=None):
         await loop.run_in_executor(None, engine.generate_scene,
                                    m["keyword"], m.get("name"), m.get("audio"),
                                    m.get("size", "small"), m.get("warmth"),
-                                   m.get("energy"), m.get("evolution"))
+                                   m.get("energy"), m.get("evolution"),
+                                   m.get("kind", "3d"))
         return {"type": "generate_result", "ok": True,
                 "source": engine.director.last_source,
                 "error": engine.director.last_error}
@@ -236,6 +237,11 @@ async def _handle(engine, m: dict, app=None):
         engine.set_model(m.get("value", "haiku"))
     elif t == "set_effort":
         engine.set_effort(m.get("value", "med"))
+    elif t == "mod_add":
+        engine.add_route(m.get("source", "audio_level"), m.get("dest", ""),
+                         float(m.get("depth", 0.3)))
+    elif t == "mod_remove":
+        engine.remove_route(int(m.get("index", -1)))
     elif t == "scene_update":
         engine.update_current_scene(camera=m.get("camera", True), soundscape=m.get("soundscape", True))
     elif t == "scene_load":

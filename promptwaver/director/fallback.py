@@ -7,6 +7,8 @@ upgrade to the director, never a hard dependency.
 
 from __future__ import annotations
 
+import hashlib
+
 from ..scenes import SceneSpec, Layer
 
 # keyword substrings -> (generator, params, palette, hue)
@@ -193,7 +195,65 @@ def _studio_world(keyword: str) -> SceneSpec:
     )
 
 
-def local_scene(keyword: str) -> SceneSpec:
+def _pattern_2d(keyword: str) -> SceneSpec:
+    """A flat pattern for offline use.
+
+    Deterministic like every other fallback, but seeded off the keyword so
+    different prompts don't all produce the identical mandala: the hash picks
+    the symmetry order, the palette and the centre motif. Structure stays
+    fixed — a 4-fold banded cross, an n-fold ring of petals, and a nested
+    centre — because that skeleton is what reads as a designed pattern, and
+    the offline director's job is a credible scene, not a surprising one.
+    """
+    kw = keyword.lower().strip()
+    h = int(hashlib.sha1(kw.encode()).hexdigest()[:8], 16)
+    fold = (8, 6, 12, 10)[h % 4]
+    ngon_n = (4, 6, 3, 8)[(h >> 4) % 4]
+    pal = ([0.25, 0.8, 1.0], [0.4, 1.0, 0.75], [1.0, 0.45, 0.85], [0.8, 0.35, 1.0])
+    c0 = pal[(h >> 8) % 4]
+    c1 = pal[(h >> 12) % 4]
+    c2 = pal[(h >> 16) % 4]
+
+    return SceneSpec(
+        name=keyword.strip()[:40] or "pattern",
+        layers=[Layer(generator="pattern2d", params=dict(
+            defs={
+                "arm": {"space": "cart",
+                        "ops": [{"op": "line", "a": [0.16, 0.16], "b": [0.16, 0.93]}]},
+                "petal": {"space": "polar",
+                          "ops": [{"op": "line", "a": [0.24, 0.0], "b": [0.62, 0.05]}]},
+                "core": {"space": "cart", "ops": [{"op": "ngon", "n": ngon_n, "r": 0.13}]},
+            },
+            nodes=[
+                dict(**{"def": "arm"}, color=c0, glow=0.85,
+                     repeat=dict(kind="offset", d=0.05, n=4, hue_step=0.05),
+                     symmetry=dict(mirror="xy")),
+                dict(**{"def": "petal"}, color=c1, glow=0.75,
+                     repeat=dict(kind="offset", d=0.04, n=2, hue_step=0.06),
+                     symmetry=dict(radial=fold, hue_step=0.02)),
+                dict(**{"def": "core"}, color=c2, glow=1.0, closed=True,
+                     repeat=dict(kind="scale", factor=1.6, n=3, hue_step=0.09)),
+            ],
+            scale=1.0, rotate=0.0, spread=1.0, glow=0.0, max_strokes=420,
+        ))],
+        palette=["#05060f", "#33e0d0", "#ff6fd8"],
+        audio_patch=dict(_DEFAULT_PATCH, base_note=45, chord=[0, 7, 12, 15]),
+        modulation=[
+            # Spin on an LFO, and brightness/size on the scene's OWN
+            # soundscape rather than the mic — rotation driven by sound
+            # jitters, and a mic-driven route reads as broken on any machine
+            # with no live input, which is most of them.
+            dict(source="lfo_slow", dest="visual.rotate", depth=1.0),
+            dict(source="synth_level", dest="visual.glow", depth=0.6),
+            dict(source="synth_low", dest="visual.scale", depth=0.18),
+            dict(source="synth_high", dest="visual.spread", depth=0.25),
+        ],
+    )
+
+
+def local_scene(keyword: str, kind: str = "3d") -> SceneSpec:
+    if kind == "2d":
+        return _pattern_2d(keyword)
     kw = keyword.lower()
     if any(k in kw for k in _SPACE_KEYS):
         return _space_world(keyword)

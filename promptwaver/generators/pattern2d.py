@@ -59,9 +59,10 @@ class Pattern2D(Generator):
         max_strokes=420,  # hard ceiling; see _emit
     )
     param_meta = {
-        "scale": (0.1, 2.5, 0.01),
+        # up to 5x so a dense pattern can be zoomed right into for detail
+        "scale": (0.1, 5.0, 0.01),
         "rotate": (0.0, 1.0, 0.002),
-        "spread": (0.0, 2.0, 0.01),
+        "spread": (0.0, 3.0, 0.01),
         "glow": (0.0, 1.0, 0.01),
         "max_strokes": (20, 1200, 10),
     }
@@ -106,6 +107,7 @@ class Pattern2D(Generator):
             items = [(P, 0.0) for P in base]
             items = apply_repeat(items, node.get("repeat"))
             items = apply_symmetry(items, node.get("symmetry"))
+            items = _spread(items, spread)
 
             n_scale = float(node.get("scale", 1.0))
             n_rot = float(node.get("rotate", 0.0))
@@ -133,6 +135,30 @@ class Pattern2D(Generator):
                 out.append(Path(Q.astype(np.float32),
                                 hue_shift(color, hue_d), closed=closed, glow=glow))
         return out
+
+
+def _spread(items, spread: float):
+    """Push each piece away from the centre WITHOUT resizing it.
+
+    This is the whole difference between `spread` and `scale`: scale zooms
+    everything, so shapes grow as they move apart; spread slides them outward
+    at constant size, opening gaps in the composition.
+
+    Each piece moves by its own centroid times (spread - 1), so a radial array
+    of petals fans outward while a motif already centred on the origin stays
+    put. That per-piece centroid is why this runs after repeat/symmetry — the
+    copies are what have distinct positions to spread, and an earlier version
+    that scaled the repeat's own distance parameters instead was nearly
+    invisible on a real scene (a 0.038 band gap has almost nothing to give).
+    """
+    if spread == 1.0:
+        return items
+    k = spread - 1.0
+    out = []
+    for P, h in items:
+        c = P.mean(axis=0)
+        out.append((P + c * k, h))
+    return out
 
 
 def _placement(node: dict) -> np.ndarray:

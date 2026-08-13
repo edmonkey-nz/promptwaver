@@ -1,0 +1,449 @@
+{
+  "name": "origami",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "crease": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.0,
+                  0.0
+                ],
+                "b": [
+                  0.0,
+                  0.48
+                ]
+              }
+            ]
+          },
+          "fold_edge": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.1,
+                  0.0
+                ],
+                "b": [
+                  0.65,
+                  0.08
+                ]
+              }
+            ]
+          },
+          "triangle_wing": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.52,
+                    0.38
+                  ],
+                  [
+                    0.0,
+                    0.52
+                  ]
+                ],
+                "closed": true
+              }
+            ]
+          },
+          "point": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "arc",
+                "r": 0.04,
+                "a0": 0.0,
+                "a1": 1.0,
+                "c": [
+                  0.0,
+                  0.0
+                ],
+                "seg": 16
+              }
+            ]
+          },
+          "paper_layer": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 4,
+                "r": 0.18,
+                "c": [
+                  0.0,
+                  0.0
+                ],
+                "rot": 0.125
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "crease",
+            "color": [
+              0.85,
+              0.75,
+              0.65
+            ],
+            "glow": 0.6,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.032,
+              "n": 3,
+              "hue_step": 0.02
+            },
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.01
+            }
+          },
+          {
+            "def": "fold_edge",
+            "color": [
+              0.75,
+              0.68,
+              0.58
+            ],
+            "glow": 0.7,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.028,
+              "n": 2,
+              "hue_step": 0.03
+            },
+            "symmetry": {
+              "radial": 12,
+              "hue_step": 0.015
+            }
+          },
+          {
+            "def": "triangle_wing",
+            "at": [
+              0.0,
+              0.0
+            ],
+            "color": [
+              0.92,
+              0.82,
+              0.7
+            ],
+            "glow": 0.75,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.4,
+              "n": 2,
+              "hue_step": 0.04
+            },
+            "symmetry": {
+              "radial": 4,
+              "hue_step": 0.02
+            }
+          },
+          {
+            "def": "paper_layer",
+            "color": [
+              0.78,
+              0.68,
+              0.55
+            ],
+            "glow": 0.65,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.55,
+              "n": 3,
+              "hue_step": 0.05
+            },
+            "closed": true
+          },
+          {
+            "def": "point",
+            "at_polar": [
+              0.62,
+              0.0
+            ],
+            "color": [
+              0.95,
+              0.88,
+              0.78
+            ],
+            "glow": 0.9,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.02,
+              "n": 2,
+              "hue_step": 0.06
+            },
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.02
+            }
+          }
+        ],
+        "scale": 1.95,
+        "rotate": 0.0,
+        "spread": 0.0,
+        "glow": 0.0,
+        "max_strokes": 920
+      }
+    }
+  ],
+  "palette": [
+    "#0a0805",
+    "#d4b896",
+    "#c49468",
+    "#e8d4b8"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "kaleidoscope_segments",
+      "depth": 0.455
+    },
+    {
+      "source": "synth_low",
+      "dest": "visual.scale",
+      "depth": 0.22
+    },
+    {
+      "source": "synth_mid",
+      "dest": "visual.glow",
+      "depth": 0.4
+    },
+    {
+      "source": "lfo_mid",
+      "dest": "visual.spread",
+      "depth": 0.01
+    }
+  ],
+  "camera": {
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 28.0,
+    "voices": [
+      {
+        "name": "foundation_sub",
+        "type": "osc",
+        "note": 28,
+        "chord": [
+          0
+        ],
+        "tone": 0.2,
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.55,
+        "level": 0.75,
+        "env": {
+          "attack": 8.0,
+          "decay": 4.0,
+          "sustain": 0.7,
+          "release": 6.0
+        },
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "warm_pad",
+        "type": "pad",
+        "chord": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "note": 48,
+        "tone": 0.32,
+        "level": 0.98,
+        "env": {
+          "attack": 6.5,
+          "decay": 6.36,
+          "sustain": 0.88,
+          "release": 7.3
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.035,
+          "depth": 0.74
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "arp": {
+          "on": false,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.3
+        }
+      },
+      {
+        "name": "tissue_texture",
+        "type": "pad",
+        "chord": [
+          0,
+          2,
+          5,
+          9
+        ],
+        "note": 60,
+        "tone": 0.22,
+        "level": 0.45,
+        "env": {
+          "attack": 7.0,
+          "decay": 4.0,
+          "sustain": 0.6,
+          "release": 5.5
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "crease_pluck",
+        "type": "pluck",
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "note": 72,
+        "rate": 0.5,
+        "decay": 3.5,
+        "tone": 0.25,
+        "level": 0.08,
+        "pan": 0.15,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.44,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.175,
+          "shape": "random",
+          "depth": 0.55,
+          "dest": "sub"
+        },
+        "waveform": "square"
+      },
+      {
+        "name": "paper_air",
+        "type": "noise",
+        "tone": 0.15,
+        "level": 0.64,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.032,
+          "depth": 0.35
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.37,
+    "master": 0.8,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.4,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "a paper crane being folded",
+  "audio_prompt": "snipping paper, folding sounds, heavy bass",
+  "generation_settings": {
+    "size": "small",
+    "warmth": 0.76,
+    "energy": 0.15,
+    "evolution": 0.55,
+    "kind": "2d"
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

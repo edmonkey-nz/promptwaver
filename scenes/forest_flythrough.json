@@ -51,10 +51,10 @@
   "camera": {
     "fov": 62,
     "near": 0.4,
-    "far": 14.0,
+    "far": 32.0,
     "speed": 0.6,
     "height": 1.0,
-    "max_strokes": 90,
+    "max_strokes": 200,
     "depth": {
       "mode": "hue",
       "near_color": [
@@ -68,11 +68,20 @@
         0.5
       ],
       "ttl_quantize": false
-    }
+    },
+    "mode": "fly",
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 60,
+    "tempo": 60.0,
     "master": 0.8,
     "distortion": 0.0,
     "delay": {
@@ -82,7 +91,7 @@
     },
     "voices": [
       {
-        "name": "foundation",
+        "name": "forest_bed",
         "type": "pad",
         "waveform": "sine",
         "note": 36,
@@ -100,7 +109,19 @@
           "decay": 1.5,
           "sustain": 0.8,
           "release": 3.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "growth",
@@ -109,61 +130,142 @@
         "note": 48,
         "chord": [
           0,
-          3,
-          7,
+          5,
           10
         ],
         "level": 0.35,
         "tone": 0.42,
         "detune": 0.012,
-        "pan": 0.0,
+        "pan": -0.15,
         "env": {
-          "attack": 5.0,
+          "attack": 5.5,
           "decay": 2.0,
           "sustain": 0.75,
-          "release": 2.8
+          "release": 4.0
         },
         "lfo": {
           "on": true,
           "dest": "tone",
           "shape": "sine",
-          "rate": 0.04,
+          "rate": 0.08,
           "depth": 0.35
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
-        "name": "fungi",
+        "name": "owl_call",
         "type": "pluck",
         "waveform": "sine",
         "note": 60,
         "scale": [
           0,
-          2,
-          5,
-          9
+          3,
+          7,
+          10,
+          12
         ],
-        "level": 0.25,
+        "level": 0.28,
         "rate": 0.35,
         "decay": 1.8,
-        "tone": 0.45,
-        "pan": 0.15
+        "tone": 0.65,
+        "pan": 0.2,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
-        "name": "moisture",
+        "name": "deer_steps",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 52,
+        "chord": [
+          0,
+          4
+        ],
+        "level": 0.22,
+        "unison": 2,
+        "detune": 0.009,
+        "tone": 0.48,
+        "pan": -0.25,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 1.2,
+          "decay": 0.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.01,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
+      },
+      {
+        "name": "spores",
         "type": "noise",
         "level": 0.12,
-        "tone": 0.3,
-        "pan": -0.1,
+        "tone": 0.38,
+        "pan": 0.1,
         "lfo": {
           "on": true,
           "dest": "level",
           "shape": "sine",
-          "rate": 0.025,
-          "depth": 0.4
-        }
+          "rate": 0.04,
+          "depth": 0.6
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.3
+    "swell_amount": 0.3,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

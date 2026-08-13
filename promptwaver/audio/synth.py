@@ -30,6 +30,7 @@ class NullSynth:
     def soundscape(self): return None
     def diagnostics(self): return None
     def vu(self): return None
+    def bands(self): return {"level": 0.0, "low": 0.0, "mid": 0.0, "high": 0.0, "voices": {}}
     # legacy no-ops (old pad-synth interface)
     def set_patch(self, patch): pass
     def set_cutoff(self, hz): pass
@@ -47,6 +48,7 @@ class SoundscapeSynth:
         self._lock = threading.Lock()
         self._scape = SoundscapeMixer(default_soundscape(), sr=sr)
         self._last_vu = {"peak": 0.0, "clipping": False}
+        self._last_bands = {"level": 0.0, "low": 0.0, "mid": 0.0, "high": 0.0, "voices": {}}
         self._stream = None
         # Off with --no-diag: skips the timing calls and stats.record() in
         # _callback below — for isolating whether the instrumentation itself
@@ -199,6 +201,19 @@ class SoundscapeSynth:
             finally:
                 self._lock.release()
         return self._last_vu
+
+    def bands(self):
+        """Level + low/mid/high energy of the live soundscape, as modulation
+        sources. Same non-blocking discipline as `vu()` above — this is read
+        from the engine's render loop every tick, and blocking on the audio
+        lock there would couple a slow audio callback straight into the frame
+        rate. One tick stale is imperceptible for modulation."""
+        if self._lock.acquire(blocking=False):
+            try:
+                self._last_bands = self._scape.bands()
+            finally:
+                self._lock.release()
+        return self._last_bands
 
     def diagnostics(self):
         d = self.stats.summary()
