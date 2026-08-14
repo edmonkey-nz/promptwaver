@@ -242,9 +242,9 @@
             "scale": 0.4
           }
         ],
-        "scale": 1.88,
+        "scale": 1.7,
         "rotate": 0.0,
-        "spread": 1.42,
+        "spread": 0.76,
         "glow": 0.0,
         "max_strokes": 50
       }
@@ -278,8 +278,8 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.0,
-    "trail": 0.0,
+    "glow": 0.69,
+    "trail": 0.64,
     "kaleidoscope_segments": 0
   },
   "pps": null,
@@ -316,7 +316,7 @@
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
-        "distortion": 0.0,
+        "distortion": 0.26,
         "scale": [
           0,
           3,
@@ -366,7 +366,7 @@
         "arp": {
           "on": false,
           "mode": "up",
-          "rate": 2,
+          "rate": 2.0,
           "decay": 0.3
         }
       },
@@ -379,7 +379,7 @@
           3,
           7
         ],
-        "unison": 4.0,
+        "unison": 5,
         "detune": 0.022,
         "tone": 0.5,
         "level": 0.35,
@@ -399,7 +399,7 @@
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
-        "sub": 0.0,
+        "sub": 0.57,
         "distortion": 0.25,
         "scale": [
           0,
@@ -445,7 +445,7 @@
         }
       }
     ],
-    "swell_amount": 0.14,
+    "swell_amount": 0.55,
     "tempo": 60.0,
     "master": 0.8,
     "distortion": 0.0,
@@ -455,7 +455,7 @@
       "mix": 0.25
     },
     "eq": {
-      "low": 0.0,
+      "low": 1.0,
       "mid": 0.0,
       "high": 0.0
     },

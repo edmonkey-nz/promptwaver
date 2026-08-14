@@ -622,6 +622,11 @@ class Engine:
             # generators (Scene.is_3d) — this is what was asked for, not the
             # source of truth for what it is.
             "kind": kind,
+            # What this generation cost. None on a cache hit or the offline
+            # fallback, which is meaningful in itself: the field says "free",
+            # not "unknown". A scene generated before this existed simply has
+            # no key, which the UI reports differently again.
+            "cost": self.director.last_cost,
         }
         try:
             self.scenes.save(name, spec)
@@ -801,6 +806,12 @@ class Engine:
         scape = self.director.generate_audio(spec.name, audio_prompt, warmth=warmth,
                                              energy=energy, evolution=evolution)
         spec.soundscape = scape
+        # Recorded separately from the scene's own `cost`: this call replaced
+        # only the audio, so folding it into the scene figure would misreport
+        # what composing the visuals cost. Also refresh the stored audio
+        # prompt, which used to keep showing the original after a regenerate.
+        spec.audio_prompt = audio_prompt
+        spec.generation_settings["audio_cost"] = self.director.last_cost
         try:
             self.scenes.save(scene_name, spec)
         except Exception as e:
@@ -1323,6 +1334,9 @@ class Engine:
             "director_effort": self.director.effort,
             "director_progress": self.director.last_progress,
             "director_generating": self.director.generating,
+            # Cost of the last billed generation; None for cache hits and the
+            # offline fallback, which cost nothing.
+            "director_last_cost": self.director.last_cost,
             "scene_3d": bool(self.scenes.current and getattr(self.scenes.current, "is_3d", False)),
             "camera": camera,
             "pps": self.pps,

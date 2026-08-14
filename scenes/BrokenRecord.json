@@ -1,0 +1,422 @@
+{
+  "name": "BrokenRecord",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "breath": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.08,
+                  0.0
+                ],
+                "b": [
+                  0.72,
+                  0.0
+                ]
+              },
+              {
+                "op": "arc",
+                "r": 0.72,
+                "a0": 0.0,
+                "a1": 0.08,
+                "c": [
+                  0.0,
+                  0.0
+                ],
+                "seg": 24
+              }
+            ]
+          },
+          "petal": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.15,
+                  0.0
+                ],
+                "b": [
+                  0.65,
+                  0.06
+                ]
+              },
+              {
+                "op": "line",
+                "a": [
+                  0.15,
+                  0.0
+                ],
+                "b": [
+                  0.65,
+                  -0.06
+                ]
+              }
+            ]
+          },
+          "thread": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.28,
+                    0.28
+                  ],
+                  [
+                    0.48,
+                    0.12
+                  ],
+                  [
+                    0.68,
+                    0.48
+                  ]
+                ],
+                "closed": false
+              }
+            ]
+          },
+          "ring": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "circle",
+                "r": 0.42,
+                "c": [
+                  0.0,
+                  0.0
+                ],
+                "seg": 120
+              }
+            ]
+          },
+          "core": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 12,
+                "r": 0.06,
+                "c": [
+                  0.0,
+                  0.0
+                ],
+                "rot": 0.0
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "breath",
+            "color": [
+              0.55,
+              0.78,
+              0.92
+            ],
+            "glow": 0.72,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.032,
+              "n": 3,
+              "hue_step": 0.08
+            },
+            "symmetry": {
+              "radial": 12,
+              "hue_step": 0.015
+            }
+          },
+          {
+            "def": "petal",
+            "color": [
+              0.78,
+              0.65,
+              0.88
+            ],
+            "glow": 0.68,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.028,
+              "n": 2,
+              "hue_step": 0.06
+            },
+            "symmetry": {
+              "radial": 12,
+              "hue_step": 0.012
+            }
+          },
+          {
+            "def": "thread",
+            "color": [
+              0.65,
+              0.85,
+              0.75
+            ],
+            "glow": 0.55,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.024,
+              "n": 2,
+              "hue_step": 0.04
+            },
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.025
+            }
+          },
+          {
+            "def": "ring",
+            "color": [
+              0.72,
+              0.6,
+              0.8
+            ],
+            "glow": 0.62,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.4,
+              "n": 3,
+              "hue_step": 0.05
+            }
+          },
+          {
+            "def": "core",
+            "color": [
+              0.92,
+              0.75,
+              0.68
+            ],
+            "glow": 0.95,
+            "closed": true,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.8,
+              "n": 2,
+              "hue_step": 0.08
+            }
+          }
+        ],
+        "scale": 0.39,
+        "rotate": 0.35,
+        "spread": 1.57,
+        "glow": 0.0,
+        "max_strokes": 30
+      }
+    }
+  ],
+  "palette": [
+    "#0a0f1a",
+    "#8dc5eb",
+    "#c5a6e0",
+    "#a6d9bf",
+    "#ebbfa8"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "voice.drone_pad",
+      "dest": "visual.rotate",
+      "depth": 0.2
+    },
+    {
+      "source": "synth_low",
+      "dest": "visual.scale",
+      "depth": 0.12
+    },
+    {
+      "source": "lfo_slow",
+      "dest": "trail",
+      "depth": 1.35
+    }
+  ],
+  "camera": {
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.01,
+    "trail": 0.12,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 31.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "sub_foundation",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0,
+          7
+        ],
+        "level": 0.55,
+        "tone": 0.2,
+        "detune": 0.006,
+        "sub": 0.6,
+        "pan": 0.0,
+        "env": {
+          "attack": 5.5,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 4.0,
+        "distortion": 0.38,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "drone_pad",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 40,
+        "chord": [
+          0,
+          5,
+          12
+        ],
+        "level": 0.42,
+        "tone": 0.25,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 6.0,
+          "decay": 1.8,
+          "sustain": 0.75,
+          "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.4,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.02,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "tone"
+        }
+      },
+      {
+        "name": "scratch_texture",
+        "type": "osc",
+        "waveform": "saw",
+        "note": 55,
+        "chord": [
+          0,
+          3,
+          7
+        ],
+        "level": 0.28,
+        "tone": 0.35,
+        "detune": 0.012,
+        "unison": 2,
+        "pan": 0.15,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "triangle",
+          "rate": 0.08,
+          "depth": 0.45
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "vinyl_crackle",
+        "type": "noise",
+        "level": 0.68,
+        "tone": 0.04,
+        "pan": -0.2,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "random",
+          "rate": 0.08,
+          "depth": 0.08
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.52,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "the purest mandala made over 100 years in silence",
+  "audio_prompt": "nirvana",
+  "generation_settings": {
+    "size": "small",
+    "warmth": 0.79,
+    "energy": 0.18,
+    "evolution": 0.12,
+    "kind": "2d"
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

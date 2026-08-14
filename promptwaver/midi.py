@@ -108,9 +108,9 @@ AUDIO_RANGES = {
     "delay.time": (0.05, 1.2),
     "delay.feedback": (0.0, 0.9),
     "delay.mix": (0.0, 0.9),
-    "eq.low": (-24.0, 24.0),
-    "eq.mid": (-24.0, 24.0),
-    "eq.high": (-24.0, 24.0),
+    "eq.low": (-10.0, 10.0),
+    "eq.mid": (-10.0, 10.0),
+    "eq.high": (-10.0, 10.0),
     "swell_amount": (0.0, 1.0),
     "swell_period": (5.0, 120.0),
 }

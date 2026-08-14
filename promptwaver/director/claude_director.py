@@ -411,6 +411,52 @@ MODEL_PRESETS = {                       # friendly name -> API id (verify at doc
     "opus": "claude-opus-4-8",
 }
 
+#: USD per MILLION tokens, (input, output), per model id. Used only to show
+#: what a generation cost — nothing here affects a request.
+MODEL_PRICES = {
+    "claude-haiku-4-5": (1.00, 5.00),
+    "claude-sonnet-5": (3.00, 15.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-fable-5": (10.00, 50.00),
+}
+#: Sonnet 5 is on introductory pricing until this date, after which it reverts
+#: to the standard rate above. Dated rather than hardcoded either way, so the
+#: figure stays right on both sides of the changeover without an edit.
+_SONNET_INTRO = ("claude-sonnet-5", (2.00, 10.00), (2026, 8, 31))
+_UNKNOWN_MODEL_PRICE = (5.00, 25.00)   # assume Opus-tier rather than under-report
+
+
+def _price_for(model: str) -> tuple[float, float]:
+    """(input, output) USD per million tokens for `model`."""
+    name, intro_rate, until = _SONNET_INTRO
+    if model == name:
+        import datetime as _dt
+        if _dt.date.today() <= _dt.date(*until):
+            return intro_rate
+    return MODEL_PRICES.get(model, _UNKNOWN_MODEL_PRICE)
+
+
+def estimate_cost(model: str, usage) -> dict | None:
+    """Cost of one API call, from the response's own usage block.
+
+    Cache tokens are priced at their documented multipliers (writes 1.25x,
+    reads 0.1x) even though this app's own cache is a local JSON file rather
+    than prompt caching — if prompt caching is ever switched on, the figure
+    stays right instead of silently drifting.
+    """
+    if usage is None:
+        return None
+    p_in, p_out = _price_for(model)
+    tin = int(getattr(usage, "input_tokens", 0) or 0)
+    tout = int(getattr(usage, "output_tokens", 0) or 0)
+    twrite = int(getattr(usage, "cache_creation_input_tokens", 0) or 0)
+    tread = int(getattr(usage, "cache_read_input_tokens", 0) or 0)
+    usd = ((tin + twrite * 1.25 + tread * 0.1) * p_in + tout * p_out) / 1e6
+    return {"model": model, "input_tokens": tin, "output_tokens": tout,
+            "cache_read_tokens": tread, "cache_write_tokens": twrite,
+            "usd": round(usd, 4)}
+
 # effort tier -> token budget + a richness directive appended to the prompt
 EFFORT = {
     "low":  {"max_tokens": 4000,
@@ -538,6 +584,11 @@ class SceneDirector:
         self.last_error = None
         self.last_progress = 0.0      # 0..1, approximate — see _from_claude
         self.generating = False
+        # Cost of the last billed API call: None until one happens, and reset
+        # to None on a cache hit or fallback so the UI can't show a stale
+        # figure next to a generation that cost nothing.
+        self.last_cost = None
+        self._last_usage = None
         self._offline_reason = None   # why the client is unavailable, set by _make_client
         # model + effort persist across restarts via settings.json
         self.model_choice = model or settings.get("model", "haiku")
@@ -637,11 +688,13 @@ class SceneDirector:
             with open(cache) as f:
                 self.last_source = "cache"
                 self.last_error = None
+                self.last_cost = None      # served from disk; nothing was billed
                 self.last_progress = 1.0
                 return _ensure_soundscape(SceneSpec.from_dict(json.load(f)))
 
         self.generating = True
         self.last_progress = 0.0
+        self.last_cost = None
         try:
             if self.online:
                 spec, ok = self._from_claude(keyword, audio, size, warmth, energy, kind)
@@ -674,11 +727,13 @@ class SceneDirector:
             with open(cache) as f:
                 self.last_source = "cache"
                 self.last_error = None
+                self.last_cost = None      # served from disk; nothing was billed
                 self.last_progress = 1.0
                 return json.load(f)
 
         self.generating = True
         self.last_progress = 0.0
+        self.last_cost = None
         try:
             if not self.online:
                 self.last_source = "fallback"
@@ -703,6 +758,7 @@ class SceneDirector:
             scape = data.get("soundscape", data)   # tolerate either shape
             if not scape.get("voices"):
                 raise ValueError("no voices in response")
+            self.last_cost = estimate_cost(self.model, self._last_usage)
             # Same ceiling the full-scene path gets via _ensure_soundscape —
             # this route returns a bare dict, so it has to be applied here too
             # (and BEFORE the cache write, or a trimmed scene would come back
@@ -781,6 +837,7 @@ class SceneDirector:
             spec = SceneSpec.from_dict(data)
             if not spec.layers:
                 raise ValueError("model returned no layers")
+            self.last_cost = estimate_cost(self.model, self._last_usage)
             self.last_progress = 1.0
             return spec, True
         except Exception as e:
@@ -797,6 +854,10 @@ class SceneDirector:
         has always used — its soundscape guidance is the part that call needs.
         """
         system = system or _SYSTEM
+        # Usage rides back on an attribute rather than a third return value:
+        # both call sites already unpack a 2-tuple, and only one of them
+        # reports cost.
+        self._last_usage = None
         tier_tokens = max(1, budget_chars // 4)
         stream_fn = getattr(self._client.messages, "stream", None)
         if stream_fn is None:
@@ -804,6 +865,7 @@ class SceneDirector:
                 model=self.model, max_tokens=tier_tokens,
                 system=system, messages=[{"role": "user", "content": content}])
             text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            self._last_usage = getattr(msg, "usage", None)
             return text, getattr(msg, "stop_reason", None)
 
         acc_len = 0
@@ -814,6 +876,7 @@ class SceneDirector:
                 self.last_progress = min(0.95, acc_len / max(budget_chars, 1))
             final = stream.get_final_message()
         text = "".join(b.text for b in final.content if getattr(b, "type", "") == "text")
+        self._last_usage = getattr(final, "usage", None)
         return text, getattr(final, "stop_reason", None)
 
 

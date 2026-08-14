@@ -749,7 +749,7 @@
     ],
     "orbit_radius": 8.5,
     "far": 19.0,
-    "speed": 0.25,
+    "speed": 0.05,
     "max_strokes": 55,
     "depth": {
       "mode": "cull"
@@ -760,8 +760,9 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.0,
-    "trail": 0.0
+    "glow": 0.56,
+    "trail": 0.82,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
@@ -805,7 +806,14 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.44,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.72,
+          "dest": "pan"
+        }
       },
       {
         "name": "vacuum_hum",
@@ -851,7 +859,7 @@
           10,
           14
         ],
-        "level": 0.49,
+        "level": 0.31,
         "rate": 0.25,
         "decay": 2.8,
         "pan": 0.2,
@@ -863,12 +871,19 @@
         "chord": [
           0
         ],
-        "distortion": 0.49
+        "distortion": 0.41,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "detune"
+        }
       },
       {
         "name": "static_breath",
         "type": "noise",
-        "level": 0.12,
+        "level": 0.18,
         "tone": 0.2,
         "pan": -0.1,
         "mute": false,
@@ -886,7 +901,14 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.11,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
       }
     ],
     "eq": {
@@ -902,5 +924,9 @@
   "image_prompt": "",
   "audio_prompt": "",
   "generation_settings": {},
-  "shape_modulation": []
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

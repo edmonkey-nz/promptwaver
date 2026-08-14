@@ -103,8 +103,8 @@
             }
           }
         ],
-        "scale": 0.87,
-        "rotate": 0.0,
+        "scale": 1.23,
+        "rotate": 0.118,
         "spread": 0.57,
         "glow": 0.6,
         "max_strokes": 420
@@ -144,7 +144,7 @@
     {
       "source": "lfo_slow",
       "dest": "visual.spread",
-      "depth": 1.0
+      "depth": 0.57
     }
   ],
   "camera": {
@@ -191,7 +191,7 @@
         "decay": 1.2,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.0,
+        "distortion": 0.4,
         "scale": [
           0,
           3,
@@ -225,7 +225,7 @@
         "decay": 1.2,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.0,
+        "distortion": 0.22,
         "scale": [
           0,
           3,
@@ -258,7 +258,7 @@
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
-        "distortion": 0.11,
+        "distortion": 0.18,
         "scale": [
           0,
           3,
@@ -278,7 +278,7 @@
           7,
           9
         ],
-        "level": 0.2,
+        "level": 0.09,
         "rate": 0.2,
         "decay": 1.8,
         "tone": 0.65,
@@ -287,7 +287,7 @@
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.0,
+        "distortion": 0.4,
         "chord": [
           0
         ],

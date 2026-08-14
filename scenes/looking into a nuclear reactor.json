@@ -942,11 +942,20 @@
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.85,
+    "trail": 0.4,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 50,
+    "tempo": 50.0,
     "master": 0.75,
     "distortion": 0.15,
     "delay": {
@@ -976,7 +985,18 @@
           "decay": 2.0,
           "sustain": 0.9,
           "release": 5.5
-        }
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.04,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "isotope_warble",
@@ -989,22 +1009,34 @@
           7,
           10
         ],
-        "level": 0.38,
-        "unison": 3,
-        "detune": 0.025,
+        "level": 0.06,
+        "unison": 5.0,
+        "detune": 0.005,
         "pan": 0.25,
         "arp": {
           "on": true,
-          "mode": "updown",
-          "rate": 1.6,
-          "decay": 0.8
+          "mode": "up",
+          "rate": 1,
+          "decay": 1.05
         },
         "env": {
           "attack": 0.5,
           "decay": 0.4,
           "sustain": 0.6,
           "release": 1.2
-        }
+        },
+        "mute": false,
+        "tone": 0.4,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.22,
+        "distortion": 0.03,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "cooling_drone",
@@ -1016,8 +1048,8 @@
           5,
           12
         ],
-        "level": 0.28,
-        "tone": 0.5,
+        "level": 0.74,
+        "tone": 0.61,
         "detune": 0.012,
         "pan": -0.2,
         "env": {
@@ -1025,16 +1057,78 @@
           "decay": 1.5,
           "sustain": 0.85,
           "release": 7.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.065,
+          "shape": "sine",
+          "depth": 0.82,
+          "dest": "pan"
         }
       },
       {
         "name": "ambient_hum",
         "type": "noise",
-        "level": 0.18,
+        "level": 0.2,
         "tone": 0.35,
-        "pan": -0.1
+        "pan": -0.1,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
-    ]
+    ],
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.0,
+    "swell_period": 24.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [
+    {
+      "shape": "containment_vessel",
+      "voice": "reactor_rumble",
+      "param": "distortion",
+      "dest": "scale",
+      "range": [
+        0.5,
+        1.5
+      ]
+    }
+  ],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

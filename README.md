@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.72.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.73.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 ![ai-code](https://img.shields.io/badge/AI%20coded-YES-orange)
@@ -11,7 +11,7 @@
 
 A realtime **immersive audio/visual instrument** ambient scene and soundscape explorer. Procedural vector visuals stream to a laser (ILDA) or second monitor, and a polyphonic synth provides the sound, it's recomended you use a MIDI controller for a better experience.
 
-Claude acts as an **scene creator**: give it a visual prompt ("water flowing from a blocked sieve", "aurora over a still lake at full moon") and an audio prompt ("scurrying beetles over a wet log", "dripping water from stalactites in a cave") and it composes a scene spec. The local engine then renders at full framerate with no further API calls. Scenes are saved as JSON and can be loaded, tweaked, and re-rendered.
+Claude acts as an **scene creator**: give it a visual prompt ("water flowing from a blocked sieve", "aurora over a still lake at full moon") and an audio prompt ("scurrying beetles over a wet log with bees buzzing", "dripping water from stalactites in a cave with footsteps and fish") and it composes a scene spec. The local engine then renders at full framerate with no further API calls. Scenes are saved as JSON and can be loaded, tweaked, and re-rendered.
 
 **Note:** You'll need a paid Claude API account to generate new scenes (~5–40¢ NZD each depending on size/model). A $5 credit goes a long way. Offline mode uses a simple fallback director.
 
@@ -23,7 +23,7 @@ Disclaimer: this has been coded almost completely with Claude Code, but with a p
 
 Theres a lack of integrated ambient AV tools out there, this came from a desire to have a portable and instant solution that doesn't require lugging around synths, midi gear and trying to organise onscreen DAWs and projection software at the same time.
 
-This scene idea with the frustration of seeing visuals at events that was repeated came to the idea of a immersive low polygon scene, which could be run without internet access (once generated online).
+This scene idea was from the frustration of seeing visuals at events that were being repeated multiple times in a performance. So making a stack of scenes to perform against, rather than mixin was the concept. Visually, I enjoy low polygon scene, which could be run without internet access (once generated online) and be projected via laser or projection.
 
 Note: the roots of this reflected on a exploratory game on PS1 called 'Fluid' (1999) where you could build soundscapes while navigating a undersea psychedelic world (as a dolphin!).
 

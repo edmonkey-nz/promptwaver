@@ -189,9 +189,14 @@ async def _handle(engine, m: dict, app=None):
                                    m.get("size", "small"), m.get("warmth"),
                                    m.get("energy"), m.get("evolution"),
                                    m.get("kind", "3d"))
+        # Cost rides on the ack rather than being read out of `state`: the
+        # state broadcast is a separate ~20Hz loop, so the client would
+        # otherwise be reading whatever snapshot happened to precede this
+        # reply — which is the pre-generation one, where the cost is still None.
         return {"type": "generate_result", "ok": True,
                 "source": engine.director.last_source,
-                "error": engine.director.last_error}
+                "error": engine.director.last_error,
+                "cost": engine.director.last_cost}
     elif t == "set_audio":
         engine.set_audio_param(m["key"], m["value"])
     elif t == "apply_audio":
@@ -200,7 +205,8 @@ async def _handle(engine, m: dict, app=None):
                                    m.get("energy"), m.get("evolution"))
         return {"type": "generate_result", "ok": True, "action": "apply_audio",
                 "source": engine.director.last_source,
-                "error": engine.director.last_error}
+                "error": engine.director.last_error,
+                "cost": engine.director.last_cost}
     elif t == "audio_config":
         done = engine.configure_audio(device=m.get("device"), blocksize=m.get("blocksize"),
                                       latency=m.get("latency"))

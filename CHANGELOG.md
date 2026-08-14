@@ -8,6 +8,61 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.73.0]
+
+### Generation cost
+
+Every billed generation now reports what it cost, computed from the response's
+own `usage` block at per-model rates. Cache tokens are priced at their
+documented multipliers (writes 1.25x, reads 0.1x) even though this app's cache
+is a local JSON file rather than prompt caching — so the figure stays right if
+prompt caching is ever switched on.
+
+- **In the header** while the scene lands, for ~20 seconds:
+  `scene generated: $0.02 · 3.9k in / 4.1k out`, with the model and cache split
+  on hover. Sub-cent results show 3dp — most Haiku scenes land there, and
+  "$0.00" reads as free rather than cheap.
+- **In the scene JSON**, under `generation_settings.cost`, so it survives
+  restarts and shows up in **Show scene prompts** alongside the prompts that
+  made the scene. Audio regeneration records `audio_cost` separately: folding
+  it into the scene figure would misreport what composing the visuals cost.
+- Three states are kept distinct, because they mean different things — a
+  figure, "no API charge (cache or offline)", and "predates cost tracking".
+  Collapsing the last two would report an unknown cost as free.
+- Sonnet 5's introductory rate is honoured until it expires (2026-08-31) and
+  then reverts automatically, rather than being hardcoded either way.
+
+### Fixed
+
+- **A `noise` voice now fades out on mute** instead of cutting. Muting skipped
+  its render entirely — an instant hard cut, which on a wind/air bed reads as
+  a click. It gets the same ADSR treatment as `pad`/`osc`/`sub` (verified:
+  `jupiter`'s `space_whisper` now releases smoothly over its 5s release).
+  `pluck` is deliberately excluded — each of its notes already carries a decay
+  envelope, and gating the scheduler would fight it.
+- **EQ narrowed to ±10dB** from ±24. The range lived in four places (DSP
+  clamp, MIDI table, three UI knobs); all now agree.
+- **`apply_audio_to_scene` now updates `spec.audio_prompt`** — the scene kept
+  reporting the prompt it was originally generated with after a regenerate.
+- **Save buttons in the header** — 🎵 sound / 🎛 midi / 💾 all, delegating to
+  the existing panel buttons so both entry points behave identically. One
+  button per slice, so saving the soundscape doesn't also overwrite camera
+  settings you were part-way through adjusting.
+
+### Not shipped
+
+An **unsaved-changes indicator** (the sibling lightsaber project's pattern) was
+built and reverted. The comparison worked — the three saveable slices read
+clean when nothing was touched — but establishing the baseline across a scene
+*load* did not: `library_name` updates the moment a load is enqueued, while the
+crossfade keeps `scenes.current` on the outgoing scene, so early broadcasts
+report the previous scene's data. Those are stable, wrongly signalling the load
+has settled, and are then replaced — which reads as an edit. A
+`scene_transition` guard plus a stability counter still left it firing after a
+switch. Reinstating it wants a real "spec installed" signal from the engine
+(a revision counter in `state()`), not more client-side heuristics. See
+`future.md`.
+
 ## [0.72.0]
 
 ### Visuals react to the instrument's own sound

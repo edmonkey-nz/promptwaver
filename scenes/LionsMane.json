@@ -1,0 +1,456 @@
+{
+  "name": "LionsMane",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "ring": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "arc",
+                "r": 0.15,
+                "a0": 0.0,
+                "a1": 1.0,
+                "c": [
+                  0,
+                  0
+                ],
+                "seg": 96
+              }
+            ]
+          },
+          "grain": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.08,
+                  0.0
+                ],
+                "b": [
+                  0.32,
+                  0.01
+                ]
+              }
+            ]
+          },
+          "radial_spoke": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.0,
+                  0.0
+                ],
+                "b": [
+                  0.0,
+                  0.48
+                ]
+              }
+            ]
+          },
+          "bark_texture": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.05,
+                    0.0
+                  ],
+                  [
+                    0.08,
+                    0.03
+                  ],
+                  [
+                    0.06,
+                    0.08
+                  ],
+                  [
+                    0.09,
+                    0.12
+                  ],
+                  [
+                    0.07,
+                    0.16
+                  ]
+                ],
+                "closed": false
+              }
+            ]
+          },
+          "heartwood": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "circle",
+                "r": 0.08,
+                "c": [
+                  0,
+                  0
+                ],
+                "seg": 64
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "heartwood",
+            "color": [
+              0.55,
+              0.35,
+              0.2
+            ],
+            "glow": 0.7,
+            "closed": true
+          },
+          {
+            "def": "ring",
+            "at_polar": [
+              0.18,
+              0.0
+            ],
+            "color": [
+              0.7,
+              0.5,
+              0.3
+            ],
+            "glow": 0.65,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.22,
+              "n": 6,
+              "hue_step": 0.04
+            }
+          },
+          {
+            "def": "grain",
+            "color": [
+              0.8,
+              0.6,
+              0.35
+            ],
+            "glow": 0.5,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.035,
+              "n": 3,
+              "hue_step": 0.02
+            },
+            "symmetry": {
+              "radial": 16,
+              "hue_step": 0.01
+            }
+          },
+          {
+            "def": "radial_spoke",
+            "color": [
+              0.65,
+              0.45,
+              0.25
+            ],
+            "glow": 0.45,
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.03
+            }
+          },
+          {
+            "def": "bark_texture",
+            "color": [
+              0.45,
+              0.28,
+              0.15
+            ],
+            "glow": 0.55,
+            "repeat": {
+              "kind": "radial",
+              "n": 12,
+              "hue_step": 0.02
+            }
+          }
+        ],
+        "scale": 2.12,
+        "rotate": 0.0,
+        "spread": 1.2992125984251968,
+        "glow": 0.69,
+        "max_strokes": 1010
+      }
+    }
+  ],
+  "palette": [
+    "#0f0a05",
+    "#8b6f47",
+    "#a68968",
+    "#d4a574",
+    "#6b4423"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.spread",
+      "depth": 0.74
+    },
+    {
+      "source": "synth_low",
+      "dest": "visual.scale",
+      "depth": 0.71
+    },
+    {
+      "source": "voice.wildlife_pluck",
+      "dest": "visual.scale",
+      "depth": 1.0
+    },
+    {
+      "source": "synth_high",
+      "dest": "visual.spread",
+      "depth": 0.12
+    }
+  ],
+  "camera": {
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": false,
+    "glow": 0.77,
+    "trail": 0.58,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 60.0,
+    "master": 0.8,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.4,
+      "feedback": 0.35,
+      "mix": 0.3
+    },
+    "voices": [
+      {
+        "name": "deep_sub",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0,
+          7
+        ],
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.6,
+        "level": 0.5,
+        "tone": 0.2,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.57,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "jungle_pad",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 43,
+        "chord": [
+          0,
+          5,
+          12,
+          19
+        ],
+        "level": 0.45,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": 0.0,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.3,
+          "sustain": 0.85,
+          "release": 2.8
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "water_texture",
+        "type": "osc",
+        "waveform": "saw",
+        "note": 52,
+        "chord": [
+          0,
+          3,
+          7
+        ],
+        "unison": 3,
+        "detune": 0.018,
+        "sub": 0.15,
+        "level": 0.35,
+        "tone": 0.42,
+        "pan": 0.0,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "roar_accent",
+        "type": "osc",
+        "waveform": "square",
+        "note": 36,
+        "chord": [
+          0,
+          12
+        ],
+        "unison": 3.0,
+        "detune": 0.01,
+        "sub": 0.3,
+        "level": 0.3,
+        "tone": 0.25,
+        "pan": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "down",
+          "rate": 0.33,
+          "decay": 2.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.37,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "creature_calls",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 67,
+        "scale": [
+          0,
+          4,
+          7,
+          12,
+          15
+        ],
+        "level": 0.25,
+        "rate": 0.4,
+        "decay": 1.2,
+        "tone": 0.55,
+        "pan": 0.15,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "triangle",
+          "rate": 0.025,
+          "depth": 0.5
+        },
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.36,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "ambient_air",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.3,
+        "pan": -0.1,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.06,
+          "depth": 0.35
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.48,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.5,
+      "high": 0.0
+    },
+    "swell_period": 24.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "growth of tree rings on a old tree",
+  "audio_prompt": "animals making homes, microorganisums, wildlife",
+  "generation_settings": {
+    "size": "small",
+    "warmth": 0.68,
+    "energy": 0.18,
+    "evolution": 0.32,
+    "kind": "2d"
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

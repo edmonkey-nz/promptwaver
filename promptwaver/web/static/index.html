@@ -218,6 +218,16 @@
   .modrow .btm label{flex:0 0 34px;font-size:10px;color:var(--dim)}
   .modrow .live{flex:0 0 46px;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden}
   .modrow .live i{display:block;height:100%;width:0%;background:var(--cyan)}
+  /* Header save buttons — one per slice, so saving the soundscape doesn't
+     also overwrite camera settings you were part-way through adjusting. */
+  #hdr-save{display:none;align-items:center;gap:5px}
+  #hdr-save.show{display:flex}
+  #hdr-save .sv{background:rgba(242,166,35,.12);border:1px solid rgba(242,166,35,.5);
+                color:var(--amber);border-radius:7px;padding:4px 8px;cursor:pointer;
+                font-size:13px;line-height:1;display:flex;align-items:center;gap:5px}
+  #hdr-save .sv:hover{background:rgba(242,166,35,.24)}
+  #hdr-save .sv .lbl{font-size:10px;letter-spacing:.03em}
+  #hdr-save .sv.saved{border-color:var(--cyan);color:var(--cyan);background:rgba(51,224,208,.14)}
   /* segmented scene-type picker in the Generate modal */
   .seg{flex:1 1 0;display:flex;flex-direction:column;gap:2px;padding:8px 10px;
        border:1px solid var(--line);border-radius:8px;background:transparent;
@@ -362,9 +372,19 @@
     <span>MIDI in</span>
   </div>
   <span class="meta" id="meta">connecting…</span>
+  <!-- Cost of the last billed generation. Its own element rather than
+       borrowing `meta`, which the state loop rewrites every broadcast. -->
+  <span class="meta" id="costflash" style="display:none;color:var(--cyan)"></span>
   <span style="flex:1"></span>
   <button id="output-toggle-1" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output 1</button>
   <button id="output-toggle-2" title="A second output window on the same live feed — independently flippable in Settings, for a second screen/projector">🖵 Output 2</button>
+  <!-- Each button saves one slice, so a soundscape tweak doesn't also
+       overwrite camera settings you were mid-way through adjusting. -->
+  <span id="hdr-save">
+    <button class="sv" id="hdr-save-sound" title="Save the soundscape into this scene">🎵<span class="lbl">sound</span></button>
+    <button class="sv" id="hdr-save-midi" title="Pin this scene's MIDI map to its voice names">🎛<span class="lbl">midi</span></button>
+    <button class="sv" id="hdr-save-all" title="Save all scene settings">💾<span class="lbl">all</span></button>
+  </span>
   <button id="motion-toggle" title="Ease all motion to a standstill over 2 seconds — LFOs, node motion and camera travel together. Audio reactivity keeps running, so the frozen picture still responds to sound." style="min-width:96px">❚❚ Freeze</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
   <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
@@ -730,6 +750,11 @@
       <textarea id="prompts-visual" readonly style="min-height:80px;background:var(--panel2);color:var(--dim)"></textarea></div>
     <div class="field"><label>Audio prompt</label>
       <textarea id="prompts-audio" readonly style="min-height:80px;background:var(--panel2);color:var(--dim)"></textarea></div>
+    <!-- Deliberately NOT class="val": `body.hide-values` collapses those to
+         zero width, which is right for slider readouts and wrong here. -->
+    <label class="flabel" style="margin-top:10px">Generated</label>
+    <div id="prompts-meta" style="font-family:var(--mono);font-size:11px;color:var(--cyan);
+         line-height:1.6;word-break:break-word"></div>
     <div class="hint">These prompts were used to generate this scene. Stored in the scene JSON.</div>
   </div>
 </div>
@@ -897,14 +922,40 @@ ws.onclose = () => { $("meta").textContent = ""; $("engine-dot").classList.remov
 // dirhint is mirrored in two places: the compact hint under the "Generate
 // scene…" button, and the fuller one inside the Generate modal itself.
 const setDirhint = text => { $("dirhint-modal").textContent = text; };
+// What the generation cost, taken from the ACK (see server.py) rather than
+// from `state` — the state broadcast is a separate loop, so at ack time it
+// still holds the pre-generation snapshot where the cost is null.
+//
+// Sub-cent results show 3dp rather than rounding to "$0.00": most Haiku
+// scenes land there, and "$0.00" reads as free rather than cheap.
+function costText(c){
+  if (!c || typeof c.usd !== "number") return "";
+  const usd = c.usd < 0.01 ? `$${c.usd.toFixed(3)}` : `$${c.usd.toFixed(2)}`;
+  const k = n => n >= 1000 ? (n/1000).toFixed(1) + "k" : String(n);
+  return `${usd} · ${k(c.input_tokens)} in / ${k(c.output_tokens)} out`;
+}
+// The Generate modal closes the moment a scene lands, taking its hint line
+// with it — so the cost goes to the header, which is always visible.
+let _costTimer = null;
+function flashCost(c, label){
+  const t = costText(c);
+  if (!t) return;
+  const el = $("costflash");
+  el.textContent = `· ${label} ${t}`;
+  el.title = `${c.model} — cache ${c.cache_read_tokens} read / ${c.cache_write_tokens} written`;
+  el.style.display = "";
+  clearTimeout(_costTimer);
+  _costTimer = setTimeout(() => { el.style.display = "none"; }, 20000);
+}
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
       endAudioRegenApply();
+      if (m.source === "claude") flashCost(m.cost, "audio generated:");
       const msg = m.ok && m.source === "claude" ? "audio updated on scene ✓"
-        : m.ok && m.source === "cache" ? "audio updated from cache ✓"
+        : m.ok && m.source === "cache" ? "audio updated from cache ✓ (no API charge)"
         : "audio fallback — " + (m.error || "no key");
       $("audio-regen-hint").textContent = msg;
       $("audio-regen-hint").style.display = "block";
@@ -924,8 +975,9 @@ ws.onmessage = e => {
     $("genbar").style.width = "100%";
     setTimeout(endGen, 200);
     $("scenename").value = "";
+    if (m.source === "claude") flashCost(m.cost, "scene generated:");
     setDirhint(m.ok && m.source === "claude" ? "composed by Claude ✓ (added to library)"
-      : m.ok && m.source === "cache" ? "from cache ✓"
+      : m.ok && m.source === "cache" ? "from cache ✓ (no API charge)"
       : "local fallback — " + (m.error || "no key"));
     closeModal("modal-generate");
   }
@@ -1121,6 +1173,7 @@ function paintState(s){
   renderRoutes(s);
   updateRouteActivity(s);
   renderModSources(s);
+  updateDirty(s);
   renderShapeModulation(s);
   syncAudioTargets(s);
   syncMonitorFilters(s);
@@ -1361,6 +1414,31 @@ $("perf-copy").onclick = async () => {
 };
 let _lastState = null;
 let _lastKind = null;   // scene kind at the last change, for panel auto-collapse
+
+// ---- header save buttons ----------------------------------------------------
+// The header save buttons are shown whenever a scene is loaded.
+//
+// A "changes not saved" indicator (the sibling lightsaber project's pattern:
+// signature-compare the saveable slice against a clean snapshot) was tried
+// and removed. The comparison itself works — the three slices read clean when
+// nothing has been touched — but establishing the baseline across a scene
+// LOAD does not: `library_name` updates the moment the load is enqueued,
+// while the crossfade keeps `scenes.current` on the outgoing scene, so the
+// early broadcasts report the previous scene's soundscape and layers. They
+// are stable (wrongly suggesting the load has settled) and then replaced,
+// which reads as an edit. Waiting on `scene_transition` plus a stability
+// counter still left it firing after a switch. Anything reinstating this
+// needs a real "scene fully installed" signal from the engine — a spec
+// revision counter in `state()` bumped by `_install_spec` would do it —
+// rather than more client-side heuristics.
+function updateDirty(s){
+  $("hdr-save").classList.toggle("show", !!s.scene);
+}
+// Delegate to the real buttons rather than duplicating their logic — they own
+// the transient "Saved ✓" feedback, and both entry points must behave alike.
+$("hdr-save-sound").onclick = () => $("save-soundscape").click();
+$("hdr-save-all").onclick   = () => $("save-all-scene").click();
+$("hdr-save-midi").onclick  = () => $("pin-midi").click();
 
 let _routesSig = "";
 function renderRoutes(s){
@@ -2046,9 +2124,9 @@ function renderSoundscape(s){
   g.appendChild(knob("delay fbk","delay.feedback",0,0.9,0.01, d.feedback ?? 0.3, v=>v.toFixed(2)));
   g.appendChild(knob("delay mix","delay.mix",0,0.9,0.01, d.mix ?? 0.25, v=>v.toFixed(2)));
   const eq = sc.eq || {};
-  g.appendChild(knob("eq low","eq.low",-24,24,0.5, eq.low ?? 0, v=>v.toFixed(1)));
-  g.appendChild(knob("eq mid","eq.mid",-24,24,0.5, eq.mid ?? 0, v=>v.toFixed(1)));
-  g.appendChild(knob("eq high","eq.high",-24,24,0.5, eq.high ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("eq low","eq.low",-10,10,0.25, eq.low ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("eq mid","eq.mid",-10,10,0.25, eq.mid ?? 0, v=>v.toFixed(1)));
+  g.appendChild(knob("eq high","eq.high",-10,10,0.25, eq.high ?? 0, v=>v.toFixed(1)));
   g.appendChild(knob("swell","swell_amount",0,1,0.01, sc.swell_amount ?? 0, v=>v.toFixed(2)));
   g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
 
@@ -2739,14 +2817,36 @@ $("audio-regen-open").onclick = () => {
 $("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
 
 // Scene prompts modal
+// Three distinct states for cost, and they mean different things:
+//   a cost object  → what the API call was billed
+//   null           → served from cache or the offline fallback: genuinely free
+//   key absent     → generated before costs were recorded: unknown, not free
+function costLine(gs, key, label){
+  if (!gs || !(key in gs)) return null;
+  const c = gs[key];
+  if (!c) return `${label}: no API charge (cache or offline)`;
+  const t = costText(c);
+  return t ? `${label}: ${t} · ${c.model}` : null;
+}
 $("show-prompts-open").onclick = () => {
   const spec = _lastState?.scene_spec;
   if (!spec) {
     $("prompts-visual").textContent = "(no scene loaded)";
     $("prompts-audio").textContent = "";
+    $("prompts-meta").textContent = "";
   } else {
     $("prompts-visual").textContent = spec.image_prompt || "(no visual prompt)";
     $("prompts-audio").textContent = spec.audio_prompt || "(no audio prompt)";
+    const gs = spec.generation_settings || {};
+    const bits = [];
+    if (gs.kind) bits.push(gs.kind.toUpperCase());
+    if (gs.size) bits.push(gs.size);
+    const scene = costLine(gs, "cost", "scene");
+    const audio = costLine(gs, "audio_cost", "audio regen");
+    if (scene) bits.push(scene);
+    if (audio) bits.push(audio);
+    $("prompts-meta").textContent = bits.length ? bits.join(" · ")
+      : "(no generation details recorded — scene predates cost tracking)";
   }
   openModal("modal-prompts");
 };

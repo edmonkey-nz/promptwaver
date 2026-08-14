@@ -257,7 +257,7 @@ class Soundscape:
         self._clock = 0                          # absolute sample index
         self._delay = Delay(sr)
         self._active_notes: list[dict] = []      # for pluck/arp voices
-        self._voice_env: dict[str, Envelope] = {}     # ADSR per pad/osc/sub voice
+        self._voice_env: dict[str, Envelope] = {}     # ADSR per enveloped voice
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
         self.spec = {}
         self.muted = False        # engine-level gate; independent of spec['master']
@@ -314,7 +314,7 @@ class Soundscape:
         self._voice_env = {}
         self._voice_env_on = {}
         for v in self.spec["voices"]:
-            if v.get("type") in ("pad", "sub", "osc"):
+            if v.get("type") in self.ENVELOPED_TYPES:
                 e = v.get("env", {})
                 self._voice_env[v["name"]] = Envelope(
                     attack=e.get("attack", 3.0), decay=e.get("decay", 1.2),
@@ -481,7 +481,7 @@ class Soundscape:
         for v in self.spec["voices"]:
             vt = v.get("type", "pad")
             name = v["name"]
-            is_sustained = vt in ("pad", "sub", "osc")
+            is_sustained = vt in self.ENVELOPED_TYPES
 
             if is_sustained:
                 # ADSR gate: attack/decay/sustain while unmuted, a genuine
@@ -606,6 +606,14 @@ class Soundscape:
         self.voice_peaks = voice_peaks
         self._update_bands(mix)
         return mix
+
+    #: Voice types that get an ADSR and so fade in/out on mute rather than
+    #: being cut. `noise` belongs here despite not being a "note" voice: it is
+    #: a continuous bed, so skipping its render on mute (which is what used to
+    #: happen) is an instant hard cut, and on a wind/air texture that reads as
+    #: a click. `pluck` stays out — each of its notes already has its own
+    #: decay envelope, and gating the scheduler would fight that.
+    ENVELOPED_TYPES = ("pad", "sub", "osc", "noise")
 
     # Band edges in Hz. Low is the drone/sub weight, mid the body of the pads
     # and plucks, high the air and bell transients.
@@ -1027,9 +1035,9 @@ def _normalise(spec: dict) -> dict:
     dl["mix"] = _clamp(dl.get("mix"), 0.0, 0.95, 0.25)
     s["delay"] = dl
     eq = dict(s.get("eq", {}))
-    eq["low"] = _clamp(eq.get("low"), -24.0, 24.0, 0.0)
-    eq["mid"] = _clamp(eq.get("mid"), -24.0, 24.0, 0.0)
-    eq["high"] = _clamp(eq.get("high"), -24.0, 24.0, 0.0)
+    eq["low"] = _clamp(eq.get("low"), -10.0, 10.0, 0.0)
+    eq["mid"] = _clamp(eq.get("mid"), -10.0, 10.0, 0.0)
+    eq["high"] = _clamp(eq.get("high"), -10.0, 10.0, 0.0)
     s["eq"] = eq
     s["swell_amount"] = _clamp(s.get("swell_amount"), 0.0, 1.0, 0.0)
     s["swell_period"] = _clamp(s.get("swell_period"), 5.0, 120.0, 24.0)

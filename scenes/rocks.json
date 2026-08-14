@@ -2323,7 +2323,7 @@
     "fov": 62,
     "near": 0.4,
     "far": 40,
-    "max_strokes": 120,
+    "max_strokes": 155,
     "depth": {
       "mode": "cull"
     },
@@ -2332,8 +2332,9 @@
     "disable_plane": true,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.0,
-    "trail": 0.11
+    "glow": 0.78,
+    "trail": 0.71,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
@@ -2542,5 +2543,9 @@
       ],
       "source": "param"
     }
-  ]
+  ],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }
