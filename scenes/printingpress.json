@@ -2900,7 +2900,8 @@
               "axis": "z"
             }
           }
-        ]
+        ],
+        "shape_speed": 0.06
       }
     }
   ],
@@ -2997,18 +2998,27 @@
         8
       ]
     ],
-    "speed": 0.5,
-    "fov": 62,
+    "speed": 0.05,
+    "fov": 66.0,
     "near": 0.4,
-    "far": 40,
-    "max_strokes": 120,
+    "far": 30.0,
+    "max_strokes": 135,
     "depth": {
       "mode": "cull"
-    }
+    },
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "laser_max_strokes": null,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.17,
+    "trail": 0.66,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 115,
+    "tempo": 40.0,
     "master": 0.75,
     "distortion": 0.08,
     "delay": {
@@ -3027,18 +3037,28 @@
           7,
           12
         ],
-        "level": 0.45,
+        "level": 0.56,
         "tone": 0.25,
         "detune": 0.008,
         "sub": 0.6,
         "pan": 0.0,
-        "unison": 2,
+        "unison": 6.0,
         "env": {
           "attack": 4.0,
           "decay": 1.5,
           "sustain": 0.8,
           "release": 3.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.16,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "body",
@@ -3052,15 +3072,27 @@
           12
         ],
         "level": 0.35,
-        "tone": 0.35,
+        "tone": 0.19,
         "detune": 0.012,
         "pan": 0.0,
         "env": {
-          "attack": 2.5,
-          "decay": 1.0,
+          "attack": 4.26,
+          "decay": 1,
           "sustain": 0.75,
-          "release": 2.5
-        }
+          "release": 6.05
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.29,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "mechanical",
@@ -3074,7 +3106,7 @@
           10,
           12
         ],
-        "level": 0.28,
+        "level": 0.06,
         "rate": 1.2,
         "decay": 0.6,
         "tone": 0.5,
@@ -3083,9 +3115,17 @@
           "on": true,
           "dest": "tone",
           "shape": "triangle",
-          "rate": 0.08,
+          "rate": 0,
           "depth": 0.4
-        }
+        },
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.21,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "impact",
@@ -3105,9 +3145,20 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 1.8,
+          "rate": 0.25,
           "decay": 0.35
-        }
+        },
+        "mute": true,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "metal_air",
@@ -3119,12 +3170,34 @@
           "on": true,
           "dest": "level",
           "shape": "sine",
-          "rate": 0.06,
+          "rate": 0.01,
           "depth": 0.5
-        }
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.504
+    "swell_amount": 0.504,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
@@ -3146,6 +3219,20 @@
       "usd": 0.077
     }
   },
-  "shape_modulation": [],
-  "lfo": {}
+  "shape_modulation": [
+    {
+      "shape": "lever_arm",
+      "voice": "impact",
+      "param": "level",
+      "dest": "scale",
+      "range": [
+        0.5,
+        1.5
+      ]
+    }
+  ],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

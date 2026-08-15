@@ -87,6 +87,16 @@ The Generate modal's size control is a log slider over 100–1200 **nodes**, and
 
 Cost estimates are served by `director.estimate()` over the websocket rather than computed in the browser, so the figure shown next to the slider and the figure the cost gate enforces are the same calculation. Don't add a price table to the JS.
 
+### Big scenes are grown locally, not asked for
+
+One call reliably writes ~200 nodes; the renderer handles ~3200. `director/expand.py` closes the gap by instancing the model's own `defs` along its own camera route — every added node is a copy of an authored one, repositioned by decomposing against the route into (lateral, height, forward) so a floor stays on the floor. Seeded from the request, so a cache hit and a fresh generation agree, and applied on **both** the cache-read and fresh-generation paths. Always reported as `{authored, total}` — never present a grown world as though the model wrote all of it.
+
+### Two render-loop invariants that are easy to undo
+
+**`_motion` must stay after the cull in `World._render_budgeted`.** Evaluating it per-node before the visibility test was ~20% of frame time on a big world and ~94% of that was discarded. Culling deliberately tests the node's *resting* position with the bounding sphere inflated by `amp` to cover where motion could carry it; that bound is conservative, and the reordering was verified bit-identical over 40 frames.
+
+**A scalar layer-param change must not rebuild the Scene.** `Scene.set_layer_param` writes to the live params dict that `render` already resolves from. A rebuild throws away geometry caches and resets generator runtime state — which is what `world`'s accumulated shape clock (`_shape_time`) depends on. Rebuild only for keys absent from `schema()`.
+
 ### The registry is the source of truth for generator metadata
 
 Generators declare `description` and `param_meta` (explicit ranges); `kind()` derives from `is_3d`; `catalog()` serves the lot. The UI builds its layer panel from that schema and addresses params as `layer<N>.<param>`. **Read the catalog rather than adding a third place that knows generator names** — hardcoding is exactly what stranded the generators above. `schema()` deliberately exposes only int/float/bool defaults, so `world`'s `defs`/`nodes` correctly yield no sliders.

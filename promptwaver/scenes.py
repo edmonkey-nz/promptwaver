@@ -146,9 +146,11 @@ class Scene:
         all. Values fall back to the generator default for any param the
         scene didn't author.
 
-        Built once per Scene: this rides the ~20Hz state broadcast, and a
-        param change rebuilds the whole Scene anyway (see Engine._apply_param),
-        so there is no way for a cached copy to go stale.
+        Cached, because this rides the ~20Hz state broadcast. The schema half
+        is immutable, but `values` is not — a scalar param change now applies
+        to the live scene instead of rebuilding it (see `set_layer_param`),
+        so that method invalidates this cache rather than relying on a new
+        Scene to replace it.
         """
         if self._layer_schema_cache is None:
             out = []
@@ -164,6 +166,42 @@ class Scene:
     def coerce_layer_param(self, index: int, key: str, value):
         """Cast `value` using the declared type of that layer's generator."""
         return type(self._gens[index][0]).coerce(key, value)
+
+    def set_layer_param(self, index: int, key: str, value) -> bool:
+        """Apply a scalar layer param to the LIVE scene. True if it took.
+
+        `render` resolves each frame from the dict held in `_gens`, so writing
+        there is exactly equivalent to rebuilding the Scene for any param the
+        generator declares in `schema()` — which is scalars only, the things
+        sliders and MIDI address. False means the key isn't a declared knob
+        (`world`'s `nodes`/`defs` are authored geometry, not parameters) and
+        the caller should rebuild instead.
+
+        Rebuilding was the original behaviour and it had two costs that only
+        showed up once worlds got big. It reconstructs every generator, which
+        throws away the def/primitive geometry caches and re-derives them on
+        the next frame — on a 1200-node scene that is real work, repeated for
+        every pixel of a slider drag. And it resets any runtime state a
+        generator accumulates, which silently broke `world`'s shape clock:
+        that clock integrates its rate so motion doesn't teleport when the
+        rate changes (see World._shape_time), and a rebuild mid-drag snapped
+        every shape back to its t=0 pose — the exact jump the accumulator
+        exists to prevent.
+        """
+        if not (0 <= index < len(self._gens)):
+            return False
+        generator, base_params = self._gens[index]
+        # schema() is a wrapper — {name, description, kind, params:[{key,...}]}
+        # — so the declared knobs are the `key` field of each entry, not the
+        # top-level dict's own keys.
+        declared = {p["key"] for p in type(generator).schema().get("params", [])}
+        if key not in declared:
+            return False
+        base_params[key] = value
+        # `layer_schemas()` caches the current values alongside the schema and
+        # used to be replaced wholesale by the rebuild this call avoids.
+        self._layer_schema_cache = None
+        return True
 
     def _resolve(self, generator, base_params, matrix):
         p = dict(generator.defaults)

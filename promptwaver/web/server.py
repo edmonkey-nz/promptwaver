@@ -196,7 +196,8 @@ async def _handle(engine, m: dict, app=None):
         return {"type": "generate_result", "ok": True,
                 "source": engine.director.last_source,
                 "error": engine.director.last_error,
-                "cost": engine.director.last_cost}
+                "cost": engine.director.last_cost,
+                "expansion": engine.director.last_expansion}
     elif t == "estimate_generation":
         # Answered from the director so the browser never carries its own copy
         # of the price table — the number quoted next to the slider and the
@@ -205,6 +206,10 @@ async def _handle(engine, m: dict, app=None):
                 **engine.director.estimate(int(m.get("nodes") or 0), m.get("kind", "3d"))}
     elif t == "set_cost_cap":
         engine.director.set_cost_cap(m.get("value") or 0)
+    elif t == "set_mod_delay":
+        ms = m.get("ms")
+        engine.set_mod_delay(m.get("mode", "auto"),
+                             None if ms is None else float(ms) / 1000.0)
     elif t == "set_audio":
         engine.set_audio_param(m["key"], m["value"])
     elif t == "apply_audio":

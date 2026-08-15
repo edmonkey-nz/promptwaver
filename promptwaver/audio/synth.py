@@ -94,6 +94,28 @@ class SoundscapeSynth:
             self._stream = None
         self.online = False
 
+    @property
+    def output_latency(self) -> float:
+        """Seconds between a rendered block being handed to the device and it
+        being audible, as PortAudio reports it — not a guess.
+
+        Needed because the modulation matrix reads each block's energy at the
+        moment the block is *generated*, so anything driven by the engine's
+        own sound would otherwise react this far ahead of it. Measured on this
+        machine it comes back as exactly one blocksize (186ms at 8192).
+        Returns 0.0 when no stream is open, which correctly means "nothing to
+        compensate".
+        """
+        st = self._stream
+        if st is None:
+            return 0.0
+        try:
+            return float(st.latency)
+        except Exception:
+            # Some backends don't report it; fall back to the one figure we
+            # can always derive, which is what it measured as anyway.
+            return self.blocksize / float(self.sr)
+
     # Blocksizes tried, largest first, when a requested size fails to open.
     # Some backends (notably PulseAudio/PipeWire virtual devices, which is
     # what "default"/"pipewire"/"Default Sink" in the device list usually are)

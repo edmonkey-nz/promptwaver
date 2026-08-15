@@ -194,26 +194,44 @@ Measured with `tools/bench_scene.py` on `pottery` (161 nodes) against a 22.2ms b
 
 | nodes | max_strokes | drawn | avg ms | peak ms | verdict |
 |---|---|---|---|---|---|
-| 161 (1×) | 120 | 120 | 14.6 | 15.5 | ok |
-| 161 (1×) | 300 | 175 | 21.6 | 23.7 | tight |
-| 483 (3×) | 120 | 120 | 21.2 | 26.4 | tight |
-| 805 (5×) | 120 | 120 | 25.2 | 33.9 | over |
-| 805 (5×) | 600 | 483 | 71.3 | 85.5 | over |
+| 161 (1×) | 120 | 120 | 13.5 | 15.2 | ok |
+| 161 (1×) | 300 | 175 | 20.2 | 21.8 | ok |
+| 483 (3×) | 120 | 120 | 16.9 | 21.4 | ok |
+| 483 (3×) | 300 | 272 | 36.3 | 45.7 | over |
+| 805 (5×) | 120 | 115 | 18.1 | 20.2 | ok |
+| 805 (5×) | 300 | 300 | 42.1 | 57.0 | over |
 
-**A drawn stroke costs ~0.12ms; a node costs ~0.013ms.** Stroke count dominates — that asymmetry is `World._render_budgeted`'s node-level culling doing its job. The practical ceiling is roughly **120–140 drawn strokes at 45fps**, and the slider's ceiling of 400 exists so a sparse scene with a near `far` plane can use it, not because a dense one can.
+**A drawn stroke costs ~0.12ms; a culled node is now close to free.** Stroke count dominates completely — that asymmetry is `World._render_budgeted`'s node-level culling doing its job. The practical ceiling is roughly **150–175 drawn strokes at 45fps**, and the slider's ceiling of 400 exists so a sparse scene with a near `far` plane can use it, not because a dense one can.
 
 ### Big explorable worlds
 
-Node count is cheap but **not free**, and the cost is paid whether or not a node is visible: every node gets a bounding-sphere and view-cone test every frame. Two consequences worth knowing before authoring a large world:
+Node count is very nearly free, because the per-node path was reduced to a bounding-sphere test and nothing else (see below). Measured at `max_strokes` 120:
 
-- **Camera speed is irrelevant to cost.** Measured on an 805-node world at 100 strokes: 19.6ms standing still, 20.7ms at speed 2.0. A slow ambient walk is not cheaper than a fast one — you simply see less of the world per unit time.
-- **Geometry beyond the far plane still costs.** A world spread wide enough that most of it is culled still pays the per-node test: at 2415 nodes the culling alone came to 33.6ms while drawing *zero* strokes.
+| nodes | 45fps avg / peak | verdict |
+|---|---|---|
+| 805 | 18.1 / 20.2 | ok |
+| 1610 | 18.2 / 20.2 | ok |
+| 3220 | 20.0 / 23.1 | tight |
+| 6440 | 28.3 / 31.4 | over |
 
-At 100 drawn strokes on a 30fps budget (33.3ms), measured: 161 nodes → 13.2ms, 805 → 21.3ms, 1610 → 26.9ms, 2415 → 33.6ms (over). So **~1600 nodes is the practical world-size ceiling**, and 800 is comfortable.
+So **~3200 nodes is the practical world-size ceiling at 45fps**, and 1200 — the node slider's maximum — is comfortable with room to spare. A real generated 1200-node scene measures 17.9ms avg / 21.1ms peak at 30fps.
+
+Two things that are *not* costs, both measured rather than assumed:
+
+- **Camera speed is irrelevant.** On an 805-node world at 100 strokes: 19.6ms standing still, 20.7ms at speed 2.0. A slow ambient walk is not cheaper than a fast one — you simply see less of the world per unit time.
+- **Geometry beyond the far plane barely costs.** At 2415 nodes with *zero* strokes drawn the culling alone comes to 17.9ms, flat against the 805-node figure.
+
+#### Why the per-node cost collapsed
+
+`_render_budgeted` used to evaluate `_motion` for every node before deciding whether the node was visible. On a 690-node world that ran 690 times a frame — each call building a fresh 3×3 rotation via `np.eye` — to place the ~40 nodes that survived the cull. Roughly 94% of the work was discarded, and it was 20% of frame time.
+
+Motion is now evaluated only for nodes that will actually be drawn, after the sort and inside the stroke budget. Culling tests the node's **resting** position with its bounding sphere inflated to cover wherever motion could carry it (`amp` bounds bob/drift offset; pulse scales by at most `1 + amp*0.5`; spin rotates about the sphere's own centre and cannot move it). The bound is conservative by construction, so the cull keeps a few nodes it could have dropped and drops none it should have kept — verified by rendering 40 frames of a 690-node scene before and after and diffing every point and colour: **bit-identical**, 29,745 points, zero difference.
+
+Two smaller wins came with it: `_motion` returns a shared read-only identity matrix instead of allocating one per call, and `_emit` skips the matmul entirely when the rotation is that identity. Net effect on the same scene: 43.9ms → 18.5ms.
 
 Since the browser only updates at ~20Hz anyway (below), running the engine at `--fps 30` for a monitor-only big scene costs the display nothing and buys ~50% more frame budget.
 
-Profiling puts ~60% of a heavy frame in `Camera.project`, nearly all of it in `_clip_and_project` — that is where to look if this ceiling ever needs raising.
+Profiling now puts the remaining heavy frame time in `Camera.project` / `_clip_and_project` — that is where to look if this ceiling ever needs raising again.
 
 **Engine fps is not monitor fps.** The websocket broadcasts at ~20Hz (`web/server.py`) and the canvas paints on message arrival, with no `requestAnimationFrame`. Rendering above ~20fps only benefits the laser; raising `--fps` toward a 60Hz monitor's refresh would tighten the frame budget without the monitor ever seeing the extra frames.
 
@@ -246,6 +264,22 @@ Three things follow, and all three shaped the design:
 - **Sonnet overshoots instead, and the failure is expensive and silent.** It wrote past 64,000 output tokens without closing the JSON; the response was truncated, thrown away, and billed in full.
 
 The 201-node scene above renders at **28.7ms avg / 30.8ms peak** at its authored `max_strokes: 120` — inside a 30fps budget, over a 45fps one. Consistent with the stroke-dominance measurements above: it is the 120 strokes costing that, not the 201 nodes.
+
+#### Reaching the node count anyway: local expansion
+
+Since the renderer handles ~3200 nodes and one API call reliably writes ~200, the shortfall is closed locally rather than by asking harder. `director/expand.py` grows the scene to the requested count after generation.
+
+The insight is that a node carries no design decision the model hasn't already made. `{"shape": "gear_large", "pos": [...], "scale": 1.0, "color": [...], "motion": {...}}` is one placement of a shape from `defs`. The creative work — the shape grammar, the palette, the motion character, the route — all fits comfortably in one call. Only the repetition is expensive, and repetition is free locally.
+
+So every added node is a **copy of an authored one**, keeping its shape, colour and motion. What is recomputed is placement, and even that is copied in the frame that matters: each authored node's position is decomposed against the nearest point of the camera route into (lateral offset, height, forward nudge), and the copy keeps those at a different point on the same route. That decomposition is what makes it read as a place — a floor authored at ground level stays at ground level, a lamp hung 4 up and 5 to the left of the walkway stays hung 4 up and 5 to the left, somewhere else along it. Placing copies at random points in the bounding box, the obvious implementation, puts floors in the air.
+
+Details that matter:
+
+- **Seeded from the request** (`_stable_seed(keyword, size, kind)`), so a cache hit and a fresh generation produce the identical world.
+- **Applied on the cache read too.** Entries written before expansion existed hold the short node list and the cache key can't distinguish them. Expansion is a no-op when the scene is already big enough, so running it on both paths is free and keeps them consistent.
+- **Small jitter only** — scale, motion speed, colour and lateral offset. Motion speed gets the widest relative range because instances moving in exact lockstep is the clearest tell that geometry was duplicated.
+- **`world` layers only.** A `pattern2d` layer's size is its stroke count after symmetry expansion, a different quantity reached a different way.
+- Reported, never hidden: `generation_settings.expansion` records `{authored, total}`, the header flash shows "203 authored → 1200 nodes", and the scene-prompts panel repeats it.
 
 #### Guards against paying for nothing
 
@@ -380,19 +414,89 @@ Bands are computed block-wise by rfft where the mix is finalised (`dsp.Soundscap
 
 The voice source list tracks the loaded scene exactly. Two details make that work: names come from the soundscape's own voice list rather than from which voices happened to produce output this block (a sparse pluck between notes contributes nothing, and would otherwise blink in and out of the picker), and voices belonging to other scenes are dropped — except any still referenced by a live route, since during a crossfade the outgoing soundscape stops reporting a moment before its scene is replaced.
 
+### Routes ADD to the control — and the UI says so
+
+`ModMatrix.value(dest, base)` returns `base + Σ(source × depth × scale)` over every route
+targeting `dest`. A route does **not** replace the slider; it stacks on top. So a modulated
+control sets the *minimum*, and dragging it to zero does not hold the value at zero.
+
+This is the single most confusing thing in the app when it isn't signposted. `rabbithole` shipped
+with `camera.speed: 0.0` and a route `audio_level → camera.speed` at depth 0.7: the stored speed
+was irrelevant, the camera travelled at 0–0.7 purely on audio, and the speed slider appeared to do
+nothing. `pottery` has the same route at 0.40 — the director emits it routinely, so this is the
+normal case rather than a one-off.
+
+Any control whose destination has a route is therefore marked amber with a `∿`, with a tooltip
+naming the source and depth (`markModulated` in `index.html`). Layer params need a translation:
+controls address them as `layer<N>.<param>` while the matrix uses `visual.<param>`, because
+`Scene._resolve` namespaces every top-level generator param under `visual.`.
+
 ### The matrix editor
 
 Each mapping is **source → destination** with its own depth, and mappings can be added, repointed and deleted live. **Destinations are derived from the layer schema** — the same registry that builds the layer panel — so a new generator param becomes routable the moment it exists, with no list to maintain. Camera destinations appear only on 3D scenes; monitor effects (`glow`, `trail`, `kaleidoscope_segments`) always.
 
 Every row shows a live meter for its own source, and a *modulation sources* readout lists all current values with flat ones greyed as idle — a route whose source never moves is otherwise indistinguishable from a broken route.
 
-**audio ↔ visual** is a single slider (0–2×) scaling *every* sound-driven source at once, on top of each route's own depth.
+**audio depth** is a single slider (0–2×) scaling *every* sound-driven source at once, on top of each route's own depth. LFOs are not affected — it trims what the sound does, not what the scene does on its own.
+
+### Audio sync — engine-driven modulation runs *early*, and is held back
+
+`Soundscape._update_bands` measures each block's energy at the moment the synth **generates** the block, and the callback hands that same block straight to the device. So a source fed from the engine's own output describes audio that has not been heard yet — visuals lead the sound rather than lagging it.
+
+Measured on this machine, PortAudio reports the output stream's latency as exactly one blocksize:
+
+| blocksize | block | stream latency | compensation applied |
+|---|---|---|---|
+| 1024 | 23.2 ms | 23.2 ms | 0 ms |
+| 2048 | 46.4 ms | 46.4 ms | 0 ms |
+| 4096 | 92.9 ms | 92.9 ms | 59 ms |
+| 8192 | 185.8 ms | 185.8 ms | **199 ms** |
+
+`Engine.mod_delay_auto()` derives it from three measured terms: the stream's own latency, plus half a block (the band figure is one scalar describing a whole block but applied at its start, so it represents the middle), minus the slew already in the sources (a first-order lag whose group delay is roughly its time constant, already pulling the corrective way). Clamped at zero — below ~4096 the existing smoothing already covers the lead, and adding delay there would make visuals late.
+
+`Value(delay=…)` implements the hold-back as an interpolating ring buffer. Two details are load-bearing:
+
+- **It runs on its own clock accumulated from real `dt`, not the `t` passed to `sample()`.** That argument is the scene clock, which Freeze ramps to a standstill — a delay line on it would stall mid-buffer and never deliver, while the whole point of Freeze is that audio reactivity keeps running.
+- **It interpolates rather than snapping to the nearest stored sample**, which would quantise the correction to the frame rate and reintroduce stepping of its own.
+
+**Only the synth path is correctable, and only because we know the audio before it plays.** `mic_level` has the opposite problem — it measures sound that has already been heard — and nothing can advance a signal, so it is never given a delay. `audio_level` follows the synth by default and so *is* compensated, but the correction is dropped the moment `audio_react` is switched to the mic.
+
+Configured by `mod_delay_mode` (`auto`/`off`/`manual`) in the Modulation panel's *Depth & rate* section. It is a **rig** property, not a scene one — it tracks the audio device and blocksize — so it persists in `settings.json` and is recomputed from `_sync_audio_cfg_from_synth`, which is the one place that knows the blocksize that actually opened (not merely the one requested).
+
+### One panel, not a 2D/3D pair
+
+Modulation was split across two accordions titled **"2D Scene modulation"** and **"3D Scene modulation"**, auto-collapsing by scene kind. They read as a matched pair and were nothing of the sort: the first is the *universal* matrix — it is where `camera.speed` is routed, on 3D scenes — while the second is a narrow extra driving shape **scale** only, on `world` layers only, from synth voice params rather than matrix sources. Anyone on a 3D scene looking for camera speed opened the wrong one.
+
+They are now a single **Modulation** panel with four sections: *Global* (audio depth, LFO rate), *Mappings*, *Shape scale · 3D worlds only* (its controls hidden, not merely captioned, on a 2D scene), and *Sources · live*.
+
+Destination and source names are plain English with the underlying key on hover, both supplied by the engine (`Engine.DEST_LABELS`, `DEST_GROUPS`, `SOURCE_LABELS`, exposed via `mod_destinations()` and `mod_source_labels`) so the browser carries no naming of its own. Two labels exist purely to break collisions that made the list ambiguous:
+
+- `visual.glow` → **pattern glow** vs `glow` → **screen glow**. On a 2D scene both appeared as the single word "glow" in the same dropdown; they are unrelated — one is pattern2d's authored per-stroke brightness (which reaches a laser through RGB), the other the browser blur filter (which never leaves the monitor).
+- `lfo_slow` → **LFO · slow**, not plain "LFO", which sat beside "lfo mid" reading as though one were *the* LFO.
+
+The monitor group is labelled **Monitor · screen only** because that is a behavioural fact, not a caveat: those filters are drawn in the browser and never touch the vector data sent to the DAC, so a mapping there does nothing at all on a laser.
 
 ### Freeze
 
 Eases all motion to a standstill over `motion_ramp` seconds (2 by default). It ramps the **scene clock** rather than stopping controls individually, so LFO phase, node motion and camera travel decelerate together and in proportion — everything time-driven is a function of `t`.
 
 The matrix still receives real `dt` while `t` is frozen, so `audio_level` keeps slewing and a frozen pattern still pulses with the sound. Distinct from **Stop**, which pauses the engine outright and blanks the output.
+
+### Shape speed — slowing the scene without slowing the walk
+
+Freeze and `motion_rate` scale the whole scene clock, which is usually what you want and sometimes exactly what you don't: generated scenes routinely author node motion at `speed` 2.5–4.0, so the objects thrash while the camera's walk is already at the right pace. **Shape speed** (`world`'s only generator param, 0–1, on the layer panel) scales node motion alone — spin, bob, drift and pulse, plus time-aware primitives like `jellyfish` — and leaves the camera untouched.
+
+The mechanism is a one-line substitution in `World.render3d`: `t` is replaced by a shape clock before anything downstream sees it, and downstream uses `t` for exactly two things (animated primitives and `_motion`). The camera is advanced separately in `Scene.render` off the unscaled clock, which is what makes the separation exact rather than approximate.
+
+That clock is **accumulated, not scaled** — `_shape_t += dt * rate`, the same shape as `Engine._scene_t`. Computing `t * rate` instead would teleport the phase on every change: a shape spinning at t=200 sits at phase 200, and halving the rate snaps it to phase 100. Unusable on a slider drag or under modulation. A backwards or implausibly large step is treated as a clock reset (scene load, crossfade) rather than elapsed time, and Freeze arrives as `dt == 0`, correctly stopping shape motion too.
+
+Being a top-level scalar, it becomes a `visual.shape_speed` modulation destination automatically via `Scene._resolve` — so it can be driven from audio or an LFO like anything else.
+
+#### Live layer params (and why the accumulator forced it)
+
+`Engine._apply_param` used to answer a `layer<N>.<param>` change by calling `set_scene(spec, crossfade=0)` — rebuilding the entire Scene. `Scene.set_layer_param` now applies scalars to the live scene instead, and only falls back to a rebuild for keys the generator doesn't declare in `schema()` (`world`'s `nodes`/`defs` are authored geometry, not knobs).
+
+This is correct because `render` resolves from the params dict held in `_gens` every frame, so writing there is equivalent to rebuilding. It matters for two reasons that only appeared once worlds got big and stateful: a rebuild discards every generator's geometry cache and re-derives it next frame — real work on a 1200-node scene, repeated for every pixel of a slider drag — and it resets generator runtime state, which silently defeated the shape clock by snapping every shape back to its t=0 pose mid-drag. `layer_schemas()` caches current values and previously relied on the rebuild to replace it, so `set_layer_param` invalidates that cache explicitly.
 
 ## MIDI control
 
@@ -432,7 +536,7 @@ Two levels of storage:
 | `settings.json` | slot-based (`voice#0.level: 20`) | the controller — constant across every scene |
 | scene JSON | name-based `midi_overrides` | wins while that scene is loaded |
 
-**Pin MIDI map** (Global section) freezes the currently-resolved slot bindings into the loaded scene as name-based overrides — for a scene dialled in ahead of a set. Nothing needs pressing after a normal generate; slots already track the ordering on their own. The button flips to **Unpin** once a scene has pins.
+**Pin MIDI map** (Master section) freezes the currently-resolved slot bindings into the loaded scene as name-based overrides — for a scene dialled in ahead of a set. Nothing needs pressing after a normal generate; slots already track the ordering on their own. The button flips to **Unpin** once a scene has pins.
 
 **Encoder modes** (Settings → MIDI, applies to the control you last learned):
 

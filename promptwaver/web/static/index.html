@@ -110,8 +110,8 @@
   .gencol{border-left:1px solid var(--line);background:var(--panel);padding:16px;
           display:flex;flex-direction:column;gap:18px}
   /* Generate throbber. The modal used to only dim to 0.5 opacity behind a 5px
-     progress bar, which reads as "nothing is happening" for the 10-45s a
-     generation takes. This covers the modal so the wait is unmistakable. */
+     progress bar, which reads as "nothing is happening" for the minute or two
+     a generation takes. This covers the modal so the wait is unmistakable. */
   .gen-overlay{position:absolute;inset:0;z-index:5;display:none;
                flex-direction:column;align-items:center;justify-content:center;gap:14px;
                background:rgba(10,12,18,.82);backdrop-filter:blur(2px);border-radius:12px}
@@ -218,16 +218,14 @@
   .modrow .btm label{flex:0 0 34px;font-size:10px;color:var(--dim)}
   .modrow .live{flex:0 0 46px;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden}
   .modrow .live i{display:block;height:100%;width:0%;background:var(--cyan)}
-  /* Header save buttons — one per slice, so saving the soundscape doesn't
-     also overwrite camera settings you were part-way through adjusting. */
-  #hdr-save{display:none;align-items:center;gap:5px}
-  #hdr-save.show{display:flex}
-  #hdr-save .sv{background:rgba(242,166,35,.12);border:1px solid rgba(242,166,35,.5);
-                color:var(--amber);border-radius:7px;padding:4px 8px;cursor:pointer;
-                font-size:13px;line-height:1;display:flex;align-items:center;gap:5px}
-  #hdr-save .sv:hover{background:rgba(242,166,35,.24)}
-  #hdr-save .sv .lbl{font-size:10px;letter-spacing:.03em}
-  #hdr-save .sv.saved{border-color:var(--cyan);color:var(--cyan);background:rgba(51,224,208,.14)}
+  /* Save row in the Scene panel — one button per slice, so saving the
+     soundscape doesn't also overwrite camera settings you were part-way
+     through adjusting. */
+  .savelabel{font-size:10px;color:var(--dim);letter-spacing:.06em;
+             text-transform:uppercase;margin:0 0 6px}
+  .saverow{display:flex;gap:6px}
+  .saverow button{flex:1 1 0;min-width:0;padding:6px 4px;font-size:11px;
+                  display:flex;align-items:center;justify-content:center;gap:4px}
   /* segmented scene-type picker in the Generate modal */
   .seg{flex:1 1 0;display:flex;flex-direction:column;gap:2px;padding:8px 10px;
        border:1px solid var(--line);border-radius:8px;background:transparent;
@@ -293,6 +291,27 @@
   .lib .item .x{color:var(--dim);padding:0 4px}
   .lib .item .x:hover{color:var(--amber)}
   .hint{font-size:11px;color:var(--dim);font-family:var(--mono)}
+  /* A destination with a modulation route on it. `ModMatrix.value` returns
+     base + the sum of its routes, so the slider is a floor rather than the
+     final value — leaving it at 0 does not stop anything. Without a mark
+     here the control simply looks broken, which is exactly how it was
+     reported on `rabbithole` (camera speed 0, camera still travelling,
+     because audio_level drives it at depth 0.7). */
+  .field.modulated > label{color:var(--amber)}
+  .field.modulated > label::after{content:" ∿";opacity:.85}
+  /* Section headings inside the merged Modulation panel. Not <h2>: those are
+     styled as panel titles, and these sit a level below one. */
+  .modsec{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+          color:var(--cyan);margin:16px 0 8px;padding-bottom:5px;
+          border-bottom:1px solid var(--line)}
+  .modsec:first-child{margin-top:0}
+  .modsec .modsec-note{color:var(--dim);font-weight:400;letter-spacing:.04em;
+                       text-transform:none}
+  /* Generation result, shown in the overlay once a scene lands. */
+  .gendone{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:center;
+           line-height:1.9;display:flex;flex-direction:column;gap:2px}
+  .gendone b{color:var(--ink);font-weight:600}
+  .gendone .cy{color:var(--cyan)}
   /* The size readout is the figure a spend decision is made from, so it reads
      brighter than the explanatory hints around it — dim grey buried in a
      paragraph of dim grey is how a cost goes unnoticed. */
@@ -310,7 +329,7 @@
   details.accordion .accordion-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
   /* the side column has the least room on the page — don't spend 24px of it
      on the accordion's own inset */
-  .sidecol details.accordion .accordion-body{padding:0 6px 12px}
+  .sidecol details.accordion .accordion-body{padding:0 6px 12px 20px}
   details.accordion + details.accordion{margin-top:0}
 
   .statusdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);
@@ -377,19 +396,12 @@
     <span>MIDI in</span>
   </div>
   <span class="meta" id="meta">connecting…</span>
-  <!-- Cost of the last billed generation. Its own element rather than
-       borrowing `meta`, which the state loop rewrites every broadcast. -->
-  <span class="meta" id="costflash" style="display:none;color:var(--cyan)"></span>
   <span style="flex:1"></span>
   <button id="output-toggle-1" title="Open a chrome-less output window to drag onto a projector or second screen">🖵 Output 1</button>
   <button id="output-toggle-2" title="A second output window on the same live feed — independently flippable in Settings, for a second screen/projector">🖵 Output 2</button>
-  <!-- Each button saves one slice, so a soundscape tweak doesn't also
-       overwrite camera settings you were mid-way through adjusting. -->
-  <span id="hdr-save">
-    <button class="sv" id="hdr-save-sound" title="Save the soundscape into this scene">🎵<span class="lbl">sound</span></button>
-    <button class="sv" id="hdr-save-midi" title="Pin this scene's MIDI map to its voice names">🎛<span class="lbl">midi</span></button>
-    <button class="sv" id="hdr-save-all" title="Save all scene settings">💾<span class="lbl">all</span></button>
-  </span>
+  <!-- The 🎵/🎛/💾 save trio that stood here was a pure duplicate: each button
+       simply .click()ed its counterpart in the side column. Saving now lives
+       in one place, the Scene panel at the top of that column. -->
   <button id="motion-toggle" title="Ease all motion to a standstill over 2 seconds — LFOs, node motion and camera travel together. Audio reactivity keeps running, so the frozen picture still responds to sound." style="min-width:96px">❚❚ Freeze</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
   <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
@@ -489,8 +501,29 @@
   </section>
 
   <aside class="sidecol">
+    <!-- Scene leads the column. It used to sit at the BOTTOM, below the
+         modulation panel — so the two buttons that create a scene, and every
+         button that saves one, were the last things in the longest column.
+         The save trio that used to duplicate these in the page header is gone
+         with it; this is now the single place saving happens. -->
+    <div class="group" id="g-scene">
+      <h2>Scene</h2>
+      <button class="go" id="gen-open" style="width:100%;margin-bottom:8px">Generate scene…</button>
+      <button class="go" id="audio-regen-open" style="width:100%;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
+      <div class="savelabel">Save into this scene</div>
+      <!-- Each button saves one slice, so a soundscape tweak doesn't also
+           overwrite camera settings you were mid-way through adjusting. -->
+      <div class="saverow">
+        <button id="save-soundscape">🎵 sound</button>
+        <button id="save-camera">🎥 camera</button>
+        <button id="save-all-scene">💾 all</button>
+      </div>
+      <button id="save-as-open" style="width:100%;margin-top:8px">Save as…</button>
+      <button id="show-prompts-open" style="width:100%">Show scene prompts</button>
+    </div>
+
     <div class="group" id="g-global">
-      <h2>Global</h2>
+      <h2>Master</h2>
 
       <div class="vmeters-row">
         <div class="vmeters">
@@ -516,8 +549,26 @@
           <button id="pin-midi" title="Freeze this scene's voice knobs to its voice names">Pin MIDI map</button>
         </div>
       </div>
-<details class="accordion" id="acc-faders" closed>
-      <summary>Faders</summary>
+      <!-- Promoted out of the fade pane. This is NOT a monitor filter: it
+           rewrites Path.color on every stroke (engine.py, "hue override"), so
+           it reaches the laser as well as the screen. It was the most buried
+           control in the app — three levels deep, last field of a collapsed
+           accordion — despite being a live recolour of the whole output. -->
+      <div class="field" style="margin-top:4px">
+        <label style="display:flex;align-items:center;gap:6px;flex:0 0 84px"
+               title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
+          <input type="checkbox" id="hue-override-on"> hue</label>
+        <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="v-hueoverride">0.50</span></div>
+    </div>
+
+    <!-- Was "Faders", and was nested INSIDE the group above — so that group's
+         heading silently spanned the master fader and these durations both.
+         Nothing in here is a fader: they are three fade TIMES. The two
+         controls that genuinely didn't belong have moved out (hue override up
+         to Master, scene PPS to Settings > Output). -->
+    <details class="accordion" id="acc-faders" closed>
+      <summary>Transitions</summary>
       <div class="accordion-body">
       <!-- Always visible (not display:none-toggled) so a scene switch
            starting/ending doesn't pop this in and out of the layout,
@@ -544,60 +595,69 @@
       <div class="field"><label>start/stop fade</label>
         <input type="range" id="s-startfade" min="0" max="8" step="0.25" value="1.5">
         <span class="val" id="v-sstartfade">1.5</span></div>
-      <div class="field"><label>scene PPS</label>
-        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="field"><label style="display:flex;align-items:center;gap:6px;flex:0 0 84px">
-          <input type="checkbox" id="hue-override-on"> hue override</label>
-        <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
-        <span class="val" id="v-hueoverride">0.50</span></div>
-    </div>
-    </div>
+      </div>
     </details>
- <details class="accordion" id="acc-modulation" closed>
-      <summary>2D Scene modulation</summary>
+ <!-- ONE modulation panel. This was two — "2D Scene modulation" and "3D Scene
+      modulation" — which read as a matched pair and were not one. The first is
+      the universal matrix (it is where camera.speed is routed, on 3D scenes);
+      the second is a narrow extra driving shape SCALE only, on `world` layers
+      only, from synth voice params rather than matrix sources. Anyone on a 3D
+      scene looking for camera speed opened the wrong one. -->
+ <details class="accordion" id="acc-modulation" open>
+      <summary>Modulation</summary>
       <div class="accordion-body">
-        <div class="field"><label>audio ↔ visual</label>
+        <!-- Not "Global": that word is a group heading elsewhere in this
+             column, at a different scope, and having both read as though
+             these two sliders were app-wide rather than the top of this
+             panel. They are the two settings every mapping below inherits. -->
+        <div class="modsec">Depth &amp; rate</div>
+        <div class="field"><label title="Master trim on every audio-derived source — audio level, the synth bands, and instrument levels. LFOs are not affected.">audio depth</label>
           <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
           <span class="val" id="v-mlink">1.00</span></div>
         <div class="field"><label>LFO rate</label>
           <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
           <span class="val" id="v-lfo">0.05</span></div>
+        <!-- Audio-latency compensation. The synth measures each block's energy
+             as it GENERATES the block, which is then played one stream-latency
+             later — so engine-driven modulation arrives before the sound
+             unless it is held back. Auto derives the figure from the live
+             stream latency and blocksize; see Engine.mod_delay_auto. -->
+        <div class="field"><label title="Holds engine-driven modulation back so it lands with the sound rather than ahead of it.">audio sync</label>
+          <input type="range" id="m-delay" min="0" max="400" step="5" value="0">
+          <span class="val" id="v-mdelay">0</span></div>
+        <div class="hint" id="mdelay-hint" style="margin:-4px 0 2px">
+          <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+            <input type="checkbox" id="m-delay-auto" checked> auto</label>
+          <span id="mdelay-note"></span>
+        </div>
+
+        <div class="modsec">Mappings</div>
+        <div class="hint" style="margin:-2px 0 8px">A mapping is <b>added</b> to its control: the
+          slider sets the minimum and the source pushes up from there.</div>
         <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
         <button id="mod-add" style="align-self:flex-start;margin-top:8px">Add mapping</button>
+
+        <div class="modsec">Shape scale <span class="modsec-note">· 3D worlds only</span></div>
+        <!-- Scope corrected: the hint used to promise scale/rotate/position,
+             but Scene._apply_shape_modulation only implements scale, and it
+             is called only for 3D `world` layers with the synth running. -->
+        <div class="hint" id="shape-mod-hint" style="margin:-2px 0 8px">Drives shape <b>scale</b>
+          from a synth voice's own parameters. A separate path from the mappings above, which read
+          the sources below — needs audio running.</div>
+        <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber);margin:-2px 0 8px">
+          This scene is 2D, so this section does nothing. Use a mapping above
+          (Pattern → scale) instead.
+        </div>
+        <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
+        <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
+
         <!-- Live source values. A route whose source never moves is
              indistinguishable from a broken route without this. -->
-        <div class="hint" style="margin-top:10px">modulation sources <span style="text-transform:none">— live values</span></div>
+        <div class="modsec">Sources <span class="modsec-note">· live</span></div>
         <div id="mod-sources" style="display:flex;flex-direction:column;gap:3px"></div>
         <div class="hint" id="mic-note" style="display:none;color:var(--amber);margin-top:6px"></div>
       </div>
     </details>
-    <details class="accordion" id="acc-shape-mod" open>
-      <summary>3D Scene modulation</summary>
-      <div class="accordion-body">
-        <!-- Scope corrected: the hint used to promise scale/rotate/position,
-             but Scene._apply_shape_modulation only implements scale, and it
-             is called only for 3D `world` layers with the synth running. -->
-        <div class="hint">Route a synth voice's parameters to shape <b>scale</b>. Works on 3D <i>world</i> scenes only, and needs audio running.</div>
-        <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber)">
-          This scene is 2D — shape modulation has no effect here. Use the
-          modulation matrix (<i>visual.scale</i>, <i>visual.rotate</i>,
-          <i>visual.glow</i>, <i>visual.spread</i>) instead.
-        </div>
-        <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
-        <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
-      </div>
-    </details>
-
-    <div class="group">
-      <h2>Scene settings</h2>
-      <button class="go" id="gen-open" style="width:100%;margin-bottom:8px">Generate scene…</button>
-      <button class="go" id="audio-regen-open" style="width:100%;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
-      <button id="save-soundscape" style="width:100%">Save Soundscape settings</button>
-      <button id="save-camera" style="width:100%">Save Camera settings</button>
-      <button id="save-all-scene" style="width:100%">Save all scene settings</button>
-      <button id="save-as-open" style="width:100%">Save as…</button>
-      <button id="show-prompts-open" style="width:100%">Show scene prompts</button>
-    </div>
 
     <details class="accordion" id="acc-diag">
       <summary>Audio diagnostics</summary>
@@ -657,9 +717,18 @@
 <div class="modal-backdrop" id="modal-generate">
   <div class="modal" id="gen-modal" style="position:relative">
     <div class="gen-overlay" id="gen-overlay">
-      <div class="ring"></div>
+      <div class="ring" id="gen-ring"></div>
       <div class="msg" id="gen-overlay-msg">Composing scene…</div>
-      <div class="sub" id="gen-overlay-sub">Claude is authoring the geometry and soundscape. This usually takes 10–45 seconds.</div>
+      <div class="sub" id="gen-overlay-sub">Claude is authoring the geometry and soundscape.</div>
+      <div class="sub" id="gen-overlay-elapsed" style="font-family:var(--mono);opacity:.75"></div>
+      <!-- Completion state. The result used to flash in the page header while
+           this modal closed itself, which put the outcome somewhere the eye
+           wasn't and gave the finished generation no call to action. It now
+           lands here, and Start is the way out. -->
+      <div id="gen-done" style="display:none;flex-direction:column;align-items:center;gap:14px">
+        <div id="gen-done-info" class="gendone"></div>
+        <button class="go" id="gen-start" style="min-width:180px">▶ Start scene</button>
+      </div>
     </div>
     <div class="modal-head">
       <h2>Generate scene</h2>
@@ -805,7 +874,13 @@
       <h2 style="font-size:11px">Output</h2>
       <div class="field"><label>max PPS</label>
         <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget. Per-scene override is in the Global section.</div>
+      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget.</div>
+      <!-- Moved here from the side column's fade pane, where it sat among
+           three crossfade durations with nothing in common with them. It is a
+           laser output setting, so it belongs beside the ceiling it overrides. -->
+      <div class="field" style="margin-top:8px"><label>scene PPS</label>
+        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">per-scene override for the current scene. Blank = use the ceiling above.</div>
       <div class="field" style="margin-top:8px"><label>output ratio</label>
         <select id="o-ratio" style="flex:1"></select></div>
       <div class="hint">the shape of the surface you're projecting onto. A rig
@@ -959,18 +1034,58 @@ function costText(c){
   const k = n => n >= 1000 ? (n/1000).toFixed(1) + "k" : String(n);
   return `${usd} · ${k(c.input_tokens)} in / ${k(c.output_tokens)} out`;
 }
-// The Generate modal closes the moment a scene lands, taking its hint line
-// with it — so the cost goes to the header, which is always visible.
-let _costTimer = null;
-function flashCost(c, label){
-  const t = costText(c);
-  if (!t) return;
-  const el = $("costflash");
-  el.textContent = `· ${label} ${t}`;
-  el.title = `${c.model} — cache ${c.cache_read_tokens} read / ${c.cache_write_tokens} written`;
-  el.style.display = "";
-  clearTimeout(_costTimer);
-  _costTimer = setTimeout(() => { el.style.display = "none"; }, 20000);
+// Turn the generation overlay into its completion state: what landed, what it
+// cost, and a single call to action. The result used to flash in the page
+// header on a 20s timer while this modal shut itself — the outcome appeared
+// away from where you were looking, and a finished generation offered nothing
+// to do next.
+//
+// The same button dismisses a failure, so there is always exactly one way out
+// of the overlay (it covers the modal's own close button).
+let _genDoneAction = null;
+function showGenDone(m){
+  const ok = m.ok && (m.source === "claude" || m.source === "cache");
+  const lines = [];
+  if (ok) {
+    $("gen-overlay-msg").textContent = "Generation complete";
+    const name = _lastState?.library_name;
+    if (name) lines.push(`<b>${name}</b>`);
+    if (m.expansion)
+      lines.push(`<span class="cy">${m.expansion.total} nodes</span> placed `
+                 + `· ${m.expansion.authored} authored by Claude`);
+    if (m.source === "cache") lines.push("from cache · no API charge");
+    else {
+      const t = costText(m.cost);
+      if (t) lines.push(`<span class="cy">${t}</span>`
+                        + (m.cost.model ? ` · ${shortModel(m.cost.model)}` : ""));
+    }
+    if (_genSeconds) lines.push(`took ${_genSeconds}s`);
+    $("gen-start").textContent = "▶ Start scene";
+    _genDoneAction = () => {
+      // The scene is already installed by the time this ack arrives; Start is
+      // about getting out of the modal and making sure playback is running.
+      send({type:"set_active", value:true});
+      endGen();
+      closeModal("modal-generate");
+    };
+  } else {
+    $("gen-overlay-msg").textContent = "Generated locally";
+    lines.push(m.error ? `<span class="cy">${m.error}</span>`
+                       : "Claude was unavailable — local fallback scene");
+    $("gen-start").textContent = "Close";
+    _genDoneAction = () => { endGen(); closeModal("modal-generate"); };
+  }
+  // Each line wrapped in its own div: `.gendone` is a flex column, so raw
+  // concatenated markup turns every inline element and stray text node into
+  // its own flex item and the lines break apart mid-sentence.
+  $("gen-done-info").innerHTML = lines.map(l => `<div>${l}</div>`).join("");
+  $("gen-overlay-sub").style.display = "none";
+  $("gen-overlay-elapsed").style.display = "none";
+  $("gen-ring").style.display = "none";
+  $("gen-done").style.display = "flex";
+  // The overlay swallows clicks while generating; it has to accept them now.
+  $("gen-overlay").style.pointerEvents = "auto";
+  $("gen-start").focus();
 }
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
@@ -979,10 +1094,14 @@ ws.onmessage = e => {
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
       endAudioRegenApply();
-      if (m.source === "claude") flashCost(m.cost, "audio generated:");
-      const msg = m.ok && m.source === "claude" ? "audio updated on scene ✓"
+      // Cost goes on this modal's own hint line now that the header flash is
+      // gone — same principle as the generate overlay: report the outcome
+      // where the action happened.
+      const cost = m.source === "claude" ? costText(m.cost) : "";
+      const msg = (m.ok && m.source === "claude"
+                   ? "audio updated on scene ✓" + (cost ? " · " + cost : "")
         : m.ok && m.source === "cache" ? "audio updated from cache ✓ (no API charge)"
-        : "audio fallback — " + (m.error || "no key");
+        : "audio fallback — " + (m.error || "no key"));
       $("audio-regen-hint").textContent = msg;
       $("audio-regen-hint").style.display = "block";
       if (m.ok) {
@@ -999,13 +1118,19 @@ ws.onmessage = e => {
       return;
     }
     $("genbar").style.width = "100%";
-    setTimeout(endGen, 200);
     $("scenename").value = "";
-    if (m.source === "claude") flashCost(m.cost, "scene generated:");
+    // The modal deliberately stays OPEN and switches to its completion state.
+    // `generating` is cleared so the safety timer and the elapsed counter
+    // stop, but the form stays covered until Start is pressed — showGenDone
+    // owns the exit from here.
+    generating = false;
+    if (genTimer) { clearTimeout(genTimer); genTimer = null; }
+    clearInterval(genElapsedTimer); genElapsedTimer = null;
+    $("genprog").classList.remove("active");
     setDirhint(m.ok && m.source === "claude" ? "composed by Claude ✓ (added to library)"
       : m.ok && m.source === "cache" ? "from cache ✓ (no API charge)"
       : "local fallback — " + (m.error || "no key"));
-    closeModal("modal-generate");
+    showGenDone(m);
   }
   else if (m.type === "midi_result") {
     if (m.action === "pin") pinResult(m);
@@ -1130,21 +1255,19 @@ function paintState(s){
       : `drawing ${live}`;
     cml.style.color = (live !== mon) ? "var(--amber)" : "var(--dim)";
   }
-  // Shape modulation is 3D-world-only; say so rather than leaving controls
-  // that silently do nothing on a 2D scene.
-  const smna = $("shape-mod-na");
+  // The Shape scale section is 3D-world-only. Swap its explanatory hint for
+  // the "does nothing here" warning on a 2D scene, and hide its controls
+  // rather than leaving buttons that silently do nothing. The two modulation
+  // accordions this used to open/close by scene kind are now one panel, so
+  // there is nothing left to collapse — a single Modulation panel applies to
+  // every scene, which is the point of merging them.
   const isWorld = (s.layers || []).some(L => L.name === "world");
+  const smna = $("shape-mod-na"), smh = $("shape-mod-hint");
   if (smna) smna.style.display = isWorld ? "none" : "block";
-  // Collapse whichever modulation panel doesn't apply to the loaded scene.
-  // Only on an actual scene-kind CHANGE — doing it every broadcast would
-  // slam the panel shut under anyone who opened it deliberately.
-  if (s.scene_kind && _lastKind !== s.scene_kind) {
-    _lastKind = s.scene_kind;
-    const is3d = s.scene_kind === "3d";
-    const shape = $("acc-shape-mod"), matrix = $("acc-modulation");
-    if (shape)  shape.open  = is3d;
-    if (matrix) matrix.open = !is3d;
-  }
+  if (smh)  smh.style.display  = isWorld ? "block" : "none";
+  const smBox = $("shape-mods"), smAdd = $("shape-mod-add");
+  if (smBox) smBox.style.display = isWorld ? "flex" : "none";
+  if (smAdd) smAdd.style.display = isWorld ? "" : "none";
   renderLayers(s);
   $("g-motion").style.display = (s.layers || []).some(L => L.params.length) ? "flex" : "none";
   // Camera slider VALUES track the engine continuously via syncControls
@@ -1208,6 +1331,8 @@ function paintState(s){
   syncControls(s);
   renderVu(s);
   renderRoutes(s);
+  // After renderLayers (line ~1165), whose rows this marks up.
+  markModulated(s);
   updateRouteActivity(s);
   renderModSources(s);
   updateDirty(s);
@@ -1450,7 +1575,6 @@ $("perf-copy").onclick = async () => {
   } catch(e) { $("perf-copy").textContent = "copy failed"; }
 };
 let _lastState = null;
-let _lastKind = null;   // scene kind at the last change, for panel auto-collapse
 
 // ---- header save buttons ----------------------------------------------------
 // The header save buttons are shown whenever a scene is loaded.
@@ -1469,13 +1593,11 @@ let _lastKind = null;   // scene kind at the last change, for panel auto-collaps
 // revision counter in `state()` bumped by `_install_spec` would do it —
 // rather than more client-side heuristics.
 function updateDirty(s){
-  $("hdr-save").classList.toggle("show", !!s.scene);
+  // The save controls live in the Scene panel and are always present; there
+  // is nothing left in the header to show or hide. Kept as a named no-op
+  // because the comment above records why a real dirty indicator was
+  // abandoned, and that reasoning should not be lost with the call site.
 }
-// Delegate to the real buttons rather than duplicating their logic — they own
-// the transient "Saved ✓" feedback, and both entry points must behave alike.
-$("hdr-save-sound").onclick = () => $("save-soundscape").click();
-$("hdr-save-all").onclick   = () => $("save-all-scene").click();
-$("hdr-save-midi").onclick  = () => $("pin-midi").click();
 
 let _routesSig = "";
 function renderRoutes(s){
@@ -1494,12 +1616,18 @@ function renderRoutes(s){
   _routesSig = sig;
   const box = $("routes"); box.innerHTML = "";
 
+  // Labels are plain English; the underlying key rides along as the option's
+  // `title` so it can still be matched against the scene JSON, TECHNICAL.md
+  // and MIDI bindings. Both come from the engine (mod_destinations /
+  // mod_source_labels) so the browser holds no naming of its own.
+  const srcLabel = n => (s.mod_source_labels || {})[n]
+    || (n.startsWith("voice.") ? n.slice(6) : n.replace(/_/g, " "));
   const destOpts = () => {
     const groups = {};
     for (const d of dests) (groups[d.group] ||= []).push(d);
     return Object.entries(groups).map(([g, items]) =>
       `<optgroup label="${g}">` +
-      items.map(d => `<option value="${d.key}">${d.label}</option>`).join("") +
+      items.map(d => `<option value="${d.key}" title="${d.key}">${d.label}</option>`).join("") +
       `</optgroup>`).join("");
   };
   const srcOpts = () => {
@@ -1507,10 +1635,9 @@ function renderRoutes(s){
     // instruments, and there can be a lot of them.
     const eng = sources.filter(n => !n.startsWith("voice."));
     const voi = sources.filter(n => n.startsWith("voice."));
-    let h = `<optgroup label="engine">` +
-            eng.map(n => `<option value="${n}">${n}</option>`).join("") + `</optgroup>`;
-    if (voi.length) h += `<optgroup label="instruments">` +
-            voi.map(n => `<option value="${n}">${n.slice(6)}</option>`).join("") + `</optgroup>`;
+    const opt = n => `<option value="${n}" title="${n}">${srcLabel(n)}</option>`;
+    let h = `<optgroup label="Engine">` + eng.map(opt).join("") + `</optgroup>`;
+    if (voi.length) h += `<optgroup label="Instruments">` + voi.map(opt).join("") + `</optgroup>`;
     return h;
   };
 
@@ -1622,8 +1749,12 @@ function renderModSources(s){
     for (const n of names){
       const row = document.createElement("div");
       row.className = "srcrow"; row.id = "src-" + n;
-      row.title = SRC_HELP[n] || n;
-      row.innerHTML = `<span class="nm">${n}</span><span class="mtr"><i></i></span><span class="nv">0.00</span>`;
+      // Plain label, key on hover — same rule as the mapping dropdowns, so
+      // the two lists name the same thing the same way.
+      const lbl = (s.mod_source_labels || {})[n]
+        || (n.startsWith("voice.") ? n.slice(6) : n.replace(/_/g, " "));
+      row.title = (SRC_HELP[n] ? SRC_HELP[n] + "\n\n" : "") + n;
+      row.innerHTML = `<span class="nm">${lbl}</span><span class="mtr"><i></i></span><span class="nv">0.00</span>`;
       box.appendChild(row);
     }
   }
@@ -1639,6 +1770,27 @@ function renderModSources(s){
   }
   if (document.activeElement !== $("a-react") && s.audio_react)
     $("a-react").value = s.audio_react;
+  // Audio sync readout. In auto the slider mirrors what the engine computed
+  // from the live stream; the note says where that number comes from, since
+  // "0 ms" is a legitimate answer at small blocksizes and would otherwise
+  // look like the feature had failed.
+  if (typeof s.mod_delay_ms === "number") {
+    const auto = s.mod_delay_mode === "auto";
+    if ($("m-delay-auto").checked !== auto) {
+      $("m-delay-auto").checked = auto; syncModDelayEnabled();
+    }
+    if ($("m-delay").disabled || document.activeElement !== $("m-delay")) {
+      $("m-delay").value = s.mod_delay_ms;
+      $("v-mdelay").textContent = s.mod_delay_ms;
+    }
+    // Three distinct reasons for a zero, and they must not read alike: audio
+    // off (nothing to measure), a blocksize small enough that the existing
+    // slew already covers the lead, or a deliberate manual setting.
+    $("mdelay-note").textContent = !auto ? " · manual"
+      : !s.audio ? " · audio is off — nothing to measure"
+      : s.mod_delay_auto_ms > 0 ? ` · ${s.mod_delay_auto_ms} ms, from the live audio stream`
+      : " · none needed at this blocksize";
+  }
   // Only warn when audio_level is actually pointed at a dead mic. On the
   // default (engine output) it follows this scene's own sound, so silence
   // there just means the transport is stopped, not that anything is wrong.
@@ -1910,6 +2062,57 @@ function repaintLearnButtons(){
 // move together, whether the change came from MIDI or from the other one.
 const _ctl = new Map();   // readPath -> [{el, span, fmt}]
 const _dragging = new Set();
+
+// Mark every control that has a modulation route pointing at it.
+//
+// `ModMatrix.value(dest, base)` returns `base + Σ(source × depth)` over the
+// routes targeting `dest` — routes ADD to the slider, they don't replace it.
+// So a modulated slider is a floor, not the value: on `rabbithole`, camera
+// speed sits at 0 while `audio_level → camera.speed` at depth 0.7 drives the
+// camera anywhere from 0 to 0.7, and dragging the slider to 0 changes
+// nothing. The control looks broken unless the route is visible where the
+// control is, rather than only in the matrix editor further down the page.
+let _modMarkSig = null;
+function markModulated(s){
+  const lbl = n => (s.mod_source_labels || {})[n]
+    || (n.startsWith("voice.") ? n.slice(6) : n.replace(/_/g, " "));
+  const by = new Map();
+  for (const r of (s.modulation || [])) {
+    if (!by.has(r.dest)) by.set(r.dest, []);
+    by.get(r.dest).push(`${lbl(r.source)} × ${(+r.depth).toFixed(2)}`);
+  }
+  // Recompute only when the routes or the layer rows change — this rides the
+  // ~20Hz state broadcast, and the layer rows are rebuilt from scratch by
+  // renderLayers, which would otherwise drop the marks silently.
+  const sig = (s.scene || "") + "|" + _layerSig + "|"
+    + [...by.entries()].map(([d, v]) => d + ":" + v.join("+")).sort().join(",");
+  if (sig === _modMarkSig) return;
+  _modMarkSig = sig;
+
+  for (const f of document.querySelectorAll(".field.modulated")) {
+    f.classList.remove("modulated");
+    f.removeAttribute("title");
+  }
+  for (const [path, ctls] of _ctl) {
+    // Layer params are addressed as `layer<N>.<param>` by the controls but as
+    // `visual.<param>` by the matrix — see Scene._resolve, which namespaces
+    // every top-level generator param under `visual.`.
+    const dest = path.startsWith("layer")
+      ? "visual." + path.split(".").slice(1).join(".") : path;
+    const srcs = by.get(dest);
+    if (!srcs) continue;
+    for (const {el} of ctls) {
+      const row = el.closest(".field");
+      if (!row) continue;
+      row.classList.add("modulated");
+      row.title = `Modulated by ${srcs.join(" and ")}.\n\n`
+        + `The mapping is ADDED to this slider, so this control sets the `
+        + `minimum and the source adds on top — leaving it at 0 will not `
+        + `hold the value at 0. Edit or remove it under `
+        + `Modulation → Mappings to take back full control.`;
+    }
+  }
+}
 
 function registerCtl(readPath, el, span, fmt){
   if (!readPath) return;
@@ -2558,7 +2761,13 @@ slider("c-max-laser","camera.laser_max_strokes","cmaxlaser",
        (v)=>(+v) ? (+v).toFixed(0) : "off");
 $("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
 
-let generating = false, genTimer = null;
+let generating = false, genTimer = null, genElapsedTimer = null, _genSeconds = 0;
+// Elapsed seconds, counted up, rather than a predicted duration. A 3D world
+// measured 112s and 114s on Haiku at high effort — and near-constant across
+// node counts, because the model writes ~200 nodes whatever it is asked for,
+// so there is no honest formula from the size slider either. Sonnet and Opus
+// are slower again. Showing the real number answers "is this stuck?" without
+// claiming a figure that only holds for one model at one effort.
 function startGen(kindLabel){
   if (generating) return;
   generating = true;
@@ -2566,6 +2775,25 @@ function startGen(kindLabel){
   $("gen-overlay").classList.add("on");
   $("gen-overlay-msg").textContent = kindLabel
     ? `Composing ${kindLabel}…` : "Composing scene…";
+  // Reset the overlay out of any previous completion state.
+  $("gen-done").style.display = "none";
+  $("gen-overlay-sub").style.display = "";
+  $("gen-overlay-elapsed").style.display = "";
+  $("gen-ring").style.display = "";
+  $("gen-overlay").style.pointerEvents = "";
+  const t0 = Date.now();
+  const tick = () => {
+    _genSeconds = Math.round((Date.now() - t0) / 1000);
+    // The "usually" figure is deliberately vague and only appears once the
+    // wait is long enough to worry about.
+    $("gen-overlay-elapsed").textContent =
+      `${_genSeconds}s elapsed`
+      + (_genSeconds > 25 ? " · a 3D world usually takes 1–3 minutes" : "");
+  };
+  _genSeconds = 0;
+  tick();
+  clearInterval(genElapsedTimer);
+  genElapsedTimer = setInterval(tick, 1000);
   $("genprog").style.display = "block";
   $("genprog").classList.add("active");
   $("genbar").style.width = "2%";
@@ -2583,6 +2811,7 @@ function endGen(){
   $("genprog").classList.remove("active");
   $("genbar").style.width = "0%";
   if (genTimer) { clearTimeout(genTimer); genTimer = null; }
+  clearInterval(genElapsedTimer); genElapsedTimer = null;
 }
 // Scene type. Remembered across sessions: someone building a set of patterns
 // is building several in a row, and re-picking 2D every time is friction.
@@ -2695,6 +2924,25 @@ $("d-model").onchange = () => {
   refreshSizeEstimate();
 };
 $("d-effort").onchange = () => send({type:"set_effort", value:$("d-effort").value});
+// Audio sync. In auto the slider is a readout of the engine's computed figure
+// and is disabled; unticking auto hands the value over to be trimmed by ear.
+function sendModDelay(){
+  const auto = $("m-delay-auto").checked;
+  send({type:"set_mod_delay", mode: auto ? "auto" : "manual",
+        ms: auto ? null : +$("m-delay").value});
+}
+$("m-delay-auto").onchange = () => { syncModDelayEnabled(); sendModDelay(); };
+$("m-delay").oninput = () => {
+  $("v-mdelay").textContent = $("m-delay").value;
+  if (!$("m-delay-auto").checked) sendModDelay();
+};
+function syncModDelayEnabled(){
+  const auto = $("m-delay-auto").checked;
+  $("m-delay").disabled = auto;
+  $("m-delay").style.opacity = auto ? ".55" : "";
+}
+syncModDelayEnabled();
+
 $("d-cap").onchange = () => {
   send({type:"set_cost_cap", value:parseFloat($("d-cap").value) || 0});
   refreshSizeEstimate();      // the warning line under the slider depends on it
@@ -2870,6 +3118,7 @@ document.addEventListener("keydown", (e) => {
     });
   }
 });
+$("gen-start").onclick = () => { if (_genDoneAction) _genDoneAction(); };
 $("gen-open").onclick = () => openModal("modal-generate");
 $("gen-close").onclick = () => closeModal("modal-generate");
 $("settings-open").onclick = () => openModal("modal-settings");
@@ -2969,7 +3218,11 @@ $("show-prompts-open").onclick = () => {
     const gs = spec.generation_settings || {};
     const bits = [];
     if (gs.kind) bits.push(gs.kind.toUpperCase());
-    if (gs.size) bits.push(gs.size);
+    // A bare number is a node target from the slider; the old tier names read
+    // as themselves.
+    if (gs.size) bits.push(typeof gs.size === "number" ? `${gs.size} nodes` : gs.size);
+    if (gs.expansion)
+      bits.push(`${gs.expansion.authored} authored → ${gs.expansion.total} placed`);
     const scene = costLine(gs, "cost", "scene");
     const audio = costLine(gs, "audio_cost", "audio regen");
     if (scene) bits.push(scene);

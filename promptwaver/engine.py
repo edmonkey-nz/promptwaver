@@ -274,6 +274,12 @@ class Engine:
         }
         # `voice.<name>` sources, added as soundscapes load — see _feed_voice_sources
         self._voice_srcs: dict[str, Value] = {}
+        # Audio-latency compensation for engine-driven modulation. A rig
+        # property like keystone or output ratio — it tracks the audio device
+        # and blocksize, not the scene. See mod_delay_auto().
+        self.mod_delay_mode = _settings0.get("mod_delay_mode", "auto")
+        self.mod_delay_manual = float(_settings0.get("mod_delay_manual", 0.0))
+        self.mod_delay_live = 0.0
 
         self.scenes = SceneManager(library_dir)
         self.director = SceneDirector(cache_dir, model=model)
@@ -424,6 +430,11 @@ class Engine:
         _settings.set("audio_device", self.synth.device)
         _settings.set("audio_blocksize", self.synth.blocksize)
         _settings.set("audio_latency", self.synth.latency)
+        # Blocksize and device are exactly what the compensation is derived
+        # from, so recompute it here rather than at each call site — including
+        # the fallback path, where the blocksize that opened may not be the
+        # one that was asked for.
+        self._apply_mod_delay()
 
     def stop(self):
         self._running = False
@@ -462,6 +473,8 @@ class Engine:
             self.audio_react = v
             from . import settings as _s
             _s.set("audio_react", v)
+            # `audio_level` switches feed, and only the engine feed leads.
+            self._apply_mod_delay()
         elif key == "output_ratio":
             self.set_output_ratio(str(value))
         elif key == "hue_override":
@@ -585,8 +598,12 @@ class Engine:
             layer = layers[idx]
             params = layer.params if hasattr(layer, "params") else layer["params"]
             params[attr] = sc.coerce_layer_param(idx, attr, value)
-            # rebuild so the change takes effect
-            self.scenes.set_scene(sc.spec, crossfade=0)
+            # Apply to the live scene where possible and only rebuild when it
+            # isn't a declared knob. A rebuild drops every generator's
+            # geometry cache and resets its runtime state — see
+            # Scene.set_layer_param for why that mattered once worlds got big.
+            if not sc.set_layer_param(idx, attr, params[attr]):
+                self.scenes.set_scene(sc.spec, crossfade=0)
 
     def load_scene(self, name: str):
         def apply():
@@ -635,6 +652,11 @@ class Engine:
             # not "unknown". A scene generated before this existed simply has
             # no key, which the UI reports differently again.
             "cost": self.director.last_cost,
+            # {"authored": n, "total": n} when the world was grown past what
+            # the model wrote (director/expand.py), else absent/None. Kept on
+            # the scene so "show scene prompts" can say how much of it Claude
+            # authored directly.
+            "expansion": self.director.last_expansion,
         }
         try:
             self.scenes.save(name, spec)
@@ -1040,6 +1062,69 @@ class Engine:
         for name in self._voice_srcs:
             self.matrix.set_source_scale(name, v)
 
+    #: Sources fed from the synth's own output, and therefore measured BEFORE
+    #: the audio is audible. These are the only ones latency compensation can
+    #: apply to. `mic_level` is deliberately absent: it measures sound that has
+    #: already played, so it lags rather than leads and nothing can advance it.
+    #: `audio_level` is here because it follows the synth by default — when
+    #: `audio_react` is "mic" the delay is dropped, below.
+    SYNTH_SOURCES = ("audio_level", "synth_level", "synth_low",
+                     "synth_mid", "synth_high")
+
+    def mod_delay_auto(self) -> float:
+        """Seconds of hold-back that would align engine-driven modulation with
+        the sound you actually hear.
+
+        Three terms, all measured rather than assumed:
+
+        * the output stream's own latency, as PortAudio reports it;
+        * half a block, because the band figure is one scalar describing a
+          whole block of audio and is applied at that block's start, so it
+          represents the middle of it;
+        * minus the slew already in the sources, which is a first-order lag
+          whose group delay is roughly its time constant and which is already
+          pulling in the corrective direction.
+
+        Clamped at zero: at small blocksizes the existing smoothing already
+        overshoots the correction, and adding delay there would make visuals
+        late rather than early.
+        """
+        if not getattr(self.synth, "online", False):
+            return 0.0
+        lead = self.synth.output_latency + (self.synth.blocksize / float(self.synth.sr)) * 0.5
+        slew = 0.08          # the smooth= constant the synth sources are built with
+        return max(0.0, lead - slew)
+
+    def _apply_mod_delay(self):
+        """Push the configured compensation onto the synth-derived sources."""
+        want = (0.0 if self.mod_delay_mode == "off"
+                else self.mod_delay_auto() if self.mod_delay_mode == "auto"
+                else self.mod_delay_manual)
+        # Following the mic means the source no longer leads anything, so the
+        # correction must come off or it would add lag to an already-late feed.
+        for name in self.SYNTH_SOURCES:
+            src = self.matrix.sources.get(name)
+            if src is None:
+                continue
+            on_mic = (name == "audio_level" and self.audio_react == "mic")
+            src.delay = 0.0 if on_mic else want
+        for name, src in self._voice_srcs.items():
+            src.delay = want
+        self.mod_delay_live = want
+
+    def set_mod_delay(self, mode: str, seconds: float | None = None):
+        """`mode` is "auto", "off", or "manual". A rig property, not a scene
+        one — it follows the audio device and blocksize, which survive scene
+        changes — so it persists in settings.json alongside them."""
+        from . import settings as _s
+        if mode in ("auto", "off", "manual"):
+            self.mod_delay_mode = mode
+            _s.set("mod_delay_mode", mode)
+        if seconds is not None:
+            self.mod_delay_manual = max(0.0, min(1.0, float(seconds)))
+            _s.set("mod_delay_manual", self.mod_delay_manual)
+        self._apply_mod_delay()
+
     def _rebuild_routes(self):
         """Re-derive the live matrix routes from the current scene's spec."""
         self.matrix.clear_routes()
@@ -1068,6 +1153,38 @@ class Engine:
                 self._rebuild_routes()
         self._enqueue(apply)
 
+    #: Human labels for routable destinations, keyed by full destination key.
+    #: Anything absent falls back to the key with underscores spaced out, so a
+    #: new generator param still reads sensibly with no edit here.
+    #:
+    #: Two entries exist purely to break a collision: on a 2D scene
+    #: `visual.glow` (pattern2d's authored per-stroke glow, which reaches a
+    #: laser through RGB) and `glow` (the monitor blur filter, which never
+    #: leaves the browser) both rendered as the single word "glow" in the same
+    #: dropdown. They are unrelated controls.
+    DEST_LABELS = {
+        "camera.speed": "speed",
+        "camera.orbit_radius": "orbit radius",
+        "camera.fov": "field of view",
+        "camera.max_strokes": "stroke budget",
+        "visual.max_strokes": "stroke budget",
+        "visual.shape_speed": "shape speed",
+        "visual.glow": "pattern glow",
+        "glow": "screen glow",
+        "trail": "trails",
+        "kaleidoscope_segments": "kaleidoscope",
+    }
+
+    #: Generator names are registry identifiers, not UI copy. Groups not listed
+    #: fall through to the generator's own name.
+    DEST_GROUPS = {
+        "world": "Shapes",
+        "pattern2d": "Pattern",
+        "flow_field": "Flow field",
+        "attractor": "Attractor",
+        "ripples": "Ripples",
+    }
+
     def mod_destinations(self) -> list[dict]:
         """What a route may target, derived rather than hardcoded.
 
@@ -1076,24 +1193,62 @@ class Engine:
         moment it exists, with no list to update here. (Scene._resolve already
         exposes every top-level param as `visual.<key>`; this just makes the
         UI aware of them.)
+
+        Each entry carries both a `key` (what the matrix and the scene JSON
+        use) and a human `label`. The browser shows the label and puts the key
+        on hover, so the dropdown reads as English without cutting the tie to
+        what's in the file and in TECHNICAL.md.
         """
+        def entry(key: str, group: str, fallback: str | None = None) -> dict:
+            return {"key": key,
+                    "label": self.DEST_LABELS.get(key,
+                                                  (fallback or key).replace("_", " ")),
+                    "group": group}
+
         out = []
         seen = set()
         sc = self.scenes.current
         if sc is not None:
             for layer in sc.layer_schemas():
+                group = self.DEST_GROUPS.get(layer["name"], layer["name"])
                 for p in layer["params"]:
                     key = f"visual.{p['key']}"
                     if key in seen:
                         continue
                     seen.add(key)
-                    out.append({"key": key, "label": p["key"], "group": layer["name"]})
+                    out.append(entry(key, group, p["key"]))
             if sc.is_3d:
                 for k in ("speed", "orbit_radius", "fov", "max_strokes"):
-                    out.append({"key": f"camera.{k}", "label": k, "group": "camera"})
+                    out.append(entry(f"camera.{k}", "Camera", k))
+        # Flagged in the group name because it is a real behavioural
+        # difference, not a caveat: monitor filters are drawn in the browser
+        # and never touch the vector data sent to the DAC, so a route here
+        # does nothing at all on a laser.
         for k in ("glow", "trail", "kaleidoscope_segments"):
-            out.append({"key": k, "label": k, "group": "monitor"})
+            out.append(entry(k, "Monitor · screen only"))
         return out
+
+    #: Human labels for modulation SOURCES. `voice.*` is handled separately —
+    #: those names come from whichever soundscape is loaded.
+    SOURCE_LABELS = {
+        "audio_level": "audio level",
+        "mic_level": "mic level",
+        "synth_level": "synth · level",
+        "synth_low": "synth · low",
+        "synth_mid": "synth · mid",
+        "synth_high": "synth · high",
+        # Both LFOs need qualifying. Labelling `lfo_slow` as plain "LFO" put
+        # "LFO" and "lfo mid" next to each other in the same list, reading as
+        # though one were the LFO and the other something else.
+        "lfo_slow": "LFO · slow",
+        "lfo_mid": "LFO · mid",
+        "env": "envelope",
+    }
+
+    def mod_source_label(self, name: str) -> str:
+        if name.startswith("voice."):
+            return name[6:]
+        return self.SOURCE_LABELS.get(name, name.replace("_", " "))
 
     def _feed_voice_sources(self, peaks: dict):
         """Publish each voice's live output level as `voice.<name>`.
@@ -1111,6 +1266,10 @@ class Engine:
             if src is None:
                 src = self._voice_srcs[key] = self.matrix.add_source(key, Value(smooth=0.05))
                 self.matrix.set_source_scale(key, link)
+                # Voice sources appear as soundscapes load, i.e. long after
+                # _apply_mod_delay last ran — they are read off the same block
+                # as the synth bands and lead by exactly as much.
+                src.delay = self.mod_delay_live
             src.current = peak
 
         # Drop voices that aren't in the live soundscape. An earlier version
@@ -1412,7 +1571,14 @@ class Engine:
                             for n in self.matrix.sources},
             "mic_online": self.analysis.online,
             "audio_react": self.audio_react,
+            "mod_delay_mode": self.mod_delay_mode,
+            "mod_delay_ms": round(self.mod_delay_live * 1000),
+            "mod_delay_auto_ms": round(self.mod_delay_auto() * 1000),
             "mod_destinations": self.mod_destinations(),
+            # name -> human label, so the browser never carries its own copy
+            # of the naming (same reason the cost estimate is server-side).
+            "mod_source_labels": {n: self.mod_source_label(n)
+                                  for n in self.matrix.sources},
             # Dotted keys so the UI's readStateValue finds them directly —
             # without these the LFO rate slider never reflected a scene load.
             "lfo_slow.rate": round(getattr(self.matrix.sources.get("lfo_slow"), "rate", 0.05), 4),

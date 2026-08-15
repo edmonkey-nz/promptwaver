@@ -46,14 +46,28 @@ def _rot_axis(axis: str, ang: float) -> np.ndarray:
     return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]], np.float32)   # y
 
 
+#: Shared identity rotation. Every motion type except `spin` leaves the node
+#: unrotated, and building a fresh `np.eye(3)` for each of those was measurable
+#: on its own (~6% of frame time on a 690-node world). Returned by reference,
+#: never written to — `_emit` reads it and additionally uses `is _EYE3` to skip
+#: the no-op matmul entirely.
+_EYE3 = np.eye(3, dtype=np.float32)
+_EYE3.flags.writeable = False
+
+_ZERO3 = np.zeros(3, np.float32)
+_ZERO3.flags.writeable = False
+
+
 def _motion(node_motion: dict, t: float):
     """Return (extra_scale, rot_matrix, offset) for this node at time t."""
     m = node_motion or {}
     kind = m.get("type", "none")
+    if kind == "none" or not m:
+        return 1.0, _EYE3, _ZERO3
     speed = float(m.get("speed", 0.3))
     amp = float(m.get("amp", 0.3))
     axis = m.get("axis", "y")
-    scale, rot, offset = 1.0, np.eye(3, dtype=np.float32), np.zeros(3, np.float32)
+    scale, rot, offset = 1.0, _EYE3, _ZERO3
     if kind == "spin":
         rot = _rot_axis(axis, t * speed)
     elif kind == "bob":
@@ -107,14 +121,48 @@ def _cone_cos(fov_deg: float, aspect: float) -> float:
 class World(Generator3D):
     description = "composed scene graph — authored defs placed as nodes"
     field_depth = 1000.0        # bounded scene; effectively no Z-wrap
-    # No param_meta: `nodes`/`defs` are authored data, not knobs, so schema()
-    # reports no adjustable params and the UI shows no slider panel for it.
-    defaults = dict(nodes=[], defs={})
+    # `nodes`/`defs` are authored data rather than knobs, so they get no
+    # param_meta and produce no sliders (schema() only exposes int/float/bool).
+    # `shape_speed` is the one genuine knob: a scalar, so it becomes a slider
+    # and a `visual.shape_speed` modulation destination for free.
+    defaults = dict(nodes=[], defs={}, shape_speed=1.0)
+    param_meta = {"shape_speed": (0.0, 1.0, 0.01)}
 
     def __init__(self, **params):
         super().__init__(**params)
         self._def_cache = {}    # name -> (paths, radius) — defs are static
         self._prim_cache = {}   # (name, frozen params) -> (paths, radius)
+        # Shape motion runs on its own accumulated clock — see _shape_time.
+        self._shape_t = 0.0
+        self._last_t = None
+
+    def _shape_time(self, t: float, rate: float) -> float:
+        """The clock node motion reads, advanced at `rate` x the scene clock.
+
+        Accumulated rather than computed as `t * rate`, for the same reason
+        `Engine._scene_t` is: scaling absolute time makes every change to the
+        rate teleport the phase. A shape spinning at t=200 sits at phase 200;
+        halve the rate and `t * rate` snaps it to phase 100 — a visible jump,
+        and an unusable one when the rate is being dragged on a slider or
+        driven from the modulation matrix. Integrating the rate instead means
+        the shape slows from wherever it currently is.
+
+        Only the CAMERA is untouched by this. The camera advances in
+        `Scene.render` off the unscaled scene clock, which is the whole point
+        of the control: the walk through the world keeps its pace while the
+        things in the world calm down.
+        """
+        prev, self._last_t = self._last_t, t
+        if prev is None:
+            return self._shape_t
+        dt = t - prev
+        # A backwards or implausibly large step is a clock reset (scene load,
+        # crossfade, seek), not elapsed time — advancing on it would lurch
+        # every shape forward by however long the gap was. Freeze already
+        # arrives here as dt == 0 and correctly stops shape motion too.
+        if 0.0 < dt < 1.0:
+            self._shape_t += dt * rate
+        return self._shape_t
 
     def _geom_for(self, node: dict, defs: dict, t: float):
         """Local (untransformed) geometry for a node, plus the radius of its
@@ -175,6 +223,10 @@ class World(Generator3D):
         defs = p.get("defs", {})
         disable_plane = p.get("_disable_plane", False)
         cam = p.get("_camera")
+        # Everything below this line sees shape time, not scene time. `t` is
+        # used for exactly two things down there — animated primitives and
+        # node motion — so substituting it is the whole implementation.
+        t = self._shape_time(t, float(p.get("shape_speed", 1.0)))
 
         # Fly mode is excluded deliberately: it wraps geometry in Z against
         # `field_depth` and tracks the camera as a travelled distance
@@ -239,14 +291,32 @@ class World(Generator3D):
             local, radius = self._geom_for(node, defs, t)
             if not local:
                 continue
-            mscale, rot, offset = _motion(node.get("motion"), t)
-            s = float(node.get("scale", 1.0)) * mscale
-            # Spin rotates about the local origin, which the bounding sphere
-            # is centred on, so it can't move the sphere — only scale (pulse)
-            # and offset (bob/drift) need folding in, and both already are.
-            pos = np.asarray(node.get("pos", [0, 0, 0]), np.float32) + offset
-            r = radius * abs(s)
-            rx, ry, rz = float(pos[0]) - px, float(pos[1]) - py, float(pos[2]) - pz
+            # Motion is deliberately NOT evaluated here. It used to be, and it
+            # was the single largest avoidable cost in a big world: on a
+            # 690-node scene `_motion` ran 690 times a frame (each call
+            # building a 3x3 numpy rotation via np.eye) to place ~40 nodes
+            # that survived the cull — ~94% of the work discarded, 20% of
+            # frame time. It now runs once per node that is actually drawn,
+            # below.
+            #
+            # Culling therefore tests the node's RESTING position, with the
+            # sphere inflated to cover wherever motion could carry it: `amp`
+            # bounds the bob/drift offset and pulse scales by at most
+            # 1 + amp*0.5 (see _motion). Spin rotates about the local origin,
+            # which the sphere is centred on, so it can't move it at all. The
+            # bound is conservative by construction, so this keeps a few nodes
+            # it could have dropped and drops none it should have kept.
+            s = float(node.get("scale", 1.0))
+            m = node.get("motion")
+            if m and m.get("type", "none") != "none":
+                amp = abs(float(m.get("amp", 0.3)))
+                r = radius * abs(s) * (1.0 + amp * 0.5) + amp
+            else:
+                amp, r = 0.0, radius * abs(s)
+            pos = node.get("pos") or (0.0, 0.0, 0.0)
+            rx = float(pos[0]) - px
+            ry = float(pos[1]) - py
+            rz = float(pos[2]) - pz
             d = (rx * rx + ry * ry + rz * rz) ** 0.5
             near_edge = d - r
             if fwd is not None:
@@ -272,15 +342,18 @@ class World(Generator3D):
                         continue               # outside the view cone
             elif near_edge > far:
                 continue
-            cand.append((near_edge, len(local), node, local, s, rot, pos))
+            cand.append((near_edge, len(local), node, local, s, pos))
 
         cand.sort(key=lambda c: c[0])
         limit = max(1, int(cam.max_strokes * _BUDGET_SLACK))
         out, n = [], 0
-        for _, n_strokes, node, local, s, rot, world_pos in cand:
+        for _, n_strokes, node, local, s, pos in cand:
             if n >= limit:
                 break
-            _emit(out, node, local, s, rot, world_pos)
+            # Only now, for nodes that will actually be drawn.
+            mscale, rot, offset = _motion(node.get("motion"), t)
+            world_pos = np.asarray(pos, np.float32) + offset
+            _emit(out, node, local, s * mscale, rot, world_pos)
             n += n_strokes
         return out
 
@@ -307,9 +380,11 @@ def _skip_plane(node: dict, disable_plane: bool) -> bool:
 
 def _emit(out, node, local, s, rot, world_pos):
     color = tuple(node.get("color", [1.0, 1.0, 1.0]))
+    spun = rot is not _EYE3          # skip an identity matmul per stroke
     for path in local:
         pts = path.points * s
-        pts = pts @ rot.T
+        if spun:
+            pts = pts @ rot.T
         pts = pts + world_pos
         out.append(Path3D(pts.astype(np.float32), color, closed=path.closed,
                           lod=path.lod))

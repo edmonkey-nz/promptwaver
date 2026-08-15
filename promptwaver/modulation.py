@@ -15,6 +15,7 @@ base)` to read its modulated parameter.
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import dataclass, field
 
 
@@ -93,19 +94,62 @@ class Value(Source):
 
     The audio analysis thread writes `.current`; the matrix reads it. This is
     the audio -> visual bridge.
+
+    `delay` holds the value back by that many seconds before it is used, which
+    exists to fix a lead rather than to create an effect. The synth measures
+    each block's energy at the moment it *generates* the block
+    (`Soundscape._update_bands`), and that block is then handed to the output
+    device and heard one stream-latency later — so without this, visuals
+    driven by the engine's own sound arrive before the sound does. Measured on
+    this machine at blocksize 8192: 186ms of stream latency plus half a block,
+    against ~90ms of slew and tick lag pulling the other way, for a net visual
+    lead of nearly 0.2s.
+
+    Only the *synth* path can be corrected this way, and only because we know
+    the audio before it is audible. `mic_level` has the opposite problem — it
+    measures sound that has already played — and no amount of buffering can
+    advance a signal, so it is left alone.
     """
 
-    def __init__(self, initial: float = 0.0, smooth: float = 0.0):
+    def __init__(self, initial: float = 0.0, smooth: float = 0.0, delay: float = 0.0):
         self.current = initial
         self.smooth = smooth        # 0 = none, ->1 = heavy slew
+        self.delay = delay          # seconds to hold the value back
         self._v = initial
+        # Own clock, accumulated from REAL dt. Deliberately not the `t` passed
+        # to sample(): that is the scene clock, which Freeze ramps to a
+        # standstill — a delay line running on it would stall mid-buffer and
+        # never deliver, while the whole point of Freeze is that audio
+        # reactivity keeps working.
+        self._clock = 0.0
+        self._hist: deque[tuple[float, float]] = deque()
 
     def sample(self, t: float, dt: float) -> float:
+        self._clock += dt
+        target = self.current
+        if self.delay > 0:
+            self._hist.append((self._clock, self.current))
+            cutoff = self._clock - self.delay
+            # Keep exactly one sample older than the cutoff so there is always
+            # a pair to interpolate between.
+            while len(self._hist) > 1 and self._hist[1][0] <= cutoff:
+                self._hist.popleft()
+            t0, v0 = self._hist[0]
+            if len(self._hist) > 1 and cutoff > t0:
+                t1, v1 = self._hist[1]
+                span = t1 - t0
+                # Interpolated, not nearest: the render tick is ~22ms and the
+                # delay is set from audio timing, so snapping to the nearest
+                # stored sample would quantise the correction to the frame
+                # rate and reintroduce its own stepping.
+                target = v0 + (v1 - v0) * ((cutoff - t0) / span) if span > 1e-9 else v1
+            else:
+                target = v0
         if self.smooth > 0:
             k = min(1.0, dt / max(self.smooth, 1e-4))
-            self._v += (self.current - self._v) * k
+            self._v += (target - self._v) * k
         else:
-            self._v = self.current
+            self._v = target
         return self._v
 
 

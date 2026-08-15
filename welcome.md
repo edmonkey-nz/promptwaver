@@ -12,7 +12,7 @@ If you don't have a Claude API account, you'll need one to create scenes, otherw
 - Press the **Start** button in the header region
 - Use settings under the visualiser in the left panel to control the visual output
 - Change any parameters in the **Soundscape** panel to adjust audio synthisis - note theres an intentional small transisiton to soften jarring changes of values
-- Use buttons in **Scene settings** to to save tweaks back to the scene
+- Use the **Scene** panel at the top of the right column to save tweaks back to the scene — **sound**, **camera** or **all**
 
 **Generate your first scene:**
 

@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.74.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.75.1-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 ![ai-code](https://img.shields.io/badge/AI%20coded-YES-orange)
@@ -13,7 +13,7 @@ A realtime **immersive audio/visual instrument** ambient scene and soundscape ex
 
 Claude acts as an **scene creator**: give it a visual prompt ("water flowing from a blocked sieve", "aurora over a still lake at full moon") and an audio prompt ("scurrying beetles over a wet log with bees buzzing", "dripping water from stalactites in a cave with footsteps and fish") and it composes a scene spec. The local engine then renders at full framerate with no further API calls. Scenes are saved as JSON and can be loaded, tweaked, and re-rendered.
 
-**Note:** You'll need a paid Claude API account to generate new scenes (~5–40¢ NZD each depending on size/model). A $5 credit goes a long way. Offline mode uses a simple fallback director.
+**Note:** You'll need a paid Claude API account to generate new scenes (~5–50¢ NZD each depending on size/model). A $5 credit goes a long way. Offline mode uses a simple fallback director.
 
 Disclaimer: this has been coded almost completely with Claude Code, but with a person planning, orchestrating and UX testing to make this what it is, YMMV. 
 

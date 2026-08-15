@@ -5,8 +5,8 @@
 1) ~~when useign the 'regenerate audio' make it choose the current scene in the dropdown when first opened, and make sure the prompt field is empty.~~
 2) ~~fix the status of the 'regenerating audio' throbber like the 'generating scene'~~
 3) ~~when audio has been regenerated, close the modal and refrsh the scene so the new audio plays~~
-4) ~~change the 'shape modulation' collasped pane title to '3D Scene modulation' and make it collasped if an 2d scene is open.~~
-5) ~~change the 'modulation' pane title to '2D Scene modulation' and make it collasped if an 3d scene is open.~~
+4) ~~change the 'shape modulation' collasped pane title to '3D Scene modulation' and make it collasped if an 2d scene is open.~~ — **superseded in 0.75.0**: the two panes were merged into one *Modulation* panel. The 2D/3D titles implied a matched pair, but the "2D" one was the universal matrix (camera routes live there, on 3D scenes) and the "3D" one a narrow shape-scale extra, so the naming sent you to the wrong pane.
+5) ~~change the 'modulation' pane title to '2D Scene modulation' and make it collasped if an 3d scene is open.~~ — **superseded in 0.75.0**, see above.
 6) ~~update the new 2d paramter silders to allow midi mapping.~~
 
 a) ~~check noise - doesnt fade out on muting instreument (jupiter - space whsiper)~~ — `noise` now gets the same ADSR as pad/osc/sub, so muting releases over its own release time instead of cutting. `pluck` deliberately left out: each of its notes already carries a decay envelope.

@@ -8,6 +8,135 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.75.1]
+
+### UI refinements
+
+- Increased left padding on accordion bodies in the control sidebar for better visual breathing room.
+
+## [0.75.0]
+
+### Shape speed — slow the objects without slowing the walk
+
+- **New `shape speed` control** on the layer panel for 3D worlds (0–1). Scales node motion only —
+  spin, bob, drift, pulse and time-aware primitives — and leaves camera orbit/walk speed alone.
+  Generated scenes routinely author motion at `speed` 2.5–4.0, which thrashes at a camera pace
+  that is otherwise right.
+- Modulatable as `visual.shape_speed` like any other scalar param, so it can be driven from audio
+  or an LFO.
+- The clock is **accumulated, not scaled**, so changing the rate never teleports motion phase.
+
+### Scenes are now as big as you ask for
+
+- **`director/expand.py` grows a generated scene to the requested node count** by instancing the
+  model's own `defs` along its own camera route. Every added node is a copy of an authored one;
+  only its placement is recomputed, and that is copied too — decomposed against the route into
+  lateral offset, height and forward nudge — so a floor stays on the floor and a hanging lamp
+  stays hanging. A 1200-node world now costs one ~$0.08 call instead of a truncated 73k-token
+  response.
+- Seeded from the request, so a cache hit and a fresh generation produce the identical world, and
+  applied on the cache-read path too so entries written before this still grow.
+- Always reported, never hidden: the header flash shows "203 authored → 1200 nodes" and
+  `generation_settings.expansion` records the split.
+
+### Modulated controls are now visible as modulated
+
+- **A slider with a modulation route pointing at it is marked amber with a `∿`**, and its tooltip
+  names the source and depth. `ModMatrix.value` returns `base + Σ(source × depth)` — routes *add*
+  to the slider rather than replacing it — so a modulated control is a floor, not the value.
+  Without the mark it simply looks broken: `rabbithole` had camera speed at 0 and a camera that
+  kept travelling, because `audio_level → camera.speed` was driving it at depth 0.7.
+- `scenes/rabbithole.json`: route depth 0.7 → 0.18 and base speed 0 → 0.06, so the walk is a
+  gentle drift that still breathes with the audio instead of peaking above a normal travel speed.
+
+### Audio sync — modulation no longer runs ahead of the sound
+
+The synth measures each block's energy as it *generates* the block, and that block is then played
+one stream-latency later — so anything driven by the engine's own output reacted **before** you
+heard it. Measured at blocksize 8192: 186ms of stream latency plus half a block, against ~80ms of
+existing slew, for a net visual lead of ~0.2s.
+
+- **New `audio sync` control** (Modulation → Depth & rate), on **auto** by default. Derives the
+  hold-back from the live stream latency and blocksize rather than a guess, and recomputes it
+  whenever the audio device or blocksize changes — including the fallback path, where the
+  blocksize that opened may not be the one requested. Untick auto to trim by ear.
+- `Value` gained an interpolating delay line. It runs on its own real-time clock, **not** the scene
+  clock, so Freeze doesn't stall it — audio reactivity keeps working while motion is stopped, which
+  is the point of Freeze. Interpolated rather than frame-snapped, so the correction doesn't
+  reintroduce stepping. `delay=0` is bit-identical to the previous behaviour.
+- **Only the synth path is corrected**, because it is the only one where we know the audio before
+  it plays. `mic_level` measures sound already heard and can't be advanced, so it is never delayed;
+  `audio_level` is compensated while it follows the synth and drops the correction the instant
+  `audio_react` switches to the mic.
+- Auto is 0 below ~4096 samples, where the existing smoothing already covers the lead. The UI
+  distinguishes that from "audio is off" rather than showing an ambiguous zero.
+
+### The side column, reordered
+
+- **Scene leads the column.** It was at the bottom, below the modulation panel — so the two
+  buttons that create a scene and every button that saves one were the last things in the longest
+  column. Renamed from "Scene settings", with the four save buttons condensed to a
+  **sound · camera · all** row plus Save as…
+- **The header save trio (🎵/🎛/💾) is gone.** It was a pure duplicate — each button simply
+  `.click()`ed its counterpart in the side column. Saving happens in one place now.
+- **"Faders" → "Transitions"**, and it is no longer nested *inside* the group above it, which had
+  been silently extending that group's heading over both the master fader and these durations.
+  Nothing in the pane was a fader; they are three fade times.
+- **Hue override promoted to the Master group.** It rewrites `Path.color` on every stroke, so it
+  reaches the laser as well as the monitor — yet it was the most buried control in the app: three
+  levels deep, last field of a collapsed pane.
+- **Scene PPS moved to Settings › Output**, beside the `max PPS` ceiling it overrides, instead of
+  sitting among three crossfade durations.
+- "Global" section renamed **Master**, and Modulation's own first section renamed **Depth & rate** —
+  the word appeared twice at two different scopes.
+
+### Modulation is one panel now
+
+- **Merged "2D Scene modulation" and "3D Scene modulation" into a single `Modulation` panel**
+  with four sections: Global, Mappings, Shape scale (3D worlds only), Sources. The old titles
+  implied a matched pair and weren't — the "2D" one was the universal matrix, where camera routes
+  live on 3D scenes, so the naming sent you to the wrong pane. Supersedes 0.73.0 items 4 and 5.
+- The Shape scale controls are now **hidden** on a 2D scene rather than captioned as inert.
+- **Plain-English names in the mapping dropdowns**, with the underlying key on hover. Supplied by
+  the engine so the browser carries no naming of its own. Two collisions fixed: `visual.glow` and
+  `glow` both read as "glow" on 2D scenes and are now **pattern glow** / **screen glow**; `lfo_slow`
+  was plain "LFO" sitting next to "lfo mid" and is now **LFO · slow**.
+- Monitor destinations are grouped as **Monitor · screen only** — those filters never reach a laser.
+- `audio ↔ visual` renamed **audio depth**, with a tooltip saying what it scales (all audio sources,
+  not LFOs).
+
+### Generation result moved to the modal
+
+- **Removed the header cost flash.** The outcome now lands in the Generate modal, which stays open
+  and switches to a **Generation complete** state: scene name, nodes placed vs authored, cost and
+  token counts, elapsed time, and a **▶ Start scene** button that closes the modal and starts
+  playback. A failed or fallback generation shows the reason and a Close button, so there is
+  exactly one way out of the overlay.
+- Audio regeneration reports its cost on its own modal's hint line for the same reason.
+
+### Generation progress
+
+- **The "Composing scene" overlay counts elapsed seconds** instead of claiming "10–45 seconds",
+  which was wrong by about 3× — two measured Haiku runs at high effort took 112s and 114s. No
+  per-size estimate is offered, because the timings were near-identical across very different
+  node asks (the model writes ~200 nodes either way), so a formula would look precise and be
+  fiction.
+
+### Render loop
+
+- **Node culling is now nearly free.** `_motion` was being evaluated for every node *before* the
+  visibility test — 690 calls a frame to place ~40 nodes, ~20% of frame time, ~94% discarded. It
+  now runs only for nodes that will be drawn, with the cull testing the resting position against a
+  bounding sphere inflated to cover where motion could carry it. Verified **bit-identical** over 40
+  frames and 29,745 points.
+- `_motion` returns a shared identity rotation instead of allocating one per call, and `_emit`
+  skips the identity matmul.
+- Net: a 690-node scene went **43.9ms → 18.5ms**. The world-size ceiling roughly doubled, to
+  ~3200 nodes at 45fps.
+- **A scalar layer-param change no longer rebuilds the Scene.** `Scene.set_layer_param` applies it
+  to the live scene; only non-schema keys still force a rebuild. Rebuilding discarded every
+  generator's geometry cache on each pixel of a slider drag, and reset generator runtime state.
+
 ## [0.74.0]
 
 ### Scene size is a node count

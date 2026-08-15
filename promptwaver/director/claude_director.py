@@ -29,7 +29,16 @@ from ..generators import available as available_generators
 from ..shapes import available_ops
 from ..primitives import available as available_primitives
 from .. import settings
+from .expand import expand_spec
 from .fallback import local_scene
+
+
+def _stable_seed(*parts) -> int:
+    """A seed derived from the request, not from the clock: regenerating the
+    same keyword at the same size must produce the same world, or the on-disk
+    cache and a fresh generation would disagree about what the scene is."""
+    h = hashlib.sha1("|".join(str(x) for x in parts).encode()).hexdigest()
+    return int(h[:8], 16)
 
 _DEFAULT_MODEL = os.environ.get("PROMPTWAVER_MODEL", "claude-haiku-4-5")
 
@@ -793,6 +802,10 @@ class SceneDirector:
         # to None on a cache hit or fallback so the UI can't show a stale
         # figure next to a generation that cost nothing.
         self.last_cost = None
+        # {"authored": n, "total": n} when the last generation was grown past
+        # what the model wrote, else None. Reported so a big scene is never
+        # silently part-synthetic — see director/expand.py.
+        self.last_expansion = None
         self._last_usage = None
         self._offline_reason = None   # why the client is unavailable, set by _make_client
         # model + effort persist across restarts via settings.json
@@ -897,15 +910,30 @@ class SceneDirector:
                                  f"|w{warmth}|e{energy}|v{evolution}|k{kind}")
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
-                self.last_source = "cache"
-                self.last_error = None
-                self.last_cost = None      # served from disk; nothing was billed
-                self.last_progress = 1.0
-                return _ensure_soundscape(SceneSpec.from_dict(json.load(f)))
+                spec = _ensure_soundscape(SceneSpec.from_dict(json.load(f)))
+            self.last_source = "cache"
+            self.last_error = None
+            self.last_cost = None          # served from disk; nothing was billed
+            self.last_expansion = None
+            self.last_progress = 1.0
+            # Expand on the way out of the cache too. Entries written before
+            # expansion existed hold the model's short node list, and the
+            # cache key cannot tell them apart from ones written after. Doing
+            # it here is free when the scene is already big enough (expand
+            # returns the list unchanged) and deterministic from the same
+            # seed, so a cache hit and a fresh generation agree on the world.
+            nodes_target = _resolve_size(size)[0]
+            if nodes_target:
+                before, after = expand_spec(
+                    spec, nodes_target, seed=_stable_seed(keyword, size, kind))
+                if after > before:
+                    self.last_expansion = {"authored": before, "total": after}
+            return spec
 
         self.generating = True
         self.last_progress = 0.0
         self.last_cost = None
+        self.last_expansion = None
         try:
             if self.online:
                 spec, ok = self._from_claude(keyword, audio, size, warmth, energy, kind)
@@ -913,6 +941,21 @@ class SceneDirector:
                     self.last_source = "claude"
                     self.last_error = None
                     spec = _apply_evolution(_ensure_soundscape(spec), evolution)
+                    # Grow the world to the size that was actually asked for.
+                    # Models write ~200 nodes however many they are told to
+                    # (measured across three runs), and the shortfall is pure
+                    # repetition — the design work is all in `defs` and the
+                    # route, both of which arrived. Done BEFORE caching so a
+                    # cache hit replays the same world rather than a small one.
+                    nodes_target = _resolve_size(size)[0]
+                    self.last_expansion = None
+                    if nodes_target:
+                        before, after = expand_spec(
+                            spec, nodes_target, seed=_stable_seed(keyword, size, kind))
+                        if after > before:
+                            self.last_expansion = {"authored": before, "total": after}
+                            print(f"[promptwaver] director: expanded {before} authored "
+                                  f"nodes to {after}")
                     with open(cache, "w") as f:      # only cache genuine Claude output
                         json.dump(spec.to_dict(), f, indent=2)
                     return spec
