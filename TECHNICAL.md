@@ -92,7 +92,7 @@ Two of them behave in a specific way worth knowing:
 
 ### Generating one
 
-The **scene type** picker in the Generate modal (3D world / 2D pattern) selects which system prompt authors the scene. It's an explicit choice rather than something inferred from the prompt text, because the two prompts are contradictory by design: the 3D one requires "a full ENVIRONMENT to navigate inside, **not a flat pattern**". The choice is remembered across sessions, and "scene size" hides for 2D — object count is a 3D notion, whereas a pattern's budget is its stroke count after expansion.
+The **scene type** picker in the Generate modal (3D world / 2D pattern) selects which system prompt authors the scene. It's an explicit choice rather than something inferred from the prompt text, because the two prompts are contradictory by design: the 3D one requires "a full ENVIRONMENT to navigate inside, **not a flat pattern**". The choice is remembered across sessions, and the "scene size" slider hides for 2D along with its cost readout — node count is a 3D notion, whereas a pattern's budget is its stroke count after expansion, and a cost estimate for a number that isn't being sent is worse than none. See [Asking for a big world](#asking-for-a-big-world-the-node-slider) for what that slider does.
 
 The 2D prompt requires modulation routes on every scene, because a static pattern is a poster rather than an instrument. It's told to put spin on an LFO and brightness/size on `audio_level` — rotation driven by audio jitters, while brightness driven by audio is the entire point.
 
@@ -174,6 +174,86 @@ Read the catalog rather than adding another place that knows generator names. Tw
 - `Generator.coerce()` casts incoming UI/MIDI values to the declared type; without it an int param arrives as a float and its truncation makes the slider feel like it skips.
 - The UI addresses any layer as `layer<N>.<param>` and renders one section per layer.
 - `catalog()` and `Scene.layer_schemas()` are memoized — both ride the ~20Hz state broadcast, and the catalog is fixed once imports settle.
+
+## Output detail profiles — monitor vs laser
+
+A monitor and a laser want very different densities from the same scene. The canvas draws whatever it is handed; the DAC spends most of its PPS budget on the blanking jump between strokes, so a frame that looks rich on screen flickers on the beam.
+
+One render feeds both outputs, so they cannot differ *simultaneously*. Instead the scene carries two settings and the engine swaps between them when the beam is armed:
+
+- `camera.max_strokes` — the monitor value, and what the **max strokes** slider edits
+- `camera.laser_max_strokes` — optional; used only while the laser is on. Absent (or 0) means "one density for both", which is how every scene authored before this behaved
+
+`Camera.apply_profile(laser_on)` sets the live `max_strokes` and is called on the transitions that can change which output is live — arming the laser, loading a scene, editing either setting — never per tick, so it can't fight a slider mid-drag. `state()` reports `max_strokes` (the monitor setting), `max_strokes_live` (what is actually rendering) and `laser_max_strokes`; the camera panel shows the live figure, in amber when the laser profile is in force.
+
+Saving writes the *monitor* value to `max_strokes` — saving while the beam is armed would otherwise persist the laser's reduced density as the scene's normal detail.
+
+### How dense can a monitor scene actually be?
+
+Measured with `tools/bench_scene.py` on `pottery` (161 nodes) against a 22.2ms budget at 45fps:
+
+| nodes | max_strokes | drawn | avg ms | peak ms | verdict |
+|---|---|---|---|---|---|
+| 161 (1×) | 120 | 120 | 14.6 | 15.5 | ok |
+| 161 (1×) | 300 | 175 | 21.6 | 23.7 | tight |
+| 483 (3×) | 120 | 120 | 21.2 | 26.4 | tight |
+| 805 (5×) | 120 | 120 | 25.2 | 33.9 | over |
+| 805 (5×) | 600 | 483 | 71.3 | 85.5 | over |
+
+**A drawn stroke costs ~0.12ms; a node costs ~0.013ms.** Stroke count dominates — that asymmetry is `World._render_budgeted`'s node-level culling doing its job. The practical ceiling is roughly **120–140 drawn strokes at 45fps**, and the slider's ceiling of 400 exists so a sparse scene with a near `far` plane can use it, not because a dense one can.
+
+### Big explorable worlds
+
+Node count is cheap but **not free**, and the cost is paid whether or not a node is visible: every node gets a bounding-sphere and view-cone test every frame. Two consequences worth knowing before authoring a large world:
+
+- **Camera speed is irrelevant to cost.** Measured on an 805-node world at 100 strokes: 19.6ms standing still, 20.7ms at speed 2.0. A slow ambient walk is not cheaper than a fast one — you simply see less of the world per unit time.
+- **Geometry beyond the far plane still costs.** A world spread wide enough that most of it is culled still pays the per-node test: at 2415 nodes the culling alone came to 33.6ms while drawing *zero* strokes.
+
+At 100 drawn strokes on a 30fps budget (33.3ms), measured: 161 nodes → 13.2ms, 805 → 21.3ms, 1610 → 26.9ms, 2415 → 33.6ms (over). So **~1600 nodes is the practical world-size ceiling**, and 800 is comfortable.
+
+Since the browser only updates at ~20Hz anyway (below), running the engine at `--fps 30` for a monitor-only big scene costs the display nothing and buys ~50% more frame budget.
+
+Profiling puts ~60% of a heavy frame in `Camera.project`, nearly all of it in `_clip_and_project` — that is where to look if this ceiling ever needs raising.
+
+**Engine fps is not monitor fps.** The websocket broadcasts at ~20Hz (`web/server.py`) and the canvas paints on message arrival, with no `requestAnimationFrame`. Rendering above ~20fps only benefits the laser; raising `--fps` toward a 60Hz monitor's refresh would tighten the frame budget without the monitor ever seeing the extra frames.
+
+### Asking for a big world: the node slider
+
+The renderer's ceiling (~1600 nodes) is well above what one API call will *write*, so the binding constraint on a big scene is authoring, not rendering. The **scene size** slider in the Generate modal is a node target, 100–1200, logarithmic — a linear slider would spend most of its travel in the range you can least afford to land in by accident.
+
+The slider replaced a four-tier `small`/`medium`/`large`/`massive` dropdown. Those strings still resolve (`_resolve_size`), because every scene generated before the slider carries one in `generation_settings.size` and the Generate panel regenerates from it; a string size keeps the old fixed token floor, an integer budgets from the count.
+
+Everything else derives from the number. `_size_hint(nodes)` is the old `massive` directive parameterised: extent grows as **sqrt(nodes)** so density stays roughly constant (a bigger world with the same geometry is just the same scene seen from further away; a bigger world with unchanged spacing is mostly dark, which measured worst of all), and def count, instances-per-def and waypoint count scale with it.
+
+**Token budget follows the ask.** `estimate_tokens(nodes) = 3500 + 58·nodes`, calibrated against a measured run (Haiku 4.5: 197 nodes in 15,211 output tokens; the formula says 14,926). `token_budget` applies 1.35× headroom and clamps to `MAX_OUTPUT_TOKENS` (64,000 — empirically accepted, not a documented figure). That puts the single-call ceiling at **~757 nodes**; `max_nodes_per_call()` computes it and the UI warns above it.
+
+#### What models actually do when asked for a big scene
+
+Measured, asking for 700–900 nodes at `effort=high`:
+
+| model | asked for | result | out tokens | cost | time |
+|---|---|---|---|---|---|
+| haiku-4-5 | 120–220 (old `massive`) | 108 nodes | — | — | — |
+| haiku-4-5 | 700–900 | 197 nodes, 12 defs | 15,211 | $0.08 | 114s |
+| haiku-4-5 | 621–759 (slider at 690) | 201 nodes, 13 defs | 14,726 | $0.08 | 112s |
+| sonnet-5 (32k budget) | 700–900 | truncated, discarded | budget exhausted | billed, unusable | 294s |
+| sonnet-5 (64k budget) | 700–900 | truncated, discarded | budget exhausted | billed, unusable | 491s |
+
+Three things follow, and all three shaped the design:
+
+- **Haiku settles near 200 nodes whatever it is asked for** — 108, 197, 201 across asks of 220, 900 and 690. The slider above ~250 buys extent and instancing discipline from Haiku, not more nodes. Reaching 800 needs a different mechanism (several calls, or expanding placements locally from a small authored `defs` library), not a bigger ask.
+- **The cost estimate is therefore a ceiling, not a prediction.** The 690-node ask estimated $0.22 and billed $0.08. Over-stating is the right direction for a figure that gates spending, so the UI labels it "up to" rather than recalibrating downward — a model that *does* comply must not blow past a cap that assumed it wouldn't.
+- **Sonnet overshoots instead, and the failure is expensive and silent.** It wrote past 64,000 output tokens without closing the JSON; the response was truncated, thrown away, and billed in full.
+
+The 201-node scene above renders at **28.7ms avg / 30.8ms peak** at its authored `max_strokes: 120` — inside a 30fps budget, over a 45fps one. Consistent with the stroke-dominance measurements above: it is the 120 strokes costing that, not the 201 nodes.
+
+#### Guards against paying for nothing
+
+Three, in the order they can save money:
+
+1. **`cost_cap`** (default $0.50, `set_cost_cap`) — `_from_claude` estimates before sending and refuses over the cap. This is the only guard that costs nothing to trip. Sized against the slider's range: Haiku never crosses it, Sonnet crosses near 1000 nodes, Opus near 500.
+2. **`timeout`** (default 240s, `set_timeout`) — `_stream_or_call` breaks out of the stream loop and lets the `with` block close the connection, which stops generation. Tokens already produced are still billed; the rest never happen. The browser's own safety restore in `startGen` is deliberately *longer* (300s) so the server-side stop is the one that fires.
+3. **Cost is recorded on failure.** `self.last_cost = estimate_cost(...)` now runs *before* the truncation and timeout checks. It previously ran after, so the only generations reporting no cost were the ones that had cost the most. On an aborted stream the usage block is reconstructed by `_EstimatedUsage` and flagged as `estimated: true`, since the API's own figures never arrive.
 
 ## PPS (points per second) control
 
@@ -494,5 +574,4 @@ The **?** button beside the gear opens an About panel that renders [`about.md`](
 - **Waterfall / cave / canyon** environments; richer camera paths (banking, look-at)
 - **Shape-tween crossfade**: resample outgoing + incoming scenes to a common point budget and interpolate positions (currently dims/overlays instead)
 - **BLE pads**: note-triggered scene recall (reuse your ESP32 HID pads) — the CC half of this now exists
-- **Output detail profiles**: laser and data projector want very different `camera.far` / `max_strokes`
 - **Key storage**: move `settings.json` key to OS keyring before public release

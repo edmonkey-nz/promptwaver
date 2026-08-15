@@ -293,6 +293,11 @@
   .lib .item .x{color:var(--dim);padding:0 4px}
   .lib .item .x:hover{color:var(--amber)}
   .hint{font-size:11px;color:var(--dim);font-family:var(--mono)}
+  /* The size readout is the figure a spend decision is made from, so it reads
+     brighter than the explanatory hints around it — dim grey buried in a
+     paragraph of dim grey is how a cost goes unnoticed. */
+  .sizeread{font-family:var(--mono);font-size:12px;color:var(--ink);margin:-2px 0 2px}
+  .sizeread b{color:var(--cyan);font-weight:600}
 
   details.accordion{border:1px solid var(--line);border-radius:8px;overflow:hidden}
   details.accordion summary{cursor:pointer;padding:10px 12px;font-size:11px;font-weight:500;
@@ -417,9 +422,19 @@
       <div class="field"><label>draw depth</label>
         <input type="range" id="c-far" min="6" max="40" step="1" value="30">
         <span class="val" id="v-cfar">30</span></div>
+      <!-- Two detail profiles from one render. The monitor draws whatever it's
+           given; the laser's PPS budget goes mostly on blanking jumps between
+           strokes, so a frame that looks rich on screen flickers on the beam.
+           The engine swaps between these when the beam is armed. Ceiling is
+           400 because measurement says nothing above that renders in budget —
+           offering more would only offer settings that drop frames. -->
       <div class="field"><label>max strokes</label>
-        <input type="range" id="c-max" min="20" max="200" step="5" value="120">
+        <input type="range" id="c-max" min="20" max="400" step="5" value="120">
         <span class="val" id="v-cmax">120</span></div>
+      <div class="field"><label>↳ on laser</label>
+        <input type="range" id="c-max-laser" min="0" max="400" step="5" value="0">
+        <span class="val" id="v-cmaxlaser">off</span></div>
+      <div class="hint" id="c-max-live" style="margin:-4px 0 8px"></div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
         <input type="checkbox" id="c-disable-plane"> disable scene planes (if possible)
       </label>
@@ -695,17 +710,24 @@
           <option value="med">medium</option>
           <option value="high">high · richest</option>
         </select></div>
+      <div class="field"><label>cost cap</label>
+        <input type="number" id="d-cap" min="0" max="20" step="0.05"
+               style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+                      border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">Checked before the request is sent — the only point at which an overrun
+        costs nothing. A run that overshoots its token budget is billed in full and discarded.
+        0 disables.</div>
       <div class="field"><label>scene size</label>
-        <select id="d-size">
-          <option value="small" selected>small</option>
-          <option value="medium">medium</option>
-          <option value="large">large</option>
-          <option value="massive">massive · walkthrough</option>
-        </select></div>
-      <div class="hint">small/medium/large change how far apart things are. <b>massive</b> also
-        raises the object count and composes the scene as a closed route with a camera that
-        travels it — minutes of walking rather than a tableau. Slower to generate, and it
-        spends a lot more tokens.</div>
+        <input type="range" id="d-size" min="0" max="1000" value="0"></div>
+      <!-- NOT class="val": body.hide-values collapses those to zero width, and
+           this is the one readout that must stay legible — it is what the
+           spend decision is made from. -->
+      <div class="sizeread" id="d-size-read"></div>
+      <div class="hint" id="d-size-warn" style="display:none;color:var(--amber)"></div>
+      <div class="hint">Node count: how many objects are placed in the world. Every size composes
+        the scene as a closed route with a camera that walks it — minutes of exploring rather
+        than a tableau — and bigger means a physically larger world, not a denser one. Cost and
+        generation time scale with this.</div>
       <button class="go" id="gen" style="width:100%">Generate new scene</button>
     </div>
 
@@ -916,6 +938,9 @@ ws.onopen = () => {
   $("meta").textContent = "";
   $("engine-dot").classList.add("on");
   initWelcome();
+  // `send` is a no-op until the socket opens, so the estimate the size slider
+  // asks for during page setup is dropped. Ask again now it can be answered.
+  refreshSizeEstimate();
 };
 ws.onclose = () => { $("meta").textContent = ""; $("engine-dot").classList.remove("on"); };
 
@@ -950,6 +975,7 @@ function flashCost(c, label){
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
+  else if (m.type === "generation_estimate") { paintSizeEstimate(m); }
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
       endAudioRegenApply();
@@ -1036,6 +1062,7 @@ function paintState(s){
     $("d-model").dataset.init = "1";
     $("d-model").value = s.director_choice;
     $("d-effort").value = s.director_effort || "med";
+    $("d-cap").value = (s.director_cost_cap ?? 0.5).toFixed(2);
   }
   if (generating && typeof s.director_progress === "number") {
     $("genbar").style.width = Math.max(2, Math.round(s.director_progress*100)) + "%";
@@ -1093,6 +1120,16 @@ function paintState(s){
   // denied it purely because the panel was labelled "Motion" and assumed a
   // flat scene.
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
+  // Which profile is actually rendering right now. Without this the slider can
+  // read 300 while the beam is armed and the renderer is quietly using 90.
+  const cml = $("c-max-live");
+  if (cml && s.camera) {
+    const live = s.camera.max_strokes_live, mon = s.camera.max_strokes;
+    cml.textContent = (live !== mon)
+      ? `drawing ${live} — laser profile active`
+      : `drawing ${live}`;
+    cml.style.color = (live !== mon) ? "var(--amber)" : "var(--dim)";
+  }
   // Shape modulation is 3D-world-only; say so rather than leaving controls
   // that silently do nothing on a 2D scene.
   const smna = $("shape-mod-na");
@@ -2515,6 +2552,10 @@ slider("c-fov","camera.fov","cfov",(v)=>(+v).toFixed(0));
 // takes far more detail than a laser's stroke budget allows.
 slider("c-far","camera.far","cfar",(v)=>(+v).toFixed(0));
 slider("c-max","camera.max_strokes","cmax",(v)=>(+v).toFixed(0));
+// 0 means "no separate laser setting" — the scene then uses one density for
+// both outputs, which is how every scene authored before this behaved.
+slider("c-max-laser","camera.laser_max_strokes","cmaxlaser",
+       (v)=>(+v) ? (+v).toFixed(0) : "off");
 $("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
 
 let generating = false, genTimer = null;
@@ -2529,7 +2570,11 @@ function startGen(kindLabel){
   $("genprog").classList.add("active");
   $("genbar").style.width = "2%";
   $("dirhint-modal").style.display = "block";
-  genTimer = setTimeout(endGen, 120000);   // safety restore
+  // Safety restore, deliberately LONGER than the director's own abort
+  // (DEFAULT_GEN_TIMEOUT, 240s) so the server-side stop is the one that fires
+  // and the UI hears its result, rather than the button quietly re-enabling
+  // while a generation is still running and still being billed.
+  genTimer = setTimeout(endGen, 300000);
 }
 function endGen(){
   generating = false;
@@ -2550,8 +2595,84 @@ function setGenKind(k){
   // scene size is a 3D notion (object count); a pattern's budget is its
   // stroke count after expansion, which the 2D prompt handles itself.
   const sz = $("d-size").closest(".field");
-  if (sz) sz.style.display = genKind === "2d" ? "none" : "";
+  const on = genKind === "2d" ? "none" : "";
+  if (sz) sz.style.display = on;
+  // The readouts belong to the slider, so they hide with it — a cost estimate
+  // for a node count that isn't being sent is worse than no estimate.
+  $("d-size-read").style.display = on;
+  if (genKind === "2d") $("d-size-warn").style.display = "none";
+  else refreshSizeEstimate();
 }
+
+// --- scene size slider -----------------------------------------------------
+// Logarithmic, because the interesting range spans more than a decade and a
+// linear slider would spend most of its travel between 700 and 1200 nodes —
+// the part you can least afford to land in by accident. Log travel gives even
+// resolution in *proportional* terms: one pixel is about the same percentage
+// change at 120 nodes as at 1000.
+const NODE_MIN = 100, NODE_MAX = 1200;
+function sliderToNodes(v){
+  const n = NODE_MIN * Math.pow(NODE_MAX / NODE_MIN, v / 1000);
+  return Math.max(NODE_MIN, Math.min(NODE_MAX, Math.round(n / 10) * 10));
+}
+function nodesToSlider(n){
+  return Math.round(1000 * Math.log(n / NODE_MIN) / Math.log(NODE_MAX / NODE_MIN));
+}
+function currentNodes(){ return sliderToNodes(+$("d-size").value); }
+
+// Estimates come from the server (director.estimate) rather than being
+// computed here: the price table, the token model and the cost cap all live in
+// one place, so the figure quoted next to the slider is by construction the
+// same one the cost gate will enforce.
+let _estTimer = null;
+function refreshSizeEstimate(){
+  const n = currentNodes();
+  $("d-size-read").innerHTML = `<b>${n} nodes</b> · estimating…`;
+  clearTimeout(_estTimer);
+  _estTimer = setTimeout(() => send({type:"estimate_generation", nodes:n, kind:genKind}), 140);
+}
+// "claude-haiku-4-5" -> "haiku 4.5". The estimate carries the resolved model
+// id; the version is worth showing (prices move with it) but the vendor prefix
+// and the dash-separated version are just noise in a one-line readout.
+function shortModel(id){
+  const m = /^claude-([a-z]+)-(\d+)(?:-(\d+))?$/.exec(id || "");
+  return m ? `${m[1]} ${m[2]}${m[3] ? "." + m[3] : ""}` : (id || "");
+}
+function paintSizeEstimate(e){
+  if (e.nodes !== currentNodes()) return;      // a stale reply from an older drag
+  const k = (e.output_tokens / 1000).toFixed(1);
+  // "up to", not "~": the estimate assumes the model writes the node count it
+  // was asked for, and measured behaviour is that it doesn't — Haiku lands
+  // near 200 nodes whether asked for 220 or 900, so a 690-node ask estimated
+  // at $0.22 actually billed $0.08. Over-stating is the safe direction for a
+  // figure that gates spending, but it has to be labelled as a ceiling.
+  $("d-size-read").innerHTML =
+    `<b>${e.nodes} nodes</b> · up to ~${k}k output tokens · <b>up to $${e.usd.toFixed(2)}</b> ` +
+    `on ${shortModel(e.model)}`;
+  const warn = $("d-size-warn");
+  let msg = "";
+  if (e.over_cap)
+    msg = `over the $${e.cost_cap.toFixed(2)} cap — Generate will refuse. Lower the ` +
+          `node count, pick a cheaper model, or raise the cap above.`;
+  else if (!e.fits)
+    // A risk, not a certainty: the estimate assumes the model writes the count
+    // it was asked for, and measured behaviour is that they undershoot badly —
+    // Haiku asked for 700-900 nodes wrote 197. So this is worth trying; it is
+    // just the range where a truncated (and fully billed) response becomes
+    // possible, which is why it is a warning rather than a block.
+    msg = `may not fit one call: ~${k}k tokens if the model complies, ceiling is ` +
+          `${(e.max_tokens/1000).toFixed(0)}k. Above ~${e.max_nodes} nodes a run can ` +
+          `truncate — models usually write fewer nodes than asked, so it often still lands.`;
+  warn.textContent = msg;
+  warn.style.display = msg ? "block" : "none";
+}
+// Remembered across sessions like the 2D/3D toggle: someone exploring big
+// worlds is generating several in a row at a similar size.
+$("d-size").value = nodesToSlider(+(localStorage.getItem("pw_gen_nodes") || 100));
+$("d-size").oninput = () => {
+  localStorage.setItem("pw_gen_nodes", currentNodes());
+  refreshSizeEstimate();
+};
 $("kind-3d").onclick = () => setGenKind("3d");
 $("kind-2d").onclick = () => setGenKind("2d");
 setGenKind(genKind);
@@ -2561,15 +2682,23 @@ $("gen").onclick = () => {
   if (!k || generating) return;
   startGen(genKind === "2d" ? "2D pattern" : "3D world");
   send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim(),
-        size:$("d-size").value, kind:genKind, ...charValues()});
+        size:currentNodes(), kind:genKind, ...charValues()});
 };
 // multiline field: Ctrl/Cmd+Enter submits, plain Enter makes a new line
 $("kw").addEventListener("keydown", e => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("gen").click();
 });
 
-$("d-model").onchange = () => send({type:"set_model", value:$("d-model").value});
+// Model choice moves the price per token, so the quoted cost has to follow it.
+$("d-model").onchange = () => {
+  send({type:"set_model", value:$("d-model").value});
+  refreshSizeEstimate();
+};
 $("d-effort").onchange = () => send({type:"set_effort", value:$("d-effort").value});
+$("d-cap").onchange = () => {
+  send({type:"set_cost_cap", value:parseFloat($("d-cap").value) || 0});
+  refreshSizeEstimate();      // the warning line under the slider depends on it
+};
 
 function commitPps(el, key, allowBlank){
   const raw = el.value.trim();

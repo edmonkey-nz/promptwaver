@@ -22,7 +22,12 @@ Lint/format (config in `pyproject.toml`, line length 100, `E501` deliberately ig
 .venv/bin/black .
 ```
 
-**There is no test suite** — no pytest, no test files, no CI lint or test gate. `.github/workflows/build.yml` only builds PyInstaller binaries on `v*` tags. Verify changes by running the app and looking at the preview; don't claim tests pass.
+**There is no test suite** — no pytest, no test files, no CI lint or test gate. `.github/workflows/build.yml` only builds PyInstaller binaries on `v*` tags. Verify changes by running the app and looking at the preview; don't claim tests pass. **The `verify-in-app` skill has the working browser-automation recipe and this repo's traps** — read it before hand-rolling one.
+
+Two things that bite regardless of how you verify:
+
+- **The user is usually running their own instance on :8080.** Use a different port and scope any `pkill` to it — a bare `pkill -f run.py` kills their session.
+- **`body.hide-values` collapses any `.val` element to zero width.** That's correct for slider readouts, and wrong for anything else — text you want read must not carry that class, or it renders blank with no error.
 
 Local settings including the Anthropic API key live in `settings.json` at the repo root (gitignored, untracked). `scenes/*.json` **is** tracked — saving a scene from the UI dirties the working tree.
 
@@ -73,6 +78,14 @@ Two generators carry most of the weight, and both are **declarative interpreters
 `_SYSTEM` (3D) and `_SYSTEM_2D` (flat patterns) are **separate prompts**, not a branch inside one, because they give directly contradictory instructions — the 3D one requires "a full ENVIRONMENT to navigate inside, not a flat pattern", which is exactly what the 2D one must produce. They share `_SOUNDSCAPE_GUIDE`, extracted so the voice-ordering and LFO limits can't drift between them.
 
 `SYSTEM_PROMPTS` maps `"2d"`/`"3d"` to the right one. `kind` threads from the UI toggle through `generate_scene` → `generate` → `_from_claude`, and **is part of the cache key** — the same keyword has a legitimate 2D and 3D answer and they must not collide. It's recorded in `generation_settings` as what was *asked for*; the scene's actual kind still derives from its generators.
+
+### `size` is a node count, but the old strings must keep working
+
+The Generate modal's size control is a log slider over 100–1200 **nodes**, and `size` is now an int. The `small`/`medium`/`large`/`massive` strings are still accepted by `_resolve_size` and must stay that way: every scene generated before the slider carries one in `generation_settings.size`, and the panel regenerates from it. An int budgets `max_tokens` from `estimate_tokens(nodes)`; a string keeps the old fixed `SIZE_MIN_TOKENS` floor.
+
+**A generation that overruns its token budget is billed in full and then discarded** — measured, twice, on Sonnet at ~$0.50 a time. Three guards exist and only the first is free: `cost_cap` refuses before sending, `timeout` aborts the stream (closing the connection stops generation), and `last_cost` is now assigned *before* the truncation/timeout checks so the most expensive failures stop being the ones that report no cost. Don't move that assignment back below them.
+
+Cost estimates are served by `director.estimate()` over the websocket rather than computed in the browser, so the figure shown next to the slider and the figure the cost gate enforces are the same calculation. Don't add a price table to the JS.
 
 ### The registry is the source of truth for generator metadata
 

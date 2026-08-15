@@ -197,6 +197,14 @@ async def _handle(engine, m: dict, app=None):
                 "source": engine.director.last_source,
                 "error": engine.director.last_error,
                 "cost": engine.director.last_cost}
+    elif t == "estimate_generation":
+        # Answered from the director so the browser never carries its own copy
+        # of the price table — the number quoted next to the slider and the
+        # number the cost gate enforces are the same calculation.
+        return {"type": "generation_estimate",
+                **engine.director.estimate(int(m.get("nodes") or 0), m.get("kind", "3d"))}
+    elif t == "set_cost_cap":
+        engine.director.set_cost_cap(m.get("value") or 0)
     elif t == "set_audio":
         engine.set_audio_param(m["key"], m["value"])
     elif t == "apply_audio":

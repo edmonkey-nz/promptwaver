@@ -204,7 +204,7 @@ class Camera:
 
     def __init__(self, *, fov=60.0, near=0.4, far=14.0, speed=0.6,
                  height=1.0, sway=0.12, depth: DepthCue | None = None,
-                 max_strokes=90, aspect=1.0, mode="fly",
+                 max_strokes=90, laser_max_strokes=None, aspect=1.0, mode="fly",
                  target=(0.0, 0.0, 0.0), orbit_radius=9.0, orbit_height=1.5,
                  waypoints=None, look_at=None, lookahead=3.0, seed=0, wander=0.0):
         self.fov = fov
@@ -214,6 +214,19 @@ class Camera:
         self.height = height
         self.sway = sway
         self.depth = depth or DepthCue()
+        # Output detail profile. `max_strokes` is the LIVE value the projection
+        # reads; the two below are the settings it's derived from.
+        #
+        # A monitor and a laser want very different densities from the same
+        # scene — the canvas draws whatever it's given, while the DAC's PPS
+        # budget is spent mostly on the blanking jump between strokes, so a
+        # frame that looks rich on screen flickers on the beam. One render
+        # feeds both outputs, so they can't differ simultaneously; instead the
+        # engine switches profile when the laser is armed (Engine.set_laser).
+        # `laser_max_strokes = None` means "no separate laser setting", which
+        # is every pre-existing scene and behaves exactly as before.
+        self.monitor_max_strokes = max_strokes
+        self.laser_max_strokes = laser_max_strokes
         self.max_strokes = max_strokes
         self.aspect = aspect
         self.mode = mode                       # "fly" | "orbit" | "drift" | "path"
@@ -476,6 +489,19 @@ class Camera:
                 out.append(Path(xy, col))
         return out
 
+    def apply_profile(self, laser_on: bool) -> int:
+        """Point `max_strokes` at the right output profile, returning the value
+        now in force.
+
+        Called on the transitions that can change which output is live —
+        arming the laser, loading a scene, editing either setting — rather than
+        per tick, so it never fights a slider mid-drag.
+        """
+        v = (self.laser_max_strokes if (laser_on and self.laser_max_strokes)
+             else self.monitor_max_strokes)
+        self.max_strokes = int(v)
+        return self.max_strokes
+
 
 def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     """Clip a polyline against the near plane, project surviving segments, and
@@ -627,6 +653,9 @@ def make_camera(spec: dict) -> Camera:
         orbit_radius=spec.get("orbit_radius", 9.0),
         orbit_height=spec.get("orbit_height", 1.5),
         max_strokes=spec.get("max_strokes", 90),
+        # Optional per-scene laser override — see Camera.__init__. Absent on
+        # every scene authored before this existed, which is the no-op case.
+        laser_max_strokes=spec.get("laser_max_strokes"),
         depth=depth,
         # Path mode (mode="path"): a closed circuit of >=3 waypoints. `look_at`
         # is a parallel list whose entries are either a point to watch while

@@ -551,7 +551,15 @@ class Engine:
                 elif attr == "far":
                     cam.far = float(value)
                 elif attr == "max_strokes":
-                    cam.max_strokes = int(value)
+                    # Always the MONITOR value. Editing the live `max_strokes`
+                    # directly would mean the slider silently changed meaning
+                    # depending on whether the beam happened to be armed.
+                    cam.monitor_max_strokes = int(value)
+                    cam.apply_profile(self.laser_on)
+                elif attr == "laser_max_strokes":
+                    v = int(value)
+                    cam.laser_max_strokes = v if v > 0 else None   # 0 = no override
+                    cam.apply_profile(self.laser_on)
         elif key.startswith("lfo_slow.") or key.startswith("lfo_mid."):
             name, attr = key.split(".", 1)
             setattr(self.matrix.sources[name], attr, float(value))
@@ -600,7 +608,7 @@ class Engine:
         self._enqueue(apply)
 
     def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None,
-                       size: str = "small", warmth: float | None = None,
+                       size: str | int = "small", warmth: float | None = None,
                        energy: float | None = None, evolution: float | None = None,
                        kind: str = "3d"):
         # the director call may hit the network; run it off the loop then queue
@@ -728,6 +736,11 @@ class Engine:
         turning it on just stops that override on the next _loop tick."""
         def apply():
             self.laser_on = bool(value)
+            # Swap detail profile with the beam: a frame dense enough to look
+            # good on a monitor overruns the DAC's PPS budget and flickers.
+            cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
+            if cam is not None:
+                cam.apply_profile(self.laser_on)
             if not self.laser_on:
                 self.output.blank()
         self._enqueue(apply)
@@ -930,7 +943,11 @@ class Engine:
                         "mode": cam.mode, "speed": round(cam.base_speed, 3),
                         "orbit_radius": cam.orbit_radius, "orbit_height": cam.orbit_height,
                         "fov": cam.fov, "near": cam.near, "far": cam.far,
-                        "max_strokes": cam.max_strokes,
+                        # The monitor value, not the live one — saving while the
+                        # beam is armed would otherwise persist the laser's
+                        # reduced density as the scene's normal detail.
+                        "max_strokes": cam.monitor_max_strokes,
+                        "laser_max_strokes": cam.laser_max_strokes,
                     })
                 # Display settings apply to every scene, 2D or 3D (a flat
                 # generator has no `cam` object above, but can still have
@@ -984,6 +1001,12 @@ class Engine:
         # built camera has to be told about it or every scene load would
         # silently revert the viewport to square.
         self._apply_aspect()
+        # Same reason as the aspect call above: the camera is rebuilt per scene,
+        # so a freshly-built one starts on its monitor profile regardless of
+        # whether the beam is currently armed.
+        cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
+        if cam is not None:
+            cam.apply_profile(self.laser_on)
         self._apply_modulation(spec)
         # per-scene PPS override if set, else the global hardware ceiling
         self.pps = min(spec.pps, self.director.max_pps) if spec.pps else self.director.max_pps
@@ -1297,7 +1320,13 @@ class Engine:
         if cam is not None:
             camera = {"mode": cam.mode, "speed": round(cam.base_speed, 2),
                       "orbit_radius": cam.orbit_radius, "fov": cam.fov,
-                      "far": cam.far, "max_strokes": cam.max_strokes,
+                      "far": cam.far,
+                      # `max_strokes` is the MONITOR setting (what the slider
+                      # edits); `max_strokes_live` is what the renderer is
+                      # actually using, which differs while the beam is armed.
+                      "max_strokes": cam.monitor_max_strokes,
+                      "max_strokes_live": cam.max_strokes,
+                      "laser_max_strokes": cam.laser_max_strokes or 0,
                       # The UI builds its mode dropdown from this rather than
                       # a fixed list — see Scene.camera_modes for why the
                       # available modes depend on the scene.
@@ -1332,6 +1361,7 @@ class Engine:
             "director_error": self.director.last_error,
             "director_choice": self.director.model_choice,
             "director_effort": self.director.effort,
+            "director_cost_cap": self.director.cost_cap,
             "director_progress": self.director.last_progress,
             "director_generating": self.director.generating,
             # Cost of the last billed generation; None for cache hits and the

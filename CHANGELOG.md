@@ -8,7 +8,88 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.74.0]
+
+### Scene size is a node count
+
+- **Replaced the small/medium/large/massive dropdown with a logarithmic node slider**, 100–1200,
+  in the Generate modal. Extent, def count, instances per def and camera waypoints all derive
+  from the one number, so a bigger world can't disagree with itself about how big it is. Extent
+  grows as sqrt(nodes) to hold density constant — a bigger world at the same spacing is mostly
+  dark, which measured worst of all for a laser.
+- **Live cost estimate under the slider**: node count, output tokens and USD on the selected
+  model, updated as you drag and re-priced when the model changes. Served by
+  `director.estimate()` rather than computed in the browser, so it is the same calculation the
+  cost gate enforces.
+- The legacy size strings still resolve. Scenes generated before this carry one in
+  `generation_settings.size` and regenerate from it unchanged.
+
+### Not paying for generations that get discarded
+
+A response that overruns its token budget is truncated, thrown away, and billed in full. Measured
+twice on Sonnet: 294s and 491s, a full budget each time, nothing usable returned.
+
+- **Cost cap** (default $0.50) — estimated before the request is sent, and refused above the cap.
+  The only guard that costs nothing to trip. Editable in the Generate modal; 0 disables.
+- **Stream timeout** (default 240s) — aborts mid-stream and closes the connection, which stops
+  generation. The browser's safety restore moved to 300s so the server-side stop fires first.
+- **Cost is now recorded on failure.** `last_cost` was assigned after the truncation check, so the
+  most expensive generations were the only ones reporting no cost at all. Aborted streams report
+  a reconstructed figure flagged `estimated: true`.
+- Token budget scales with the node count instead of a fixed 32,000 floor, capped at
+  `MAX_OUTPUT_TOKENS` (64,000). `max_nodes_per_call()` reports the resulting ~757-node
+  single-call ceiling and the UI warns above it — a warning, not a block, because models
+  measurably undershoot the count they're asked for.
+
 ## [0.73.0]
+
+### Output detail profiles, and a benchmark to size them with
+
+A monitor and a laser want different densities from the same scene — the canvas
+draws whatever it is handed, while the DAC spends most of its PPS budget on the
+blanking jump between strokes. One render feeds both, so they now swap:
+`camera.max_strokes` is the monitor value and an optional
+`camera.laser_max_strokes` takes over while the beam is armed. Absent means one
+density for both, which is every existing scene, unchanged.
+
+- `camera` is a free-form dict in the spec, so this needs **no schema change**.
+- The **max strokes** slider always edits the monitor value; editing the live
+  figure would have made the control mean different things depending on whether
+  the beam happened to be on. The panel shows what is actually being drawn, in
+  amber when the laser profile is in force.
+- Saving writes the monitor value — saving with the beam armed would otherwise
+  persist the laser's reduced density as the scene's normal detail.
+- Ceilings raised from 200 to 400 (slider and MIDI) so a denser monitor frame
+  is reachable at all.
+
+**New: `tools/bench_scene.py`** — the repo had no benchmark, so every perf
+number in the docs was prose from a one-off measurement. It grows a real scene
+in memory, sweeps `max_strokes`, and reports render time against the frame
+budget using the same `LoopStats` accounting the live engine reports.
+
+Building it turned up two measurement traps worth recording, both found by
+measuring the same configuration twice and getting different answers:
+
+- **A short sample under-reports.** An orbit/drift/path camera travels, so how
+  much geometry is on screen depends where along its route it is. A one-second
+  sample of `pottery` reports ~14ms; four seconds reports ~30ms, because the
+  short window never reaches the dense part of the route.
+- **The first run of a process is an outlier** — ~40% above the settled figure
+  even after ten warmup frames. A full second of warmup removes it.
+- **A single frame's stroke count means nothing** with a travelling camera. The
+  tool reports the average across the sample; the last frame alone can read
+  zero strokes on a scene costing 34ms.
+
+Measured result: a drawn stroke costs ~0.12ms against ~0.014ms for a node, so
+stroke count dominates and node count is nearly free — `World._render_budgeted`
+doing its job. The ceiling is ~120–140 drawn strokes at 45fps; ~60% of a heavy
+frame is in `Camera.project`/`_clip_and_project`, which is where to look if that
+ever needs raising.
+
+Also recorded, because it is the opposite of the intuitive answer: **engine fps
+is not monitor fps.** The websocket broadcasts at ~20Hz and the canvas paints on
+message arrival, so rendering faster than that only benefits the laser — raising
+`--fps` toward a 60Hz refresh would tighten the frame budget for nothing.
 
 ### Generation cost
 

@@ -75,7 +75,7 @@ ENGINE_RANGES = {
     "camera.orbit_radius": (3.0, 20.0),
     "camera.fov": (30.0, 100.0),
     "camera.far": (6.0, 40.0),
-    "camera.max_strokes": (20.0, 200.0),
+    "camera.max_strokes": (20.0, 400.0),
     "crossfade": (0.0, 8.0),
     "audio_fade": (0.0, 16.0),
     "glow": (0.0, 1.0),

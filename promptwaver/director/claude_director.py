@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
+import time
 
 from ..scenes import SceneSpec
 from ..generators import available as available_generators
@@ -455,7 +457,131 @@ def estimate_cost(model: str, usage) -> dict | None:
     usd = ((tin + twrite * 1.25 + tread * 0.1) * p_in + tout * p_out) / 1e6
     return {"model": model, "input_tokens": tin, "output_tokens": tout,
             "cache_read_tokens": tread, "cache_write_tokens": twrite,
+            # True when the figures were reconstructed from an aborted stream
+            # rather than read from the API's own usage block — the money was
+            # still spent, but the token counts are inferred. See
+            # `_EstimatedUsage`.
+            "estimated": isinstance(usage, _EstimatedUsage),
             "usd": round(usd, 4)}
+
+
+# --------------------------------------------------------------------------
+# Estimating a generation BEFORE it is sent
+#
+# `estimate_cost` above reports what was actually billed, from the response's
+# own usage block. Everything below is its counterpart for the decision you
+# make first — how big a scene to ask for, and whether to send the request at
+# all. Both read the same price table, so the "before" and "after" figures
+# can't drift apart.
+#
+# This exists because of a measured failure: asked for a very large scene,
+# Sonnet spent eight minutes and its entire 64,000-token budget without ever
+# closing the JSON. The response was truncated, discarded, and billed in full.
+# There is no way to get that money back after the fact, so the only place
+# that failure can be stopped is before the request goes out.
+# --------------------------------------------------------------------------
+
+#: Hard ceiling on `max_tokens` for one generation. 64,000 is empirically
+#: accepted by every model in MODEL_PRESETS — a Sonnet 5 run streamed all the
+#: way to it — rather than a documented figure, so it is deliberately not
+#: raised on a guess. The node slider can ask for more geometry than this can
+#: carry; `estimate_generation` reports that as `fits: false` instead of
+#: letting the request fail expensively.
+MAX_OUTPUT_TOKENS = int(os.environ.get("PROMPTWAVER_MAX_TOKENS", "64000"))
+
+#: Output tokens a generated scene costs, as `base + per_node * nodes`.
+#: Calibrated against a measured run: Haiku 4.5 produced 197 nodes in 15,211
+#: output tokens (the formula gives 14,926). The constant term is everything
+#: that doesn't scale with node count — the `defs` library, soundscape, camera
+#: and layer wrapper; the per-node term is one placement object of JSON.
+#:
+#: The per-node figure is what a model writes when left to its own devices,
+#: including rotations and per-node colours it didn't have to spell out. A
+#: prompt demanding minimal placements would land well under it, which would
+#: raise the node ceiling — worth measuring, but not worth assuming here.
+_TOKENS_BASE = 3500
+_TOKENS_PER_NODE = 58
+
+#: Slack between the estimate and the `max_tokens` actually requested. Models
+#: overshoot their own node instruction (Haiku asked for 700-900 wrote 197;
+#: Sonnet asked for the same wrote past 64,000 tokens), so a budget set to the
+#: estimate exactly would truncate about as often as not. Unused headroom
+#: costs nothing — output tokens are billed as generated, not as budgeted.
+_BUDGET_HEADROOM = 1.35
+
+
+def estimate_tokens(nodes: int) -> int:
+    """Output tokens a `nodes`-node scene is expected to cost."""
+    return int(_TOKENS_BASE + _TOKENS_PER_NODE * max(0, int(nodes)))
+
+
+def token_budget(nodes: int, floor: int = 0) -> int:
+    """`max_tokens` to request for a `nodes`-node scene, clamped to what the
+    API will accept. `floor` keeps the effort tier's own budget when it is the
+    larger of the two."""
+    want = int(estimate_tokens(nodes) * _BUDGET_HEADROOM)
+    return max(floor, min(MAX_OUTPUT_TOKENS, want))
+
+
+def max_nodes_per_call() -> int:
+    """Largest node count whose estimate still fits `MAX_OUTPUT_TOKENS` with
+    headroom — the practical ceiling for a single generation. Above this a
+    scene has to be reached some other way (several calls, or expanding
+    placements locally from a small authored `defs` library) rather than by
+    asking one call to write more JSON than it can emit."""
+    room = MAX_OUTPUT_TOKENS / _BUDGET_HEADROOM - _TOKENS_BASE
+    return max(1, int(room // _TOKENS_PER_NODE))
+
+
+def estimate_input_tokens(kind: str = "3d") -> int:
+    """The system prompt dominates input; ~4 chars a token is close enough for
+    a figure whose job is to inform a slider."""
+    return len(SYSTEM_PROMPTS.get(kind, _SYSTEM)) // 4 + 250
+
+
+#: Refuse a generation whose *estimated* cost exceeds this, in USD. Sized
+#: against the slider's own range so it bites where the risk is: at Haiku rates
+#: the whole 100-1200 node span stays under it and never trips, Sonnet crosses
+#: it near 1000 nodes, and Opus near 500. That ordering is the point — Sonnet
+#: and Opus are the models that were measured spending a full token budget and
+#: returning nothing usable. 0 disables.
+DEFAULT_COST_CAP = 0.50
+
+#: Abort a generation still streaming after this many seconds. The measured
+#: runaway ran 491s before the API cut it off; nothing legitimate here takes
+#: that long, and every second past the point of no return is billed. 0
+#: disables. Keep the browser's own safety restore (index.html, `startGen`)
+#: LONGER than this, so the server-side stop is the one that fires.
+DEFAULT_GEN_TIMEOUT = 240.0
+
+
+class _EstimatedUsage:
+    """Stand-in for the API's usage block when a stream was aborted before its
+    final message arrived. The tokens generated up to that point were billed,
+    so reporting nothing would understate the cost of exactly the failure this
+    is here to make visible. `output_tokens` is inferred from the text
+    received at ~4 chars a token, and is flagged as an estimate by
+    `last_cost["estimated"]` so the UI can say so.
+    """
+
+    def __init__(self, input_tokens: int, output_tokens: int):
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.cache_creation_input_tokens = 0
+        self.cache_read_input_tokens = 0
+
+
+def estimate_generation(model: str, nodes: int, kind: str = "3d") -> dict:
+    """Predicted tokens and USD for one generation, before sending it."""
+    p_in, p_out = _price_for(model)
+    tin = estimate_input_tokens(kind)
+    tout = estimate_tokens(nodes)
+    return {"model": model, "nodes": int(nodes),
+            "input_tokens": tin, "output_tokens": tout,
+            "max_tokens": token_budget(nodes),
+            "fits": tout * _BUDGET_HEADROOM <= MAX_OUTPUT_TOKENS,
+            "max_nodes": max_nodes_per_call(),
+            "usd": round((tin * p_in + tout * p_out) / 1e6, 4)}
 
 # effort tier -> token budget + a richness directive appended to the prompt
 EFFORT = {
@@ -523,6 +649,78 @@ SCENE_SIZE = {
 # to the local director. Unused headroom costs nothing but latency.
 SIZE_MIN_TOKENS = {"massive": 32000}
 
+
+def _size_hint(nodes: int) -> str:
+    """The `massive` directive above, parameterised by an explicit node count.
+
+    The tiers in SCENE_SIZE are four fixed points; this is the same shape of
+    instruction as `massive` — a closed route with geometry along it and a
+    camera that walks it — with the count, extent and camera scaled to a
+    number the UI slider supplies. Everything derives from `nodes`, so there
+    is one control rather than a count and an extent that can disagree.
+
+    Extent grows as sqrt(nodes) so DENSITY stays roughly constant: a bigger
+    world with the same geometry crammed into it would just be the same scene
+    viewed from further away, and a bigger world with the spacing unchanged
+    would be mostly empty — which measured worst of all for a laser (a
+    drifting camera over sparse route geometry got 1 stroke a frame and 89%
+    dark frames). The constant is set so ~170 nodes reproduces the +-40 the
+    hand-written `massive` tier asked for.
+    """
+    nodes = max(1, int(nodes))
+    extent = int(round(20 * math.sqrt(nodes / 40.0)))
+    lo, hi = int(nodes * 0.9), int(nodes * 1.1)
+    # More shapes for a bigger world (repetition shows up over minutes of
+    # walking), but sub-linearly: the whole reason a big scene is affordable
+    # at all is that placements are cheap and distinct shapes are not.
+    ndefs = max(6, min(14, 6 + nodes // 130))
+    each = max(4, round(nodes / ndefs))
+    waypoints = max(8, min(24, 8 + nodes // 90))
+    return (
+        f"Scale: MASSIVE — a place to travel through for minutes, not a tableau.\n"
+        f"This OVERRIDES the object-count guidance above: author {lo}-{hi} nodes, "
+        f"not 6-14. That count is deliberate and it is the point of this scene — "
+        f"do not stop early or trail off.\n\n"
+        f"Compose it as a long CLOSED ROUTE through the environment, and place "
+        f"the geometry ALONG that route rather than scattered through a volume. "
+        f"Spread it over roughly -{extent}..{extent} on each axis.\n\n"
+        f"Reach that node count by INSTANCING, never by authoring more shapes: "
+        f"author {ndefs} named shapes in \"defs\" and place each of them about "
+        f"{each} times at varied positions, scales, rotations and colours. "
+        f"{ndefs} shapes placed {each} times each — never {nodes} distinct shapes.\n\n"
+        f"Set the camera to travel that same route:\n"
+        f"  \"camera\": {{\"mode\":\"path\",\n"
+        f"              \"waypoints\": [[x,y,z], ... {waypoints} points forming a loop "
+        f"that comes back around to where it started, so it can be walked "
+        f"indefinitely. Do NOT repeat the first point at the end — the loop is "
+        f"closed automatically],\n"
+        f"              \"speed\":0.5, \"fov\":62, \"near\":0.4, \"far\":40,\n"
+        f"              \"max_strokes\":120, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
+        f"Keep objects within about 3-8 units either side of the route, on both "
+        f"sides and overhead, so something is always in frame as the camera "
+        f"moves. A stretch of route with nothing beside it is a dark laser.")
+
+
+def _resolve_size(size) -> tuple[int | None, str | None]:
+    """`size` -> (node target, prompt directive).
+
+    Accepts either a node count (what the UI slider sends) or one of the
+    legacy SCENE_SIZE keys. The strings have to keep working: every scene
+    generated before the slider existed carries one in
+    `generation_settings.size`, and regenerating from that panel replays it.
+    A string size has no node target, so it keeps the old fixed token floor.
+    """
+    if isinstance(size, bool):
+        return None, None
+    if isinstance(size, (int, float)):
+        n = int(size)
+        return (n, _size_hint(n)) if n > 0 else (None, None)
+    s = str(size).strip()
+    if s.isdigit():
+        n = int(s)
+        return (n, _size_hint(n)) if n > 0 else (None, None)
+    return None, SCENE_SIZE.get(s)
+
 # "Character" sliders (Generate modal), 0..1 centered at 0.5. warmth/energy
 # are soft prompt hints — like EFFORT/SCENE_SIZE, they bias choices Claude
 # has to make itself (voice type, tempo), so there's no way to force them
@@ -579,7 +777,14 @@ class SceneDirector:
     def __init__(self, cache_dir: str, model: str | None = None):
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
-        self.max_tokens = int(os.environ.get("PROMPTWAVER_MAX_TOKENS", "8000"))
+        # Two guards against an expensive runaway, both aimed at the same
+        # measured failure: a model that keeps writing past its budget, is
+        # truncated, and is billed in full for output that gets discarded.
+        # `cost_cap` stops it before the request goes out (free); `timeout`
+        # stops it mid-stream (refunds nothing already generated, but closing
+        # the connection does stop the meter). 0 disables either.
+        self.cost_cap = float(settings.get("cost_cap", DEFAULT_COST_CAP))
+        self.timeout = float(settings.get("gen_timeout", DEFAULT_GEN_TIMEOUT))
         self.last_source = None       # "claude" | "cache" | "fallback"
         self.last_error = None
         self.last_progress = 0.0      # 0..1, approximate — see _from_claude
@@ -676,13 +881,19 @@ class SceneDirector:
         return os.path.join(self.cache_dir, f"g2_{h}.json")
 
     def generate(self, keyword: str, use_cache: bool = True, audio: str | None = None,
-                 size: str = "small", warmth: float | None = None, energy: float | None = None,
+                 size: str | int = "small", warmth: float | None = None,
+                 energy: float | None = None,
                  evolution: float | None = None, kind: str = "3d") -> SceneSpec:
-        size = size if size in SCENE_SIZE else "small"
+        # `size` is either a node count (the UI slider) or a legacy tier name
+        # carried by scenes generated before the slider existed. Anything else
+        # falls back to the historical default rather than erroring.
+        if not (isinstance(size, int) and not isinstance(size, bool)) and \
+                not str(size).strip().isdigit() and size not in SCENE_SIZE:
+            size = "small"
         kind = kind if kind in SYSTEM_PROMPTS else "3d"
         # `kind` is part of the cache key: the same keyword legitimately has a
         # 3D and a 2D answer, and they must not collide.
-        cache = self._cache_path(keyword + "|" + (audio or "") + "|" + size +
+        cache = self._cache_path(keyword + "|" + (audio or "") + "|" + str(size) +
                                  f"|w{warmth}|e{energy}|v{evolution}|k{kind}")
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
@@ -782,7 +993,7 @@ class SceneDirector:
             self.last_progress = 1.0
             self.generating = False
 
-    def _from_claude(self, keyword: str, audio: str | None = None, size: str = "small",
+    def _from_claude(self, keyword: str, audio: str | None = None, size: str | int = "small",
                      warmth: float | None = None, energy: float | None = None,
                      kind: str = "3d"):
         """Return (spec, ok). ok=False means fall back (reason in last_error)."""
@@ -795,7 +1006,7 @@ class SceneDirector:
         else:
             audio_line = ("\n\nAudio: also compose a calm ambient soundscape that fits the "
                           "scene, in the \"soundscape\" field.")
-        size_hint = SCENE_SIZE.get(size)
+        nodes, size_hint = _resolve_size(size)
         size_line = f"\n\n{size_hint}" if size_hint else ""
         character_hint = _character_hints(warmth, energy)
         character_line = f"\n\n{character_hint}" if character_hint else ""
@@ -824,12 +1035,43 @@ class SceneDirector:
         # completion (it doesn't know the final length in advance), but a
         # streaming call reports tokens as they're generated, which we compare
         # against this effort tier's token budget to drive an approximate bar.
-        max_tokens = max(tier["max_tokens"], SIZE_MIN_TOKENS.get(size, 0))
+        # A node count budgets from the geometry actually asked for; a legacy
+        # tier name has no count, so it keeps its old fixed floor.
+        if nodes:
+            max_tokens = token_budget(nodes, floor=tier["max_tokens"])
+        else:
+            max_tokens = max(tier["max_tokens"], SIZE_MIN_TOKENS.get(str(size), 0))
         budget_chars = max_tokens * 4
+
+        # The cost gate, before anything is sent. This is the only point at
+        # which an over-budget generation costs nothing to refuse — once the
+        # request is out, a response that overruns and gets truncated is
+        # billed in full for output that is then thrown away.
+        if nodes and self.cost_cap:
+            est = estimate_generation(self.model, nodes, kind)
+            if est["usd"] > self.cost_cap:
+                self.last_error = (
+                    f"estimated ${est['usd']:.2f} for {nodes} nodes exceeds the "
+                    f"${self.cost_cap:.2f} cap — lower the node count, switch to a "
+                    f"cheaper model, or raise the cap in the Generate panel")
+                print(f"[promptwaver] director: {self.last_error}")
+                return None, False
+
         try:
             text, stop_reason = self._stream_or_call(content, budget_chars, system)
+            # Record the cost BEFORE judging whether the response is usable.
+            # Truncated and aborted responses are billed for everything they
+            # did generate, and those are the expensive ones — an earlier
+            # version returned above this line, so the only generations that
+            # reported no cost were the ones that had cost the most.
+            self.last_cost = estimate_cost(self.model, self._last_usage)
+            if stop_reason == "timeout":
+                self.last_error = (f"generation aborted after {self.timeout:.0f}s — the model "
+                                   f"was still writing. Lower the node count or the effort")
+                print(f"[promptwaver] director: {self.last_error}")
+                return None, False
             if stop_reason == "max_tokens":
-                self.last_error = ("response truncated — try a lower effort or raise "
+                self.last_error = ("response truncated — lower the node count, or raise "
                                    f"PROMPTWAVER_MAX_TOKENS (budget {max_tokens})")
                 print(f"[promptwaver] director: {self.last_error}")
                 return None, False
@@ -837,7 +1079,6 @@ class SceneDirector:
             spec = SceneSpec.from_dict(data)
             if not spec.layers:
                 raise ValueError("model returned no layers")
-            self.last_cost = estimate_cost(self.model, self._last_usage)
             self.last_progress = 1.0
             return spec, True
         except Exception as e:
@@ -869,15 +1110,54 @@ class SceneDirector:
             return text, getattr(msg, "stop_reason", None)
 
         acc_len = 0
+        parts: list[str] = []
+        t0 = time.monotonic()
+        timed_out = False
         with stream_fn(model=self.model, max_tokens=tier_tokens,
                        system=system, messages=[{"role": "user", "content": content}]) as stream:
             for chunk in stream.text_stream:
+                parts.append(chunk)
                 acc_len += len(chunk)
                 self.last_progress = min(0.95, acc_len / max(budget_chars, 1))
+                if self.timeout and time.monotonic() - t0 > self.timeout:
+                    # Leaving the `with` block closes the connection, which
+                    # stops generation — tokens not yet produced are never
+                    # billed. Waiting politely for a doomed response to finish
+                    # is what made the measured runaway cost what it did.
+                    timed_out = True
+                    break
+            if timed_out:
+                # get_final_message() would block for the rest of the response
+                # we just decided not to pay for, so the usage block is
+                # reconstructed instead of read.
+                self._last_usage = _EstimatedUsage(
+                    input_tokens=len(system) // 4 + len(content) // 4,
+                    output_tokens=acc_len // 4)
+                print(f"[promptwaver] director: aborted stream after {self.timeout:.0f}s "
+                      f"(~{acc_len // 4} output tokens generated)")
+                return "".join(parts), "timeout"
             final = stream.get_final_message()
         text = "".join(b.text for b in final.content if getattr(b, "type", "") == "text")
         self._last_usage = getattr(final, "usage", None)
         return text, getattr(final, "stop_reason", None)
+
+    def set_cost_cap(self, usd: float):
+        self.cost_cap = max(0.0, float(usd))
+        settings.set("cost_cap", self.cost_cap)
+
+    def set_timeout(self, seconds: float):
+        self.timeout = max(0.0, float(seconds))
+        settings.set("gen_timeout", self.timeout)
+
+    def estimate(self, nodes: int, kind: str = "3d") -> dict:
+        """What a `nodes`-node generation would cost on the current model, plus
+        whether it would be allowed. The UI reads this rather than carrying its
+        own copy of the price table — one source of truth for a number the user
+        is about to spend money on."""
+        est = estimate_generation(self.model, nodes, kind)
+        est["cost_cap"] = self.cost_cap
+        est["over_cap"] = bool(self.cost_cap and est["usd"] > self.cost_cap)
+        return est
 
 
 #: Ceiling on how many voices in one soundscape may carry an LFO. The prompt
