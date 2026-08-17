@@ -226,6 +226,12 @@
   .saverow{display:flex;gap:6px}
   .saverow button{flex:1 1 0;min-width:0;padding:6px 4px;font-size:11px;
                   display:flex;align-items:center;justify-content:center;gap:4px}
+  .saverow.compact{gap:4px;grid-template-columns:repeat(4,1fr)}
+  .saverow.compact button{padding:3px 4px;font-size:13px;min-width:28px;height:28px}
+  .buttonrow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .buttonrow button{min-width:0}
+  .buttonrow.compact{grid-template-columns:repeat(3,1fr);gap:4px}
+  .buttonrow.compact button{padding:3px 4px;font-size:13px;min-width:28px;height:28px}
   /* segmented scene-type picker in the Generate modal */
   .seg{flex:1 1 0;display:flex;flex-direction:column;gap:2px;padding:8px 10px;
        border:1px solid var(--line);border-radius:8px;background:transparent;
@@ -332,6 +338,13 @@
   .sidecol details.accordion .accordion-body{padding:0 6px 12px 20px}
   details.accordion + details.accordion{margin-top:0}
 
+  /* Nested accordions (subsections within Modulation panel) */
+  details.accordion.nested{border:none;border-bottom:1px solid var(--line);margin:0}
+  details.accordion.nested summary{background:transparent;color:var(--cyan);padding:8px 0;font-size:11px}
+  details.accordion.nested summary:hover{color:var(--ink)}
+  details.accordion.nested[open] summary::after{color:var(--cyan)}
+  details.accordion.nested .accordion-body{padding:0 0 10px 0;gap:8px}
+
   .statusdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);
     box-shadow:0 0 6px var(--red);flex:0 0 auto}
   .statusdot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
@@ -344,22 +357,22 @@
   .statusdot.midi-act{transition:none}
   .statushead{display:flex;align-items:center;gap:8px}
 
-  .vmeters-row{display:flex;gap:18px;align-items:center;padding:4px 0 8px}
-  .vmeters{display:flex;gap:24px;align-items:flex-end}
-  .vbuttons{display:flex;flex-direction:column;gap:8px}
+  .vmeters-row{display:flex;gap:8px;align-items:center;padding:0 0 12px 0;flex-direction:column;width:100%;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .vmeters{display:flex;gap:0;align-items:stretch;width:100%;flex-direction:column}
+  .vbuttons{display:none}
   .vbuttons button{white-space:nowrap}
-  .vchannel{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .vchannel{display:flex;flex-direction:row;align-items:center;gap:8px;width:100%}
   .vchannel label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
-    display:flex;flex-direction:column;align-items:center;gap:4px}
-  .vslider-wrap{height:73px;display:flex;align-items:center;justify-content:center}
-  .vslider{writing-mode:vertical-lr;direction:rtl;width:10px;height:68px;accent-color:var(--cyan)}   /* 35% shorter than the 112/105px this was */
-  .vu-bar{width:22px;height:112px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
-    overflow:hidden;display:flex;flex-direction:column-reverse}
-  .vu-fill{width:100%;height:0%;background:var(--cyan)}
+    display:flex;align-items:center;gap:4px;flex:0 0 auto;white-space:nowrap}
+  .vslider-wrap{display:none}
+  .vslider{display:none}
+  .vu-bar{width:100%;height:4px;border-radius:2px;background:var(--panel2);border:1px solid var(--line);
+    overflow:hidden;display:flex;flex-direction:row}
+  .vu-fill{width:0%;height:100%;background:var(--cyan);transition:width .08s linear}
   .vu-fill.hot{background:var(--amber)}
   .vu-fill.clip{background:var(--red)}
-  .vu-clip{width:10px;height:10px;border-radius:50%;background:var(--line);
-    transition:background .1s,box-shadow .1s}
+  .vu-clip{width:8px;height:8px;border-radius:50%;background:var(--line);
+    transition:background .1s,box-shadow .1s;flex:0 0 auto;margin-left:4px}
 
   .xfade-indicator{display:flex;flex-direction:column;gap:6px;padding:8px 10px;
     border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
@@ -415,6 +428,13 @@
       <span>fps <b id="r-fps">—</b></span>
     </div>
     <div id="scene-name" style="text-align:left;font-size:13px;font-weight:700;:var(--dim);margin-top:8px;font-family:var(--mono)"></div>
+
+    <div class="field" style="margin-top:12px">
+      <label style="display:flex;align-items:center;gap:6px;flex:0 0 auto"
+             title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
+        <input type="checkbox" id="hue-override-on"> hue</label>
+      <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
+      <span class="val" id="v-hueoverride">0.50</span></div>
 
     <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
@@ -501,65 +521,39 @@
   </section>
 
   <aside class="sidecol">
-    <!-- Scene leads the column. It used to sit at the BOTTOM, below the
-         modulation panel — so the two buttons that create a scene, and every
-         button that saves one, were the last things in the longest column.
-         The save trio that used to duplicate these in the page header is gone
-         with it; this is now the single place saving happens. -->
-    <div class="group" id="g-scene">
-      <h2>Scene</h2>
-      <button class="go" id="gen-open" style="width:100%;margin-bottom:8px">Generate scene…</button>
-      <button class="go" id="audio-regen-open" style="width:100%;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
-      <div class="savelabel">Save into this scene</div>
-      <!-- Each button saves one slice, so a soundscape tweak doesn't also
-           overwrite camera settings you were mid-way through adjusting. -->
-      <div class="saverow">
-        <button id="save-soundscape">🎵 sound</button>
-        <button id="save-camera">🎥 camera</button>
-        <button id="save-all-scene">💾 all</button>
+    <!-- VU meter at the top -->
+    <div class="vmeters-row">
+      <div class="vmeters">
+        <div class="vchannel">
+          <div class="vu-bar"><div class="vu-fill" id="vu-fill"></div></div>
+          <label>output <span class="vu-clip" id="vu-clip" title="clipping"></span></label>
+        </div>
       </div>
-      <button id="save-as-open" style="width:100%;margin-top:8px">Save as…</button>
-      <button id="show-prompts-open" style="width:100%">Show scene prompts</button>
     </div>
 
-    <div class="group" id="g-global">
-      <h2>Master</h2>
-
-      <div class="vmeters-row">
-        <div class="vmeters">
-          <div class="vchannel">
-            <div class="vslider-wrap"><input type="range" id="g-master" class="vslider" min="0" max="1" step="0.01" value="0.8"></div>
-            <label>master <span class="val" id="v-gmaster">0.80</span></label>
-          </div>
-          <div class="vchannel">
-            <div class="vu-bar"><div class="vu-fill" id="vu-fill"></div></div>
-            <label>output <span class="vu-clip" id="vu-clip" title="clipping"></span></label>
-          </div>
-        </div>
-        <div class="vbuttons">
-          <button id="disable-audio">Disable Audio</button>
-          <button id="disable-visuals">Disable Visuals</button>
-          <button id="show-title">Show scene title</button>
-          <!-- Voice knobs normally follow SLOTS (voice#0, voice#1 …), which
-               track the director's foundation-first voice ordering and so
-               survive a scene change on their own. This pins them to this
-               scene's actual voice NAMES instead — for a scene dialled in
-               ahead of a set, where a knob should stay on that one voice
-               wherever it ends up in the ordering. -->
-          <button id="pin-midi" title="Freeze this scene's voice knobs to its voice names">Pin MIDI map</button>
-        </div>
+    <!-- Scene panel with reorganized buttons -->
+    <div class="group" id="g-scene">
+      <h2>Scene</h2>
+      <button class="go" id="gen-open" style="width:100%;padding:4px 12px;margin-bottom:6px">Generate scene…</button>
+      <button class="go" id="audio-regen-open" style="width:100%;padding:4px 12px;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
+      <div class="savelabel">Save</div>
+      <!-- Each button saves one slice, so a soundscape tweak doesn't also
+           overwrite camera settings you were mid-way through adjusting. -->
+      <div class="saverow compact">
+        <button id="save-soundscape" title="Save soundscape only">🎵</button>
+        <button id="save-camera" title="Save camera only">🎥</button>
+        <button id="save-all-scene" title="Save all settings">💾</button>
+        <button id="save-as-open" title="Save as new scene">💿</button>
       </div>
-      <!-- Promoted out of the fade pane. This is NOT a monitor filter: it
-           rewrites Path.color on every stroke (engine.py, "hue override"), so
-           it reaches the laser as well as the screen. It was the most buried
-           control in the app — three levels deep, last field of a collapsed
-           accordion — despite being a live recolour of the whole output. -->
-      <div class="field" style="margin-top:4px">
-        <label style="display:flex;align-items:center;gap:6px;flex:0 0 84px"
-               title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
-          <input type="checkbox" id="hue-override-on"> hue</label>
-        <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
-        <span class="val" id="v-hueoverride">0.50</span></div>
+      <div class="buttonrow compact">
+        <button id="show-prompts-open" title="Show scene prompts">📝</button>
+        <button id="show-title" title="Show scene title">📌</button>
+        <button id="pin-midi" title="Pin MIDI map">🎛</button>
+      </div>
+    </div>
+
+    <div class="group" id="g-global" style="display:none">
+      <h2>Master</h2>
     </div>
 
     <!-- Was "Faders", and was nested INSIDE the group above — so that group's
@@ -605,57 +599,67 @@
       scene looking for camera speed opened the wrong one. -->
  <details class="accordion" id="acc-modulation" open>
       <summary>Modulation</summary>
-      <div class="accordion-body">
-        <!-- Not "Global": that word is a group heading elsewhere in this
-             column, at a different scope, and having both read as though
-             these two sliders were app-wide rather than the top of this
-             panel. They are the two settings every mapping below inherits. -->
-        <div class="modsec">Depth &amp; rate</div>
-        <div class="field"><label title="Master trim on every audio-derived source — audio level, the synth bands, and instrument levels. LFOs are not affected.">audio depth</label>
-          <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
-          <span class="val" id="v-mlink">1.00</span></div>
-        <div class="field"><label>LFO rate</label>
-          <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
-          <span class="val" id="v-lfo">0.05</span></div>
-        <!-- Audio-latency compensation. The synth measures each block's energy
-             as it GENERATES the block, which is then played one stream-latency
-             later — so engine-driven modulation arrives before the sound
-             unless it is held back. Auto derives the figure from the live
-             stream latency and blocksize; see Engine.mod_delay_auto. -->
-        <div class="field"><label title="Holds engine-driven modulation back so it lands with the sound rather than ahead of it.">audio sync</label>
-          <input type="range" id="m-delay" min="0" max="400" step="5" value="0">
-          <span class="val" id="v-mdelay">0</span></div>
-        <div class="hint" id="mdelay-hint" style="margin:-4px 0 2px">
-          <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
-            <input type="checkbox" id="m-delay-auto" checked> auto</label>
-          <span id="mdelay-note"></span>
-        </div>
+      <div class="accordion-body" style="display:flex;flex-direction:column;gap:8px">
+        <!-- Depth & rate sub-panel -->
+        <details class="accordion nested" id="acc-mod-depth" open>
+          <summary>Depth &amp; rate</summary>
+          <div class="accordion-body">
+            <div class="field"><label title="Master trim on every audio-derived source — audio level, the synth bands, and instrument levels. LFOs are not affected.">audio depth</label>
+              <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
+              <span class="val" id="v-mlink">1.00</span></div>
+            <div class="field"><label>LFO rate</label>
+              <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
+              <span class="val" id="v-lfo">0.05</span></div>
+            <div class="field"><label title="Holds engine-driven modulation back so it lands with the sound rather than ahead of it.">audio sync</label>
+              <input type="range" id="m-delay" min="0" max="400" step="5" value="0">
+              <span class="val" id="v-mdelay">0</span></div>
+            <div class="hint" id="mdelay-hint" style="margin:-4px 0 2px">
+              <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+                <input type="checkbox" id="m-delay-auto" checked> auto</label>
+              <span id="mdelay-note"></span>
+            </div>
+          </div>
+        </details>
 
-        <div class="modsec">Mappings</div>
-        <div class="hint" style="margin:-2px 0 8px">A mapping is <b>added</b> to its control: the
-          slider sets the minimum and the source pushes up from there.</div>
-        <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
-        <button id="mod-add" style="align-self:flex-start;margin-top:8px">Add mapping</button>
+        <!-- Mappings sub-panel -->
+        <details class="accordion nested" id="acc-mod-mappings" open>
+          <summary>Mappings</summary>
+          <div class="accordion-body">
+            <div class="hint" style="margin:-2px 0 8px">A mapping is <b>added</b> to its control: the
+              slider sets the minimum and the source pushes up from there.</div>
+            <div id="mappings-hint-3d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Available for this 3D scene: visual layer parameters, camera controls, and audio sources.</div>
+            <div id="mappings-hint-2d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Available for this 2D scene: visual layer parameters and audio sources.</div>
+            <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
+            <button id="mod-add" style="align-self:flex-start;margin-top:8px">Add mapping</button>
+          </div>
+        </details>
 
-        <div class="modsec">Shape scale <span class="modsec-note">· 3D worlds only</span></div>
-        <!-- Scope corrected: the hint used to promise scale/rotate/position,
-             but Scene._apply_shape_modulation only implements scale, and it
-             is called only for 3D `world` layers with the synth running. -->
-        <div class="hint" id="shape-mod-hint" style="margin:-2px 0 8px">Drives shape <b>scale</b>
-          from a synth voice's own parameters. A separate path from the mappings above, which read
-          the sources below — needs audio running.</div>
-        <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber);margin:-2px 0 8px">
-          This scene is 2D, so this section does nothing. Use a mapping above
-          (Pattern → scale) instead.
-        </div>
-        <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
-        <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
+        <!-- Shape scale sub-panel (3D only) -->
+        <details class="accordion nested" id="acc-mod-shape" open>
+          <summary>Shape scale</summary>
+          <div class="accordion-body">
+            <div class="hint" id="shape-mod-hint" style="margin:-2px 0 8px">Drives shape <b>scale</b>
+              from a synth voice's own parameters. A separate path from the mappings above, which read
+              the sources below — needs audio running.</div>
+            <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber);margin:-2px 0 8px">
+              This scene is 2D, so this section does nothing. Use a mapping above
+              (Pattern → scale) instead.
+            </div>
+            <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
+            <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
+          </div>
+        </details>
 
-        <!-- Live source values. A route whose source never moves is
-             indistinguishable from a broken route without this. -->
-        <div class="modsec">Sources <span class="modsec-note">· live</span></div>
-        <div id="mod-sources" style="display:flex;flex-direction:column;gap:3px"></div>
-        <div class="hint" id="mic-note" style="display:none;color:var(--amber);margin-top:6px"></div>
+        <!-- Sources sub-panel -->
+        <details class="accordion nested" id="acc-mod-sources" closed>
+          <summary>Sources</summary>
+          <div class="accordion-body">
+            <div id="sources-hint-3d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Engine sources: audio analysis, LFOs, synth voice outputs. Camera destinations available on 3D scenes.</div>
+            <div id="sources-hint-2d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Engine sources: audio analysis, LFOs, synth voice outputs.</div>
+            <div id="mod-sources" style="display:flex;flex-direction:column;gap:3px"></div>
+            <div class="hint" id="mic-note" style="display:none;color:var(--amber);margin-top:6px"></div>
+          </div>
+        </details>
       </div>
     </details>
 
@@ -1262,12 +1266,25 @@ function paintState(s){
   // there is nothing left to collapse — a single Modulation panel applies to
   // every scene, which is the point of merging them.
   const isWorld = (s.layers || []).some(L => L.name === "world");
+  const is3D = s.scene_3d || isWorld;
   const smna = $("shape-mod-na"), smh = $("shape-mod-hint");
   if (smna) smna.style.display = isWorld ? "none" : "block";
   if (smh)  smh.style.display  = isWorld ? "block" : "none";
   const smBox = $("shape-mods"), smAdd = $("shape-mod-add");
   if (smBox) smBox.style.display = isWorld ? "flex" : "none";
   if (smAdd) smAdd.style.display = isWorld ? "" : "none";
+
+  // Show scene-type-specific hints in the Mappings and Sources sections
+  const mh3d = $("mappings-hint-3d"), mh2d = $("mappings-hint-2d");
+  if (mh3d) mh3d.style.display = is3D ? "block" : "none";
+  if (mh2d) mh2d.style.display = is3D ? "none" : "block";
+  const sh3d = $("sources-hint-3d"), sh2d = $("sources-hint-2d");
+  if (sh3d) sh3d.style.display = is3D ? "block" : "none";
+  if (sh2d) sh2d.style.display = is3D ? "none" : "block";
+
+  // Show/hide the Shape scale modulation panel based on scene type
+  const shapePanel = $("acc-mod-shape");
+  if (shapePanel) shapePanel.style.display = isWorld ? "block" : "none";
   renderLayers(s);
   $("g-motion").style.display = (s.layers || []).some(L => L.params.length) ? "flex" : "none";
   // Camera slider VALUES track the engine continuously via syncControls
@@ -1308,7 +1325,6 @@ function paintState(s){
   // used to live here; the registry's drag/recency guard is strictly better
   // (focus is sticky after a drag ends, which stalled tracking until you
   // clicked elsewhere).
-  updateDisableButtons(s);
   // per-scene PPS override: sync once per scene change, blank means "auto"
   if ($("o-scenepps").dataset.scene !== s.scene) {
     $("o-scenepps").dataset.scene = s.scene;
@@ -1373,13 +1389,13 @@ function renderVu(s){
   const fill = $("vu-fill"), clipDot = $("vu-clip");
   const vu = s.vu;
   if (!vu || !s.audio) {
-    fill.style.height = "0%";
+    fill.style.width = "0%";
     fill.classList.remove("hot", "clip");
     clipDot.classList.remove("hot");
     return;
   }
   const peak = Math.max(0, Math.min(1, vu.peak ?? 0));
-  fill.style.height = (peak * 100).toFixed(1) + "%";
+  fill.style.width = (peak * 100).toFixed(1) + "%";
   fill.classList.remove("hot", "clip");
   if (peak >= 0.9) fill.classList.add("clip");
   else if (peak >= 0.7) fill.classList.add("hot");
@@ -2288,7 +2304,8 @@ function syncMidi(s){
   const b = $("pin-midi");
   if (b.dataset.busy !== "1") {
     const n = Object.keys(mi.overrides || {}).length;
-    b.textContent = n ? `Unpin MIDI (${n})` : "Pin MIDI map";
+    b.textContent = n ? `🎛` : `🎛`;
+    b.title = n ? `Unpin MIDI (${n})` : "Pin MIDI map";
   }
 }
 $("midi-port").onchange = () => send({type:"midi_port", name:$("midi-port").value});
@@ -2396,11 +2413,13 @@ function renderSoundscape(s){
       const wl = document.createElement("label"); wl.className="flabel"; wl.textContent="wave";
       el.appendChild(wl); el.appendChild(sel);
     }
-    if (v.type==="pad" || v.type==="noise")
+    if (v.type==="pad" || v.type==="noise" || v.type==="bell")
       el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")}));
       el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
-    if (v.type==="pluck")
+    if (v.type==="pluck" || v.type==="bell")
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
+    if (v.type==="bell")
+      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
     if (v.type==="osc"){
       el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
       el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
@@ -2990,12 +3009,7 @@ $("fullscreen-toggle").onclick = () => {
   }
 };
 
-// Global section: vertical master fader (mirrors the "master" knob in the
-// Soundscape globals — same underlying value, just always-visible here)
-$("g-master").oninput = () => {
-  $("v-gmaster").textContent = (+$("g-master").value).toFixed(2);
-  sendAudio("master", +$("g-master").value);
-};
+// Global section: vertical master fader (removed from UI — kept in Soundscape globals)
 
 // Global hue override: recolours the whole output to one hue, independent
 // of whatever the scene/generator chose
@@ -3008,28 +3022,15 @@ $("hue-override-val").oninput = () => {
   $("v-hueoverride").textContent = (+$("hue-override-val").value).toFixed(2);
   send({type:"set", key:"hue_value", value:+$("hue-override-val").value});
 };
-// These three don't go through slider() (each has its own handler above), so
+// These don't go through slider() (each has its own handler above), so
 // they get their learn button and live-tracking registration attached directly.
 $("v-hueoverride").insertAdjacentElement("afterend", learnBtn("hue_value"));
 $("v-mlink").insertAdjacentElement("afterend", learnBtn("audio_link"));
-$("v-gmaster").insertAdjacentElement("afterend", learnBtn("master"));
-// same tag gutter as slider() gives its rows (g-master is a vertical channel,
-// not a .field, so it keeps the tag in the flow)
 $("hue-override-val").closest(".field")?.classList.add("has-midi");
 $("m-link").closest(".field")?.classList.add("has-midi");
 registerCtl("hue_value",  $("hue-override-val"), $("v-hueoverride"), v=>(+v).toFixed(2));
 registerCtl("audio_link", $("m-link"),           $("v-mlink"),       v=>(+v).toFixed(2));
-registerCtl("master",     $("g-master"),         $("v-gmaster"),     v=>(+v).toFixed(2));
 
-// Disable Audio / Disable Visuals: independent, gracefully-fading gates —
-// separate from Start/Stop, which is instant and controls both at once
-function updateDisableButtons(s){
-  const ab = $("disable-audio"), vb = $("disable-visuals");
-  ab.textContent = s.audio_disabled ? "Enable Audio" : "Disable Audio";
-  ab.className = s.audio_disabled ? "amber" : "";
-  vb.textContent = s.visuals_disabled ? "Enable Visuals" : "Disable Visuals";
-  vb.className = s.visuals_disabled ? "amber" : "";
-}
 // Pin / unpin this scene's voice mappings. Unlike the Save buttons this one
 // waits for the server's answer rather than assuming success, because it has
 // real failure modes worth surfacing (a scene with no voices, nothing mapped
@@ -3051,13 +3052,6 @@ function pinResult(m){
   b.className = m.ok ? "" : "amber";
   setTimeout(() => { b.className = ""; syncMidi(_lastState); }, 2200);
 }
-
-$("disable-audio").onclick = () => {
-  send({type:"set_audio_disabled", value: !_lastState?.audio_disabled, fade: 2.0});
-};
-$("disable-visuals").onclick = () => {
-  send({type:"set_visuals_disabled", value: !_lastState?.visuals_disabled, fade: 2.0});
-};
 $("show-title").onclick = () => {
   send({type:"show_title"});
 };

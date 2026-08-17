@@ -124,6 +124,7 @@ VOICE_RANGES = {
     "detune": (0.0, 0.05),
     "sub": (0.0, 1.0),
     "rate": (0.1, 4.0),
+    "decay": (0.1, 6.0),
     "unison": (1.0, 7.0),
     "env.attack": (0.01, 15.0),
     "env.decay": (0.01, 8.0),

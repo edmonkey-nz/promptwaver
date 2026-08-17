@@ -108,3 +108,98 @@ settings. Not started.
   director prompt names exactly one generator, so `flow_field`, `attractor`
   and `ripples` can be driven by hand but never chosen by Claude.
 - **CHANGELOG has no entries for 0.31–0.70.** Not worth reconstructing.
+- **5.1 surround audio with depth/front-back panning.** Standard term: "depth" (front/back axis). Would need per-voice depth parameter routed through modulation matrix, and graceful fallback for stereo headphones (either ignored or optional HRTF simulation). Only viable on HDMI surround setups, so conditional UI. Worth revisiting when surround hardware support is part of the scope.
+
+## Audio enhancements
+
+`pluck` is the only percussive/note-based voice (the other four —
+`pad`/`sub`/`osc`/`noise` — are all continuous drones), so it's doing double
+duty and reads as repetitive across a set. The two directions below were
+scoped against the actual DSP architecture (`promptwaver/audio/dsp.py`)
+rather than as a generic synth wishlist, because this codebase's performance
+rules are stricter than usual: everything renders inside the realtime audio
+callback in pure numpy, so a naive implementation is a glitch, not just a
+slow frame.
+
+### Bell / mallet voice
+
+The obvious next percussive voice, and the reason it's not a small addition:
+a bell's character comes from **inharmonic** partials (ratios like
+2.756×, 5.404× the fundamental for a real bell mode) rather than the integer
+harmonic series every existing waveform is built from. `_wavetable()` (dsp.py
+~130) bakes one periodic single-cycle table per (waveform, tone, partial
+count) by summing *integer-multiple* sine partials — that's what makes it
+cacheable and lookup-able via `_osc()`'s phase-indexed interpolation.
+Inharmonic partials aren't periodic at the fundamental, so they can't be
+baked into that same single-cycle table. A bell needs its own additive
+render path, not a fifth entry in `WAVEFORMS`.
+
+**The real trap is performance, and it's one this codebase already hit
+once.** `_render_pad`'s docstring (dsp.py ~659) documents switching from a
+Python loop calling `_osc` once per partial to one batched
+`(partials × frames)` vectorised call, because the old version was "up to
+len(chord)×2×n_partials separate numpy calls per audio callback" and each
+call's fixed dispatch overhead — inside the GIL-held realtime callback — was
+stealing time from the render thread. `pluck` and a bell voice would go
+through `_render_note_events` (dsp.py ~764), which *still* calls `_osc` once
+per active note in a Python loop (up to `MAX_ACTIVE_NOTES` = 96). That's
+already the pre-fix pad pattern at the note level; adding several inharmonic
+partials *per note*, each its own `_osc` call, multiplies it by
+`n_partials` and reintroduces exactly the bug the pad rewrite fixed, just one
+level up.
+
+**So:** batch across active notes *and* partials into one vectorised array
+op per render block — same lesson as the pad/osc rewrites, applied to the
+note scheduler instead of the chord/unison stack. Concretely, treat a bell
+strike as a short-lived batched additive voice (fixed inharmonic ratio
+table × per-note amplitude envelope, one array op over all currently-ringing
+strikes) rather than routing it through the existing per-note
+`_render_note_events` loop unmodified. Numerically verify against a naive
+reference the same way the pad rewrite did (docstring claims max abs diff
+~6e-7) before landing it.
+
+### Reverb
+
+Delay already exists (`Delay` class, dsp.py ~225) but a room reverb is not
+"another Delay instance" — worth writing down why before someone tries that.
+`Delay.process()` is block-granular specifically because delay time is
+clamped to `>= one block` (dsp.py ~240-241), which guarantees read/write
+ranges never overlap within a block and lets the whole thing be vectorised
+with zero per-sample Python recursion. That's free for an echo effect, which
+wants delay times of tens to thousands of ms anyway. A convincing *room*
+reverb wants early reflections/comb filters in the 5–80ms range — shorter
+than one block at the default blocksize (8192 frames ≈ 186ms) entirely, and
+still coarse at the lowest practical setting (1024 ≈ 23ms). The Delay
+pattern can't express that.
+
+Two ways forward that respect the constraint instead of fighting it:
+
+1. **Lean into it — a long, washy ambient reverb** built from several
+   parallel long delay lines (each independently legal under the same `>=
+   one block` rule), detuned/modulated slightly against each other. Less
+   "small room," more "cathedral" — which arguably suits this app's ambient
+   character better than a tight room sim would anyway.
+2. **Block-granular convolution.** `_apply_eq()` (dsp.py ~190) already does
+   one rFFT/irFFT per block for the 3-band EQ — that's precedent and
+   existing infrastructure for frequency-domain block processing. A fixed
+   impulse response applied via FFT overlap-add is the standard efficient
+   convolution reverb approach and, done right, needs no per-sample loop
+   either. More work than (1), but it's the "real" reverb if that's wanted
+   later.
+
+Chorus/phaser carry a milder version of the same constraint (short modulated
+delay), worth checking against blocksize before promising either.
+
+### The general rule for anything added here
+
+Every existing voice type and effect in this file follows the same
+discipline: pure numpy, block-granular (no per-sample Python loop or
+recursion), and where there's per-note or per-partial structure, batch it
+into one vectorised array op rather than one numpy call per note/partial.
+`_render_pad`'s rewrite and `Delay`'s block-time clamp are both that same
+rule applied in different places. Any new voice or effect should be
+scoped against it explicitly before implementation, not discovered by a
+frame-drop report afterward — that's how the pad/osc batching bug and the
+pluck note cap (`MAX_ACTIVE_NOTES`, added after 3 pluck voices hit 1248
+active notes and 100ms+ renders against a ~93ms budget) both got found the
+first time.

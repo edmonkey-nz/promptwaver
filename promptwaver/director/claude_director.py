@@ -113,6 +113,10 @@ Soundscape guidance: ambient and calm. Voice types:
   "osc"   unison multi-oscillator — thicker/simpler than pad, good for a lead or bass
           texture (params: chord, unison 1-7, detune, tone, sub 0-1 for an octave-down layer)
   "pluck" sparse notes stepping through a scale (params: scale, rate, decay, tone)
+  "bell"  struck notes with inharmonic (bell/chime, not string) partials —
+          reach for this over "pluck" when the brief actually wants a bell,
+          chime, or mallet-struck sound rather than a plucked string
+          (params: scale, rate, decay, tone)
   "noise" wind/air texture (params: tone)
 
 "tone" (0-1) is the brightness of EVERY voice type — it behaves like a filter
@@ -166,7 +170,7 @@ VOICE ORDER MATTERS — always list "voices" in this fixed priority order:
   1. foundation: the lowest, most sustained voice (bass/sub/drone pad)
   2. body: mid-register pads and harmonic texture
   3. lead: whatever carries the melody or the most movement
-  4. detail: plucks, sequences, arps
+  4. detail: plucks, bells, sequences, arps
   5. air: noise/atmosphere beds
 Omit any tier the scene doesn't need, but never reorder the ones you do use.
 Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
@@ -401,7 +405,7 @@ _SOUNDSCAPE_SCHEMA = """{
       {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
        "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0,
         "lfo":{"on":true,"dest":"tone","shape":"sine","rate":0.05,"depth":0.5}},
-      {"name":"bells","type":"pluck","waveform":"sine","note":72,
+      {"name":"bells","type":"bell","note":72,
        "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
       {"name":"seq","type":"osc","waveform":"triangle","note":60,"chord":[0,4,7,11],
        "level":0.25,"arp":{"on":true,"mode":"up","rate":2.0,"decay":0.3},"pan":-0.2},
@@ -412,9 +416,10 @@ _SOUNDSCAPE_SCHEMA = """{
 }
 
 List "voices" in this fixed priority order: foundation (lowest/most sustained)
-first, then body pads, then lead, then detail plucks/sequences, then noise/air.
-Omit tiers the piece doesn't need, but never reorder the ones used — hardware
-MIDI knobs bind to voice POSITIONS, and the names change with every scene."""
+first, then body pads, then lead, then detail plucks/bells/sequences, then
+noise/air. Omit tiers the piece doesn't need, but never reorder the ones
+used — hardware MIDI knobs bind to voice POSITIONS, and the names change
+with every scene."""
 
 MODEL_PRESETS = {                       # friendly name -> API id (verify at docs)
     "haiku": "claude-haiku-4-5",
@@ -743,8 +748,8 @@ def _character_hints(warmth: float | None, energy: float | None) -> str:
         if warmth >= 0.7:
             lines.append(
                 "Tone: warm and mellow. Favour \"pad\"/\"sub\"/\"osc\" voices over "
-                "\"pluck\" — at most one sparse pluck/bell accent, the rest "
-                "sustained. Set \"tone\" 0.15-0.4 on EVERY voice (it works on all "
+                "\"pluck\"/\"bell\" — at most one sparse pluck or bell accent, the "
+                "rest sustained. Set \"tone\" 0.15-0.4 on EVERY voice (it works on all "
                 "of them and is the difference between a round analogue warmth and "
                 "a thin digital buzz), and a longer attack (4-10s) for a slow build "
                 "rather than an immediately-present sound. Put real weight "
@@ -752,8 +757,9 @@ def _character_hints(warmth: float | None, energy: float | None) -> str:
                 "0.4-0.8 mixed in.")
         elif warmth <= 0.3:
             lines.append(
-                "Tone: bright and crisp. Pluck/arp textures and higher tone values "
-                "(0.6-0.9) are welcome — present and percussive rather than soft. "
+                "Tone: bright and crisp. Pluck/bell/arp textures and higher tone "
+                "values (0.6-0.9) are welcome — present and percussive rather than "
+                "soft. "
                 "Keep at least the lowest voice below 0.5 so the bottom end still "
                 "has body rather than buzzing.")
     if energy is not None:

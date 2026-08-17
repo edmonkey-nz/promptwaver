@@ -25,9 +25,9 @@ A soundscape spec (JSON, stored in the scene):
      "level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,"mute":false,
      "distortion":0.0,"compress":{"on":false,"threshold":0.6,"ratio":4.0},
      "lfo":{"on":false,"dest":"level","shape":"sine","rate":0.06,"depth":0.5,"phase":0.0}},
-    {"name":"bells","type":"pluck","waveform":"sine","note":72,
-     "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"pan":0.2,"mute":false,
-     "distortion":0.0},
+    {"name":"bells","type":"bell","note":72,
+     "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"tone":0.7,"pan":0.2,
+     "mute":false,"distortion":0.0},
     {"name":"air","type":"noise","level":0.15,"tone":0.5,"pan":0.0,"mute":false,
      "distortion":0.0}
   ]
@@ -44,8 +44,26 @@ import numpy as np
 from ..modulation import Envelope
 
 SR = 44100
-VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc")
+VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell")
 WAVEFORMS = ("sine", "saw", "square", "triangle")
+
+# Fixed inharmonic partial bank for `bell` — ratios are NOT integer multiples
+# of the fundamental (that's what makes it read as a bell/chime rather than a
+# plucked string), so they can't be derived by a formula like `_harmonic_amps`
+# and aren't cacheable in `_wavetable`'s per-cycle table either. A tasteful
+# starting point rather than a physically-modelled real bell casting; easy to
+# re-season by ear. Amplitude decreases with partial number so the fundamental
+# still reads as the pitch, with the upper partials as shimmer on top.
+#
+# 5 partials, not 8: measured directly (see MAX_ACTIVE_BELL_NOTES below) —
+# sin()/exp() on this class of hardware is expensive enough that 8 partials
+# at a modest note count alone pushed average render time past the 8192-frame
+# block budget. Cost scales linearly with partial count, so this is the
+# lowest-risk lever: fewer partials, same batching technique, same headroom
+# margin restored without touching the note cap further.
+BELL_PARTIAL_RATIOS = np.array([1.0, 1.41, 2.0, 2.37, 3.0])
+BELL_PARTIAL_AMPS = np.array([1.0, 0.55, 0.4, 0.32, 0.22])
+BELL_PARTIAL_AMP_SUM = float(BELL_PARTIAL_AMPS.sum())
 
 #: Ceiling on a per-voice LFO's rate, in Hz. One cycle every two seconds is
 #: already brisk for ambient — the useful range in practice is an order of
@@ -519,6 +537,8 @@ class Soundscape:
                 mono = self._render_osc(rv, t, n0, frames)
             elif vt == "pluck":
                 mono = self._render_pluck(rv, n0, frames)
+            elif vt == "bell":
+                mono = self._render_bell(rv, n0, frames)
             elif vt == "noise":
                 mono = self._render_noise(rv, frames)
             else:
@@ -739,6 +759,25 @@ class Soundscape:
     # thousands of notes within a single block in the first place.
     MIN_ONSET_INTERVAL_S = 0.04       # ~25 onsets/sec ceiling, plenty for ambient
 
+    # A SECOND, tighter cap on top of MAX_ACTIVE_NOTES, scoped to one bell
+    # voice's own contribution to `_render_bell_notes`. MAX_ACTIVE_NOTES was
+    # calibrated for `pluck`'s cost model — one _osc() call per note, one
+    # partial. Bell renders BELL_PARTIAL_RATIOS partials per note in one
+    # batched call, so its per-note cost is that many times higher; the
+    # shared 96-note cap alone lets one bell voice's worst case (decay long
+    # enough, rate high enough — both independently reachable via
+    # _normalise's clamps, not just the UI's narrower knob ranges) blow the
+    # frame budget on its own. Measured directly at the default 8192-frame
+    # blocksize: with 5 partials, 24 active notes for one bell voice averaged
+    # ~60-80ms against a ~186ms budget — enough headroom for another bell
+    # voice, other voice types, and master effects to coexist without
+    # starving the render thread the way 3 uncapped pluck voices once did
+    # (see MAX_ACTIVE_NOTES above). Enforced in `_render_bell_notes`, not at
+    # schedule time — MAX_ACTIVE_NOTES stays the one shared budget across
+    # every note-scheduling voice type; this only tightens bell's own slice
+    # of it.
+    MAX_ACTIVE_BELL_NOTES = 24
+
     def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay,
                         tone=1.0):
         """Append onsets landing in this block for `voice_name`, then enforce
@@ -806,6 +845,85 @@ class Soundscape:
 
         self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
         return self._render_note_events(v["name"], n0, frames)
+
+    def _render_bell(self, v, n0, frames):
+        """Struck notes with a fixed inharmonic partial bank (bell/chime
+        character) rather than `pluck`'s single fundamental. Scheduling
+        reuses `_schedule_notes` unchanged — `wf="sine"` is passed as an
+        unused placeholder, since the bell's timbre comes entirely from
+        BELL_PARTIAL_RATIOS/AMPS, not from the note's own waveform. Rendering
+        does NOT go through `_render_note_events` (see `_render_bell_notes`):
+        that method does one `_osc()` call per note for one fundamental,
+        and a bell needs a bank of partials per note — a different batching
+        shape, not a bigger version of the same one."""
+        tempo = float(self.spec.get("tempo", 60))
+        rate = float(v.get("rate", 1.0))          # strikes per beat
+        interval = int(self.sr * 60.0 / max(1e-3, tempo * rate))
+        scale = v.get("scale") or [0, 3, 7, 10]
+        root = v.get("note", 72)
+        decay = float(v.get("decay", 1.2))
+        tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
+
+        def freq_fn(step):
+            semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
+            return midi_to_hz(root + semi)
+
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay, tone)
+        return self._render_bell_notes(v["name"], n0, frames, tone)
+
+    def _render_bell_notes(self, voice_name, n0, frames, tone):
+        """Batched partial-bank renderer for `bell`. Same technique as
+        `_render_pad` — flatten (note x partial) into one 1D combo array,
+        build a 2D phase matrix, one `_osc()` call, weighted sum — extended
+        to handle notes with different start times via a per-note envelope
+        repeated across its own partials. Partitions `self._active_notes`
+        into this voice's notes and everyone else's exactly as
+        `_render_note_events` does, so pluck/arp notes from other voices in
+        the same shared pool are left untouched."""
+        mine, other = [], []
+        for note in self._active_notes:
+            (mine if note["voice"] == voice_name else other).append(note)
+        if not mine:
+            return np.zeros(frames, np.float32)
+        # Bell's own tighter cap on top of the shared MAX_ACTIVE_NOTES budget
+        # — see MAX_ACTIVE_BELL_NOTES. Same "evict oldest" policy as
+        # `_schedule_notes`; `mine` is in schedule order (oldest first), so
+        # the newest MAX_ACTIVE_BELL_NOTES survive. Notes dropped here are
+        # gone for good, not deferred — they don't reappear in `other` below.
+        if len(mine) > self.MAX_ACTIVE_BELL_NOTES:
+            mine = mine[-self.MAX_ACTIVE_BELL_NOTES:]
+
+        idx = np.arange(n0, n0 + frames)
+        starts = np.array([n["start"] for n in mine], dtype=np.int64)
+        freqs = np.array([n["freq"] for n in mine], dtype=np.float64)
+        decays = np.array([n["decay"] for n in mine], dtype=np.float64)
+
+        age = (idx[None, :] - starts[:, None]) / self.sr           # (N, frames)
+        env = np.where(age >= 0, np.exp(-age / np.maximum(decays, 0.05)[:, None]), 0.0)
+
+        # tone brightens/dulls the fixed partial table, same spirit as pad's
+        # tone-driven rolloff — it doesn't change WHICH partials ring, only
+        # how loud the upper ones are relative to the fundamental.
+        ratios = BELL_PARTIAL_RATIOS
+        amps = BELL_PARTIAL_AMPS * (max(tone, 0.05) ** np.arange(len(BELL_PARTIAL_RATIOS)))
+        n_partials = len(ratios)
+
+        fk = (freqs[:, None] * ratios[None, :]).ravel()            # (N*P,)
+        ak = np.tile(amps, len(freqs))                             # (N*P,)
+        t = idx / self.sr
+        ph = fk[:, None] * t[None, :]                               # (N*P, frames)
+        osc_out = _osc(ph, "sine")                                  # one call
+
+        env_rep = np.repeat(env, n_partials, axis=0)                # (N*P, frames)
+        out = (ak[:, None] * env_rep * osc_out).sum(axis=0)
+        out = (out / BELL_PARTIAL_AMP_SUM).astype(np.float32)
+
+        # Prune: same eviction rule as _render_note_events (age at the end of
+        # this block vs. the note's own un-floored decay*6), vectorised.
+        alive_mask = age[:, -1] <= decays * 6
+        surviving = [n for n, keep in zip(mine, alive_mask) if keep]
+        self._active_notes = other + surviving
+        return out * 0.6
 
     @staticmethod
     def _arp_note(chord, mode, step):
