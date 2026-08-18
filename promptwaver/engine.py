@@ -392,6 +392,14 @@ class Engine:
         self.glow = 0.0
         self.trail = 0.0
         self.kaleidoscope_segments = 0
+        # Shape of the GPU bloom that `glow` feeds: how wide the halo spreads
+        # (as a fraction of the smaller canvas dimension) and how hard it is
+        # added back over the strokes. Deliberately NOT modulation
+        # destinations — `glow` already is one, and it drives the same bloom,
+        # so these stay as the per-scene character of the effect rather than
+        # something else for a route to fight over.
+        self.bloom_spread = 0.005
+        self.bloom_intensity = 2.5
         # Modulated versions (live values, updated every tick)
         self._mod_glow = 0.0
         self._mod_trail = 0.0
@@ -491,6 +499,10 @@ class Engine:
             self.trail = max(0.0, min(0.95, float(value)))
         elif key == "kaleidoscope_segments":
             self.kaleidoscope_segments = max(0, int(value))
+        elif key == "bloom_spread":
+            self.bloom_spread = max(0.0, min(0.02, float(value)))
+        elif key == "bloom_intensity":
+            self.bloom_intensity = max(0.0, min(5.0, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -983,6 +995,8 @@ class Engine:
                     "glow": self.glow,
                     "trail": self.trail,
                     "kaleidoscope_segments": self.kaleidoscope_segments,
+                    "bloom_spread": self.bloom_spread,
+                    "bloom_intensity": self.bloom_intensity,
                 })
                 # LFO rates travel with the scene like the rest of the
                 # modulation setup. Captured from the live sources rather than
@@ -1048,6 +1062,10 @@ class Engine:
         self.glow = float(cam_cfg.get("glow", 0.0))
         self.trail = float(cam_cfg.get("trail", 0.0))
         self.kaleidoscope_segments = int(cam_cfg.get("kaleidoscope_segments", 0))
+        # Defaults chosen to look like the shipped bloom, so every scene saved
+        # before these existed loads with the tuning they were authored under.
+        self.bloom_spread = float(cam_cfg.get("bloom_spread", 0.005))
+        self.bloom_intensity = float(cam_cfg.get("bloom_intensity", 2.5))
 
     #: Every sound-driven source. The "audio <-> visual" slider scales all of
     #: them together — it means "how much does sound move the picture", and a
@@ -1561,6 +1579,8 @@ class Engine:
             "glow": max(0.0, min(1.0, self._mod_glow)),
             "trail": max(0.0, min(0.95, self._mod_trail)),
             "kaleidoscope_segments": max(0, round(self._mod_kaleidoscope_segments)),
+            "bloom_spread": self.bloom_spread,
+            "bloom_intensity": self.bloom_intensity,
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),

@@ -567,6 +567,13 @@
       <div class="field"><label>kaleidoscope (beta)</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
+      <div class="hint">bloom shapes the glow above — no effect where glow is 0</div>
+      <div class="field"><label>bloom spread</label>
+        <input type="range" id="mf-bloomspread" min="0" max="0.02" step="0.001" value="0.005">
+        <span class="val" id="v-mfbloomspread">0.005</span></div>
+      <div class="field"><label>bloom intensity</label>
+        <input type="range" id="mf-bloomint" min="0" max="5" step="0.1" value="2.5">
+        <span class="val" id="v-mfbloomint">2.5</span></div>
     </div>
 
     <!-- Built at runtime from the generator registry's schema (state.layers),
@@ -2854,6 +2861,16 @@ function syncMonitorFilters(s){
     $("mf-kaleidoscope").value = monitorFilters.kaleidoscopeSegments;
     $("v-mfkaleidoscope").textContent = monitorFilters.kaleidoscopeSegments === 0 ? "off" : monitorFilters.kaleidoscopeSegments + " way";
   }
+  monitorFilters.bloomSpread = s.bloom_spread ?? 0.005;
+  monitorFilters.bloomIntensity = s.bloom_intensity ?? 2.5;
+  if (document.activeElement !== $("mf-bloomspread")) {
+    $("mf-bloomspread").value = monitorFilters.bloomSpread;
+    $("v-mfbloomspread").textContent = monitorFilters.bloomSpread.toFixed(3);
+  }
+  if (document.activeElement !== $("mf-bloomint")) {
+    $("mf-bloomint").value = monitorFilters.bloomIntensity;
+    $("v-mfbloomint").textContent = monitorFilters.bloomIntensity.toFixed(1);
+  }
   if (document.activeElement !== $("ks-h")) {
     $("ks-h").value = monitorFilters.keystoneH;
     $("v-ksh").textContent = monitorFilters.keystoneH.toFixed(3);
@@ -2942,6 +2959,11 @@ slider("mf-trail", "trail", "mftrail");
 $("mf-mirror-x").onchange = () => send({type:"set", key:"mirror_x", value:$("mf-mirror-x").checked});
 $("mf-mirror-y").onchange = () => send({type:"set", key:"mirror_y", value:$("mf-mirror-y").checked});
 slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0" ? "off" : v+" way", null);
+// null midiKey, as for kaleidoscope: these set a scene's bloom character
+// once while authoring, rather than being reached for mid-performance. The
+// glow slider above is the MIDI-bindable one, and it drives the same bloom.
+slider("mf-bloomspread", "bloom_spread", "mfbloomspread", (v)=>(+v).toFixed(3), null);
+slider("mf-bloomint", "bloom_intensity", "mfbloomint", (v)=>(+v).toFixed(1), null);
 // The three layer0.* sliders that stood here are gone — they hardcoded
 // speed/turbulence/hue, which no generator's param list actually matches.
 // renderLayers() builds the real set from the registry schema instead.

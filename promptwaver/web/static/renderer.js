@@ -5,11 +5,14 @@
  */
 
 class PromptWaverRenderer {
-  // Bloom tuning. SPREAD is the blur's tap spacing as a fraction of the
-  // smaller canvas dimension (four taps each side, so the visible radius is
-  // roughly four times this); INTENSITY is the gain applied to the blurred
-  // layer when it's added back over the sharp strokes. These are the two
-  // knobs worth touching if the glow reads too tight/wide or too weak/hot.
+  // Bloom fallbacks, used only when the caller's filters don't carry the
+  // values — normally they arrive per-scene from engine state. SPREAD is the
+  // blur's tap spacing as a fraction of the smaller canvas dimension (four
+  // taps each side, so the visible radius is roughly four times this);
+  // INTENSITY is the gain applied to the blurred layer when it's added back
+  // over the sharp strokes. Keep in step with the same defaults in
+  // Engine._install_spec, so a scene saved before these were adjustable
+  // renders identically whichever path supplies them.
   static BLOOM_SPREAD = 0.005;
   static BLOOM_INTENSITY = 2.5;
 
@@ -427,7 +430,8 @@ void main() {
     // Tap spacing in full-resolution pixels, scaled with the canvas so the
     // bloom reads the same at preview size and on a projector. Expressed in
     // UV, so it's independent of the (half-res) buffer being sampled.
-    const stepPx = Math.max(1.0, Math.min(w, h) * PromptWaverRenderer.BLOOM_SPREAD);
+    const spread = filters.bloomSpread ?? PromptWaverRenderer.BLOOM_SPREAD;
+    const stepPx = Math.max(1.0, Math.min(w, h) * spread);
     const bw = this.fbos.bloomA.width, bh = this.fbos.bloomA.height;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.bloomA.fb);
@@ -457,7 +461,7 @@ void main() {
     gl.bindTexture(gl.TEXTURE_2D, this.fbos.bloomB.textures[0]);
     gl.uniform1i(gl.getUniformLocation(comp, 'uBloom'), 1);
     gl.uniform1f(gl.getUniformLocation(comp, 'uBloomIntensity'),
-                 PromptWaverRenderer.BLOOM_INTENSITY);
+                 filters.bloomIntensity ?? PromptWaverRenderer.BLOOM_INTENSITY);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindVertexArray(null);

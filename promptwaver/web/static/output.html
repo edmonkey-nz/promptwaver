@@ -164,6 +164,8 @@ function connect(){
       filters.mirrorX = !!s.mirror_x;
       filters.mirrorY = !!s.mirror_y;
       filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
+      filters.bloomSpread = s.bloom_spread;
+      filters.bloomIntensity = s.bloom_intensity;
       filters.aspect = s.output_aspect || 1;
       if (showFps) {
         // Timed around the real thing, filters and all — a number that
