@@ -1623,9 +1623,20 @@ class Engine:
                 if len(kept) < 2 or not np.array_equal(kept[-1], pts[-1]):
                     kept = np.vstack([kept, pts[-1:]])
                 pts = kept
+            # Rounded with numpy rather than a per-point Python loop: this was
+            # the most expensive step in the whole ~20Hz broadcast, and
+            # `np.round(...).tolist()` yields the identical nested lists of
+            # Python floats with the rounding and float conversion both down
+            # in C (~7x on this operation alone).
+            #
+            # The .astype is load-bearing — Path.points is float32, and
+            # rounding at float32 precision before widening on .tolist()
+            # leaks the representation error into the payload: 0.105 comes
+            # out as 0.10499999672174454, a different number than this used
+            # to send and roughly four times the bytes to serialise.
             st = {
-                "c": [round(float(v), 3) for v in p.color],
-                "p": [[round(float(x), 3), round(float(y), 3)] for x, y in pts],
+                "c": np.round(p.color, 3).tolist(),
+                "p": np.round(pts.astype(np.float64), 3).tolist(),
             }
             # Per-stroke glow rides along only when a scene actually uses it,
             # so the ~20Hz payload for every existing scene is byte-identical

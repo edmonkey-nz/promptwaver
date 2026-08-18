@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 
 from aiohttp import web, WSMsgType
 
@@ -105,12 +106,19 @@ def make_app(engine) -> web.Application:
         return ws
 
     async def broadcaster(app):
+        # Target period, not a post-work pause. Sleeping a flat 0.05 *after*
+        # the work made the real period `work + 50ms`, so 20Hz was
+        # unreachable by construction: ~23ms of state/preview/serialise on a
+        # dense scene put the output window at ~13Hz. Sleeping the remainder
+        # of the budget instead holds a true 20Hz whenever the work fits, and
+        # degrades to "as fast as the work allows" when it doesn't.
+        period = 0.05
         try:
             while True:
+                tick_start = time.monotonic()
                 if app["clients"]:
                     try:
                         state = engine.state()
-                        preview_std = engine.preview()
                     except Exception as e:
                         # Never let a bad tick (e.g. a non-JSON-serialisable
                         # value slipping into state()) kill this task. Before
@@ -122,10 +130,15 @@ def make_app(engine) -> web.Application:
                         # in the terminal on process exit.
                         print(f"[promptwaver] broadcaster: skipped a bad state "
                               f"tick ({e}); continuing")
-                        await asyncio.sleep(0.05)
+                        await asyncio.sleep(period)
                         continue
-                    payload_std = json.dumps({"type": "state", "state": state, "preview": preview_std})
-                    payload_hq = None   # built lazily, only if an hq client is actually connected
+                    # BOTH payloads are built lazily, and each costs real time
+                    # on a dense scene (the hq preview alone is the single
+                    # most expensive step in this loop). Building the std one
+                    # unconditionally spent that on a payload nobody read
+                    # whenever the projector window was the only client.
+                    payload_std = None
+                    payload_hq = None
                     for ws, meta in list(app["clients"].items()):
                         try:
                             if meta.get("hq"):
@@ -134,10 +147,16 @@ def make_app(engine) -> web.Application:
                                     payload_hq = json.dumps({"type": "state", "state": state, "preview": preview_hq})
                                 await ws.send_str(payload_hq)
                             else:
+                                if payload_std is None:
+                                    preview_std = engine.preview()
+                                    payload_std = json.dumps({"type": "state", "state": state, "preview": preview_std})
                                 await ws.send_str(payload_std)
                         except Exception:
                             app["clients"].pop(ws, None)
-                await asyncio.sleep(0.05)   # ~20 Hz
+                # Sleep only the unused remainder of the budget. asyncio.sleep(0)
+                # still yields to the event loop, so an over-budget tick can't
+                # starve the websocket handlers.
+                await asyncio.sleep(max(0.0, period - (time.monotonic() - tick_start)))
         except asyncio.CancelledError:
             pass
 
