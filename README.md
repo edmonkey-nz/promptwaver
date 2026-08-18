@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.75.1-33e0d0)
+![version](https://img.shields.io/badge/version-0.76.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 ![ai-code](https://img.shields.io/badge/AI%20coded-YES-orange)

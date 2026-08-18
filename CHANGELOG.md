@@ -8,6 +8,106 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.76.0]
+
+### `bell` — a second percussive voice
+
+`pluck` was the only note-based voice; the other four (`pad`/`sub`/`osc`/`noise`) are continuous
+drones, so every soundscape's percussive accent came from the same place.
+
+- **New `bell` voice type**: struck notes built from a fixed bank of **inharmonic** partials
+  (`BELL_PARTIAL_RATIOS`), which is what makes it read as a bell/chime rather than a plucked
+  string. Those ratios aren't integer multiples of the fundamental, so they can't come from the
+  cached single-cycle wavetable every other waveform uses — it needs its own additive path.
+- Reuses the existing note scheduler (`_schedule_notes`, shared `MAX_ACTIVE_NOTES` cap) unchanged,
+  and stays **out** of `ENVELOPED_TYPES` for the same reason `pluck` does: each note already owns
+  its decay envelope, so a top-level ADSR would fight it.
+- Rendered with one batched `(notes × partials, frames)` call rather than one `_osc()` per note —
+  the same lesson `_render_pad` already learned. Sine partials specifically, which sidesteps
+  `_osc()`'s one-wavetable-per-call limit instead of fighting it.
+- **`MAX_ACTIVE_BELL_NOTES = 24`**, a tighter cap layered on the shared 96-note budget, because a
+  bell note costs several partials where a pluck note costs one. Both this and the drop from 8
+  partials to 5 came from measurement, not taste: 8 partials blew the 186ms frame budget on their
+  own (270ms avg). After: 62ms avg / 73ms max with two bell voices maxed out plus a pluck voice.
+
+### Slow filter sweep
+
+- **New whole-mix `filter sweep` + `sweep period`**: a slow sine added to the high band's EQ gain,
+  swinging ±8dB around whatever `eq.high` is set to. Reuses `_apply_eq`'s existing per-block FFT
+  untouched — only the dB figure it's handed varies over time — so `amount = 0` is byte-identical
+  to the previous behaviour and it needs no on/off flag.
+- Single global phase, unlike `swell`'s per-voice randomised phase: there's only one instance of
+  this, so there's nothing to decorrelate it against.
+
+### Effect previews
+
+- **Swell and filter-sweep visualisers**, side by side in a collapsible *Effect previews* panel:
+  the curve, a wall-clock-synced playhead, and a readout (depth/period, or dB swing/centre/period).
+- The swell one is honestly labelled a *representative* curve, not a live per-voice readout — each
+  voice runs on its own randomised phase **and** period (`base × 0.7–1.3`), by design, so there is
+  no single phase that would be true of any voice.
+
+### Generating a scene no longer freezes the interface
+
+- **The director call is backgrounded** (`asyncio.create_task`) instead of awaited inline in the
+  websocket handler. Awaiting it blocked that connection's whole message loop for the 1–3 minutes
+  a generation takes — sliders, mute and scene switches all sat unprocessed — while the separate
+  state broadcaster kept the canvas updating, which is exactly the "looks alive, nothing responds"
+  gap.
+- The modal now closes on submit and hands off to a **status strip** at the top of the page: live
+  elapsed time, progress, a pulsing border for the first few seconds so the handoff isn't missed,
+  and a **Cancel** button (arm-then-confirm) that genuinely interrupts the stream between chunks
+  rather than just hiding the UI. On completion it becomes a **Play** button and stays until used.
+
+### The director no longer accepts scenes it can't render
+
+Claude emitted `"generator": "pattern3d"` — a name that doesn't exist — four times running on one
+brief. Valid JSON, non-empty layers, so nothing caught it: it was billed, saved, and installed,
+and only failed later in `Scene.__init__`, leaving a scene that could neither play nor reopen.
+
+- **Generator names are now validated against the registry** before a generation is accepted, and
+  a bad one routes through the same retry-once-then-fall-back path as a parse failure.
+- **The retry now catches every exception**, not just `JSONDecodeError`/`ValueError`. A layer-level
+  `camera` key raises `TypeError` from `Layer(**l)`, which previously escaped and so skipped *both*
+  the retry and the log — the failure was invisible and unrecoverable.
+- **Malformed responses are saved to `<cache_dir>/_failed/`.** Previously only the parser's error
+  message survived, never the text that caused it, so there was nothing to diagnose from.
+- **Both system prompts now state their generator name explicitly** in REQUIREMENTS. It previously
+  appeared *only* inside the worked example — directly under a line reading "NEVER reuse the motifs
+  from the example below". The 2D prompt also now says that a 3D-*sounding* subject still renders
+  flat, which is what the failing brief ("sand falling between two glass panes") tripped on.
+
+### Model choice narrowed to Haiku
+
+- **Sonnet and Opus are commented out** (not removed) in the Generate modal. Sonnet-5 at high
+  effort was measured overshooting 64,000 output tokens without closing its JSON, truncated, billed
+  in full, taking up to 491s to fail. Opus costs more with no evidence it does better.
+
+### Output windows report their real frame rate
+
+- **New setting, Settings → Output monitors → "show frame rate on output windows"**: a corner
+  readout of each window's *actual* paint rate, paint cost in ms, stroke count and canvas size.
+- This is a different number from both the engine fps under the visualiser and the ~20Hz broadcast,
+  either of which can look healthy while a full-screen canvas is too slow to keep up. Paint cost is
+  shown next to the rate deliberately — it separates "the canvas is the bottleneck" (lower strokes
+  or glow) from "frames aren't arriving" (server side), which need opposite fixes.
+
+### Interface reorganisation
+
+- Save controls are icon-only (🎵 sound / 🎥 camera / 💾 all / 💿 save-as) with a tick on save, and
+  the Show prompts / Show title / Pin MIDI trio joins them as icons — two rows instead of five.
+- Output VU meter moved to the top of the side column and is now a 4px horizontal bar.
+- `hue` moved out of the stage column into the layer panel, next to the generator's own params.
+- Soundscape globals now lay out 7 across; the Modulation panel's sections became individually
+  collapsible sub-panels, with the ones that don't apply to the loaded scene hidden rather than
+  shown doing nothing.
+
+### Fixed
+
+- Save buttons replaced their icon with a text label on click and never restored it, because the
+  "revert" state was hardcoded from when they *were* text buttons.
+- The output VU meter animated `height` after being changed to a horizontal bar, so it never moved.
+
 ## [0.75.1]
 
 ### UI refinements

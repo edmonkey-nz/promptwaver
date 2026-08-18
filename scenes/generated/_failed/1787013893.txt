@@ -1,0 +1,285 @@
+# unknown generator 'pattern3d' — have ['attractor', 'flow_field', 'forest', 'ground_grid', 'pattern2d', 'ripples', 'world']
+
+```json
+{
+  "name": "sand falling between glass panes",
+  "layers": [
+    {
+      "generator": "pattern3d",
+      "params": {
+        "defs": {
+          "sand_grain": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.08, "c": [0, 0], "seg": 16}
+            ]
+          },
+          "dune_ridge": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[-0.6, 0], [-0.3, 0.5], [0.2, 0.3], [0.6, 0.7]], "closed": false}
+            ]
+          },
+          "valley_curve": {
+            "space": "cart",
+            "ops": [
+              {"op": "arc", "r": 0.8, "a0": 0.0, "a1": 0.5, "c": [0, -0.3], "seg": 32}
+            ]
+          },
+          "cascade": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 0.8], [0.05, 0.5], [-0.03, 0.2], [0.02, -0.1]], "closed": false}
+            ]
+          },
+          "strata_line": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [-0.9, 0], "b": [0.9, 0.1]}
+            ]
+          },
+          "glass_edge": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[-1.0, -0.2], [-0.95, 0.4], [-0.92, 0.8]], "closed": false}
+            ]
+          },
+          "settlement_pool": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.35, "c": [0, 0], "seg": 24}
+            ]
+          },
+          "wind_trace": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[-0.7, 0.3], [-0.4, 0.5], [-0.1, 0.2], [0.3, 0.6], [0.7, 0.4]], "closed": false}
+            ]
+          }
+        },
+        "nodes": [
+          {"def": "dune_ridge", "at": [-50, 0], "scale": 1.2, "color": [1.0, 0.92, 0.75], "glow": 0.7, "rotate": 0.0},
+          {"def": "dune_ridge", "at": [-48, 5], "scale": 0.95, "color": [0.95, 0.88, 0.70], "glow": 0.65, "rotate": 0.15},
+          {"def": "dune_ridge", "at": [-46, -3], "scale": 1.1, "color": [1.0, 0.90, 0.72], "glow": 0.68, "rotate": -0.08},
+          {"def": "dune_ridge", "at": [-44, 6], "scale": 0.88, "color": [0.98, 0.85, 0.68], "glow": 0.62, "rotate": 0.22},
+          {"def": "dune_ridge", "at": [-42, -2], "scale": 1.15, "color": [1.0, 0.93, 0.75], "glow": 0.70, "rotate": -0.12},
+          {"def": "dune_ridge", "at": [-40, 4], "scale": 0.92, "color": [0.96, 0.87, 0.69], "glow": 0.64, "rotate": 0.18},
+          {"def": "dune_ridge", "at": [-38, -4], "scale": 1.08, "color": [0.99, 0.91, 0.73], "glow": 0.66, "rotate": -0.10},
+          {"def": "dune_ridge", "at": [-36, 7], "scale": 0.90, "color": [0.97, 0.86, 0.67], "glow": 0.63, "rotate": 0.20},
+          {"def": "dune_ridge", "at": [-34, -1], "scale": 1.13, "color": [1.0, 0.92, 0.74], "glow": 0.69, "rotate": -0.06},
+          {"def": "dune_ridge", "at": [-32, 5], "scale": 0.94, "color": [0.98, 0.89, 0.71], "glow": 0.65, "rotate": 0.16},
+          {"def": "dune_ridge", "at": [-30, -3], "scale": 1.10, "color": [1.0, 0.91, 0.73], "glow": 0.67, "rotate": -0.09},
+          {"def": "dune_ridge", "at": [-28, 6], "scale": 0.89, "color": [0.97, 0.87, 0.68], "glow": 0.64, "rotate": 0.19},
+          {"def": "dune_ridge", "at": [-26, -5], "scale": 1.12, "color": [1.0, 0.93, 0.75], "glow": 0.70, "rotate": -0.11},
+          {"def": "dune_ridge", "at": [-24, 3], "scale": 0.91, "color": [0.96, 0.88, 0.70], "glow": 0.62, "rotate": 0.17},
+          {"def": "dune_ridge", "at": [-22, -2], "scale": 1.09, "color": [0.99, 0.90, 0.72], "glow": 0.68, "rotate": -0.07},
+          {"def": "dune_ridge", "at": [-20, 7], "scale": 0.93, "color": [0.98, 0.86, 0.69], "glow": 0.63, "rotate": 0.21},
+          {"def": "dune_ridge", "at": [-18, -4], "scale": 1.14, "color": [1.0, 0.92, 0.74], "glow": 0.71, "rotate": -0.13},
+          {"def": "dune_ridge", "at": [-16, 4], "scale": 0.87, "color": [0.95, 0.85, 0.67], "glow": 0.61, "rotate": 0.23},
+          {"def": "dune_ridge", "at": [-14, -1], "scale": 1.11, "color": [0.99, 0.91, 0.73], "glow": 0.69, "rotate": -0.08},
+          {"def": "dune_ridge", "at": [-12, 5], "scale": 0.96, "color": [0.98, 0.89, 0.71], "glow": 0.65, "rotate": 0.15},
+          {"def": "dune_ridge", "at": [-10, -3], "scale": 1.07, "color": [1.0, 0.90, 0.72], "glow": 0.66, "rotate": -0.10},
+          {"def": "dune_ridge", "at": [-8, 6], "scale": 0.92, "color": [0.97, 0.87, 0.69], "glow": 0.64, "rotate": 0.18},
+          {"def": "dune_ridge", "at": [-6, -2], "scale": 1.09, "color": [0.99, 0.92, 0.74], "glow": 0.68, "rotate": -0.09},
+          {"def": "dune_ridge", "at": [-4, 4], "scale": 0.90, "color": [0.96, 0.86, 0.68], "glow": 0.62, "rotate": 0.19},
+          {"def": "dune_ridge", "at": [-2, -5], "scale": 1.12, "color": [1.0, 0.93, 0.75], "glow": 0.70, "rotate": -0.12},
+          {"def": "dune_ridge", "at": [0, 3], "scale": 0.88, "color": [0.97, 0.88, 0.70], "glow": 0.63, "rotate": 0.16},
+          {"def": "dune_ridge", "at": [2, -4], "scale": 1.10, "color": [0.99, 0.91, 0.73], "glow": 0.69, "rotate": -0.11},
+          {"def": "dune_ridge", "at": [4, 5], "scale": 0.94, "color": [0.98, 0.87, 0.69], "glow": 0.64, "rotate": 0.20},
+          {"def": "dune_ridge", "at": [6, -1], "scale": 1.13, "color": [1.0, 0.92, 0.74], "glow": 0.71, "rotate": -0.07},
+          {"def": "dune_ridge", "at": [8, 6], "scale": 0.91, "color": [0.96, 0.85, 0.67], "glow": 0.61, "rotate": 0.22},
+          {"def": "dune_ridge", "at": [10, -3], "scale": 1.08, "color": [0.99, 0.90, 0.72], "glow": 0.67, "rotate": -0.09},
+          {"def": "dune_ridge", "at": [12, 4], "scale": 0.95, "color": [0.98, 0.89, 0.71], "glow": 0.65, "rotate": 0.17},
+          {"def": "dune_ridge", "at": [14, -2], "scale": 1.11, "color": [1.0, 0.91, 0.73], "glow": 0.68, "rotate": -0.08},
+          {"def": "dune_ridge", "at": [16, 7], "scale": 0.89, "color": [0.97, 0.86, 0.68], "glow": 0.62, "rotate": 0.21},
+          {"def": "dune_ridge", "at": [18, -5], "scale": 1.14, "color": [1.0, 0.93, 0.75], "glow": 0.70, "rotate": -0.13},
+          {"def": "dune_ridge", "at": [20, 3], "scale": 0.87, "color": [0.95, 0.85, 0.67], "glow": 0.61, "rotate": 0.23},
+          {"def": "dune_ridge", "at": [22, -1], "scale": 1.12, "color": [0.99, 0.92, 0.74], "glow": 0.69, "rotate": -0.10},
+          {"def": "dune_ridge", "at": [24, 5], "scale": 0.93, "color": [0.98, 0.88, 0.70], "glow": 0.64, "rotate": 0.18},
+          {"def": "dune_ridge", "at": [26, -3], "scale": 1.09, "color": [0.99, 0.91, 0.73], "glow": 0.68, "rotate": -0.11},
+          {"def": "dune_ridge", "at": [28, 6], "scale": 0.92, "color": [0.97, 0.87, 0.69], "glow": 0.63, "rotate": 0.19},
+          {"def": "dune_ridge", "at": [30, -2], "scale": 1.10, "color": [1.0, 0.90, 0.72], "glow": 0.67, "rotate": -0.09},
+          {"def": "dune_ridge", "at": [32, 4], "scale": 0.90, "color": [0.96, 0.86, 0.68], "glow": 0.62, "rotate": 0.20},
+          {"def": "dune_ridge", "at": [34, -4], "scale": 1.13, "color": [1.0, 0.93, 0.75], "glow": 0.71, "rotate": -0.12},
+          {"def": "dune_ridge", "at": [36, 3], "scale": 0.88, "color": [0.97, 0.88, 0.70], "glow": 0.63, "rotate": 0.16},
+          {"def": "dune_ridge", "at": [38, -5], "scale": 1.11, "color": [0.99, 0.91, 0.73], "glow": 0.69, "rotate": -0.11},
+          {"def": "dune_ridge", "at": [40, 5], "scale": 0.94, "color": [0.98, 0.87, 0.69], "glow": 0.64, "rotate": 0.21},
+          {"def": "dune_ridge", "at": [42, -2], "scale": 1.12, "color": [1.0, 0.92, 0.74], "glow": 0.70, "rotate": -0.08},
+          {"def": "dune_ridge", "at": [44, 6], "scale": 0.91, "color": [0.96, 0.85, 0.67], "glow": 0.61, "rotate": 0.22},
+          {"def": "dune_ridge", "at": [46, -1], "scale": 1.09, "color": [0.99, 0.90, 0.72], "glow": 0.68, "rotate": -0.07},
+          {"def": "dune_ridge", "at": [48, 4], "scale": 0.95, "color": [0.98, 0.89, 0.71], "glow": 0.65, "rotate": 0.17},
+          {"def": "dune_ridge", "at": [50, -3], "scale": 1.10, "color": [1.0, 0.91, 0.73], "glow": 0.67, "rotate": -0.10},
+          {"def": "valley_curve", "at": [-52, -8], "scale": 1.3, "color": [0.88, 0.78, 0.60], "glow": 0.75},
+          {"def": "valley_curve", "at": [-45, 10], "scale": 1.2, "color": [0.85, 0.75, 0.55], "glow": 0.73},
+          {"def": "valley_curve", "at": [-35, -12], "scale": 1.25, "color": [0.87, 0.77, 0.58], "glow": 0.74},
+          {"def": "valley_curve", "at": [-25, 9], "scale": 1.15, "color": [0.86, 0.76, 0.57], "glow": 0.72},
+          {"def": "valley_curve", "at": [-15, -10], "scale": 1.22, "color": [0.89, 0.79, 0.61], "glow": 0.76},
+          {"def": "valley_curve", "at": [-5, 11], "scale": 1.18, "color": [0.84, 0.74, 0.54], "glow": 0.71},
+          {"def": "valley_curve", "at": [5, -9], "scale": 1.27, "color": [0.88, 0.78, 0.60], "glow": 0.75},
+          {"def": "valley_curve", "at": [15, 8], "scale": 1.19, "color": [0.86, 0.76, 0.57], "glow": 0.72},
+          {"def": "valley_curve", "at": [25, -11], "scale": 1.23, "color": [0.87, 0.77, 0.58], "glow": 0.74},
+          {"def": "valley_curve", "at": [35, 10], "scale": 1.16, "color": [0.85, 0.75, 0.55], "glow": 0.73},
+          {"def": "valley_curve", "at": [45, -8], "scale": 1.21, "color": [0.89, 0.79, 0.61], "glow": 0.76},
+          {"def": "valley_curve", "at": [55, 7], "scale": 1.17, "color": [0.84, 0.74, 0.54], "glow": 0.71},
+          {"def": "cascade", "at": [-50, 2], "scale": 0.8, "color": [0.92, 0.88, 0.78], "glow": 0.8},
+          {"def": "cascade", "at": [-40, -5], "scale": 0.85, "color": [0.94, 0.90, 0.80], "glow": 0.82},
+          {"def": "cascade", "at": [-30, 4], "scale": 0.78, "color": [0.90, 0.86, 0.76], "glow": 0.78},
+          {"def": "cascade", "at": [-20, -3], "scale": 0.87, "color": [0.95, 0.91, 0.81], "glow": 0.83},
+          {"def": "cascade", "at": [-10, 6], "scale": 0.82, "color": [0.92, 0.88, 0.78], "glow": 0.80},
+          {"def": "cascade", "at": [0, -4], "scale": 0.88, "color": [0.93, 0.89, 0.79], "glow": 0.81},
+          {"def": "cascade", "at": [10, 3], "scale": 0.80, "color": [0.91, 0.87, 0.77], "glow": 0.79},
+          {"def": "cascade", "at": [20, -5], "scale": 0.86, "color": [0.94, 0.90, 0.80], "glow": 0.82},
+          {"def": "cascade", "at": [30, 5], "scale": 0.81, "color": [0.92, 0.88, 0.78], "glow": 0.80},
+          {"def": "cascade", "at": [40, -2], "scale": 0.89, "color": [0.95, 0.91, 0.81], "glow": 0.83},
+          {"def": "cascade", "at": [50, 4], "scale": 0.83, "color": [0.93, 0.89, 0.79], "glow": 0.81},
+          {"def": "strata_line", "at": [-54, -6], "scale": 1.0, "color": [0.75, 0.68, 0.50], "glow": 0.55},
+          {"def": "strata_line", "at": [-48, 8], "scale": 1.05, "color": [0.77, 0.70, 0.52], "glow": 0.57},
+          {"def": "strata_line", "at": [-42, -4], "scale": 0.98, "color": [0.73, 0.66, 0.48], "glow": 0.53},
+          {"def": "strata_line", "at": [-36, 10], "scale": 1.02, "color": [0.76, 0.69, 0.51], "glow": 0.56},
+          {"def": "strata_line", "at": [-30, -7], "scale": 1.01, "color": [0.74, 0.67, 0.49], "glow": 0.54},
+          {"def": "strata_line", "at": [-24, 9], "scale": 0.99, "color": [0.78, 0.71, 0.53], "glow": 0.58},
+          {"def": "strata_line", "at": [-18, -5], "scale": 1.03, "color": [0.75, 0.68, 0.50], "glow": 0.55},
+          {"def": "strata_line", "at": [-12, 11], "scale": 1.00, "color": [0.77, 0.70, 0.52], "glow": 0.57},
+          {"def": "strata_line", "at": [-6, -3], "scale": 1.04, "color": [0.73, 0.66, 0.48], "glow": 0.53},
+          {"def": "strata_line", "at": [0, 8], "scale": 0.97, "color": [0.76, 0.69, 0.51], "glow": 0.56},
+          {"def": "strata_line", "at": [6, -6], "scale": 1.02, "color": [0.74, 0.67, 0.49], "glow": 0.54},
+          {"def": "strata_line", "at": [12, 10], "scale": 1.01, "color": [0.78, 0.71, 0.53], "glow": 0.58},
+          {"def": "strata_line", "at": [18, -4], "scale": 0.98, "color": [0.75, 0.68, 0.50], "glow": 0.55},
+          {"def": "strata_line", "at": [24, 7], "scale": 1.05, "color": [0.77, 0.70, 0.52], "glow": 0.57},
+          {"def": "strata_line", "at": [30, -5], "scale": 1.03, "color": [0.73, 0.66, 0.48], "glow": 0.53},
+          {"def": "strata_line", "at": [36, 9], "scale": 0.99, "color": [0.76, 0.69, 0.51], "glow": 0.56},
+          {"def": "strata_line", "at": [42, -3], "scale": 1.00, "color": [0.74, 0.67, 0.49], "glow": 0.54},
+          {"def": "strata_line", "at": [48, 11], "scale": 1.04, "color": [0.78, 0.71, 0.53], "glow": 0.58},
+          {"def": "strata_line", "at": [54, -2], "scale": 0.97, "color": [0.75, 0.68, 0.50], "glow": 0.55},
+          {"def": "glass_edge", "at": [-56, -15], "scale": 1.8, "color": [0.40, 0.50, 0.70], "glow": 0.85},
+          {"def": "glass_edge", "at": [-48, 15], "scale": 1.7, "color": [0.35, 0.48, 0.68], "glow": 0.83},
+          {"def": "glass_edge", "at": [-40, -18], "scale": 1.75, "color": [0.38, 0.49, 0.69], "glow": 0.84},
+          {"def": "glass_edge", "at": [-32, 16], "scale": 1.65, "color": [0.32, 0.47, 0.67], "glow": 0.82},
+          {"def": "glass_edge", "at": [-24, -14], "scale": 1.72, "color": [0.39, 0.51, 0.70], "glow": 0.86},
+          {"def": "glass_edge", "at": [-16, 17], "scale": 1.68, "color": [0.36, 0.48, 0.68], "glow": 0.84},
+          {"def": "glass_edge", "at": [-8, -16], "scale": 1.74, "color": [0.41, 0.52, 0.71], "glow": 0.87},
+          {"def": "glass_edge", "at": [0, 14], "scale": 1.66, "color": [0.34, 0.47, 0.67], "glow": 0.83},
+          {"def": "glass_edge", "at": [8, -15], "scale": 1.70, "color": [0.37, 0.49, 0.69], "glow": 0.85},
+          {"def": "glass_edge", "at": [16, 18], "scale": 1.69, "color": [0.38, 0.50, 0.70], "glow": 0.86},
+          {"def": "glass_edge", "at": [24, -13], "scale": 1.64, "color": [0.33, 0.46, 0.66], "glow": 0.82},
+          {"def": "glass_edge", "at": [32, 16], "scale": 1.73, "color": [0.40, 0.51, 0.70], "glow": 0.86},
+          {"def": "glass_edge", "at": [40, -17], "scale": 1.67, "color": [0.35, 0.48, 0.68], "glow": 0.84},
+          {"def": "glass_edge", "at": [48, 15], "scale": 1.71, "color": [0.39, 0.50, 0.69], "glow": 0.85},
+          {"def": "glass_edge", "at": [56, -14], "scale": 1.65, "color": [0.36, 0.48, 0.68], "glow": 0.83},
+          {"def": "settlement_pool", "at": [-52, 3], "scale": 0.7, "color": [0.50, 0.75, 1.0], "glow": 0.90},
+          {"def": "settlement_pool", "at": [-42, -8], "scale": 0.65, "color": [0.45, 0.72, 0.98], "glow": 0.88},
+          {"def": "settlement_pool", "at": [-32, 5], "scale": 0.72, "color": [0.52, 0.76, 1.0], "glow": 0.91},
+          {"def": "settlement_pool", "at": [-22, -6], "scale": 0.68, "color": [0.48, 0.74, 0.99], "glow": 0.89},
+          {"def": "settlement_pool", "at": [-12, 7], "scale": 0.71, "color": [0.51, 0.75, 1.0], "glow": 0.90},
+          {"def": "settlement_pool", "at": [-2, -5], "scale": 0.66, "color": [0.46, 0.73, 0.98], "glow": 0.88},
+          {"def": "settlement_pool", "at": [8, 4], "scale": 0.73, "color": [0.53, 0.77, 1.0], "glow": 0.91},
+          {"def": "settlement_pool", "at": [18, -7], "scale": 0.67, "color": [0.47, 0.73, 0.99], "glow": 0.89},
+          {"def": "settlement_pool", "at": [28, 6], "scale": 0.70, "color": [0.50, 0.75, 1.0], "glow": 0.90},
+          {"def": "settlement_pool", "at": [38, -4], "scale": 0.69, "color": [0.49, 0.74, 0.99], "glow": 0.89},
+          {"def": "settlement_pool", "at": [48, 5], "scale": 0.72, "color": [0.52, 0.76, 1.0], "glow": 0.91},
+          {"def": "settlement_pool", "at": [56, -6], "scale": 0.68, "color": [0.48, 0.74, 0.99], "glow": 0.89},
+          {"def": "wind_trace", "at": [-54, 5], "scale": 0.9, "color": [0.85, 0.80, 0.65], "glow": 0.60, "rotate": 0.12},
+          {"def": "wind_trace", "at": [-44, -7], "scale": 0.95, "color": [0.88, 0.83, 0.68], "glow": 0.62, "rotate": 0.08},
+          {"def": "wind_trace", "at": [-34, 9], "scale": 0.88, "color": [0.83, 0.78, 0.63], "glow": 0.58, "rotate": 0.15},
+          {"def": "wind_trace", "at": [-24, -4], "scale": 0.92, "color": [0.86, 0.81, 0.66], "glow": 0.61, "rotate": 0.10},
+          {"def": "wind_trace", "at": [-14, 8], "scale": 0.90, "color": [0.85, 0.80, 0.65], "glow": 0.60, "rotate": 0.13},
+          {"def": "wind_trace", "at": [-4, -6], "scale": 0.94, "color": [0.87, 0.82, 0.67], "glow": 0.61, "rotate": 0.09},
+          {"def": "wind_trace", "at": [6, 7], "scale": 0.89, "color": [0.84, 0.79, 0.64], "glow": 0.59, "rotate": 0.14},
+          {"def": "wind_trace", "at": [16, -5], "scale": 0.93, "color": [0.86, 0.81, 0.66], "glow": 0.61, "rotate": 0.11},
+          {"def": "wind_trace", "at": [26, 6], "scale": 0.91, "color": [0.85, 0.80, 0.65], "glow": 0.60, "rotate": 0.12},
+          {"def": "wind_trace", "at": [36, -3], "scale": 0.96, "color": [0.88, 0.83, 0.68], "glow": 0.62, "rotate": 0.08},
+          {"def": "wind_trace", "at": [46, 8], "scale": 0.87, "color": [0.83, 0.78, 0.63], "glow": 0.58, "rotate": 0.15},
+          {"def": "wind_trace", "at": [54, -4], "scale": 0.92, "color": [0.86, 0.81, 0.66], "glow": 0.61, "rotate": 0.10},
+          {"def": "sand_grain", "at": [-50, -2, 0.5], "scale": 1.5, "color": [1.0, 0.98, 0.88], "glow": 0.85},
+          {"def": "sand_grain", "at": [-40, 6, -0.3], "scale": 1.3, "color": [0.98, 0.95, 0.85], "glow": 0.83},
+          {"def": "sand_grain", "at": [-30, -4, 1.0], "scale": 1.4, "color": [0.99, 0.97, 0.87], "glow": 0.84},
+          {"def": "sand_grain", "at": [-20, 5, 0.2], "scale": 1.6, "color": [1.0, 0.98, 0.88], "glow": 0.85},
+          {"def": "sand_grain", "at": [-10, -3, -0.5], "scale": 1.2, "color": [0.97, 0.94, 0.84], "glow": 0.82},
+          {"def": "sand_grain", "at": [0, 4, 0.8], "scale": 1.5, "color": [1.0, 0.98, 0.88], "glow": 0.85},
+          {"def": "sand_grain", "at": [10, -5, 0.1], "scale": 1.4, "color": [0.99, 0.97, 0.87], "glow": 0.84},
+          {"def": "sand_grain", "at": [20, 3, -0.4], "scale": 1.3, "color": [0.98, 0.95, 0.85], "glow": 0.83},
+          {"def": "sand_grain", "at": [30, -2, 0.9], "scale": 1.5, "color": [1.0, 0.98, 0.88], "glow": 0.85},
+          {"def": "sand_grain", "at": [40, 6, 0.3], "scale": 1.4, "color": [0.99, 0.97, 0.87], "glow": 0.84},
+          {"def": "sand_grain", "at": [50, -1, -0.2], "scale": 1.6, "color": [1.0, 0.98, 0.88], "glow": 0.85},
+          {"def": "sand_grain", "at": [56, 4, 0.7], "scale": 1.3, "color": [0.98, 0.95, 0.85], "glow": 0.83}
+        ],
+        "scale": 1.0,
+        "rotate": 0.0,
+        "spread": 1.0,
+        "glow": 0.0,
+        "camera": {
+          "mode": "path",
+          "waypoints": [
+            [-55, 0, 8],
+            [-35, 12, 12],
+            [-15, -10, 10],
+            [5, 14, 11],
+            [25, -8, 9],
+            [45, 10, 12],
+            [55, -5, 8],
+            [35, 15, 11],
+            [15, -12, 10],
+            [-5, 16, 12],
+            [-30, -6, 9]
+          ],
+          "speed": 0.5,
+          "fov": 62,
+          "near": 0.4,
+          "far": 40,
+          "max_strokes": 120,
+          "depth": {"mode": "cull"}
+        },
+        "max_strokes": 700
+      }
+    }
+  ],
+  "soundscape": {
+    "tempo": 55,
+    "key": "C",
+    "voices": [
+      {
+        "name": "deep_earth",
+        "type": "osc",
+        "chord": [24],
+        "unison": 3,
+        "detune": 0.008,
+        "tone": 0.22,
+        "sub": 0.6,
+        "level": 0.7,
+        "env": {"attack": 4.0, "decay": 8.0, "sustain": 0.6, "release": 3.0}
+      },
+      {
+        "name": "sand_drift",
+        "type": "pad",
+        "chord": [36, 40, 43, 47],
+        "tone": 0.35,
+        "level": 0.5,
+        "env": {"attack": 6.0, "decay": 10.0, "sustain": 0.5, "release": 4.0},
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.25
+        }
+      },
+      {
+        "name": "crystalline_voices",
+        "type": "bell",
+        "scale": [36, 40, 43, 47, 50, 52, 55],
+        "rate": 0.3,
+        "decay": 3.5,
+        "tone": 0.58,
+        "level": 0.4
+      },
+      {
+        "name": "mineral_air",
+        "type": "noise",
+        "tone": 0.28,
+        "level": 0.25
+      }
+    ]
+  },
+  "palette": ["#0a0a14", "#e8dcc4", "#c7a882", "#4080c0", "#f5f1e0"]
+}
+```

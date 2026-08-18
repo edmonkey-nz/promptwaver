@@ -95,7 +95,7 @@ def make_app(engine) -> web.Application:
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    reply = await _handle(engine, json.loads(msg.data), request.app)
+                    reply = await _handle(engine, json.loads(msg.data), request.app, ws)
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
         except (asyncio.CancelledError, ConnectionResetError):
@@ -158,7 +158,7 @@ def make_app(engine) -> web.Application:
     return app
 
 
-async def _handle(engine, m: dict, app=None):
+async def _handle(engine, m: dict, app=None, ws=None):
     t = m.get("type")
     loop = asyncio.get_event_loop()
     if t == "set":
@@ -182,22 +182,46 @@ async def _handle(engine, m: dict, app=None):
         fade = float(m.get("fade", 2.0))
         (engine.disable_visuals if m.get("value") else engine.enable_visuals)(fade=fade)
     elif t == "generate":
-        # run the (possibly networked) director off the event loop, then ack so
-        # the UI can restore the Generate button from its throbber state
-        await loop.run_in_executor(None, engine.generate_scene,
-                                   m["keyword"], m.get("name"), m.get("audio"),
-                                   m.get("size", "small"), m.get("warmth"),
-                                   m.get("energy"), m.get("evolution"),
-                                   m.get("kind", "3d"))
-        # Cost rides on the ack rather than being read out of `state`: the
-        # state broadcast is a separate ~20Hz loop, so the client would
-        # otherwise be reading whatever snapshot happened to precede this
-        # reply — which is the pre-generation one, where the cost is still None.
-        return {"type": "generate_result", "ok": True,
-                "source": engine.director.last_source,
-                "error": engine.director.last_error,
-                "cost": engine.director.last_cost,
-                "expansion": engine.director.last_expansion}
+        # The director call may sit on the network for 1-3+ minutes (longer on
+        # slower models). It runs off the event loop via run_in_executor either
+        # way, but AWAITING that call inline here — as this used to — blocks
+        # this connection's own message loop (the `async for msg in ws` below)
+        # for the same duration: every other message from this browser tab
+        # (a slider drag, mute, scene switch) would sit unprocessed until
+        # generation finished, even though the state broadcaster (a separate
+        # task) keeps the canvas/meters updating the whole time — which is
+        # exactly the "looks alive, nothing responds" gap. Backgrounding it as
+        # its own task lets this connection keep reading and dispatching other
+        # messages while generation is in flight; the reply still lands on the
+        # same websocket once it's done, just asynchronously rather than as
+        # this handler's return value.
+        async def _run_generate():
+            try:
+                await loop.run_in_executor(None, engine.generate_scene,
+                                           m["keyword"], m.get("name"), m.get("audio"),
+                                           m.get("size", "small"), m.get("warmth"),
+                                           m.get("energy"), m.get("evolution"),
+                                           m.get("kind", "3d"))
+                # Cost rides on the ack rather than being read out of `state`: the
+                # state broadcast is a separate ~20Hz loop, so the client would
+                # otherwise be reading whatever snapshot happened to precede this
+                # reply — which is the pre-generation one, where the cost is None.
+                reply = {"type": "generate_result", "ok": True,
+                         "source": engine.director.last_source,
+                         "error": engine.director.last_error,
+                         "cost": engine.director.last_cost,
+                         "expansion": engine.director.last_expansion}
+                await ws.send_str(json.dumps(reply))
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass    # the tab closed/reloaded mid-generation — nothing to reply to
+        asyncio.create_task(_run_generate())
+        return None
+    elif t == "cancel_generation":
+        # Only takes effect between stream chunks (see SceneDirector.cancel /
+        # _stream_or_call) — a request already fully received when this
+        # arrives finishes normally. Safe to call with nothing running: it's
+        # just a flag, cleared at the start of the next generate() either way.
+        engine.director.cancel()
     elif t == "estimate_generation":
         # Answered from the director so the browser never carries its own copy
         # of the price table — the number quoted next to the slider and the
@@ -213,13 +237,22 @@ async def _handle(engine, m: dict, app=None):
     elif t == "set_audio":
         engine.set_audio_param(m["key"], m["value"])
     elif t == "apply_audio":
-        await loop.run_in_executor(None, engine.apply_audio_to_scene,
-                                   m["scene"], m.get("audio", ""), m.get("warmth"),
-                                   m.get("energy"), m.get("evolution"))
-        return {"type": "generate_result", "ok": True, "action": "apply_audio",
-                "source": engine.director.last_source,
-                "error": engine.director.last_error,
-                "cost": engine.director.last_cost}
+        # Same reasoning as "generate" above — background it so this
+        # connection's message loop isn't blocked for the duration.
+        async def _run_apply_audio():
+            try:
+                await loop.run_in_executor(None, engine.apply_audio_to_scene,
+                                           m["scene"], m.get("audio", ""), m.get("warmth"),
+                                           m.get("energy"), m.get("evolution"))
+                reply = {"type": "generate_result", "ok": True, "action": "apply_audio",
+                         "source": engine.director.last_source,
+                         "error": engine.director.last_error,
+                         "cost": engine.director.last_cost}
+                await ws.send_str(json.dumps(reply))
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass
+        asyncio.create_task(_run_apply_audio())
+        return None
     elif t == "audio_config":
         done = engine.configure_audio(device=m.get("device"), blocksize=m.get("blocksize"),
                                       latency=m.get("latency"))

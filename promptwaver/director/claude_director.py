@@ -22,6 +22,7 @@ import hashlib
 import json
 import math
 import os
+import threading
 import time
 
 from ..scenes import SceneSpec
@@ -186,6 +187,8 @@ positions about -8..8 so the camera can float among them. Gentle motion, long
 attack/release, colours matched to the mood. r,g,b are 0..1.
 
 REQUIREMENTS for every scene:
+- The layer's "generator" MUST be exactly the string "world". There is no other
+  valid value — a made-up name makes the scene unloadable.
 - Build a full ENVIRONMENT to navigate inside, not a flat pattern.
 - Author geometry SPECIFIC to THIS keyword. Invent the objects that belong in it.
 - Include a ground/floor or an enclosing boundary (walls, a shell) so it reads as
@@ -344,8 +347,14 @@ band to destination — low band to size (it thumps), high band to spread or glo
 depth of 0 is a route that does nothing.
 
 REQUIREMENTS for every 2D scene:
+- The layer's "generator" MUST be exactly the string "pattern2d". There is no
+  other valid value, and no such thing as "pattern3d" — a made-up name makes
+  the scene unloadable. Every point you write is 2 numbers [x,y], never 3.
 - Fill the frame. The composition should reach out to roughly 0.9 in at least
   one direction, and be centred on (0,0) unless the keyword says otherwise.
+- A subject that sounds three-dimensional (falling, depth, stacking, "between"
+  two surfaces) is still rendered as a FLAT pattern here: express it as
+  symmetry, banding and scale, NOT as a camera, waypoints, or 3D positions.
 - Author motifs SPECIFIC to the keyword, then multiply them. Invent geometry
   that belongs to the subject.
 - Use symmetry. 4-fold ("mirror":"xy") or 6/8/12-fold ("radial") is what makes
@@ -476,6 +485,28 @@ def estimate_cost(model: str, usage) -> dict | None:
             # still spent, but the token counts are inferred. See
             # `_EstimatedUsage`.
             "estimated": isinstance(usage, _EstimatedUsage),
+            "usd": round(usd, 4)}
+
+
+def _sum_cost(a: dict | None, b: dict | None) -> dict | None:
+    """Combine two `estimate_cost` results into one, for a retried generation
+    where BOTH calls were billed — the retry is a second real API call, not a
+    replacement for the first, so the reported cost has to cover both or it
+    understates what was actually spent. Token counts are simple sums; `usd`
+    is re-derived rather than added directly so rounding doesn't compound."""
+    if a is None:
+        return b
+    if b is None:
+        return a
+    tin = a["input_tokens"] + b["input_tokens"]
+    tout = a["output_tokens"] + b["output_tokens"]
+    twrite = a.get("cache_write_tokens", 0) + b.get("cache_write_tokens", 0)
+    tread = a.get("cache_read_tokens", 0) + b.get("cache_read_tokens", 0)
+    p_in, p_out = _price_for(b["model"])
+    usd = ((tin + twrite * 1.25 + tread * 0.1) * p_in + tout * p_out) / 1e6
+    return {"model": b["model"], "input_tokens": tin, "output_tokens": tout,
+            "cache_read_tokens": tread, "cache_write_tokens": twrite,
+            "estimated": a.get("estimated", False) or b.get("estimated", False),
             "usd": round(usd, 4)}
 
 
@@ -792,6 +823,7 @@ class SceneDirector:
     def __init__(self, cache_dir: str, model: str | None = None):
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
+        self._failed_dir = os.path.join(cache_dir, "_failed")
         # Two guards against an expensive runaway, both aimed at the same
         # measured failure: a model that keeps writing past its budget, is
         # truncated, and is billed in full for output that gets discarded.
@@ -800,6 +832,13 @@ class SceneDirector:
         # the connection does stop the meter). 0 disables either.
         self.cost_cap = float(settings.get("cost_cap", DEFAULT_COST_CAP))
         self.timeout = float(settings.get("gen_timeout", DEFAULT_GEN_TIMEOUT))
+        # User-triggered abort, checked from the streaming loop in
+        # _stream_or_call (running on a background thread via
+        # run_in_executor) — set from the asyncio thread when a "cancel"
+        # message arrives. threading.Event rather than a plain bool: this is
+        # genuinely read from one thread and written from another, and a bool
+        # only happens to be safe for that under CPython's GIL by accident.
+        self._cancel_event = threading.Event()
         self.last_source = None       # "claude" | "cache" | "fallback"
         self.last_error = None
         self.last_progress = 0.0      # 0..1, approximate — see _from_claude
@@ -821,6 +860,16 @@ class SceneDirector:
         self.max_pps = int(settings.get("max_pps", 20000))
         settings.apply_env()          # pull a stored key into the env if present
         self._client = self._make_client()
+
+    def cancel(self):
+        """User-triggered abort of whatever generation is currently in
+        flight. Checked from `_stream_or_call`'s streaming loop, on the
+        background thread the request actually runs on — this can only take
+        effect at the same granularity `timeout` already does (between
+        stream chunks), and only on the streaming code path. Idempotent; a
+        cancel with nothing running just sets a flag that the next
+        generate()/generate_audio() clears before it would matter."""
+        self._cancel_event.set()
 
     def set_max_pps(self, value: int):
         self.max_pps = max(1000, int(value))
@@ -936,6 +985,7 @@ class SceneDirector:
                     self.last_expansion = {"authored": before, "total": after}
             return spec
 
+        self._cancel_event.clear()   # a stale cancel from a finished run must not abort this one
         self.generating = True
         self.last_progress = 0.0
         self.last_cost = None
@@ -991,6 +1041,7 @@ class SceneDirector:
                 self.last_progress = 1.0
                 return json.load(f)
 
+        self._cancel_event.clear()
         self.generating = True
         self.last_progress = 0.0
         self.last_cost = None
@@ -1008,30 +1059,49 @@ class SceneDirector:
                       f"Output ONLY a JSON object with this exact shape, no prose, no "
                       f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}\n\n{tier['hint']}" + character_line)
             budget_chars = min(tier["max_tokens"], 3000) * 4
-            text, stop_reason = self._stream_or_call(content, budget_chars)
-            if stop_reason == "max_tokens":
-                self.last_error = "response truncated"
-                self.last_source = "fallback"
-                from ..audio import default_soundscape
-                return default_soundscape()
-            data = json.loads(_extract_json(text))
-            scape = data.get("soundscape", data)   # tolerate either shape
-            if not scape.get("voices"):
-                raise ValueError("no voices in response")
-            self.last_cost = estimate_cost(self.model, self._last_usage)
-            # Same ceiling the full-scene path gets via _ensure_soundscape —
-            # this route returns a bare dict, so it has to be applied here too
-            # (and BEFORE the cache write, or a trimmed scene would come back
-            # untrimmed on the next load).
-            _limit_lfos(scape)
-            if evolution is not None:
-                scape["swell_amount"] = round(max(0.0, min(1.0, float(evolution))) * 0.6, 3)
-            self.last_source = "claude"
-            self.last_error = None
-            self.last_progress = 1.0
-            with open(cache, "w") as f:
-                json.dump(scape, f, indent=2)
-            return scape
+            # Retry once on a malformed response before falling back to the
+            # generic default soundscape — same mitigation and reasoning as
+            # _from_claude's identical retry loop.
+            last_parse_error = None
+            for attempt in range(2):
+                text, stop_reason = self._stream_or_call(content, budget_chars)
+                attempt_cost = estimate_cost(self.model, self._last_usage)
+                self.last_cost = _sum_cost(self.last_cost, attempt_cost) if attempt else attempt_cost
+                if stop_reason == "cancelled":
+                    self.last_error = "cancelled"
+                    self.last_source = "fallback"
+                    from ..audio import default_soundscape
+                    return default_soundscape()
+                if stop_reason == "max_tokens":
+                    self.last_error = "response truncated"
+                    self.last_source = "fallback"
+                    from ..audio import default_soundscape
+                    return default_soundscape()
+                try:
+                    data = json.loads(_extract_json(text))
+                    scape = data.get("soundscape", data)   # tolerate either shape
+                    if not scape.get("voices"):
+                        raise ValueError("no voices in response")
+                    # Same ceiling the full-scene path gets via _ensure_soundscape —
+                    # this route returns a bare dict, so it has to be applied here
+                    # too (and BEFORE the cache write, or a trimmed scene would
+                    # come back untrimmed on the next load).
+                    _limit_lfos(scape)
+                    if evolution is not None:
+                        scape["swell_amount"] = round(max(0.0, min(1.0, float(evolution))) * 0.6, 3)
+                    self.last_source = "claude"
+                    self.last_error = None
+                    self.last_progress = 1.0
+                    with open(cache, "w") as f:
+                        json.dump(scape, f, indent=2)
+                    return scape
+                except Exception as e:      # broad by design — see _from_claude
+                    last_parse_error = e
+                    self._log_failed_response(text, e)
+                    if attempt == 0:
+                        print(f"[promptwaver] director: malformed response "
+                              f"({_friendly_error(e)}) — retrying once")
+            raise last_parse_error
         except Exception as e:
             self.last_error = _friendly_error(e)
             self.last_source = "fallback"
@@ -1041,6 +1111,26 @@ class SceneDirector:
         finally:
             self.last_progress = 1.0
             self.generating = False
+
+    def _log_failed_response(self, text: str, error: Exception):
+        """Dump a response that failed to parse as JSON to `<cache_dir>/_failed/`
+        for postmortem. Without this, a malformed response is simply lost —
+        `_from_claude`'s except block only ever kept the parser's error
+        MESSAGE (e.g. "Expecting ',' delimiter: line 43 column 96"), never the
+        text that produced it, so there was no way to look at what Claude
+        actually wrote and pin down the real defect (a dropped comma? a bad
+        escape? something specific to certain scene content?) — only ever the
+        symptom, and only ever after the fact from a user's bug report. Best
+        effort: a failure writing the debug file must never mask the parse
+        failure it's trying to help diagnose."""
+        try:
+            os.makedirs(self._failed_dir, exist_ok=True)
+            path = os.path.join(self._failed_dir, f"{int(time.time())}.txt")
+            with open(path, "w") as f:
+                f.write(f"# {error}\n\n{text}")
+            print(f"[promptwaver] director: malformed response saved to {path}")
+        except OSError:
+            pass
 
     def _from_claude(self, keyword: str, audio: str | None = None, size: str | int = "small",
                      warmth: float | None = None, energy: float | None = None,
@@ -1107,29 +1197,92 @@ class SceneDirector:
                 return None, False
 
         try:
-            text, stop_reason = self._stream_or_call(content, budget_chars, system)
-            # Record the cost BEFORE judging whether the response is usable.
-            # Truncated and aborted responses are billed for everything they
-            # did generate, and those are the expensive ones — an earlier
-            # version returned above this line, so the only generations that
-            # reported no cost were the ones that had cost the most.
-            self.last_cost = estimate_cost(self.model, self._last_usage)
-            if stop_reason == "timeout":
-                self.last_error = (f"generation aborted after {self.timeout:.0f}s — the model "
-                                   f"was still writing. Lower the node count or the effort")
-                print(f"[promptwaver] director: {self.last_error}")
-                return None, False
-            if stop_reason == "max_tokens":
-                self.last_error = ("response truncated — lower the node count, or raise "
-                                   f"PROMPTWAVER_MAX_TOKENS (budget {max_tokens})")
-                print(f"[promptwaver] director: {self.last_error}")
-                return None, False
-            data = json.loads(_extract_json(text))
-            spec = SceneSpec.from_dict(data)
-            if not spec.layers:
-                raise ValueError("model returned no layers")
-            self.last_progress = 1.0
-            return spec, True
+            # A response that fails to parse as JSON is retried once — same
+            # prompt, a fresh independent sample — before falling back to the
+            # much lower-quality local scene. This is a real, observed failure
+            # mode (not hypothetical): Claude occasionally drops a delimiter
+            # partway through an otherwise-complete response, and it isn't
+            # correlated with response size (seen on both a ~7KB and a ~2.8KB
+            # response), consistent with an occasional sampling slip rather
+            # than a structural problem with the prompt or the extraction
+            # here. Retrying is the standard mitigation for that class of
+            # flakiness. Only a parse/shape failure retries — timeout and
+            # max_tokens return immediately below, since asking again with an
+            # unchanged budget would likely just repeat the same overrun.
+            last_parse_error = None
+            for attempt in range(2):
+                text, stop_reason = self._stream_or_call(content, budget_chars, system)
+                # Record the cost BEFORE judging whether the response is
+                # usable. Truncated and aborted responses are billed for
+                # everything they did generate, and those are the expensive
+                # ones — an earlier version returned above this line, so the
+                # only generations that reported no cost were the ones that
+                # cost the most. A retried attempt is a SECOND billed call,
+                # not a replacement for the first, so the cost accumulates
+                # across attempts rather than being overwritten.
+                attempt_cost = estimate_cost(self.model, self._last_usage)
+                self.last_cost = _sum_cost(self.last_cost, attempt_cost) if attempt else attempt_cost
+                if stop_reason == "cancelled":
+                    # Explicit user action, not a failure — don't retry, and
+                    # say so plainly rather than reporting it as an error.
+                    self.last_error = "cancelled"
+                    return None, False
+                if stop_reason == "timeout":
+                    self.last_error = (f"generation aborted after {self.timeout:.0f}s — the model "
+                                       f"was still writing. Lower the node count or the effort")
+                    print(f"[promptwaver] director: {self.last_error}")
+                    return None, False
+                if stop_reason == "max_tokens":
+                    self.last_error = ("response truncated — lower the node count, or raise "
+                                       f"PROMPTWAVER_MAX_TOKENS (budget {max_tokens})")
+                    print(f"[promptwaver] director: {self.last_error}")
+                    return None, False
+                try:
+                    data = json.loads(_extract_json(text))
+                    spec = SceneSpec.from_dict(data)
+                    if not spec.layers:
+                        raise ValueError("model returned no layers")
+                    # A response can be syntactically valid JSON and still be
+                    # unusable: Claude has been observed emitting a made-up
+                    # generator name (e.g. "pattern3d", which doesn't exist —
+                    # only "world" and "pattern2d" do) with a hybrid schema
+                    # mixing 3D camera/waypoints into a scene requested as 2D.
+                    # Nothing about that fails json.loads or the "has layers"
+                    # check above, so uncaught it sails through validation,
+                    # gets billed and saved as a "successful" generation, and
+                    # only breaks later — Scene.__init__ calls
+                    # generators.create() unconditionally with no try/except,
+                    # so an unknown name raises KeyError there and the scene
+                    # can neither play immediately after generating nor be
+                    # reopened from the library afterwards. Catching it here
+                    # routes it through the exact same retry-once-then-log
+                    # path as a JSON parse failure, which is what this
+                    # deserves — same failure class, just caught one layer
+                    # deeper than syntax.
+                    known = available_generators()
+                    bad = [l.generator for l in spec.layers if l.generator not in known]
+                    if bad:
+                        raise ValueError(f"unknown generator {bad[0]!r} — have {known}")
+                    self.last_progress = 1.0
+                    return spec, True
+                # Deliberately broad. This used to catch only JSONDecodeError
+                # and ValueError, which silently excluded whole classes of
+                # malformed response — observed in the wild: Claude putting a
+                # "camera" key at LAYER level, where `Layer(**l)` raises
+                # TypeError, not ValueError. That escaped to the outer handler
+                # and so skipped BOTH the retry and the _failed/ log, making
+                # the failure invisible and unrecoverable. Everything from
+                # `json.loads` to the checks above is turning untrusted model
+                # text into a spec, so ANY exception here means "this response
+                # is unusable" and deserves the same retry-once-then-log path.
+                # (Exception, not BaseException — a Ctrl-C must still escape.)
+                except Exception as e:
+                    last_parse_error = e
+                    self._log_failed_response(text, e)
+                    if attempt == 0:
+                        print(f"[promptwaver] director: malformed response "
+                              f"({_friendly_error(e)}) — retrying once")
+            raise last_parse_error
         except Exception as e:
             self.last_error = _friendly_error(e)
             print(f"[promptwaver] director generation failed: {self.last_error}")
@@ -1161,30 +1314,39 @@ class SceneDirector:
         acc_len = 0
         parts: list[str] = []
         t0 = time.monotonic()
-        timed_out = False
+        stop_early = None   # "timeout" | "cancelled", or None if it finished normally
         with stream_fn(model=self.model, max_tokens=tier_tokens,
                        system=system, messages=[{"role": "user", "content": content}]) as stream:
             for chunk in stream.text_stream:
                 parts.append(chunk)
                 acc_len += len(chunk)
                 self.last_progress = min(0.95, acc_len / max(budget_chars, 1))
+                if self._cancel_event.is_set():
+                    # Same early-exit as the timeout below, just user-triggered
+                    # instead of budget-triggered — leaving the `with` block
+                    # closes the connection, which is what actually stops
+                    # billing for tokens not yet produced.
+                    stop_early = "cancelled"
+                    break
                 if self.timeout and time.monotonic() - t0 > self.timeout:
                     # Leaving the `with` block closes the connection, which
                     # stops generation — tokens not yet produced are never
                     # billed. Waiting politely for a doomed response to finish
                     # is what made the measured runaway cost what it did.
-                    timed_out = True
+                    stop_early = "timeout"
                     break
-            if timed_out:
+            if stop_early:
                 # get_final_message() would block for the rest of the response
                 # we just decided not to pay for, so the usage block is
                 # reconstructed instead of read.
                 self._last_usage = _EstimatedUsage(
                     input_tokens=len(system) // 4 + len(content) // 4,
                     output_tokens=acc_len // 4)
-                print(f"[promptwaver] director: aborted stream after {self.timeout:.0f}s "
+                reason = (f"aborted stream after {self.timeout:.0f}s" if stop_early == "timeout"
+                          else "cancelled by user")
+                print(f"[promptwaver] director: {reason} "
                       f"(~{acc_len // 4} output tokens generated)")
-                return "".join(parts), "timeout"
+                return "".join(parts), stop_early
             final = stream.get_final_message()
         text = "".join(b.text for b in final.content if getattr(b, "type", "") == "text")
         self._last_usage = getattr(final, "usage", None)

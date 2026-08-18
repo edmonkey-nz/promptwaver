@@ -179,6 +179,63 @@
   .progress.active{display:block}
   .progress .bar{height:100%;background:var(--cyan);width:0%;
                  transition:width .15s ease-out}
+
+  /* Generation status strip — replaces the old behaviour of forcing the
+     Generate modal to stay open (and so the whole page blocked behind its
+     backdrop) for the full 1-3+ minutes a generation can take. The scene
+     keeps rendering and the rest of the UI stays fully usable underneath;
+     this is just a live, clickable readout of what's happening in the
+     background. Click it to reopen the modal and see the full detail /
+     "Start scene" button — reopening does NOT start a new request, see
+     gen-open's handler. */
+  .genstrip{display:none;align-items:center;gap:10px;padding:6px 18px;
+            background:var(--panel2);border-bottom:1px solid var(--line);
+            font-size:12px;color:var(--dim);cursor:pointer;user-select:none}
+  .genstrip:hover{background:var(--panel)}
+  .genstrip.on{display:flex}
+  .genstrip .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);
+                 flex:0 0 auto;animation:genpulse 1.1s ease-in-out infinite}
+  .genstrip.done .dot{animation:none;background:var(--green)}
+  @keyframes genpulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion: reduce){ .genstrip .dot{animation:none} }
+  /* Brief attention-grabber right after the big modal closes — the strip
+     alone (dot + thin fill bar) reads as too quiet a handoff from a
+     full-screen dialog, easy to miss entirely. Timed out client-side (see
+     startGen) rather than lingering for the whole generation, which would
+     just be visual noise once the point ("something is now happening up
+     here") has landed. */
+  .genstrip.attention{animation:genstrip-attention 0.9s ease-in-out infinite}
+  @keyframes genstrip-attention{
+    0%,100%{box-shadow:inset 0 0 0 1px rgba(51,224,208,.15)}
+    50%{box-shadow:inset 0 0 0 1px rgba(51,224,208,.7), 0 0 14px 1px rgba(51,224,208,.3)}
+  }
+  @media (prefers-reduced-motion: reduce){ .genstrip.attention{animation:none} }
+  .genstrip .msg{color:var(--ink);flex:0 0 auto}
+  .genstrip .elapsed{flex:0 0 auto;font-family:var(--mono)}
+  .genstrip .track{flex:1 1 auto;height:3px;border-radius:2px;background:var(--bg);
+                   overflow:hidden;min-width:60px}
+  .genstrip .fill{height:100%;width:2%;background:var(--cyan);transition:width .3s ease-out}
+  /* Sits inside a clickable strip (click elsewhere opens the modal) — its own
+     click has to stop propagation or every press would also pop the modal
+     open. Two states, not a native confirm() dialog: a quick second click
+     confirms without a modal popup stealing focus from this otherwise
+     lightweight bar. */
+  .genstrip .cancel-btn{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);
+                        color:var(--dim);border-radius:6px;padding:3px 10px;font-size:11px;
+                        cursor:pointer}
+  .genstrip .cancel-btn:hover{border-color:var(--red);color:var(--red)}
+  .genstrip .cancel-btn.confirm{border-color:var(--red);color:var(--red);background:rgba(255,77,77,.12)}
+  .genstrip.done .cancel-btn{display:none}
+  /* Exact inverse of the cancel button: Cancel is for a generation still
+     running, Play only means anything once one has finished, so they swap
+     rather than ever both being present. Green to match .done's dot — it's
+     the positive action, and it reads as "ready" next to the tick in the
+     message text. */
+  .genstrip .play-btn{display:none;flex:0 0 auto;background:var(--panel);
+                      border:1px solid var(--green);color:var(--green);
+                      border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer}
+  .genstrip .play-btn:hover{background:rgba(46,204,113,.14)}
+  .genstrip.done .play-btn{display:inline-block}
   .lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
        gap:6px;align-content:start}
   .lib .item{display:flex;align-items:center;justify-content:space-between;gap:6px;
@@ -246,8 +303,26 @@
   .synthhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
   .synthhead h2{margin:0;font-size:11px;font-weight:500;letter-spacing:.16em;
                 text-transform:uppercase;color:var(--dim)}
-  .synthglobals{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 20px}
+  .synthglobals{display:grid;grid-template-columns:repeat(7,1fr);gap:10px 12px}
   .synthglobals .knob{min-width:0}
+  /* Swell preview — a self-contained illustration of the swell/swell-period
+     knobs above it, not a literal per-voice oscilloscope: each voice gets its
+     own randomised phase AND period (base_period x 0.7-1.3, see
+     Soundscape.set_spec) specifically so voices don't swell in lockstep, so
+     there is no single "the" phase this could show that would be true of any
+     one voice. This draws the same curve the DSP's _swell_gain formula
+     produces, with a playhead synced to wall-clock time (stable across
+     reloads, not restarting at a fresh phase every time the page loads) —
+     honest about being a representative preview of the shape and timescale,
+     not a live per-voice readout. */
+  .vizrow{display:flex;gap:12px}
+  .vizrow .swellviz{width:50%}
+  .swellviz{padding:8px 10px;border:1px solid var(--line);min-width:0;
+            border-radius:8px;background:var(--panel2);display:flex;flex-direction:column;gap:5px}
+  .swellviz .swellviz-label{font-size:10px;color:var(--dim);letter-spacing:.04em;
+                            text-transform:uppercase;display:flex;justify-content:space-between}
+  .swellviz .swellviz-label b{color:var(--cyan);font-weight:500}
+  .swellviz canvas{display:block;width:100%;height:36px}
   .knob{display:flex;flex-direction:column;gap:3px;min-width:88px}
   .knob label{font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;
               display:flex;justify-content:space-between}
@@ -420,6 +495,14 @@
   <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
   <button id="fullscreen-toggle" title="Toggle fullscreen">⛶</button>
 </header>
+<div class="genstrip" id="genstrip" title="Click to open the Generate panel">
+  <span class="dot" id="genstrip-dot"></span>
+  <span class="msg" id="genstrip-msg">Composing scene…</span>
+  <span class="elapsed" id="genstrip-elapsed"></span>
+  <div class="track"><div class="fill" id="genstrip-fill"></div></div>
+  <button class="cancel-btn" id="genstrip-cancel" title="Stop this generation">Cancel</button>
+  <button class="play-btn" id="genstrip-play" title="Start this scene">▶ Play</button>
+</div>
 <main>
  <div class="toprow">
   <section class="stage">
@@ -428,13 +511,6 @@
       <span>fps <b id="r-fps">—</b></span>
     </div>
     <div id="scene-name" style="text-align:left;font-size:13px;font-weight:700;:var(--dim);margin-top:8px;font-family:var(--mono)"></div>
-
-    <div class="field" style="margin-top:12px">
-      <label style="display:flex;align-items:center;gap:6px;flex:0 0 auto"
-             title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
-        <input type="checkbox" id="hue-override-on"> hue</label>
-      <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
-      <span class="val" id="v-hueoverride">0.50</span></div>
 
     <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
@@ -498,6 +574,12 @@
     <div class="group" id="g-motion" style="width:100%">
       <h2 id="layer-title">Layer</h2>
       <div class="layer-desc" id="layer-desc"></div>
+      <div class="field" style="margin-bottom:4px">
+        <label style="display:flex;align-items:center;gap:6px;flex:0 0 auto"
+               title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
+          <input type="checkbox" id="hue-override-on"> hue</label>
+        <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="v-hueoverride">0.50</span></div>
       <div id="layer-params" style="width:100%"></div>
     </div>
 
@@ -516,6 +598,21 @@
         <button id="soundscape-save-icon" title="Save Soundscape settings" style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center">💾</button>
       </div>
       <div class="synthglobals" id="synthglobals"></div>
+      <details class="accordion" id="acc-effect-preview" closed>
+        <summary>Effect previews</summary>
+        <div class="accordion-body">
+          <div class="vizrow">
+            <div class="swellviz" id="swellviz" title="Preview of the swell shape and timing — see the note in the stylesheet: this is a representative curve, not a literal per-voice readout, since each voice's swell runs on its own independently randomised phase and period.">
+              <div class="swellviz-label"><span>swell preview</span><span id="swellviz-readout"></span></div>
+              <canvas id="swellviz-canvas"></canvas>
+            </div>
+            <div class="swellviz" id="filtersweepviz" title="Preview of the filter sweep — the high band's EQ gain swinging slowly around whatever eq.high is set to. Whole-mix, single global phase (unlike swell there's only one instance of this, nothing to decorrelate against).">
+              <div class="swellviz-label"><span>filter sweep preview</span><span id="filtersweepviz-readout"></span></div>
+              <canvas id="filtersweepviz-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </details>
       <div class="voices" id="voices"></div>
     </div>
   </section>
@@ -536,7 +633,7 @@
       <h2>Scene</h2>
       <button class="go" id="gen-open" style="width:100%;padding:4px 12px;margin-bottom:6px">Generate scene…</button>
       <button class="go" id="audio-regen-open" style="width:100%;padding:4px 12px;margin-bottom:12px;background:#3c3f48;color:#c0c4cb">Regenerate audio…</button>
-      <div class="savelabel">Save</div>
+      <div class="savelabel">Save/Inspect</div>
       <!-- Each button saves one slice, so a soundscape tweak doesn't also
            overwrite camera settings you were mid-way through adjusting. -->
       <div class="saverow compact">
@@ -591,17 +688,11 @@
         <span class="val" id="v-sstartfade">1.5</span></div>
       </div>
     </details>
- <!-- ONE modulation panel. This was two — "2D Scene modulation" and "3D Scene
-      modulation" — which read as a matched pair and were not one. The first is
-      the universal matrix (it is where camera.speed is routed, on 3D scenes);
-      the second is a narrow extra driving shape SCALE only, on `world` layers
-      only, from synth voice params rather than matrix sources. Anyone on a 3D
-      scene looking for camera speed opened the wrong one. -->
  <details class="accordion" id="acc-modulation" open>
       <summary>Modulation</summary>
       <div class="accordion-body" style="display:flex;flex-direction:column;gap:8px">
         <!-- Depth & rate sub-panel -->
-        <details class="accordion nested" id="acc-mod-depth" open>
+        <details class="accordion nested" id="acc-mod-depth" closed>
           <summary>Depth &amp; rate</summary>
           <div class="accordion-body">
             <div class="field"><label title="Master trim on every audio-derived source — audio level, the synth bands, and instrument levels. LFOs are not affected.">audio depth</label>
@@ -622,29 +713,18 @@
         </details>
 
         <!-- Mappings sub-panel -->
-        <details class="accordion nested" id="acc-mod-mappings" open>
+        <details class="accordion nested" id="acc-mod-mappings" closed>
           <summary>Mappings</summary>
           <div class="accordion-body">
-            <div class="hint" style="margin:-2px 0 8px">A mapping is <b>added</b> to its control: the
-              slider sets the minimum and the source pushes up from there.</div>
-            <div id="mappings-hint-3d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Available for this 3D scene: visual layer parameters, camera controls, and audio sources.</div>
-            <div id="mappings-hint-2d" class="hint" style="display:none;color:var(--dim);margin:-2px 0 8px">Available for this 2D scene: visual layer parameters and audio sources.</div>
             <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
             <button id="mod-add" style="align-self:flex-start;margin-top:8px">Add mapping</button>
           </div>
         </details>
 
         <!-- Shape scale sub-panel (3D only) -->
-        <details class="accordion nested" id="acc-mod-shape" open>
+        <details class="accordion nested" id="acc-mod-shape" closed>
           <summary>Shape scale</summary>
           <div class="accordion-body">
-            <div class="hint" id="shape-mod-hint" style="margin:-2px 0 8px">Drives shape <b>scale</b>
-              from a synth voice's own parameters. A separate path from the mappings above, which read
-              the sources below — needs audio running.</div>
-            <div class="hint" id="shape-mod-na" style="display:none;color:var(--amber);margin:-2px 0 8px">
-              This scene is 2D, so this section does nothing. Use a mapping above
-              (Pattern → scale) instead.
-            </div>
             <div id="shape-mods" style="display:flex;flex-direction:column;gap:12px"></div>
             <button id="shape-mod-add" style="align-self:flex-start">Add modulation</button>
           </div>
@@ -774,8 +854,15 @@
       <div class="field"><label>model</label>
         <select id="d-model">
           <option value="haiku">Haiku · fast/cheap</option>
-          <option value="sonnet">Sonnet · better</option>
-          <option value="opus">Opus · best</option>
+          <!-- Sonnet/Opus disabled, not removed: Sonnet-5 at high effort has been
+               measured overshooting 64,000 output tokens without closing its JSON
+               on a big scene ask, getting truncated, billed in full, and taking up
+               to 491s to fail (see TECHNICAL.md "What models actually do when
+               asked for a big scene"). Opus is pricier still ($5/$25 per million vs
+               Sonnet's $3/$15) with no measurement suggesting it fares better.
+               Uncomment to bring either back. -->
+          <!-- <option value="sonnet">Sonnet · better</option> -->
+          <!-- <option value="opus">Opus · best</option> -->
         </select></div>
       <div class="field"><label>effort</label>
         <select id="d-effort">
@@ -948,6 +1035,10 @@
     <div class="group">
       <h2 style="font-size:11px">Output monitors</h2>
       <div class="hint">Output 1 and Output 2 (header buttons) show the same live feed. Flip reverses the whole image (no reflection, unlike the Global section's "mirror"). Keystone here is independent per window — for when each screen is physically mounted/angled differently (unlike the laser's, above, these are display-only, not sent anywhere). Glow/trail/mirror (Global section) are shared between both.</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:4px">
+        <input type="checkbox" id="out-show-fps"> show frame rate on output windows
+      </label>
+      <div class="hint" style="margin:-4px 0 10px">Draws a small readout in the corner of each output window: its <b>real</b> paint rate, the cost of one paint in ms, the stroke count and the canvas size. This is the number to watch if an output looks choppy — it is not the engine's fps (under the visualiser) and not the ~20Hz state broadcast, both of which can look fine while a large full-screen canvas is too slow to keep up. Paint cost over ~25ms is highlighted; ~20fps is the ceiling by design.</div>
       <div class="field"><label>Output 1</label>
         <label style="display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="out1-flip-x"> flip x</label>
@@ -1072,6 +1163,11 @@ function showGenDone(m){
       endGen();
       closeModal("modal-generate");
     };
+  } else if (m.error === "cancelled") {
+    $("gen-overlay-msg").textContent = "Cancelled";
+    lines.push("Stopped — a local fallback scene was installed instead");
+    $("gen-start").textContent = "Close";
+    _genDoneAction = () => { endGen(); closeModal("modal-generate"); };
   } else {
     $("gen-overlay-msg").textContent = "Generated locally";
     lines.push(m.error ? `<span class="cy">${m.error}</span>`
@@ -1090,6 +1186,20 @@ function showGenDone(m){
   // The overlay swallows clicks while generating; it has to accept them now.
   $("gen-overlay").style.pointerEvents = "auto";
   $("gen-start").focus();
+
+  // Plain-text one-liner for the strip (not the modal's richer HTML lines) —
+  // this is what's visible if the user never reopens the modal at all.
+  if (ok) {
+    const bits = [];
+    if (m.source === "cache") bits.push("from cache");
+    else { const t = costText(m.cost); if (t) bits.push(t); }
+    if (m.expansion) bits.push(`${m.expansion.total} nodes`);
+    genstripDone("✓ Scene ready" + (bits.length ? " · " + bits.join(" · ") : ""));
+  } else if (m.error === "cancelled") {
+    genstripDone("✕ Cancelled — local fallback used");
+  } else {
+    genstripDone("⚠ Generated locally" + (m.error ? " · " + m.error : ""));
+  }
 }
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
@@ -1194,7 +1304,9 @@ function paintState(s){
     $("d-cap").value = (s.director_cost_cap ?? 0.5).toFixed(2);
   }
   if (generating && typeof s.director_progress === "number") {
-    $("genbar").style.width = Math.max(2, Math.round(s.director_progress*100)) + "%";
+    const pct = Math.max(2, Math.round(s.director_progress*100)) + "%";
+    $("genbar").style.width = pct;
+    $("genstrip-fill").style.width = pct;
   }
   setDirhint(s.director_online
     ? "keyword → Claude scene spec (cached; ~1 call per new keyword)"
@@ -2360,6 +2472,130 @@ const liveVoice = (name) =>
     .find(x => x.name === name);
 const liveSub = (name, field, fallback) =>
   ({...fallback, ...((liveVoice(name) || {})[field] || {})});
+
+// Swell preview canvas — see the comment on .swellviz in the stylesheet for
+// why this is a representative curve (wall-clock-synced, same formula as
+// dsp.py's _swell_gain) rather than a literal per-voice readout. Runs its
+// own rAF loop rather than being driven off the ~20Hz state broadcast: the
+// playhead needs to move smoothly, and browsers already throttle rAF in
+// backgrounded tabs, so there's no separate pause/resume to manage.
+function drawSwellViz(){
+  requestAnimationFrame(drawSwellViz);
+  const cv = $("swellviz-canvas");
+  if (!cv) return;
+  const sc = _lastState?.soundscape || {};
+  const amount = Math.max(0, Math.min(1, sc.swell_amount ?? 0));
+  const period = Math.max(1, sc.swell_period ?? 24);
+  $("swellviz-readout").innerHTML =
+    `<b>${Math.round(amount*100)}%</b> depth · <b>${period.toFixed(0)}s</b> period`;
+
+  // Backing store matches the element's CSS size (times devicePixelRatio) so
+  // the line stays crisp on hiDPI instead of being upscaled/blurry.
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) {
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if (!w || !h) return;
+
+  const gainAt = t => 1 - amount * (0.5 - 0.5 * Math.sin(2*Math.PI*t/period));
+  // amount=0 collapses gMax-gMin to 0 — draw a flat centred line rather than
+  // dividing by (near-)zero and pinning it to one edge.
+  const gMin = 1 - amount, gMax = 1, range = gMax - gMin;
+  const pad = 4, top = pad, bot = h - pad;
+  const yFor = g => range > 1e-6 ? bot - ((g - gMin) / range) * (bot - top) : (top + bot) / 2;
+
+  ctx.beginPath();
+  const N = 120;
+  for (let i = 0; i <= N; i++){
+    const x = (i / N) * w;
+    const y = yFor(gainAt((i / N) * period));
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = "rgba(51,224,208,.65)";   // --cyan
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Playhead: where "now" sits in one period, wall-clock time so it's
+  // consistent across reloads rather than restarting at phase 0 every time.
+  const now = (Date.now()/1000) % period;
+  const px = (now / period) * w;
+  ctx.beginPath();
+  ctx.moveTo(px, top); ctx.lineTo(px, bot);
+  ctx.strokeStyle = "rgba(242,166,35,.5)";     // --amber
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px, yFor(gainAt(now)), 2.5, 0, 2*Math.PI);
+  ctx.fillStyle = "#f2a623";                   // --amber, hardcoded: canvas
+                                                // fillStyle doesn't resolve var()
+  ctx.fill();
+}
+drawSwellViz();
+
+// Filter sweep preview — same technique as drawSwellViz above, but the
+// curve is in dB (the high band's EQ gain) rather than a 0..1 level
+// multiplier, centred on whatever eq.high is currently set to rather than
+// always centred on 0. FILTER_SWEEP_MAX_DB must match the constant of the
+// same name in dsp.py — it's the swing at amount=1.0, not derivable from
+// anything the state broadcast carries.
+const FILTER_SWEEP_MAX_DB = 8.0;
+function drawFilterSweepViz(){
+  requestAnimationFrame(drawFilterSweepViz);
+  const cv = $("filtersweepviz-canvas");
+  if (!cv) return;
+  const sc = _lastState?.soundscape || {};
+  const amount = Math.max(0, Math.min(1, sc.filter_sweep_amount ?? 0));
+  const period = Math.max(1, sc.filter_sweep_period ?? 30);
+  const center = sc.eq?.high ?? 0;
+  const swing = amount * FILTER_SWEEP_MAX_DB;
+  $("filtersweepviz-readout").innerHTML =
+    `<b>±${swing.toFixed(1)}dB</b> around <b>${center.toFixed(1)}dB</b> · <b>${period.toFixed(0)}s</b> period`;
+
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) {
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if (!w || !h) return;
+
+  const dbAt = t => Math.max(-10, Math.min(10, center + swing * Math.sin(2*Math.PI*t/period)));
+  const dMin = Math.max(-10, center - swing), dMax = Math.min(10, center + swing);
+  const range = dMax - dMin;
+  const pad = 4, top = pad, bot = h - pad;
+  const yFor = db => range > 1e-6 ? bot - ((db - dMin) / range) * (bot - top) : (top + bot) / 2;
+
+  ctx.beginPath();
+  const N = 120;
+  for (let i = 0; i <= N; i++){
+    const x = (i / N) * w;
+    const y = yFor(dbAt((i / N) * period));
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = "rgba(51,224,208,.65)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  const now = (Date.now()/1000) % period;
+  const px = (now / period) * w;
+  ctx.beginPath();
+  ctx.moveTo(px, top); ctx.lineTo(px, bot);
+  ctx.strokeStyle = "rgba(242,166,35,.5)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px, yFor(dbAt(now)), 2.5, 0, 2*Math.PI);
+  ctx.fillStyle = "#f2a623";
+  ctx.fill();
+}
+drawFilterSweepViz();
+
 function renderSoundscape(s){
   const sc = s.soundscape;
   const block = $("synthblock");
@@ -2386,6 +2622,8 @@ function renderSoundscape(s){
   g.appendChild(knob("eq high","eq.high",-10,10,0.25, eq.high ?? 0, v=>v.toFixed(1)));
   g.appendChild(knob("swell","swell_amount",0,1,0.01, sc.swell_amount ?? 0, v=>v.toFixed(2)));
   g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
+  g.appendChild(knob("filter sweep","filter_sweep_amount",0,1,0.01, sc.filter_sweep_amount ?? 0, v=>v.toFixed(2)));
+  g.appendChild(knob("sweep period","filter_sweep_period",5,120,1, sc.filter_sweep_period ?? 30, v=>v.toFixed(0)));
 
   const vc = $("voices"); vc.innerHTML="";
   for (const k of [..._learnBtns.keys()]) if (k.startsWith("voice#")) _learnBtns.delete(k);
@@ -2413,13 +2651,11 @@ function renderSoundscape(s){
       const wl = document.createElement("label"); wl.className="flabel"; wl.textContent="wave";
       el.appendChild(wl); el.appendChild(sel);
     }
-    if (v.type==="pad" || v.type==="noise" || v.type==="bell")
+    if (v.type==="pad" || v.type==="noise")
       el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")}));
       el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
-    if (v.type==="pluck" || v.type==="bell")
+    if (v.type==="pluck")
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
-    if (v.type==="bell")
-      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
     if (v.type==="osc"){
       el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
       el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
@@ -2808,6 +3044,7 @@ function startGen(kindLabel){
     $("gen-overlay-elapsed").textContent =
       `${_genSeconds}s elapsed`
       + (_genSeconds > 25 ? " · a 3D world usually takes 1–3 minutes" : "");
+    $("genstrip-elapsed").textContent = `${_genSeconds}s`;
   };
   _genSeconds = 0;
   tick();
@@ -2822,6 +3059,17 @@ function startGen(kindLabel){
   // and the UI hears its result, rather than the button quietly re-enabling
   // while a generation is still running and still being billed.
   genTimer = setTimeout(endGen, 300000);
+
+  // The request is already sent and running server-side (backgrounded — see
+  // server.py's _handle — so it no longer blocks this connection's other
+  // messages either). Nothing from here on needs the modal open: close it so
+  // the rest of the interface — scene library, sliders, mute, everything —
+  // stays fully usable while this runs, and hand off to the small strip
+  // instead. Clicking the strip (or the Generate button again) reopens this
+  // SAME modal, which still holds the live overlay/progress state — see
+  // gen-open's handler — not a fresh request.
+  closeModal("modal-generate");
+  genstripShow(kindLabel ? `Composing ${kindLabel}…` : "Composing scene…");
 }
 function endGen(){
   generating = false;
@@ -2831,7 +3079,99 @@ function endGen(){
   $("genbar").style.width = "0%";
   if (genTimer) { clearTimeout(genTimer); genTimer = null; }
   clearInterval(genElapsedTimer); genElapsedTimer = null;
+  genstripHide();
+  // Same as loading a scene from the library (see the .lib item's own
+  // onclick) — the new/updated scene is what you're looking at now, so a
+  // library left open from before generating has nothing left to do here.
+  const libAccordion = $("acc-library");
+  if (libAccordion && libAccordion.open) libAccordion.open = false;
 }
+// Generation status strip — see .genstrip in the stylesheet for why this
+// exists. `genstripShow`/`genstripDone`/`genstripHide` are the only entry
+// points; startGen/showGenDone/endGen call these instead of touching
+// #genstrip's DOM directly, same separation as the modal's own helpers.
+let _genstripAutoHide = null, _genstripAttention = null;
+function resetCancelBtn(){
+  clearTimeout(_cancelConfirmTimer);
+  const btn = $("genstrip-cancel");
+  btn.classList.remove("confirm");
+  btn.textContent = "Cancel";
+  btn.disabled = false;
+}
+function genstripShow(msg){
+  clearTimeout(_genstripAutoHide);
+  const el = $("genstrip");
+  el.classList.remove("done");
+  el.classList.add("on");
+  $("genstrip-msg").textContent = msg;
+  $("genstrip-elapsed").style.display = "";
+  $("genstrip-elapsed").textContent = "0s";
+  $("genstrip-fill").parentElement.style.display = "";
+  $("genstrip-fill").style.width = "2%";
+  resetCancelBtn();
+  // Pulsing border for the first few seconds — the strip alone is easy to
+  // miss right as a full-screen modal closes; this fades away well before
+  // the generation itself does, once it's done its job of catching the eye.
+  clearTimeout(_genstripAttention);
+  el.classList.add("attention");
+  _genstripAttention = setTimeout(() => el.classList.remove("attention"), 4000);
+}
+function genstripDone(msg){
+  clearTimeout(_genstripAutoHide);
+  clearTimeout(_genstripAttention);
+  const el = $("genstrip");
+  el.classList.remove("attention");
+  el.classList.add("on", "done");
+  el.title = "Click to play this scene";
+  $("genstrip-msg").textContent = msg;
+  $("genstrip-elapsed").style.display = "none";
+  $("genstrip-fill").parentElement.style.display = "none";
+  // Deliberately NOT auto-cleared — stays up until the scene is actually
+  // played (or the strip/modal is otherwise dismissed), so a finished
+  // generation can't be missed just because you looked away for a bit.
+}
+function genstripHide(){
+  clearTimeout(_genstripAutoHide);
+  clearTimeout(_genstripAttention);
+  $("genstrip").classList.remove("on", "done", "attention");
+  $("genstrip").title = "Click to open the Generate panel";
+}
+// Done: clicking the strip plays the scene directly (same action as the
+// modal's "Start scene" button) — no need to reopen the modal just to
+// dismiss a generation you already know succeeded. Still generating:
+// clicking opens the modal, same as before.
+$("genstrip").onclick = () => {
+  if ($("genstrip").classList.contains("done")) { if (_genDoneAction) _genDoneAction(); }
+  else $("gen-open").click();
+};
+
+// Cancel button: click once arms it (amber, "Confirm?"), a second click
+// within a few seconds actually sends the cancel; otherwise it quietly
+// disarms itself, so a stray/misclick can't stop a generation you meant to
+// keep. Only takes effect between the model's stream chunks server-side
+// (see SceneDirector.cancel) — "Cancelling…" covers that short gap rather
+// than claiming it's instant.
+let _cancelConfirmTimer = null;
+$("genstrip-cancel").onclick = (e) => {
+  e.stopPropagation();   // don't also trigger the strip's "open modal" click
+  const btn = e.currentTarget;
+  if (!btn.classList.contains("confirm")) {
+    btn.classList.add("confirm");
+    btn.textContent = "Confirm?";
+    clearTimeout(_cancelConfirmTimer);
+    _cancelConfirmTimer = setTimeout(() => resetCancelBtn(), 4000);
+    return;
+  }
+  clearTimeout(_cancelConfirmTimer);
+  btn.disabled = true;
+  btn.textContent = "Cancelling…";
+  $("genstrip-msg").textContent = "Cancelling…";
+  send({type:"cancel_generation"});
+};
+$("genstrip-play").onclick = (e) => {
+  e.stopPropagation();   // strip's own onclick would otherwise fire this twice
+  if (_genDoneAction) _genDoneAction();
+};
 // Scene type. Remembered across sessions: someone building a set of patterns
 // is building several in a row, and re-picking 2D every time is friction.
 let genKind = localStorage.getItem("pw_gen_kind") || "3d";
@@ -2895,7 +3235,7 @@ function paintSizeEstimate(e){
   // at $0.22 actually billed $0.08. Over-stating is the safe direction for a
   // figure that gates spending, but it has to be labelled as a ceiling.
   $("d-size-read").innerHTML =
-    `<b>${e.nodes} nodes</b> · up to ~${k}k output tokens · <b>up to $${e.usd.toFixed(2)}</b> ` +
+    `<b>${e.nodes} nodes</b> · up to ~${k}k output tokens · <b>up to $${e.usd.toFixed(2)} (USD)</b> ` +
     `on ${shortModel(e.model)}`;
   const warn = $("d-size-warn");
   let msg = "";
@@ -3330,6 +3670,18 @@ function outputFlipCheckbox(id, outputId, axis){
   el.checked = localStorage.getItem(key) === "1";
   el.onchange = () => localStorage.setItem(key, el.checked ? "1" : "0");
 }
+// Frame-rate overlay on the output windows. Same localStorage + "storage"
+// event channel as the flip/keystone settings around it, but deliberately NOT
+// keyed per output id: those describe how one physical screen is mounted, this
+// is a diagnostic you switch on to measure a problem and off again. The
+// "storage" event only fires in OTHER windows, which is exactly the direction
+// needed here — this page writes, the output windows listen.
+(function outputFpsCheckbox(){
+  const el = $("out-show-fps");
+  el.checked = localStorage.getItem("pw_output_fps") === "1";
+  el.onchange = () => localStorage.setItem("pw_output_fps", el.checked ? "1" : "0");
+})();
+
 outputFlipCheckbox("out1-flip-x", 1, "x");
 outputFlipCheckbox("out1-flip-y", 1, "y");
 outputFlipCheckbox("out2-flip-x", 2, "x");
@@ -3372,22 +3724,25 @@ document.querySelectorAll(".modal-backdrop").forEach(el => {
 // Scene settings: three granular "save the live config back into the
 // currently-loaded scene" buttons (camera-only / soundscape-only / both),
 // each just scene_update with different flags, plus brief button feedback.
-function saveWithFeedback(btn, label, payload){
+// Icon-only buttons — flash a tick over the icon rather than replacing it
+// with a text label, and always revert to whatever the button's own icon
+// was (read live, not hardcoded), so this works regardless of which icon
+// a given save button carries.
+function saveWithFeedback(btn, payload){
   if (btn.dataset.busy === "1") return;
   btn.dataset.busy = "1";
-  const original = label;
-  btn.textContent = "Saving…";
+  const original = btn.textContent;
   send(payload);
-  setTimeout(() => { btn.textContent = "Saved ✓"; }, 200);
-  setTimeout(() => { btn.textContent = original; btn.dataset.busy = "0"; }, 1600);
+  btn.textContent = "✓";
+  setTimeout(() => { btn.textContent = original; btn.dataset.busy = "0"; }, 900);
 }
-const saveSoundscapeSettings = () => saveWithFeedback($("save-soundscape"), "Save Soundscape settings",
+const saveSoundscapeSettings = () => saveWithFeedback($("save-soundscape"),
   {type:"scene_update", camera:false, soundscape:true});
 $("save-soundscape").onclick = saveSoundscapeSettings;
 $("soundscape-save-icon").onclick = saveSoundscapeSettings;
-$("save-camera").onclick = () => saveWithFeedback($("save-camera"), "Save Camera settings",
+$("save-camera").onclick = () => saveWithFeedback($("save-camera"),
   {type:"scene_update", camera:true, soundscape:false});
-$("save-all-scene").onclick = () => saveWithFeedback($("save-all-scene"), "Save all scene settings",
+$("save-all-scene").onclick = () => saveWithFeedback($("save-all-scene"),
   {type:"scene_update", camera:true, soundscape:true});
 
 // Save as: modal popup for naming a new library entry from the current live state

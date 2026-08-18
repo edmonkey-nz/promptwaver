@@ -1,0 +1,335 @@
+# Layer.__init__() got an unexpected keyword argument 'camera'
+
+```json
+{
+  "name": "sand slowly falling to make mountains and valleys",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "sand_drift": {
+            "space": "cart",
+            "ops": [
+              {"polyline": {"pts": [[0, 0], [0.8, 0.3], [1.2, 0.1], [1.4, -0.4]], "closed": false}}
+            ]
+          },
+          "ridge_line": {
+            "space": "cart",
+            "ops": [
+              {"polyline": {"pts": [[-0.6, 0], [0, 0.5], [0.6, 0.2], [1.0, -0.3]], "closed": false}}
+            ]
+          },
+          "valley_curve": {
+            "space": "polar",
+            "ops": [
+              {"arc": {"r": 0.8, "a0": 0.0, "a1": 0.5, "c": [0, 0], "seg": 40}}
+            ]
+          },
+          "grain_scatter": {
+            "space": "cart",
+            "ops": [
+              {"polyline": {"pts": [[0, 0], [0.15, 0.2], [0.3, 0.05], [0.4, 0.25], [0.5, 0.08]], "closed": false}}
+            ]
+          },
+          "dune_crest": {
+            "space": "polar",
+            "ops": [
+              {"line": {"a": [0.3, 0.0], "b": [0.9, 0.08]}}
+            ]
+          },
+          "settling_particles": {
+            "space": "cart",
+            "ops": [
+              {"polyline": {"pts": [[0, 0.4], [0.1, 0.2], [0.05, 0], [-0.05, -0.15], [0, -0.3]], "closed": false}}
+            ]
+          },
+          "mountain_profile": {
+            "space": "cart",
+            "ops": [
+              {"polyline": {"pts": [[-1.0, -0.5], [-0.5, 0.8], [0, 0.4], [0.5, 0.9], [1.0, -0.3]], "closed": false}}
+            ]
+          },
+          "wind_trace": {
+            "space": "polar",
+            "ops": [
+              {"arc": {"r": 0.5, "a0": 0.1, "a1": 0.6, "c": [0, 0], "seg": 32}}
+            ]
+          }
+        },
+        "nodes": [
+          {"def": "sand_drift", "at": [-45, -20], "scale": 1.2, "rotate": 0.0, "color": [0.9, 0.85, 0.7], "glow": 0.6},
+          {"def": "sand_drift", "at": [-40, -18], "scale": 1.0, "rotate": 0.05, "color": [0.88, 0.84, 0.68], "glow": 0.6},
+          {"def": "sand_drift", "at": [-35, -15], "scale": 1.1, "rotate": 0.08, "color": [0.92, 0.86, 0.72], "glow": 0.6},
+          {"def": "sand_drift", "at": [-30, -12], "scale": 0.9, "rotate": 0.03, "color": [0.87, 0.83, 0.66], "glow": 0.6},
+          {"def": "sand_drift", "at": [-25, -10], "scale": 1.3, "rotate": 0.12, "color": [0.91, 0.85, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [-20, -8], "scale": 1.0, "rotate": 0.06, "color": [0.89, 0.84, 0.69], "glow": 0.6},
+          {"def": "sand_drift", "at": [-15, -5], "scale": 1.15, "rotate": 0.09, "color": [0.93, 0.87, 0.73], "glow": 0.6},
+          {"def": "sand_drift", "at": [-10, -2], "scale": 0.95, "rotate": 0.04, "color": [0.86, 0.82, 0.65], "glow": 0.6},
+          {"def": "sand_drift", "at": [-5, 0], "scale": 1.2, "rotate": 0.11, "color": [0.90, 0.85, 0.70], "glow": 0.6},
+          {"def": "sand_drift", "at": [0, 2], "scale": 1.05, "rotate": 0.07, "color": [0.88, 0.83, 0.67], "glow": 0.6},
+          {"def": "sand_drift", "at": [5, 4], "scale": 1.25, "rotate": 0.10, "color": [0.92, 0.86, 0.72], "glow": 0.6},
+          {"def": "sand_drift", "at": [10, 6], "scale": 0.98, "rotate": 0.05, "color": [0.87, 0.83, 0.68], "glow": 0.6},
+          {"def": "sand_drift", "at": [15, 8], "scale": 1.18, "rotate": 0.08, "color": [0.91, 0.85, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [20, 10], "scale": 1.02, "rotate": 0.06, "color": [0.89, 0.84, 0.69], "glow": 0.6},
+          {"def": "sand_drift", "at": [25, 12], "scale": 1.22, "rotate": 0.09, "color": [0.93, 0.87, 0.73], "glow": 0.6},
+          {"def": "sand_drift", "at": [30, 14], "scale": 0.96, "rotate": 0.04, "color": [0.86, 0.82, 0.66], "glow": 0.6},
+          {"def": "sand_drift", "at": [35, 16], "scale": 1.20, "rotate": 0.11, "color": [0.90, 0.85, 0.70], "glow": 0.6},
+          {"def": "sand_drift", "at": [40, 18], "scale": 1.07, "rotate": 0.07, "color": [0.88, 0.83, 0.68], "glow": 0.6},
+          {"def": "sand_drift", "at": [45, 20], "scale": 1.26, "rotate": 0.10, "color": [0.92, 0.86, 0.72], "glow": 0.6},
+          {"def": "sand_drift", "at": [50, 22], "scale": 0.99, "rotate": 0.05, "color": [0.87, 0.83, 0.67], "glow": 0.6},
+          {"def": "sand_drift", "at": [55, 24], "scale": 1.19, "rotate": 0.08, "color": [0.91, 0.85, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [58, 26], "scale": 1.03, "rotate": 0.06, "color": [0.89, 0.84, 0.69], "glow": 0.6},
+          {"def": "ridge_line", "at": [-45, 5], "scale": 1.1, "rotate": 0.15, "color": [0.85, 0.78, 0.62], "glow": 0.7},
+          {"def": "ridge_line", "at": [-38, 8], "scale": 0.95, "rotate": 0.18, "color": [0.84, 0.77, 0.60], "glow": 0.7},
+          {"def": "ridge_line", "at": [-32, 12], "scale": 1.15, "rotate": 0.12, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [-25, 15], "scale": 1.05, "rotate": 0.20, "color": [0.83, 0.76, 0.59], "glow": 0.7},
+          {"def": "ridge_line", "at": [-18, 18], "scale": 1.12, "rotate": 0.14, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [-12, 22], "scale": 0.98, "rotate": 0.17, "color": [0.84, 0.77, 0.61], "glow": 0.7},
+          {"def": "ridge_line", "at": [-5, 25], "scale": 1.13, "rotate": 0.13, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [2, 28], "scale": 1.07, "rotate": 0.19, "color": [0.83, 0.76, 0.60], "glow": 0.7},
+          {"def": "ridge_line", "at": [10, 32], "scale": 1.10, "rotate": 0.15, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [18, 35], "scale": 1.00, "rotate": 0.18, "color": [0.84, 0.77, 0.61], "glow": 0.7},
+          {"def": "ridge_line", "at": [25, 38], "scale": 1.14, "rotate": 0.12, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [32, 42], "scale": 1.06, "rotate": 0.20, "color": [0.83, 0.76, 0.59], "glow": 0.7},
+          {"def": "ridge_line", "at": [40, 45], "scale": 1.11, "rotate": 0.14, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [48, 48], "scale": 0.97, "rotate": 0.17, "color": [0.84, 0.77, 0.60], "glow": 0.7},
+          {"def": "ridge_line", "at": [55, 52], "scale": 1.12, "rotate": 0.13, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [58, 55], "scale": 1.08, "rotate": 0.19, "color": [0.83, 0.76, 0.60], "glow": 0.7},
+          {"def": "valley_curve", "at": [-50, 10], "scale": 1.3, "rotate": 0.25, "color": [0.80, 0.70, 0.50], "glow": 0.5},
+          {"def": "valley_curve", "at": [-42, 20], "scale": 1.1, "rotate": 0.30, "color": [0.78, 0.68, 0.48], "glow": 0.5},
+          {"def": "valley_curve", "at": [-35, 28], "scale": 1.25, "rotate": 0.22, "color": [0.82, 0.72, 0.52], "glow": 0.5},
+          {"def": "valley_curve", "at": [-28, 35], "scale": 1.15, "rotate": 0.27, "color": [0.79, 0.69, 0.49], "glow": 0.5},
+          {"def": "valley_curve", "at": [-20, 42], "scale": 1.20, "rotate": 0.24, "color": [0.81, 0.71, 0.51], "glow": 0.5},
+          {"def": "valley_curve", "at": [-12, 50], "scale": 1.08, "rotate": 0.29, "color": [0.77, 0.67, 0.47], "glow": 0.5},
+          {"def": "valley_curve", "at": [-5, 57], "scale": 1.22, "rotate": 0.23, "color": [0.83, 0.73, 0.53], "glow": 0.5},
+          {"def": "valley_curve", "at": [3, 58], "scale": 1.12, "rotate": 0.28, "color": [0.78, 0.68, 0.48], "glow": 0.5},
+          {"def": "valley_curve", "at": [12, 55], "scale": 1.18, "rotate": 0.25, "color": [0.80, 0.70, 0.50], "glow": 0.5},
+          {"def": "valley_curve", "at": [20, 48], "scale": 1.10, "rotate": 0.30, "color": [0.77, 0.67, 0.47], "glow": 0.5},
+          {"def": "valley_curve", "at": [28, 40], "scale": 1.24, "rotate": 0.22, "color": [0.82, 0.72, 0.52], "glow": 0.5},
+          {"def": "valley_curve", "at": [36, 32], "scale": 1.14, "rotate": 0.27, "color": [0.79, 0.69, 0.49], "glow": 0.5},
+          {"def": "valley_curve", "at": [44, 24], "scale": 1.19, "rotate": 0.24, "color": [0.81, 0.71, 0.51], "glow": 0.5},
+          {"def": "valley_curve", "at": [52, 15], "scale": 1.09, "rotate": 0.29, "color": [0.77, 0.67, 0.47], "glow": 0.5},
+          {"def": "valley_curve", "at": [58, 8], "scale": 1.21, "rotate": 0.23, "color": [0.83, 0.73, 0.53], "glow": 0.5},
+          {"def": "grain_scatter", "at": [-48, -10], "scale": 0.8, "rotate": 0.33, "color": [0.95, 0.92, 0.80], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-42, -5], "scale": 0.85, "rotate": 0.38, "color": [0.93, 0.90, 0.78], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-37, 0], "scale": 0.82, "rotate": 0.35, "color": [0.94, 0.91, 0.79], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-32, 5], "scale": 0.87, "rotate": 0.40, "color": [0.92, 0.89, 0.77], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-27, 10], "scale": 0.81, "rotate": 0.32, "color": [0.96, 0.93, 0.81], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-22, 15], "scale": 0.84, "rotate": 0.37, "color": [0.93, 0.90, 0.78], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-17, 20], "scale": 0.83, "rotate": 0.34, "color": [0.94, 0.91, 0.79], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-12, 25], "scale": 0.86, "rotate": 0.39, "color": [0.92, 0.89, 0.77], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-7, 30], "scale": 0.80, "rotate": 0.31, "color": [0.96, 0.93, 0.81], "glow": 0.4},
+          {"def": "grain_scatter", "at": [-2, 35], "scale": 0.85, "rotate": 0.36, "color": [0.93, 0.90, 0.78], "glow": 0.4},
+          {"def": "grain_scatter", "at": [3, 40], "scale": 0.82, "rotate": 0.33, "color": [0.94, 0.91, 0.79], "glow": 0.4},
+          {"def": "grain_scatter", "at": [8, 45], "scale": 0.88, "rotate": 0.38, "color": [0.92, 0.89, 0.77], "glow": 0.4},
+          {"def": "grain_scatter", "at": [15, 50], "scale": 0.81, "rotate": 0.35, "color": [0.96, 0.93, 0.81], "glow": 0.4},
+          {"def": "grain_scatter", "at": [22, 54], "scale": 0.84, "rotate": 0.40, "color": [0.93, 0.90, 0.78], "glow": 0.4},
+          {"def": "grain_scatter", "at": [30, 57], "scale": 0.83, "rotate": 0.32, "color": [0.94, 0.91, 0.79], "glow": 0.4},
+          {"def": "grain_scatter", "at": [38, 58], "scale": 0.87, "rotate": 0.37, "color": [0.92, 0.89, 0.77], "glow": 0.4},
+          {"def": "grain_scatter", "at": [46, 56], "scale": 0.80, "rotate": 0.34, "color": [0.96, 0.93, 0.81], "glow": 0.4},
+          {"def": "grain_scatter", "at": [54, 52], "scale": 0.85, "rotate": 0.39, "color": [0.93, 0.90, 0.78], "glow": 0.4},
+          {"def": "dune_crest", "at": [-50, -15], "scale": 1.4, "rotate": 0.42, "color": [0.88, 0.80, 0.65], "glow": 0.8},
+          {"def": "dune_crest", "at": [-42, -8], "scale": 1.2, "rotate": 0.45, "color": [0.87, 0.79, 0.64], "glow": 0.8},
+          {"def": "dune_crest", "at": [-35, 0], "scale": 1.35, "rotate": 0.40, "color": [0.89, 0.81, 0.66], "glow": 0.8},
+          {"def": "dune_crest", "at": [-28, 8], "scale": 1.25, "rotate": 0.47, "color": [0.86, 0.78, 0.63], "glow": 0.8},
+          {"def": "dune_crest", "at": [-20, 16], "scale": 1.30, "rotate": 0.43, "color": [0.88, 0.80, 0.65], "glow": 0.8},
+          {"def": "dune_crest", "at": [-12, 24], "rotate": 0.46, "scale": 1.22, "color": [0.87, 0.79, 0.64], "glow": 0.8},
+          {"def": "dune_crest", "at": [-5, 32], "scale": 1.32, "rotate": 0.41, "color": [0.89, 0.81, 0.66], "glow": 0.8},
+          {"def": "dune_crest", "at": [3, 40], "scale": 1.24, "rotate": 0.48, "color": [0.86, 0.78, 0.63], "glow": 0.8},
+          {"def": "dune_crest", "at": [12, 48], "scale": 1.28, "rotate": 0.44, "color": [0.88, 0.80, 0.65], "glow": 0.8},
+          {"def": "dune_crest", "at": [20, 52], "scale": 1.23, "rotate": 0.47, "color": [0.87, 0.79, 0.64], "glow": 0.8},
+          {"def": "dune_crest", "at": [28, 56], "scale": 1.33, "rotate": 0.42, "color": [0.89, 0.81, 0.66], "glow": 0.8},
+          {"def": "dune_crest", "at": [36, 58], "scale": 1.26, "rotate": 0.49, "color": [0.86, 0.78, 0.63], "glow": 0.8},
+          {"def": "dune_crest", "at": [44, 56], "scale": 1.29, "rotate": 0.45, "color": [0.88, 0.80, 0.65], "glow": 0.8},
+          {"def": "dune_crest", "at": [52, 50], "scale": 1.21, "rotate": 0.48, "color": [0.87, 0.79, 0.64], "glow": 0.8},
+          {"def": "dune_crest", "at": [58, 40], "scale": 1.34, "rotate": 0.43, "color": [0.89, 0.81, 0.66], "glow": 0.8},
+          {"def": "settling_particles", "at": [-45, 0], "scale": 0.75, "rotate": 0.50, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [-38, 5], "scale": 0.78, "rotate": 0.52, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [-32, 10], "scale": 0.76, "rotate": 0.51, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [-25, 15], "scale": 0.79, "rotate": 0.53, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [-18, 20], "scale": 0.77, "rotate": 0.50, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [-12, 25], "scale": 0.80, "rotate": 0.52, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [-5, 30], "scale": 0.75, "rotate": 0.51, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [2, 35], "scale": 0.78, "rotate": 0.53, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [10, 40], "scale": 0.76, "rotate": 0.50, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [18, 45], "scale": 0.79, "rotate": 0.52, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [25, 50], "scale": 0.77, "rotate": 0.51, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [32, 54], "scale": 0.80, "rotate": 0.53, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [40, 57], "scale": 0.75, "rotate": 0.50, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "settling_particles", "at": [48, 58], "scale": 0.78, "rotate": 0.52, "color": [0.96, 0.94, 0.84], "glow": 0.3},
+          {"def": "settling_particles", "at": [55, 56], "scale": 0.76, "rotate": 0.51, "color": [0.97, 0.95, 0.85], "glow": 0.3},
+          {"def": "mountain_profile", "at": [-52, -25], "scale": 0.9, "rotate": 0.0, "color": [0.82, 0.74, 0.55], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-44, -12], "scale": 0.85, "rotate": 0.06, "color": [0.83, 0.75, 0.57], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-36, 2], "scale": 0.92, "rotate": 0.03, "color": [0.81, 0.73, 0.54], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-28, 16], "scale": 0.88, "rotate": 0.09, "color": [0.82, 0.74, 0.56], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-20, 28], "scale": 0.91, "rotate": 0.04, "color": [0.83, 0.75, 0.57], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-12, 38], "scale": 0.87, "rotate": 0.08, "color": [0.81, 0.73, 0.54], "glow": 0.75},
+          {"def": "mountain_profile", "at": [-4, 48], "scale": 0.90, "rotate": 0.05, "color": [0.82, 0.74, 0.56], "glow": 0.75},
+          {"def": "mountain_profile", "at": [4, 56], "scale": 0.86, "rotate": 0.10, "color": [0.83, 0.75, 0.57], "glow": 0.75},
+          {"def": "mountain_profile", "at": [14, 58], "scale": 0.89, "rotate": 0.02, "color": [0.81, 0.73, 0.54], "glow": 0.75},
+          {"def": "mountain_profile", "at": [24, 56], "scale": 0.93, "rotate": 0.07, "color": [0.82, 0.74, 0.56], "glow": 0.75},
+          {"def": "mountain_profile", "at": [34, 50], "scale": 0.88, "rotate": 0.04, "color": [0.83, 0.75, 0.57], "glow": 0.75},
+          {"def": "mountain_profile", "at": [44, 40], "scale": 0.91, "rotate": 0.09, "color": [0.81, 0.73, 0.54], "glow": 0.75},
+          {"def": "mountain_profile", "at": [52, 28], "scale": 0.84, "rotate": 0.06, "color": [0.82, 0.74, 0.56], "glow": 0.75},
+          {"def": "wind_trace", "at": [-48, -20], "scale": 1.1, "rotate": 0.55, "color": [0.75, 0.65, 0.45], "glow": 0.5},
+          {"def": "wind_trace", "at": [-40, -10], "scale": 0.95, "rotate": 0.58, "color": [0.73, 0.63, 0.43], "glow": 0.5},
+          {"def": "wind_trace", "at": [-32, 0], "scale": 1.08, "rotate": 0.56, "color": [0.74, 0.64, 0.44], "glow": 0.5},
+          {"def": "wind_trace", "at": [-24, 10], "scale": 1.02, "rotate": 0.59, "color": [0.72, 0.62, 0.42], "glow": 0.5},
+          {"def": "wind_trace", "at": [-16, 20], "scale": 1.12, "rotate": 0.57, "color": [0.75, 0.65, 0.45], "glow": 0.5},
+          {"def": "wind_trace", "at": [-8, 30], "scale": 0.98, "rotate": 0.60, "color": [0.73, 0.63, 0.43], "glow": 0.5},
+          {"def": "wind_trace", "at": [0, 40], "scale": 1.10, "rotate": 0.55, "color": [0.74, 0.64, 0.44], "glow": 0.5},
+          {"def": "wind_trace", "at": [8, 48], "scale": 1.04, "rotate": 0.58, "color": [0.72, 0.62, 0.42], "glow": 0.5},
+          {"def": "wind_trace", "at": [16, 54], "scale": 1.13, "rotate": 0.57, "color": [0.75, 0.65, 0.45], "glow": 0.5},
+          {"def": "wind_trace", "at": [24, 57], "scale": 0.96, "rotate": 0.60, "color": [0.73, 0.63, 0.43], "glow": 0.5},
+          {"def": "wind_trace", "at": [32, 58], "scale": 1.09, "rotate": 0.56, "color": [0.74, 0.64, 0.44], "glow": 0.5},
+          {"def": "wind_trace", "at": [40, 56], "scale": 1.05, "rotate": 0.59, "color": [0.72, 0.62, 0.42], "glow": 0.5},
+          {"def": "wind_trace", "at": [48, 50], "scale": 1.11, "rotate": 0.57, "color": [0.75, 0.65, 0.45], "glow": 0.5},
+          {"def": "wind_trace", "at": [56, 40], "scale": 0.99, "rotate": 0.60, "color": [0.73, 0.63, 0.43], "glow": 0.5},
+          {"def": "sand_drift", "at": [-48, 35], "scale": 1.24, "rotate": 0.16, "color": [0.91, 0.86, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [-40, 42], "scale": 1.01, "rotate": 0.10, "color": [0.88, 0.83, 0.68], "glow": 0.6},
+          {"def": "sand_drift", "at": [-32, 50], "scale": 1.20, "rotate": 0.14, "color": [0.92, 0.86, 0.72], "glow": 0.6},
+          {"def": "sand_drift", "at": [-24, 55], "scale": 0.94, "rotate": 0.08, "color": [0.87, 0.83, 0.67], "glow": 0.6},
+          {"def": "sand_drift", "at": [-16, 58], "scale": 1.23, "rotate": 0.13, "color": [0.91, 0.85, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [-8, 56], "scale": 1.04, "rotate": 0.09, "color": [0.89, 0.84, 0.69], "glow": 0.6},
+          {"def": "sand_drift", "at": [0, 52], "scale": 1.19, "rotate": 0.12, "color": [0.93, 0.87, 0.73], "glow": 0.6},
+          {"def": "sand_drift", "at": [8, 46], "scale": 0.97, "rotate": 0.07, "color": [0.86, 0.82, 0.65], "glow": 0.6},
+          {"def": "sand_drift", "at": [16, 40], "scale": 1.21, "rotate": 0.11, "color": [0.90, 0.85, 0.70], "glow": 0.6},
+          {"def": "sand_drift", "at": [24, 32], "scale": 1.06, "rotate": 0.08, "color": [0.88, 0.83, 0.67], "glow": 0.6},
+          {"def": "sand_drift", "at": [32, 25], "scale": 1.25, "rotate": 0.10, "color": [0.92, 0.86, 0.72], "glow": 0.6},
+          {"def": "sand_drift", "at": [40, 18], "scale": 0.99, "rotate": 0.06, "color": [0.87, 0.83, 0.68], "glow": 0.6},
+          {"def": "sand_drift", "at": [48, 10], "scale": 1.20, "rotate": 0.09, "color": [0.91, 0.85, 0.71], "glow": 0.6},
+          {"def": "sand_drift", "at": [56, 2], "scale": 1.03, "rotate": 0.07, "color": [0.89, 0.84, 0.69], "glow": 0.6},
+          {"def": "ridge_line", "at": [-52, 25], "scale": 1.09, "rotate": 0.16, "color": [0.85, 0.78, 0.62], "glow": 0.7},
+          {"def": "ridge_line", "at": [-44, 35], "scale": 0.96, "rotate": 0.19, "color": [0.84, 0.77, 0.60], "glow": 0.7},
+          {"def": "ridge_line", "at": [-36, 45], "scale": 1.13, "rotate": 0.13, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [-28, 52], "scale": 1.04, "rotate": 0.21, "color": [0.83, 0.76, 0.59], "glow": 0.7},
+          {"def": "ridge_line", "at": [-20, 58], "scale": 1.10, "rotate": 0.15, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [-12, 56], "scale": 0.99, "rotate": 0.18, "color": [0.84, 0.77, 0.61], "glow": 0.7},
+          {"def": "ridge_line", "at": [-4, 50], "scale": 1.11, "rotate": 0.14, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [4, 42], "scale": 1.08, "rotate": 0.20, "color": [0.83, 0.76, 0.60], "glow": 0.7},
+          {"def": "ridge_line", "at": [12, 35], "scale": 1.09, "rotate": 0.16, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [20, 28], "scale": 1.01, "rotate": 0.19, "color": [0.84, 0.77, 0.61], "glow": 0.7},
+          {"def": "ridge_line", "at": [28, 20], "scale": 1.12, "rotate": 0.13, "color": [0.86, 0.79, 0.64], "glow": 0.7},
+          {"def": "ridge_line", "at": [36, 12], "scale": 1.07, "rotate": 0.21, "color": [0.83, 0.76, 0.59], "glow": 0.7},
+          {"def": "ridge_line", "at": [44, 5], "scale": 1.10, "rotate": 0.15, "color": [0.85, 0.78, 0.63], "glow": 0.7},
+          {"def": "ridge_line", "at": [52, -5], "scale": 0.98, "rotate": 0.18, "color": [0.84, 0.77, 0.60], "glow": 0.7},
+          {"def": "valley_curve", "at": [-50, 40], "scale": 1.31, "rotate": 0.26, "color": [0.80, 0.70, 0.50], "glow": 0.5},
+          {"def": "valley_curve", "at": [-42, 50], "scale": 1.12, "rotate": 0.31, "color": [0.78, 0.68, 0.48], "glow": 0.5},
+          {"def": "valley_curve", "at": [-35, 58], "scale": 1.26, "rotate": 0.23, "color": [0.82, 0.72, 0.52], "glow": 0.5},
+          {"def": "valley_curve", "at": [-27, 56], "scale": 1.16, "rotate": 0.28, "color": [0.79, 0.69, 0.49], "glow": 0.5},
+          {"def": "valley_curve", "at": [-19, 48], "scale": 1.21, "rotate": 0.25, "color": [0.81, 0.71, 0.51], "glow": 0.5},
+          {"def": "valley_curve", "at": [-11, 38], "scale": 1.09, "rotate": 0.30, "color": [0.77, 0.67, 0.47], "glow": 0.5},
+          {"def": "valley_curve", "at": [-3, 28], "scale": 1.23, "rotate": 0.24, "color": [0.83, 0.73, 0.53], "glow": 0.5},
+          {"def": "valley_curve", "at": [5, 18], "scale": 1.13, "rotate": 0.29, "color": [0.78, 0.68, 0.48], "glow": 0.5},
+          {"def": "valley_curve", "at": [13, 8], "scale": 1.19, "rotate": 0.26, "color": [0.80, 0.70, 0.50], "glow": 0.5},
+          {"def": "valley_curve", "at": [21, -2], "scale": 1.11, "rotate": 0.31, "color": [0.77, 0.67, 0.47], "glow": 0.5},
+          {"def": "valley_curve", "at": [29, -12], "scale": 1.25, "rotate": 0.23, "color": [0.82, 0.72, 0.52], "glow": 0.5},
+          {"def": "valley_curve", "at": [37, -20], "scale": 1.15, "rotate": 0.28, "color": [0.79, 0.69, 0.49], "glow": 0.5},
+          {"def": "valley_curve", "at": [45, -25], "scale": 1.20, "rotate": 0.25, "color": [0.81, 0.71, 0.51], "glow": 0.5},
+          {"def": "valley_curve", "at": [53, -20], "scale": 1.10, "rotate": 0.30, "color": [0.77, 0.67, 0.47], "glow": 0.5}
+        ],
+        "scale": 1.0,
+        "rotate": 0.0,
+        "spread": 1.0,
+        "glow": 0.15,
+        "max_strokes": 680
+      },
+      "camera": {
+        "mode": "path",
+        "waypoints": [
+          [-55, -30, 3.5],
+          [-40, -15, 3.2],
+          [-25, 5, 3.0],
+          [-10, 25, 2.8],
+          [10, 45, 3.0],
+          [30, 55, 3.2],
+          [50, 50, 3.5],
+          [55, 30, 3.8],
+          [45, 10, 4.0],
+          [20, -10, 3.6],
+          [-15, -25, 3.3]
+        ],
+        "speed": 0.5,
+        "fov": 62,
+        "near": 0.4,
+        "far": 40,
+        "max_strokes": 120,
+        "depth": {"mode": "cull"}
+      }
+    }
+  ],
+  "palette": ["#0a0a0a", "#d4c4a8", "#e8d7b8", "#a89468"],
+  "modulation": [
+    {"source": "lfo_slow", "dest": "visual.rotate", "depth": 0.08},
+    {"source": "synth_low", "dest": "visual.scale", "depth": 0.22},
+    {"source": "synth_mid", "dest": "visual.glow", "depth": 0.45},
+    {"source": "synth_high", "dest": "visual.spread", "depth": 0.18}
+  ],
+  "soundscape": {
+    "name": "the sound of the earth being created",
+    "tempo": 54,
+    "master_level": 0.65,
+    "voices": [
+      {
+        "name": "foundation",
+        "type": "osc",
+        "note": 28,
+        "chord": [0, 3, 7],
+        "unison": 2,
+        "detune": 0.008,
+        "tone": 0.22,
+        "sub": 0.55,
+        "level": 0.7,
+        "pan": 0,
+        "env": {
+          "attack": 4.5,
+          "decay": 2.0,
+          "sustain": 0.85,
+          "release": 3.0
+        },
+        "lfo": {
+          "on": true,
+          "dest": "sub",
+          "shape": "sine",
+          "rate": 0.035,
+          "depth": 0.4
+        }
+      },
+      {
+        "name": "settling_pad",
+        "type": "pad",
+        "note": 52,
+        "chord": [0, 4, 7, 11],
+        "tone": 0.35,
+        "level": 0.5,
+        "pan": -0.15,
+        "env": {
+          "attack": 6.0,
+          "decay": 3.0,
+          "sustain": 0.7,
+          "release": 4.0
+        }
+      },
+      {
+        "name": "wind_bells",
+        "type": "bell",
+        "note": 60,
+        "scale": "major",
+        "rate": 0.18,
+        "decay": 2.2,
+        "tone": 0.55,
+        "level": 0.42,
+        "pan": 0.2
+      },
+      {
+        "name": "air_texture",
+        "type": "noise",
+        "tone": 0.25,
+        "level": 0.28,
+        "pan": 0
+      }
+    ]
+  }
+}
+```

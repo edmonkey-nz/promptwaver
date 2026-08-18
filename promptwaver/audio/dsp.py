@@ -71,6 +71,18 @@ BELL_PARTIAL_AMP_SUM = float(BELL_PARTIAL_AMPS.sum())
 #: UI knob so all three agree on what the control means.
 LFO_MAX_RATE = 0.5
 
+#: Whole-mix "filter sweep": a slow, single-phase sine added to the static
+#: eq.high dB value, reusing _apply_eq's existing FFT machinery untouched —
+#: only the "high" figure it's called with varies over time. Unlike swell
+#: (per-voice, independently randomised phase so voices don't move in
+#: lockstep) this is one global effect with nothing to decorrelate against,
+#: so it runs on a single deterministic phase tied to the scene clock rather
+#: than needing per-instance random state. At amount=1.0 the high band swings
+#: +-8dB around whatever eq.high is set to — audible without being able to
+#: exceed the existing +-10dB EQ ceiling by much even from an extreme static
+#: setting (clamped below regardless).
+FILTER_SWEEP_MAX_DB = 8.0
+
 
 def midi_to_hz(n: float) -> float:
     return 440.0 * 2.0 ** ((n - 69) / 12.0)
@@ -350,12 +362,13 @@ class Soundscape:
 
     def set_param(self, path: str, value):
         """Live update. Paths: 'master', 'tempo', 'distortion', 'swell_amount',
-        'swell_period', 'delay.time|feedback|mix', 'eq.low|mid|high',
-        'voice.<name>.<field>'."""
+        'swell_period', 'filter_sweep_amount', 'filter_sweep_period',
+        'delay.time|feedback|mix', 'eq.low|mid|high', 'voice.<name>.<field>'."""
         s = self.spec
         parts = path.split(".")
         if len(parts) == 1 and parts[0] in ("master", "tempo", "distortion",
-                                             "swell_amount", "swell_period"):
+                                             "swell_amount", "swell_period",
+                                             "filter_sweep_amount", "filter_sweep_period"):
             s[parts[0]] = _coerce(parts[0], value)
         elif parts[0] == "delay" and len(parts) == 2:
             s["delay"][parts[1]] = float(value)
@@ -594,6 +607,16 @@ class Soundscape:
             mix[:, 1] += mono * np.sqrt(0.5 * (1 + pan))
 
         eq = self.spec.get("eq")
+        sweep_amount = float(self.spec.get("filter_sweep_amount", 0.0))
+        if sweep_amount > 0:
+            # Whole-mix, single-phase — see FILTER_SWEEP_MAX_DB. Swings the
+            # high band's dB gain around whatever it's statically set to,
+            # so amount=0 is exactly the pre-existing behaviour and this
+            # never needs its own on/off flag.
+            sweep_period = max(1.0, float(self.spec.get("filter_sweep_period", 30.0)))
+            swing = sweep_amount * FILTER_SWEEP_MAX_DB * math.sin(2 * math.pi * block_t / sweep_period)
+            eq = dict(eq or {})
+            eq["high"] = max(-10.0, min(10.0, float(eq.get("high", 0.0)) + swing))
         if eq and (eq.get("low") or eq.get("mid") or eq.get("high")):
             mix = _apply_eq(mix, eq, self.sr)
 
@@ -1159,6 +1182,8 @@ def _normalise(spec: dict) -> dict:
     s["eq"] = eq
     s["swell_amount"] = _clamp(s.get("swell_amount"), 0.0, 1.0, 0.0)
     s["swell_period"] = _clamp(s.get("swell_period"), 5.0, 120.0, 24.0)
+    s["filter_sweep_amount"] = _clamp(s.get("filter_sweep_amount"), 0.0, 1.0, 0.0)
+    s["filter_sweep_period"] = _clamp(s.get("filter_sweep_period"), 5.0, 120.0, 30.0)
     voices = []
     for i, v in enumerate(s.get("voices", [])):
         v = dict(v)

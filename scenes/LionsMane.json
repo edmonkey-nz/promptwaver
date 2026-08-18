@@ -179,8 +179,8 @@
         "scale": 2.12,
         "rotate": 0.0,
         "spread": 1.2992125984251968,
-        "glow": 0.69,
-        "max_strokes": 1010
+        "glow": 0.0,
+        "max_strokes": 100
       }
     }
   ],
@@ -199,7 +199,7 @@
       "depth": 0.74
     },
     {
-      "source": "synth_low",
+      "source": "voice.deep_sub",
       "dest": "visual.scale",
       "depth": 0.71
     },
@@ -342,7 +342,7 @@
           0,
           12
         ],
-        "unison": 3.0,
+        "unison": 3,
         "detune": 0.01,
         "sub": 0.3,
         "level": 0.3,
@@ -435,7 +435,9 @@
       "mid": 0.5,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

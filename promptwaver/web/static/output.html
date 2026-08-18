@@ -19,6 +19,14 @@
   #title{position:fixed;bottom:24px;left:24px;font:14px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#e7eaf0;
         opacity:0;transition:opacity 0.5s ease-in-out;pointer-events:none;user-select:none}
   #title.show{opacity:1}
+  /* Frame-rate meter. Top-left rather than centred so it never sits over the
+     middle of a projection, and deliberately dim — it's a diagnostic you
+     glance at while tuning, not part of the show. */
+  #fps{position:fixed;top:10px;left:12px;font:12px ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+       color:#5a5f6b;display:none;pointer-events:none;user-select:none;white-space:pre}
+  #fps.show{display:block}
+  #fps b{color:#33e0d0;font-weight:normal}
+  #fps .warn{color:#f2a623}
 </style>
 </head>
 <body>
@@ -26,6 +34,7 @@
 <div id="hint">PromptWaver output — drag this window to your projector/second screen, then press F11 for fullscreen</div>
 <div id="status">disconnected — retrying…</div>
 <div id="title"></div>
+<div id="fps"></div>
 <script>
 const cv = document.getElementById("out"), cx = cv.getContext("2d");
 const statusEl = document.getElementById("status");
@@ -73,11 +82,17 @@ const filters = {
   keystoneH: parseFloat(localStorage.getItem(`pw_filter_keystoneh_${outputId}`) || "0"),
   keystoneV: parseFloat(localStorage.getItem(`pw_filter_keystonev_${outputId}`) || "0"),
 };
+// NOT keyed by outputId, unlike flip/keystone above: those describe how one
+// physical screen is mounted, so they differ per window. This is a diagnostic
+// overlay you turn on to measure a problem and off again, and wanting it on
+// one output but not the other isn't a real case — one switch drives both.
+let showFps = localStorage.getItem("pw_output_fps") === "1";
 window.addEventListener("storage", e => {
   if (e.key === `pw_filter_flipx_${outputId}`) filters.flipX = e.newValue === "1";
   if (e.key === `pw_filter_flipy_${outputId}`) filters.flipY = e.newValue === "1";
   if (e.key === `pw_filter_keystoneh_${outputId}`) filters.keystoneH = parseFloat(e.newValue || "0");
   if (e.key === `pw_filter_keystonev_${outputId}`) filters.keystoneV = parseFloat(e.newValue || "0");
+  if (e.key === "pw_output_fps") setFpsVisible(e.newValue === "1");
 });
 
 // Same bilinear formula as output/ilda.py's PathPlanner._to_dac_vec and
@@ -210,6 +225,49 @@ function paint(scene){
   if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);
 }
 
+// --- frame-rate meter -------------------------------------------------------
+//
+// Measures the REAL paint rate of THIS window, which is none of the numbers
+// already on the control page: not the engine's render fps, and not the ~20Hz
+// state broadcast either. `paint()` runs synchronously inside ws.onmessage,
+// so once a full-HD canvas costs more to draw than the gap between messages,
+// this is the only place that shows up.
+//
+// Paint cost in ms is reported next to it deliberately — "12 fps" alone
+// doesn't tell you whether the fix is fewer strokes, less glow, or a smaller
+// window, whereas "12 fps · 68ms · 210 strokes" points straight at it. 20 fps
+// is the ceiling by design (the broadcast rate), so the meter compares against
+// that rather than 60 and only warns when paint cost is genuinely the limit.
+const fpsEl = document.getElementById("fps");
+let _frames = 0, _paintMs = 0, _paintMax = 0, _strokes = 0, _lastFpsT = performance.now();
+
+function setFpsVisible(on){
+  showFps = !!on;
+  fpsEl.classList.toggle("show", showFps);
+  if (!showFps) return;
+  _frames = 0; _paintMs = 0; _paintMax = 0; _lastFpsT = performance.now();
+  fpsEl.textContent = "measuring…";
+}
+setFpsVisible(showFps);
+
+function updateFpsReadout(){
+  if (!showFps) return;
+  const now = performance.now(), dt = now - _lastFpsT;
+  if (dt < 500) return;                      // ~2 updates/sec; the overlay
+  const fps = _frames * 1000 / dt;           // must not itself cost anything
+  const avg = _frames ? _paintMs / _frames : 0;
+  // The broadcast is ~20Hz, so anything at/near 20 is healthy and a low
+  // number only means trouble if painting is actually slow — a paused engine
+  // sends nothing and would otherwise read as 0fps "bad".
+  const slow = avg > 25;
+  fpsEl.innerHTML =
+    `<b${slow ? ' class="warn"' : ''}>${fps.toFixed(1)} fps</b>  `
+    + `<span${slow ? ' class="warn"' : ''}>paint ${avg.toFixed(1)}ms (max ${_paintMax.toFixed(1)})</span>  `
+    + `${_strokes} strokes  ${cv.width}x${cv.height}`;
+  _frames = 0; _paintMs = 0; _paintMax = 0; _lastFpsT = now;
+}
+setInterval(updateFpsReadout, 500);
+
 const titleEl = document.getElementById("title");
 let titleTimeout = null;
 
@@ -229,7 +287,18 @@ function connect(){
       filters.mirrorY = !!s.mirror_y;
       filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
       filters.aspect = s.output_aspect || 1;
-      paint(m.preview);
+      if (showFps) {
+        // Timed around the real thing, filters and all — a number that
+        // excluded the glow/mirror/keystone passes would miss the usual cause.
+        const t0 = performance.now();
+        paint(m.preview);
+        const ms = performance.now() - t0;
+        _frames++; _paintMs += ms;
+        if (ms > _paintMax) _paintMax = ms;
+        _strokes = (m.preview || []).length;
+      } else {
+        paint(m.preview);
+      }
     } else if (m.type === "show_title") {
       clearTimeout(titleTimeout);
       titleEl.textContent = m.title;

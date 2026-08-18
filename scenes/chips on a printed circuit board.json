@@ -773,7 +773,9 @@
     "mirror_x": true,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.75
+    "trail": 0.75,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 0
   },
   "pps": null,
   "soundscape": {
@@ -829,7 +831,8 @@
           "shape": "random",
           "depth": 0.69,
           "dest": "tone"
-        }
+        },
+        "distortion": 0.0
       },
       {
         "name": "tb303_lead",
@@ -858,11 +861,12 @@
         ],
         "lfo": {
           "on": true,
-          "rate": 0,
+          "rate": 0.025,
           "shape": "sine",
           "depth": 0.73,
           "dest": "pan"
-        }
+        },
+        "distortion": 0.0
       },
       {
         "name": "808_kick",
@@ -886,12 +890,13 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "tech_texture",
         "type": "noise",
-        "level": 0.12,
+        "level": 0.18,
         "tone": 0.6,
         "pan": -0.15,
         "mute": false,
@@ -908,7 +913,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       }
     ],
     "eq": {
@@ -920,5 +926,13 @@
     "swell_period": 60.0
   },
   "audio_link": 1.55,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

@@ -1,0 +1,7062 @@
+{
+  "name": "Topo map",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "volcano_peak": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0,
+                  -2
+                ],
+                [
+                  0.3,
+                  -1.8
+                ],
+                [
+                  0.5,
+                  -1.2
+                ],
+                [
+                  0.7,
+                  -0.4
+                ],
+                [
+                  0.6,
+                  0.2
+                ],
+                [
+                  0.4,
+                  0.8
+                ],
+                [
+                  0.1,
+                  1.2
+                ],
+                [
+                  0,
+                  1.4
+                ]
+              ],
+              "seg": 12,
+              "meridians": 6
+            }
+          ],
+          "crater_rim": [
+            {
+              "op": "circle",
+              "r": 0.9,
+              "plane": "xy",
+              "c": [
+                0,
+                1.3,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 0.7,
+              "plane": "xy",
+              "c": [
+                0,
+                1.3,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "arc",
+              "r": 0.8,
+              "a0": 0,
+              "a1": 6.28,
+              "plane": "xy",
+              "c": [
+                0,
+                1.35,
+                0
+              ]
+            }
+          ],
+          "palm_tree": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                2.2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.8,
+                0
+              ],
+              "b": [
+                -0.6,
+                2.4,
+                -0.3
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.8,
+                0
+              ],
+              "b": [
+                0.7,
+                2.3,
+                0.4
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.8,
+                0
+              ],
+              "b": [
+                -0.5,
+                2.2,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.8,
+                0
+              ],
+              "b": [
+                0.4,
+                2.5,
+                -0.4
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                1.8,
+                0
+              ],
+              "b": [
+                -0.3,
+                2.6,
+                0
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.05,
+                  0.3,
+                  0
+                ],
+                [
+                  0.03,
+                  0.6,
+                  0
+                ],
+                [
+                  0.08,
+                  0.9,
+                  0
+                ],
+                [
+                  0.02,
+                  1.2,
+                  0
+                ],
+                [
+                  0.06,
+                  1.5,
+                  0
+                ],
+                [
+                  0,
+                  1.8,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "atoll_ring": [
+            {
+              "op": "circle",
+              "r": 3.5,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.4,
+                0
+              ],
+              "seg": 32
+            },
+            {
+              "op": "circle",
+              "r": 3.2,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.4,
+                0
+              ],
+              "seg": 32
+            }
+          ],
+          "lagoon_contour": [
+            {
+              "op": "circle",
+              "r": 2.1,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.5,
+                0
+              ],
+              "seg": 28
+            },
+            {
+              "op": "arc",
+              "r": 2.0,
+              "a0": 0,
+              "a1": 3.14,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.5,
+                0
+              ]
+            },
+            {
+              "op": "arc",
+              "r": 1.9,
+              "a0": 3.14,
+              "a1": 6.28,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.5,
+                0
+              ]
+            }
+          ],
+          "reef_break": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.3,
+                  0
+                ],
+                [
+                  0.1,
+                  -0.2,
+                  0.05
+                ],
+                [
+                  0.15,
+                  -0.1,
+                  0.1
+                ],
+                [
+                  0.2,
+                  0,
+                  0.15
+                ],
+                [
+                  0.18,
+                  0.1,
+                  0.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.3,
+                  -0.3,
+                  0.1
+                ],
+                [
+                  0.35,
+                  -0.15,
+                  0.15
+                ],
+                [
+                  0.38,
+                  0.05,
+                  0.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.2,
+                  -0.3,
+                  -0.1
+                ],
+                [
+                  -0.15,
+                  -0.1,
+                  -0.05
+                ],
+                [
+                  -0.1,
+                  0.1,
+                  0.05
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "topo_contour": [
+            {
+              "op": "circle",
+              "r": 1.8,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.35,
+                0
+              ],
+              "seg": 24
+            },
+            {
+              "op": "circle",
+              "r": 1.4,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.35,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 1.0,
+              "plane": "xz",
+              "c": [
+                0,
+                -0.35,
+                0
+              ],
+              "seg": 16
+            }
+          ],
+          "small_islet": [
+            {
+              "op": "lathe",
+              "profile": [
+                [
+                  0,
+                  -0.6
+                ],
+                [
+                  0.2,
+                  -0.4
+                ],
+                [
+                  0.3,
+                  -0.1
+                ],
+                [
+                  0.25,
+                  0.2
+                ],
+                [
+                  0.1,
+                  0.4
+                ],
+                [
+                  0,
+                  0.5
+                ]
+              ],
+              "seg": 8,
+              "meridians": 4
+            },
+            {
+              "op": "circle",
+              "r": 0.25,
+              "plane": "xz",
+              "c": [
+                0,
+                0.3,
+                0
+              ],
+              "seg": 12
+            }
+          ],
+          "ocean_swell": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1,
+                  0,
+                  0
+                ],
+                [
+                  -0.8,
+                  0.15,
+                  0.1
+                ],
+                [
+                  -0.6,
+                  0.2,
+                  0.2
+                ],
+                [
+                  -0.4,
+                  0.15,
+                  0.1
+                ],
+                [
+                  -0.2,
+                  0,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.2,
+                  0.05,
+                  0.1
+                ],
+                [
+                  0.4,
+                  0.25,
+                  0.2
+                ],
+                [
+                  0.6,
+                  0.3,
+                  0.3
+                ],
+                [
+                  0.8,
+                  0.2,
+                  0.2
+                ],
+                [
+                  1,
+                  0,
+                  0.1
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "arc",
+              "r": 0.5,
+              "a0": 0,
+              "a1": 3.14,
+              "plane": "xy",
+              "c": [
+                0,
+                0.1,
+                0
+              ]
+            }
+          ],
+          "wave_pattern": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.8,
+                  0,
+                  0
+                ],
+                [
+                  -0.6,
+                  0.1,
+                  0.05
+                ],
+                [
+                  -0.4,
+                  0.12,
+                  0.1
+                ],
+                [
+                  -0.2,
+                  0.08,
+                  0.05
+                ],
+                [
+                  0,
+                  0,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.2,
+                  0.02,
+                  0.1
+                ],
+                [
+                  0.5,
+                  0.15,
+                  0.15
+                ],
+                [
+                  0.8,
+                  0.1,
+                  0.08
+                ]
+              ],
+              "closed": false
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -2,
+              1.2,
+              -8
+            ],
+            "scale": 2.8,
+            "color": [
+              0.6,
+              0.4,
+              0.3
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -2,
+              3.8,
+              -8
+            ],
+            "scale": 1.0,
+            "color": [
+              0.8,
+              0.6,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -2,
+              0,
+              -8
+            ],
+            "scale": 1.0,
+            "color": [
+              0.5,
+              0.65,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -2,
+              -0.1,
+              -8
+            ],
+            "scale": 1.0,
+            "color": [
+              0.3,
+              0.7,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              0,
+              0,
+              -5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.4,
+              0.6,
+              0.35
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.08,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -1.5,
+              0,
+              -3
+            ],
+            "scale": 0.95,
+            "color": [
+              0.45,
+              0.65,
+              0.4
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.06,
+              "amp": 0.35,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              2.2,
+              0,
+              -4
+            ],
+            "scale": 1.2,
+            "color": [
+              0.42,
+              0.62,
+              0.38
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.07,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -3,
+              0,
+              -6
+            ],
+            "scale": 0.88,
+            "color": [
+              0.48,
+              0.68,
+              0.42
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.05,
+              "amp": 0.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              1.2,
+              0,
+              -7
+            ],
+            "scale": 1.05,
+            "color": [
+              0.44,
+              0.64,
+              0.36
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.09,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -4.5,
+              0,
+              -3
+            ],
+            "scale": 0.92,
+            "color": [
+              0.46,
+              0.66,
+              0.4
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.07,
+              "amp": 0.36,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              3.2,
+              0,
+              -2
+            ],
+            "scale": 1.3,
+            "color": [
+              0.55,
+              0.45,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -4.8,
+              0,
+              1
+            ],
+            "scale": 0.95,
+            "color": [
+              0.58,
+              0.48,
+              0.38
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              2.5,
+              0,
+              3
+            ],
+            "scale": 1.1,
+            "color": [
+              0.52,
+              0.42,
+              0.32
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -3.2,
+              0,
+              -0.5
+            ],
+            "scale": 0.85,
+            "color": [
+              0.6,
+              0.5,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              4,
+              -0.8,
+              0
+            ],
+            "scale": 2.2,
+            "color": [
+              0.7,
+              0.75,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.4,
+              "amp": 0.08
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -4.5,
+              -0.8,
+              -2
+            ],
+            "scale": 1.8,
+            "color": [
+              0.65,
+              0.7,
+              0.75
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.5,
+              "amp": 0.06
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              1.5,
+              -0.8,
+              4
+            ],
+            "scale": 2.0,
+            "color": [
+              0.68,
+              0.73,
+              0.78
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.45,
+              "amp": 0.07
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -3,
+              -0.8,
+              3.5
+            ],
+            "scale": 1.6,
+            "color": [
+              0.72,
+              0.77,
+              0.82
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.55,
+              "amp": 0.05
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              0,
+              0,
+              2
+            ],
+            "scale": 1.0,
+            "color": [
+              0.4,
+              0.65,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -5.5,
+              0,
+              -0.5
+            ],
+            "scale": 0.9,
+            "color": [
+              0.42,
+              0.67,
+              0.72
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              4.5,
+              0,
+              -3
+            ],
+            "scale": 1.1,
+            "color": [
+              0.38,
+              0.63,
+              0.68
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -1.5,
+              0,
+              5
+            ],
+            "scale": 0.85,
+            "color": [
+              0.44,
+              0.69,
+              0.74
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              3.5,
+              -1.2,
+              -5
+            ],
+            "scale": 3.5,
+            "color": [
+              0.35,
+              0.6,
+              0.75
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.2,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -4,
+              -1.2,
+              2
+            ],
+            "scale": 3.2,
+            "color": [
+              0.32,
+              0.58,
+              0.72
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.25,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              0.5,
+              -1.2,
+              5
+            ],
+            "scale": 2.8,
+            "color": [
+              0.38,
+              0.62,
+              0.76
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.18,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -5.8,
+              -1.2,
+              -3
+            ],
+            "scale": 3.0,
+            "color": [
+              0.36,
+              0.61,
+              0.74
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.22,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              5.5,
+              -2,
+              0
+            ],
+            "scale": 4.5,
+            "color": [
+              0.3,
+              0.55,
+              0.7
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 0.6,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -2.2,
+              -2,
+              5.5
+            ],
+            "scale": 3.8,
+            "color": [
+              0.28,
+              0.52,
+              0.67
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.1,
+              "amp": 0.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              2,
+              -2,
+              -6
+            ],
+            "scale": 4.2,
+            "color": [
+              0.32,
+              0.57,
+              0.72
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 0.65,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -5.2,
+              -2,
+              1.5
+            ],
+            "scale": 3.5,
+            "color": [
+              0.29,
+              0.54,
+              0.69
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 0.55,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              5.8,
+              0.8,
+              3
+            ],
+            "scale": 1.5,
+            "color": [
+              0.65,
+              0.45,
+              0.35
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              5.8,
+              2.5,
+              3
+            ],
+            "scale": 0.65,
+            "color": [
+              0.8,
+              0.6,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              6.5,
+              0,
+              5.5
+            ],
+            "scale": 0.98,
+            "color": [
+              0.47,
+              0.67,
+              0.39
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.08,
+              "amp": 0.4,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              4.2,
+              0,
+              6
+            ],
+            "scale": 1.08,
+            "color": [
+              0.43,
+              0.63,
+              0.37
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.06,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              7.5,
+              0,
+              2
+            ],
+            "scale": 0.9,
+            "color": [
+              0.49,
+              0.69,
+              0.41
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.09,
+              "amp": 0.44,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              6.2,
+              0,
+              0.5
+            ],
+            "scale": 1.15,
+            "color": [
+              0.54,
+              0.44,
+              0.34
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              5,
+              0,
+              7
+            ],
+            "scale": 0.88,
+            "color": [
+              0.59,
+              0.49,
+              0.39
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              8.2,
+              -0.8,
+              1
+            ],
+            "scale": 1.9,
+            "color": [
+              0.66,
+              0.71,
+              0.76
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.42,
+              "amp": 0.065
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              4,
+              -0.8,
+              7.5
+            ],
+            "scale": 2.1,
+            "color": [
+              0.7,
+              0.75,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.48,
+              "amp": 0.075
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              5.5,
+              0,
+              5
+            ],
+            "scale": 0.95,
+            "color": [
+              0.41,
+              0.66,
+              0.71
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              7,
+              0,
+              1.5
+            ],
+            "scale": 1.05,
+            "color": [
+              0.39,
+              0.64,
+              0.69
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              7.8,
+              -1.2,
+              4
+            ],
+            "scale": 3.1,
+            "color": [
+              0.34,
+              0.59,
+              0.73
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.23,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              3.5,
+              -1.2,
+              7
+            ],
+            "scale": 2.9,
+            "color": [
+              0.37,
+              0.61,
+              0.75
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.2,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              8.8,
+              -2,
+              2.5
+            ],
+            "scale": 4.0,
+            "color": [
+              0.31,
+              0.56,
+              0.71
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 0.62,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              4.5,
+              -2,
+              8
+            ],
+            "scale": 3.7,
+            "color": [
+              0.3,
+              0.53,
+              0.68
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 0.58,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -6.5,
+              1.0,
+              4
+            ],
+            "scale": 1.6,
+            "color": [
+              0.62,
+              0.42,
+              0.32
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -6.5,
+              2.8,
+              4
+            ],
+            "scale": 0.7,
+            "color": [
+              0.8,
+              0.6,
+              0.4
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -6,
+              0,
+              6.5
+            ],
+            "scale": 1.02,
+            "color": [
+              0.45,
+              0.65,
+              0.37
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.07,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -8,
+              0,
+              3
+            ],
+            "scale": 0.96,
+            "color": [
+              0.48,
+              0.68,
+              0.42
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.08,
+              "amp": 0.41,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -5.2,
+              0,
+              2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.41,
+              0.61,
+              0.35
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.06,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -7.5,
+              0,
+              5.5
+            ],
+            "scale": 1.05,
+            "color": [
+              0.56,
+              0.46,
+              0.36
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -4.5,
+              0,
+              5
+            ],
+            "scale": 0.9,
+            "color": [
+              0.61,
+              0.51,
+              0.41
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -8.8,
+              -0.8,
+              2.5
+            ],
+            "scale": 2.0,
+            "color": [
+              0.69,
+              0.74,
+              0.79
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.46,
+              "amp": 0.072
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -5.5,
+              -0.8,
+              6.5
+            ],
+            "scale": 1.85,
+            "color": [
+              0.64,
+              0.69,
+              0.74
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.52,
+              "amp": 0.068
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -6,
+              0,
+              4.5
+            ],
+            "scale": 1.0,
+            "color": [
+              0.4,
+              0.65,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -7.5,
+              0,
+              2
+            ],
+            "scale": 0.92,
+            "color": [
+              0.43,
+              0.68,
+              0.73
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -8.2,
+              -1.2,
+              3.5
+            ],
+            "scale": 3.3,
+            "color": [
+              0.33,
+              0.58,
+              0.72
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.24,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -5.5,
+              -1.2,
+              6.5
+            ],
+            "scale": 2.7,
+            "color": [
+              0.39,
+              0.63,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.19,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -9.2,
+              -2,
+              1
+            ],
+            "scale": 4.3,
+            "color": [
+              0.29,
+              0.54,
+              0.69
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 0.63,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -4.2,
+              -2,
+              7.5
+            ],
+            "scale": 3.6,
+            "color": [
+              0.32,
+              0.55,
+              0.7
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 0.57,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              0,
+              -0.1,
+              1.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.35,
+              0.72,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              3,
+              -0.1,
+              -0.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.32,
+              0.7,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -3.5,
+              -0.1,
+              2.5
+            ],
+            "scale": 0.75,
+            "color": [
+              0.37,
+              0.73,
+              0.83
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              5.2,
+              -0.1,
+              3.5
+            ],
+            "scale": 0.65,
+            "color": [
+              0.34,
+              0.71,
+              0.81
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -5.8,
+              -0.1,
+              0.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.36,
+              0.72,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              1.5,
+              -0.1,
+              4.5
+            ],
+            "scale": 0.68,
+            "color": [
+              0.33,
+              0.7,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -2,
+              -0.1,
+              -3
+            ],
+            "scale": 0.72,
+            "color": [
+              0.38,
+              0.74,
+              0.84
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              4.5,
+              -0.1,
+              -2.5
+            ],
+            "scale": 0.66,
+            "color": [
+              0.35,
+              0.71,
+              0.81
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              0,
+              0,
+              1.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.52,
+              0.68,
+              0.75
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              3,
+              0,
+              -0.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.48,
+              0.65,
+              0.72
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -3.5,
+              0,
+              2.5
+            ],
+            "scale": 0.75,
+            "color": [
+              0.51,
+              0.67,
+              0.74
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              5.2,
+              0,
+              3.5
+            ],
+            "scale": 0.65,
+            "color": [
+              0.49,
+              0.66,
+              0.73
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -5.8,
+              0,
+              0.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.5,
+              0.67,
+              0.74
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              1.5,
+              0,
+              4.5
+            ],
+            "scale": 0.68,
+            "color": [
+              0.48,
+              0.65,
+              0.72
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -2,
+              0,
+              -3
+            ],
+            "scale": 0.72,
+            "color": [
+              0.52,
+              0.68,
+              0.75
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              4.5,
+              0,
+              -2.5
+            ],
+            "scale": 0.66,
+            "color": [
+              0.49,
+              0.66,
+              0.73
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -3.38,
+              0.703,
+              -8.553
+            ],
+            "scale": 1.371,
+            "color": [
+              0.628,
+              0.405,
+              0.329
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              0.843,
+              -0.073,
+              -14.623
+            ],
+            "scale": 0.59,
+            "color": [
+              0.389,
+              0.705,
+              0.852
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -0.528,
+              1.199,
+              -11.928
+            ],
+            "scale": 2.472,
+            "color": [
+              0.596,
+              0.363,
+              0.292
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              6.392,
+              0.44,
+              -22.547
+            ],
+            "scale": 0.758,
+            "color": [
+              0.372,
+              0.698,
+              0.821
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -0.177,
+              -0.196,
+              -10.019
+            ],
+            "scale": 0.995,
+            "color": [
+              0.457,
+              0.675,
+              0.45
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.066,
+              "amp": 0.41,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              5.231,
+              -0.874,
+              -18.0
+            ],
+            "scale": 1.101,
+            "color": [
+              0.279,
+              0.659,
+              0.755
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              0.853,
+              -1.944,
+              -9.957
+            ],
+            "scale": 3.683,
+            "color": [
+              0.291,
+              0.531,
+              0.695
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.114,
+              "amp": 0.63,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              0.586,
+              -1.48,
+              -8.72
+            ],
+            "scale": 3.857,
+            "color": [
+              0.318,
+              0.601,
+              0.735
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.227,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -0.404,
+              -0.2,
+              -4.95
+            ],
+            "scale": 1.22,
+            "color": [
+              0.419,
+              0.633,
+              0.388
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.07,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              3.521,
+              0.059,
+              -11.011
+            ],
+            "scale": 0.81,
+            "color": [
+              0.456,
+              0.682,
+              0.721
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              5.204,
+              -0.492,
+              -12.615
+            ],
+            "scale": 1.186,
+            "color": [
+              0.433,
+              0.598,
+              0.383
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              7.315,
+              -0.755,
+              -15.677
+            ],
+            "scale": 0.947,
+            "color": [
+              0.476,
+              0.68,
+              0.358
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.073,
+              "amp": 0.35,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              8.344,
+              0.164,
+              -15.942
+            ],
+            "scale": 0.815,
+            "color": [
+              0.499,
+              0.677,
+              0.753
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              1.726,
+              -0.264,
+              -3.866
+            ],
+            "scale": 1.216,
+            "color": [
+              0.393,
+              0.622,
+              0.663
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              4.527,
+              -0.374,
+              -7.091
+            ],
+            "scale": 1.863,
+            "color": [
+              0.636,
+              0.7,
+              0.715
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.489,
+              "amp": 0.068
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              9.773,
+              -1.067,
+              -14.975
+            ],
+            "scale": 2.004,
+            "color": [
+              0.665,
+              0.749,
+              0.772
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.388,
+              "amp": 0.075
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              8.845,
+              -1.161,
+              -12.952
+            ],
+            "scale": 2.054,
+            "color": [
+              0.695,
+              0.706,
+              0.807
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.512,
+              "amp": 0.065
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              9.061,
+              -0.123,
+              -12.064
+            ],
+            "scale": 0.583,
+            "color": [
+              0.304,
+              0.663,
+              0.759
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              10.498,
+              -0.507,
+              -13.264
+            ],
+            "scale": 1.0,
+            "color": [
+              0.446,
+              0.662,
+              0.418
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.055,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              9.93,
+              -0.522,
+              -11.486
+            ],
+            "scale": 0.819,
+            "color": [
+              0.466,
+              0.646,
+              0.419
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.07,
+              "amp": 0.4,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              11.02,
+              0.106,
+              -12.178
+            ],
+            "scale": 1.053,
+            "color": [
+              0.593,
+              0.502,
+              0.364
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              7.883,
+              -0.133,
+              -5.7
+            ],
+            "scale": 1.239,
+            "color": [
+              0.457,
+              0.64,
+              0.33
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.082,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              6.645,
+              -0.322,
+              -3.222
+            ],
+            "scale": 1.167,
+            "color": [
+              0.593,
+              0.479,
+              0.395
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              15.312,
+              -0.601,
+              -16.997
+            ],
+            "scale": 1.698,
+            "color": [
+              0.632,
+              0.665,
+              0.784
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.402,
+              "amp": 0.06
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              14.595,
+              -0.945,
+              -14.43
+            ],
+            "scale": 0.724,
+            "color": [
+              0.554,
+              0.726,
+              0.77
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              7.488,
+              -1.297,
+              -0.836
+            ],
+            "scale": 3.553,
+            "color": [
+              0.401,
+              0.621,
+              0.764
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.221,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              14.082,
+              -1.635,
+              -8.794
+            ],
+            "scale": 2.032,
+            "color": [
+              0.67,
+              0.749,
+              0.826
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.379,
+              "amp": 0.08
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              16.064,
+              -0.678,
+              -8.688
+            ],
+            "scale": 1.165,
+            "color": [
+              0.378,
+              0.606,
+              0.308
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.08,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              15.328,
+              -2.046,
+              -8.112
+            ],
+            "scale": 3.867,
+            "color": [
+              0.352,
+              0.531,
+              0.739
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.108,
+              "amp": 0.62,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              19.969,
+              -0.253,
+              -8.965
+            ],
+            "scale": 1.039,
+            "color": [
+              0.441,
+              0.68,
+              0.737
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              12.099,
+              -2.057,
+              -5.486
+            ],
+            "scale": 3.989,
+            "color": [
+              0.396,
+              0.61,
+              0.735
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.184,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              15.513,
+              0.133,
+              -5.995
+            ],
+            "scale": 1.469,
+            "color": [
+              0.423,
+              0.631,
+              0.394
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.086,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              15.526,
+              -0.993,
+              -5.983
+            ],
+            "scale": 0.605,
+            "color": [
+              0.444,
+              0.607,
+              0.714
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              8.447,
+              -0.842,
+              -2.464
+            ],
+            "scale": 2.887,
+            "color": [
+              0.41,
+              0.633,
+              0.788
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.209,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              13.287,
+              -0.975,
+              -3.767
+            ],
+            "scale": 0.565,
+            "color": [
+              0.382,
+              0.678,
+              0.804
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              20.055,
+              -0.846,
+              -5.617
+            ],
+            "scale": 0.615,
+            "color": [
+              0.401,
+              0.741,
+              0.881
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              21.34,
+              -0.29,
+              -5.82
+            ],
+            "scale": 0.801,
+            "color": [
+              0.521,
+              0.64,
+              0.788
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              4.729,
+              -0.569,
+              0.975
+            ],
+            "scale": 0.978,
+            "color": [
+              0.597,
+              0.464,
+              0.402
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              10.228,
+              -1.607,
+              -0.23
+            ],
+            "scale": 3.087,
+            "color": [
+              0.303,
+              0.542,
+              0.721
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.09,
+              "amp": 0.57,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              17.881,
+              -2.24,
+              -2.719
+            ],
+            "scale": 3.75,
+            "color": [
+              0.319,
+              0.552,
+              0.639
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 0.58,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              17.836,
+              -1.117,
+              -1.887
+            ],
+            "scale": 2.475,
+            "color": [
+              0.685,
+              0.756,
+              0.807
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.478,
+              "amp": 0.07
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              15.47,
+              0.377,
+              -0.736
+            ],
+            "scale": 1.121,
+            "color": [
+              0.348,
+              0.641,
+              0.662
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              13.566,
+              -0.513,
+              -0.402
+            ],
+            "scale": 1.325,
+            "color": [
+              0.39,
+              0.623,
+              0.71
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              19.574,
+              0.402,
+              2.188
+            ],
+            "scale": 1.055,
+            "color": [
+              0.429,
+              0.675,
+              0.69
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              7.963,
+              0.025,
+              -0.667
+            ],
+            "scale": 0.758,
+            "color": [
+              0.412,
+              0.686,
+              0.371
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.086,
+              "amp": 0.36,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              10.124,
+              2.8,
+              0.125
+            ],
+            "scale": 0.901,
+            "color": [
+              0.822,
+              0.56,
+              0.415
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              6.584,
+              0.467,
+              -0.207
+            ],
+            "scale": 0.98,
+            "color": [
+              0.444,
+              0.653,
+              0.763
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              13.512,
+              0.147,
+              2.455
+            ],
+            "scale": 1.34,
+            "color": [
+              0.504,
+              0.392,
+              0.372
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              15.256,
+              -2.507,
+              3.566
+            ],
+            "scale": 4.992,
+            "color": [
+              0.31,
+              0.524,
+              0.721
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 0.6,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              5.668,
+              0.403,
+              1.363
+            ],
+            "scale": 0.818,
+            "color": [
+              0.391,
+              0.74,
+              0.778
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              3.968,
+              -1.407,
+              1.019
+            ],
+            "scale": 2.904,
+            "color": [
+              0.293,
+              0.525,
+              0.685
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.111,
+              "amp": 0.55,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              18.586,
+              -2.05,
+              6.121
+            ],
+            "scale": 2.672,
+            "color": [
+              0.351,
+              0.608,
+              0.746
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.227,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              18.0,
+              -0.357,
+              6.361
+            ],
+            "scale": 0.819,
+            "color": [
+              0.349,
+              0.684,
+              0.805
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              14.764,
+              0.312,
+              6.32
+            ],
+            "scale": 1.211,
+            "color": [
+              0.531,
+              0.414,
+              0.395
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              5.421,
+              0.465,
+              3.883
+            ],
+            "scale": 0.688,
+            "color": [
+              0.482,
+              0.633,
+              0.747
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              16.409,
+              -0.162,
+              7.891
+            ],
+            "scale": 1.107,
+            "color": [
+              0.496,
+              0.699,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              18.267,
+              -1.842,
+              9.023
+            ],
+            "scale": 3.285,
+            "color": [
+              0.33,
+              0.637,
+              0.773
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.223,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              17.308,
+              -0.401,
+              9.047
+            ],
+            "scale": 0.81,
+            "color": [
+              0.335,
+              0.737,
+              0.846
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              17.014,
+              -0.833,
+              9.321
+            ],
+            "scale": 0.869,
+            "color": [
+              0.458,
+              0.729,
+              0.447
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.06,
+              "amp": 0.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              11.669,
+              -1.578,
+              8.663
+            ],
+            "scale": 2.625,
+            "color": [
+              0.368,
+              0.559,
+              0.744
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.209,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              14.483,
+              -0.069,
+              9.77
+            ],
+            "scale": 1.144,
+            "color": [
+              0.444,
+              0.657,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              13.465,
+              0.541,
+              10.325
+            ],
+            "scale": 1.295,
+            "color": [
+              0.691,
+              0.431,
+              0.316
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              15.373,
+              -1.472,
+              19.438
+            ],
+            "scale": 1.576,
+            "color": [
+              0.698,
+              0.812,
+              0.821
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.484,
+              "amp": 0.05
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              8.797,
+              -1.519,
+              4.201
+            ],
+            "scale": 1.995,
+            "color": [
+              0.707,
+              0.743,
+              0.807
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.572,
+              "amp": 0.072
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              7.853,
+              2.239,
+              4.106
+            ],
+            "scale": 0.625,
+            "color": [
+              0.762,
+              0.641,
+              0.437
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              6.755,
+              -2.719,
+              3.021
+            ],
+            "scale": 4.668,
+            "color": [
+              0.261,
+              0.471,
+              0.695
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.101,
+              "amp": 0.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              11.473,
+              -0.166,
+              14.492
+            ],
+            "scale": 1.291,
+            "color": [
+              0.491,
+              0.409,
+              0.361
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              11.013,
+              -0.873,
+              14.903
+            ],
+            "scale": 0.821,
+            "color": [
+              0.491,
+              0.718,
+              0.707
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              9.044,
+              -2.701,
+              12.185
+            ],
+            "scale": 3.986,
+            "color": [
+              0.331,
+              0.618,
+              0.681
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.152,
+              "amp": 0.65,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              8.515,
+              1.781,
+              11.739
+            ],
+            "scale": 0.689,
+            "color": [
+              0.822,
+              0.616,
+              0.392
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              7.71,
+              0.283,
+              11.959
+            ],
+            "scale": 0.581,
+            "color": [
+              0.47,
+              0.679,
+              0.716
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              3.603,
+              0.021,
+              3.06
+            ],
+            "scale": 0.928,
+            "color": [
+              0.375,
+              0.698,
+              0.734
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              7.589,
+              -0.156,
+              13.928
+            ],
+            "scale": 0.784,
+            "color": [
+              0.464,
+              0.711,
+              0.434
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.096,
+              "amp": 0.44,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              9.352,
+              -1.991,
+              19.551
+            ],
+            "scale": 3.739,
+            "color": [
+              0.313,
+              0.576,
+              0.726
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.219,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              2.677,
+              0.172,
+              5.137
+            ],
+            "scale": 1.115,
+            "color": [
+              0.584,
+              0.531,
+              0.375
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              8.228,
+              -0.292,
+              20.515
+            ],
+            "scale": 0.806,
+            "color": [
+              0.641,
+              0.454,
+              0.449
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              4.872,
+              -2.605,
+              12.764
+            ],
+            "scale": 4.228,
+            "color": [
+              0.342,
+              0.523,
+              0.72
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.113,
+              "amp": 0.6,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              4.019,
+              0.36,
+              11.973
+            ],
+            "scale": 0.552,
+            "color": [
+              0.469,
+              0.675,
+              0.727
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              6.202,
+              -0.472,
+              18.717
+            ],
+            "scale": 0.84,
+            "color": [
+              0.366,
+              0.735,
+              0.829
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              3.573,
+              -1.46,
+              14.51
+            ],
+            "scale": 1.938,
+            "color": [
+              0.719,
+              0.755,
+              0.812
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.445,
+              "amp": 0.08
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              4.247,
+              -0.895,
+              17.592
+            ],
+            "scale": 1.102,
+            "color": [
+              0.266,
+              0.728,
+              0.762
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              6.341,
+              -1.226,
+              23.284
+            ],
+            "scale": 2.14,
+            "color": [
+              0.649,
+              0.684,
+              0.716
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.462,
+              "amp": 0.06
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              3.051,
+              -1.195,
+              16.567
+            ],
+            "scale": 3.239,
+            "color": [
+              0.402,
+              0.59,
+              0.759
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.202,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              1.294,
+              -0.711,
+              14.486
+            ],
+            "scale": 1.926,
+            "color": [
+              0.656,
+              0.732,
+              0.728
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.438,
+              "amp": 0.065
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              2.618,
+              -2.036,
+              19.029
+            ],
+            "scale": 3.897,
+            "color": [
+              0.298,
+              0.56,
+              0.654
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.142,
+              "amp": 0.58,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -2.007,
+              -1.502,
+              8.861
+            ],
+            "scale": 4.519,
+            "color": [
+              0.268,
+              0.49,
+              0.668
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.113,
+              "amp": 0.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              1.279,
+              -0.462,
+              18.111
+            ],
+            "scale": 1.33,
+            "color": [
+              0.475,
+              0.674,
+              0.343
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.053,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              2.071,
+              -1.613,
+              7.99
+            ],
+            "scale": 2.712,
+            "color": [
+              0.322,
+              0.643,
+              0.747
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.255,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -3.541,
+              0.51,
+              20.293
+            ],
+            "scale": 0.933,
+            "color": [
+              0.545,
+              0.722,
+              0.771
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -5.286,
+              -0.241,
+              22.873
+            ],
+            "scale": 0.729,
+            "color": [
+              0.477,
+              0.622,
+              0.745
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -2.775,
+              -1.592,
+              15.746
+            ],
+            "scale": 4.129,
+            "color": [
+              0.349,
+              0.597,
+              0.666
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.112,
+              "amp": 0.62,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              0.228,
+              0.363,
+              6.866
+            ],
+            "scale": 0.945,
+            "color": [
+              0.457,
+              0.566,
+              0.335
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.052,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -6.232,
+              0.148,
+              21.619
+            ],
+            "scale": 0.906,
+            "color": [
+              0.611,
+              0.456,
+              0.43
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -6.273,
+              -0.385,
+              19.543
+            ],
+            "scale": 0.783,
+            "color": [
+              0.453,
+              0.638,
+              0.429
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.069,
+              "amp": 0.35,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -1.395,
+              -0.46,
+              6.789
+            ],
+            "scale": 1.769,
+            "color": [
+              0.631,
+              0.643,
+              0.7
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.513,
+              "amp": 0.068
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -4.288,
+              -2.245,
+              12.911
+            ],
+            "scale": 4.868,
+            "color": [
+              0.336,
+              0.524,
+              0.72
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.153,
+              "amp": 0.65,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -7.859,
+              -0.91,
+              19.344
+            ],
+            "scale": 1.136,
+            "color": [
+              0.412,
+              0.651,
+              0.682
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -2.962,
+              0.332,
+              6.744
+            ],
+            "scale": 1.136,
+            "color": [
+              0.47,
+              0.641,
+              0.356
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.067,
+              "amp": 0.36,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -9.034,
+              -0.419,
+              19.344
+            ],
+            "scale": 1.475,
+            "color": [
+              0.737,
+              0.759,
+              0.854
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.629,
+              "amp": 0.05
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -8.902,
+              -0.755,
+              17.925
+            ],
+            "scale": 0.753,
+            "color": [
+              0.518,
+              0.651,
+              0.46
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.052,
+              "amp": 0.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -4.397,
+              -1.261,
+              5.356
+            ],
+            "scale": 3.166,
+            "color": [
+              0.431,
+              0.589,
+              0.722
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.185,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -5.075,
+              -1.957,
+              6.002
+            ],
+            "scale": 4.195,
+            "color": [
+              0.326,
+              0.562,
+              0.68
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.089,
+              "amp": 0.57,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -6.005,
+              0.076,
+              6.955
+            ],
+            "scale": 1.262,
+            "color": [
+              0.56,
+              0.468,
+              0.399
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -5.898,
+              -1.952,
+              5.599
+            ],
+            "scale": 4.763,
+            "color": [
+              0.263,
+              0.547,
+              0.724
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.149,
+              "amp": 0.63,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -11.72,
+              0.225,
+              17.859
+            ],
+            "scale": 0.812,
+            "color": [
+              0.395,
+              0.746,
+              0.79
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -9.836,
+              -0.352,
+              11.715
+            ],
+            "scale": 1.076,
+            "color": [
+              0.446,
+              0.671,
+              0.401
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.099,
+              "amp": 0.4,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -7.07,
+              -0.872,
+              4.393
+            ],
+            "scale": 1.038,
+            "color": [
+              0.46,
+              0.646,
+              0.771
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -11.449,
+              -0.933,
+              13.29
+            ],
+            "scale": 1.355,
+            "color": [
+              0.398,
+              0.644,
+              0.359
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.098,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -11.583,
+              -0.754,
+              12.039
+            ],
+            "scale": 0.568,
+            "color": [
+              0.54,
+              0.637,
+              0.722
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -11.785,
+              0.128,
+              11.646
+            ],
+            "scale": 1.069,
+            "color": [
+              0.461,
+              0.655,
+              0.351
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.079,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -9.386,
+              -0.313,
+              4.184
+            ],
+            "scale": 0.988,
+            "color": [
+              0.508,
+              0.695,
+              0.459
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.091,
+              "amp": 0.41,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -11.714,
+              -0.142,
+              9.526
+            ],
+            "scale": 1.218,
+            "color": [
+              0.371,
+              0.611,
+              0.703
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -12.62,
+              -1.143,
+              9.427
+            ],
+            "scale": 0.729,
+            "color": [
+              0.318,
+              0.712,
+              0.782
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -14.213,
+              1.577,
+              9.009
+            ],
+            "scale": 0.709,
+            "color": [
+              0.81,
+              0.6,
+              0.443
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -21.897,
+              -1.78,
+              10.855
+            ],
+            "scale": 3.018,
+            "color": [
+              0.361,
+              0.623,
+              0.697
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.209,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -12.176,
+              -1.089,
+              7.364
+            ],
+            "scale": 3.519,
+            "color": [
+              0.323,
+              0.566,
+              0.71
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.264,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -12.636,
+              -1.439,
+              6.914
+            ],
+            "scale": 2.915,
+            "color": [
+              0.396,
+              0.624,
+              0.701
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.161,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -17.836,
+              -0.025,
+              7.805
+            ],
+            "scale": 1.168,
+            "color": [
+              0.511,
+              0.618,
+              0.713
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -18.503,
+              -0.049,
+              7.568
+            ],
+            "scale": 0.72,
+            "color": [
+              0.526,
+              0.604,
+              0.683
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -5.628,
+              3.021,
+              3.108
+            ],
+            "scale": 0.787,
+            "color": [
+              0.789,
+              0.563,
+              0.411
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -7.128,
+              1.354,
+              3.217
+            ],
+            "scale": 1.631,
+            "color": [
+              0.584,
+              0.427,
+              0.294
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -7.741,
+              -1.65,
+              2.646
+            ],
+            "scale": 3.807,
+            "color": [
+              0.317,
+              0.547,
+              0.722
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.286,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -8.783,
+              2.811,
+              2.63
+            ],
+            "scale": 1.201,
+            "color": [
+              0.792,
+              0.593,
+              0.408
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -13.722,
+              1.161,
+              3.685
+            ],
+            "scale": 1.425,
+            "color": [
+              0.681,
+              0.432,
+              0.394
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -17.324,
+              -0.105,
+              4.118
+            ],
+            "scale": 0.841,
+            "color": [
+              0.579,
+              0.445,
+              0.378
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -9.532,
+              -0.067,
+              0.77
+            ],
+            "scale": 1.243,
+            "color": [
+              0.458,
+              0.618,
+              0.339
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.087,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -12.831,
+              0.141,
+              1.668
+            ],
+            "scale": 1.006,
+            "color": [
+              0.574,
+              0.421,
+              0.387
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -21.759,
+              -0.562,
+              3.84
+            ],
+            "scale": 0.806,
+            "color": [
+              0.436,
+              0.654,
+              0.748
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -14.686,
+              -0.677,
+              1.023
+            ],
+            "scale": 1.418,
+            "color": [
+              0.378,
+              0.665,
+              0.419
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.074,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -7.213,
+              -1.732,
+              -1.733
+            ],
+            "scale": 3.64,
+            "color": [
+              0.272,
+              0.535,
+              0.659
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.107,
+              "amp": 0.55,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -6.765,
+              0.466,
+              2.884
+            ],
+            "scale": 0.992,
+            "color": [
+              0.418,
+              0.686,
+              0.745
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -17.773,
+              -1.11,
+              -1.8
+            ],
+            "scale": 1.729,
+            "color": [
+              0.682,
+              0.776,
+              0.771
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.49,
+              "amp": 0.075
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -20.39,
+              -0.702,
+              -3.212
+            ],
+            "scale": 1.802,
+            "color": [
+              0.654,
+              0.772,
+              0.777
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.466,
+              "amp": 0.07
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -7.074,
+              -0.232,
+              1.112
+            ],
+            "scale": 0.707,
+            "color": [
+              0.343,
+              0.675,
+              0.788
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -5.304,
+              0.427,
+              1.117
+            ],
+            "scale": 0.924,
+            "color": [
+              0.577,
+              0.484,
+              0.368
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -7.226,
+              0.699,
+              -0.076
+            ],
+            "scale": 0.854,
+            "color": [
+              0.391,
+              0.694,
+              0.711
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              -9.341,
+              -0.889,
+              -1.374
+            ],
+            "scale": 2.435,
+            "color": [
+              0.708,
+              0.691,
+              0.833
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.524,
+              "amp": 0.072
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -14.028,
+              0.092,
+              -3.48
+            ],
+            "scale": 1.321,
+            "color": [
+              0.526,
+              0.475,
+              0.361
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -17.0,
+              -0.933,
+              -5.538
+            ],
+            "scale": 1.15,
+            "color": [
+              0.556,
+              0.399,
+              0.304
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -22.512,
+              -0.377,
+              -8.152
+            ],
+            "scale": 0.632,
+            "color": [
+              0.349,
+              0.705,
+              0.834
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -19.189,
+              -0.892,
+              -7.251
+            ],
+            "scale": 3.205,
+            "color": [
+              0.398,
+              0.601,
+              0.801
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.217,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -13.343,
+              -1.02,
+              -5.952
+            ],
+            "scale": 0.633,
+            "color": [
+              0.369,
+              0.718,
+              0.834
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -11.163,
+              -0.257,
+              -5.603
+            ],
+            "scale": 1.363,
+            "color": [
+              0.374,
+              0.649,
+              0.716
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -16.739,
+              -0.516,
+              -8.06
+            ],
+            "scale": 0.788,
+            "color": [
+              0.515,
+              0.712,
+              0.786
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -9.578,
+              0.268,
+              -6.015
+            ],
+            "scale": 2.346,
+            "color": [
+              0.585,
+              0.4,
+              0.331
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -15.314,
+              -0.414,
+              -8.549
+            ],
+            "scale": 0.756,
+            "color": [
+              0.346,
+              0.704,
+              0.784
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -3.761,
+              0.178,
+              -4.662
+            ],
+            "scale": 0.818,
+            "color": [
+              0.613,
+              0.553,
+              0.374
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -7.823,
+              0.245,
+              -1.688
+            ],
+            "scale": 0.689,
+            "color": [
+              0.523,
+              0.674,
+              0.777
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -11.153,
+              -0.302,
+              -8.629
+            ],
+            "scale": 0.876,
+            "color": [
+              0.458,
+              0.62,
+              0.694
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -12.926,
+              -0.836,
+              -12.579
+            ],
+            "scale": 0.874,
+            "color": [
+              0.39,
+              0.713,
+              0.868
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -10.889,
+              -0.451,
+              -9.996
+            ],
+            "scale": 0.828,
+            "color": [
+              0.492,
+              0.647,
+              0.691
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -9.08,
+              -0.793,
+              -8.669
+            ],
+            "scale": 0.958,
+            "color": [
+              0.463,
+              0.716,
+              0.367
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.107,
+              "amp": 0.44,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -11.164,
+              -0.472,
+              -13.192
+            ],
+            "scale": 0.913,
+            "color": [
+              0.433,
+              0.625,
+              0.425
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.068,
+              "amp": 0.35,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -5.239,
+              -0.029,
+              -3.224
+            ],
+            "scale": 0.775,
+            "color": [
+              0.377,
+              0.726,
+              0.837
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              -5.24,
+              2.564,
+              -4.654
+            ],
+            "scale": 0.625,
+            "color": [
+              0.798,
+              0.605,
+              0.376
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -11.825,
+              0.013,
+              -17.131
+            ],
+            "scale": 0.62,
+            "color": [
+              0.548,
+              0.706,
+              0.742
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -7.853,
+              0.885,
+              -12.008
+            ],
+            "scale": 1.152,
+            "color": [
+              0.441,
+              0.704,
+              0.369
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.085,
+              "amp": 0.4,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -4.163,
+              0.272,
+              -6.191
+            ],
+            "scale": 0.958,
+            "color": [
+              0.405,
+              0.611,
+              0.361
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.076,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -10.321,
+              -0.163,
+              -17.565
+            ],
+            "scale": 1.011,
+            "color": [
+              0.408,
+              0.729,
+              0.726
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -9.889,
+              0.464,
+              -18.111
+            ],
+            "scale": 0.737,
+            "color": [
+              0.637,
+              0.534,
+              0.414
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -5.941,
+              0.123,
+              -12.196
+            ],
+            "scale": 1.085,
+            "color": [
+              0.434,
+              0.631,
+              0.668
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -4.91,
+              -0.692,
+              -17.288
+            ],
+            "scale": 3.44,
+            "color": [
+              0.425,
+              0.643,
+              0.731
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.174,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -4.726,
+              -1.361,
+              -11.477
+            ],
+            "scale": 5.038,
+            "color": [
+              0.346,
+              0.596,
+              0.717
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.143,
+              "amp": 0.6,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -4.077,
+              0.975,
+              -16.709
+            ],
+            "scale": 0.58,
+            "color": [
+              0.479,
+              0.646,
+              0.74
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -3.321,
+              -1.465,
+              -2.837
+            ],
+            "scale": 3.477,
+            "color": [
+              0.254,
+              0.473,
+              0.668
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.113,
+              "amp": 0.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -3.107,
+              0.421,
+              -12.949
+            ],
+            "scale": 0.559,
+            "color": [
+              0.479,
+              0.644,
+              0.76
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -2.334,
+              1.03,
+              -15.73
+            ],
+            "scale": 1.058,
+            "color": [
+              0.382,
+              0.601,
+              0.307
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.09,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -2.04,
+              -0.994,
+              -5.412
+            ],
+            "scale": 2.885,
+            "color": [
+              0.3,
+              0.53,
+              0.711
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.232,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              -1.438,
+              1.256,
+              -4.407
+            ],
+            "scale": 0.969,
+            "color": [
+              0.464,
+              0.647,
+              0.762
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -1.06,
+              -1.908,
+              -15.775
+            ],
+            "scale": 3.686,
+            "color": [
+              0.35,
+              0.494,
+              0.639
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.144,
+              "amp": 0.58,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -0.537,
+              1.119,
+              -13.061
+            ],
+            "scale": 0.652,
+            "color": [
+              0.515,
+              0.669,
+              0.737
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              0.325,
+              -2.016,
+              -5.422
+            ],
+            "scale": 5.101,
+            "color": [
+              0.321,
+              0.568,
+              0.672
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.123,
+              "amp": 0.63,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              0.789,
+              0.306,
+              -16.381
+            ],
+            "scale": 1.171,
+            "color": [
+              0.451,
+              0.602,
+              0.403
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.062,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              1.193,
+              -0.052,
+              -10.578
+            ],
+            "scale": 1.141,
+            "color": [
+              0.398,
+              0.674,
+              0.656
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              1.834,
+              -0.896,
+              -3.169
+            ],
+            "scale": 2.638,
+            "color": [
+              0.378,
+              0.626,
+              0.7
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.273,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              2.359,
+              0.761,
+              -5.524
+            ],
+            "scale": 1.08,
+            "color": [
+              0.353,
+              0.673,
+              0.658
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              2.96,
+              -0.1,
+              -12.562
+            ],
+            "scale": 0.719,
+            "color": [
+              0.389,
+              0.712,
+              0.841
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              3.574,
+              0.216,
+              -12.902
+            ],
+            "scale": 1.036,
+            "color": [
+              0.433,
+              0.69,
+              0.34
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.108,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              3.88,
+              1.077,
+              -2.673
+            ],
+            "scale": 0.784,
+            "color": [
+              0.457,
+              0.644,
+              0.729
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              4.548,
+              -0.188,
+              -7.061
+            ],
+            "scale": 2.493,
+            "color": [
+              0.43,
+              0.655,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.189,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              4.901,
+              -0.212,
+              -16.918
+            ],
+            "scale": 2.797,
+            "color": [
+              0.328,
+              0.638,
+              0.785
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.244,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -3.253,
+              1.369,
+              -10.222
+            ],
+            "scale": 0.806,
+            "color": [
+              0.568,
+              0.498,
+              0.378
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -0.534,
+              0.638,
+              -10.33
+            ],
+            "scale": 1.039,
+            "color": [
+              0.559,
+              0.504,
+              0.373
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              11.548,
+              0.607,
+              -11.269
+            ],
+            "scale": 0.669,
+            "color": [
+              0.37,
+              0.687,
+              0.797
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              5.618,
+              1.279,
+              -10.113
+            ],
+            "scale": 1.558,
+            "color": [
+              0.601,
+              0.429,
+              0.359
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              13.286,
+              -0.8,
+              -10.631
+            ],
+            "scale": 1.983,
+            "color": [
+              0.733,
+              0.811,
+              0.831
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.612,
+              "amp": 0.05
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -2.453,
+              0.935,
+              -7.512
+            ],
+            "scale": 0.826,
+            "color": [
+              0.494,
+              0.68,
+              0.762
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              8.144,
+              -1.572,
+              -8.728
+            ],
+            "scale": 3.948,
+            "color": [
+              0.266,
+              0.547,
+              0.681
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.116,
+              "amp": 0.62,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              5.223,
+              -0.425,
+              -7.707
+            ],
+            "scale": 1.831,
+            "color": [
+              0.727,
+              0.785,
+              0.769
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.387,
+              "amp": 0.08
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              10.291,
+              0.597,
+              -8.071
+            ],
+            "scale": 0.605,
+            "color": [
+              0.505,
+              0.633,
+              0.725
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              8.385,
+              0.66,
+              -7.063
+            ],
+            "scale": 0.944,
+            "color": [
+              0.548,
+              0.397,
+              0.279
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              5.708,
+              -1.447,
+              -6.266
+            ],
+            "scale": 4.552,
+            "color": [
+              0.281,
+              0.575,
+              0.69
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 0.65,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              5.534,
+              -0.105,
+              -5.457
+            ],
+            "scale": 0.821,
+            "color": [
+              0.456,
+              0.703,
+              0.424
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.075,
+              "amp": 0.44,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              13.108,
+              0.348,
+              -6.126
+            ],
+            "scale": 0.999,
+            "color": [
+              0.401,
+              0.637,
+              0.66
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              -1.914,
+              -1.82,
+              -3.255
+            ],
+            "scale": 2.939,
+            "color": [
+              0.254,
+              0.504,
+              0.698
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.095,
+              "amp": 0.55,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              14.49,
+              -0.576,
+              -5.48
+            ],
+            "scale": 1.597,
+            "color": [
+              0.613,
+              0.72,
+              0.771
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.562,
+              "amp": 0.06
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              5.052,
+              -0.29,
+              -3.509
+            ],
+            "scale": 0.699,
+            "color": [
+              0.496,
+              0.632,
+              0.684
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -0.999,
+              0.864,
+              -1.982
+            ],
+            "scale": 0.826,
+            "color": [
+              0.504,
+              0.713,
+              0.466
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.073,
+              "amp": 0.41,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              0.231,
+              0.157,
+              -1.582
+            ],
+            "scale": 2.11,
+            "color": [
+              0.644,
+              0.732,
+              0.708
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.504,
+              "amp": 0.068
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              8.316,
+              -0.967,
+              -2.428
+            ],
+            "scale": 2.305,
+            "color": [
+              0.696,
+              0.754,
+              0.729
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.347,
+              "amp": 0.065
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              1.34,
+              3.277,
+              -0.546
+            ],
+            "scale": 1.145,
+            "color": [
+              0.834,
+              0.649,
+              0.371
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              11.882,
+              -0.17,
+              -1.445
+            ],
+            "scale": 1.139,
+            "color": [
+              0.25,
+              0.653,
+              0.839
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              11.782,
+              -0.233,
+              -0.989
+            ],
+            "scale": 0.941,
+            "color": [
+              0.565,
+              0.689,
+              0.756
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -2.917,
+              -0.126,
+              1.681
+            ],
+            "scale": 1.168,
+            "color": [
+              0.623,
+              0.467,
+              0.368
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              6.467,
+              -1.166,
+              0.67
+            ],
+            "scale": 4.295,
+            "color": [
+              0.303,
+              0.578,
+              0.73
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.161,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              5.361,
+              -0.504,
+              1.323
+            ],
+            "scale": 0.73,
+            "color": [
+              0.331,
+              0.669,
+              0.792
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              12.948,
+              -0.201,
+              0.83
+            ],
+            "scale": 2.124,
+            "color": [
+              0.718,
+              0.744,
+              0.764
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.546,
+              "amp": 0.07
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              8.183,
+              0.155,
+              2.12
+            ],
+            "scale": 1.232,
+            "color": [
+              0.431,
+              0.628,
+              0.425
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.064,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              -0.784,
+              1.316,
+              4.159
+            ],
+            "scale": 1.667,
+            "color": [
+              0.667,
+              0.414,
+              0.337
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              16.374,
+              -0.732,
+              2.1
+            ],
+            "scale": 3.11,
+            "color": [
+              0.286,
+              0.569,
+              0.676
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.221,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              1.848,
+              -2.179,
+              4.567
+            ],
+            "scale": 3.071,
+            "color": [
+              0.287,
+              0.572,
+              0.743
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.122,
+              "amp": 0.57,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -0.343,
+              -0.328,
+              5.601
+            ],
+            "scale": 0.918,
+            "color": [
+              0.432,
+              0.618,
+              0.317
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.053,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              13.71,
+              -0.374,
+              3.952
+            ],
+            "scale": 0.785,
+            "color": [
+              0.482,
+              0.635,
+              0.444
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.06,
+              "amp": 0.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              3.535,
+              -0.073,
+              5.96
+            ],
+            "scale": 2.429,
+            "color": [
+              0.681,
+              0.715,
+              0.795
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.512,
+              "amp": 0.072
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              11.095,
+              0.064,
+              5.37
+            ],
+            "scale": 0.67,
+            "color": [
+              0.336,
+              0.705,
+              0.844
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              9.343,
+              2.849,
+              6.055
+            ],
+            "scale": 0.74,
+            "color": [
+              0.822,
+              0.585,
+              0.41
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              8.801,
+              0.597,
+              6.755
+            ],
+            "scale": 1.543,
+            "color": [
+              0.503,
+              0.425,
+              0.312
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              7.999,
+              -1.473,
+              7.537
+            ],
+            "scale": 3.761,
+            "color": [
+              0.304,
+              0.574,
+              0.73
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.21,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              12.598,
+              -0.905,
+              7.165
+            ],
+            "scale": 2.0,
+            "color": [
+              0.66,
+              0.761,
+              0.84
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.434,
+              "amp": 0.075
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              8.325,
+              -0.236,
+              7.207
+            ],
+            "scale": 1.333,
+            "color": [
+              0.538,
+              0.412,
+              0.364
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              2.059,
+              -0.417,
+              9.165
+            ],
+            "scale": 0.853,
+            "color": [
+              0.379,
+              0.744,
+              0.794
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -2.102,
+              -0.304,
+              9.897
+            ],
+            "scale": 0.648,
+            "color": [
+              0.371,
+              0.7,
+              0.799
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              7.898,
+              -0.126,
+              5.746
+            ],
+            "scale": 1.109,
+            "color": [
+              0.344,
+              0.612,
+              0.73
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              10.102,
+              1.016,
+              4.272
+            ],
+            "scale": 3.151,
+            "color": [
+              0.585,
+              0.388,
+              0.288
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              13.212,
+              -0.613,
+              2.899
+            ],
+            "scale": 1.095,
+            "color": [
+              0.496,
+              0.676,
+              0.418
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.085,
+              "amp": 0.36,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              3.162,
+              -0.651,
+              5.68
+            ],
+            "scale": 0.938,
+            "color": [
+              0.517,
+              0.613,
+              0.659
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              4.472,
+              -0.194,
+              4.556
+            ],
+            "scale": 0.916,
+            "color": [
+              0.619,
+              0.534,
+              0.436
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              4.562,
+              0.421,
+              4.066
+            ],
+            "scale": 0.762,
+            "color": [
+              0.292,
+              0.713,
+              0.804
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              1.527,
+              0.091,
+              4.619
+            ],
+            "scale": 0.688,
+            "color": [
+              0.504,
+              0.677,
+              0.733
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              9.825,
+              -0.024,
+              1.152
+            ],
+            "scale": 2.341,
+            "color": [
+              0.697,
+              0.739,
+              0.806
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.468,
+              "amp": 0.072
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              0.385,
+              -0.021,
+              4.012
+            ],
+            "scale": 0.726,
+            "color": [
+              0.502,
+              0.688,
+              0.696
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              -1.232,
+              -0.064,
+              4.033
+            ],
+            "scale": 0.695,
+            "color": [
+              0.342,
+              0.691,
+              0.877
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              10.882,
+              0.417,
+              -1.035
+            ],
+            "scale": 0.968,
+            "color": [
+              0.424,
+              0.628,
+              0.366
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.085,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              13.612,
+              0.157,
+              -2.59
+            ],
+            "scale": 0.801,
+            "color": [
+              0.427,
+              0.662,
+              0.764
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              0.879,
+              -0.648,
+              1.169
+            ],
+            "scale": 0.965,
+            "color": [
+              0.425,
+              0.587,
+              0.38
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.071,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              3.702,
+              0.465,
+              -0.306
+            ],
+            "scale": 0.592,
+            "color": [
+              0.442,
+              0.655,
+              0.762
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              3.876,
+              -1.659,
+              -0.738
+            ],
+            "scale": 2.608,
+            "color": [
+              0.333,
+              0.541,
+              0.741
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.258,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              8.195,
+              2.823,
+              -2.802
+            ],
+            "scale": 0.902,
+            "color": [
+              0.81,
+              0.593,
+              0.395
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              12.218,
+              0.002,
+              -4.931
+            ],
+            "scale": 0.786,
+            "color": [
+              0.415,
+              0.612,
+              0.356
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.085,
+              "amp": 0.36,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              7.868,
+              -1.525,
+              -4.035
+            ],
+            "scale": 3.928,
+            "color": [
+              0.339,
+              0.591,
+              0.694
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.111,
+              "amp": 0.57,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              10.129,
+              -1.253,
+              -5.005
+            ],
+            "scale": 2.677,
+            "color": [
+              0.387,
+              0.606,
+              0.726
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.169,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              13.495,
+              -0.435,
+              -6.968
+            ],
+            "scale": 0.799,
+            "color": [
+              0.311,
+              0.76,
+              0.785
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "lagoon_contour",
+            "pos": [
+              0.808,
+              -0.55,
+              -3.095
+            ],
+            "scale": 0.773,
+            "color": [
+              0.32,
+              0.732,
+              0.759
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              1.471,
+              -1.126,
+              -3.738
+            ],
+            "scale": 2.082,
+            "color": [
+              0.738,
+              0.718,
+              0.807
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.531,
+              "amp": 0.075
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              2.467,
+              0.476,
+              -4.859
+            ],
+            "scale": 0.785,
+            "color": [
+              0.464,
+              0.702,
+              0.698
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              11.052,
+              -2.449,
+              -8.237
+            ],
+            "scale": 3.807,
+            "color": [
+              0.295,
+              0.567,
+              0.692
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.1,
+              "amp": 0.5,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              2.156,
+              0.091,
+              -5.808
+            ],
+            "scale": 0.852,
+            "color": [
+              0.387,
+              0.638,
+              0.683
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              2.457,
+              -0.441,
+              -6.354
+            ],
+            "scale": 2.109,
+            "color": [
+              0.642,
+              0.699,
+              0.748
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.507,
+              "amp": 0.065
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              -0.627,
+              -0.468,
+              -5.804
+            ],
+            "scale": 1.088,
+            "color": [
+              0.394,
+              0.579,
+              0.387
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.073,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "palm_tree",
+            "pos": [
+              2.095,
+              0.43,
+              -7.29
+            ],
+            "scale": 1.078,
+            "color": [
+              0.454,
+              0.731,
+              0.393
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.096,
+              "amp": 0.44,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              8.918,
+              1.031,
+              -10.15
+            ],
+            "scale": 1.117,
+            "color": [
+              0.437,
+              0.672,
+              0.71
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "reef_break",
+            "pos": [
+              8.385,
+              -0.165,
+              -11.098
+            ],
+            "scale": 2.102,
+            "color": [
+              0.649,
+              0.657,
+              0.721
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.461,
+              "amp": 0.068
+            }
+          },
+          {
+            "shape": "volcano_peak",
+            "pos": [
+              8.161,
+              1.803,
+              -11.326
+            ],
+            "scale": 1.53,
+            "color": [
+              0.607,
+              0.4,
+              0.326
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -7.293,
+              0.165,
+              -6.546
+            ],
+            "scale": 0.736,
+            "color": [
+              0.539,
+              0.626,
+              0.783
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "wave_pattern",
+            "pos": [
+              10.786,
+              -1.758,
+              -13.202
+            ],
+            "scale": 3.271,
+            "color": [
+              0.335,
+              0.588,
+              0.706
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 0.55,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "topo_contour",
+            "pos": [
+              9.187,
+              0.019,
+              -13.378
+            ],
+            "scale": 0.919,
+            "color": [
+              0.46,
+              0.694,
+              0.715
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -1.006,
+              0.555,
+              -10.318
+            ],
+            "scale": 1.16,
+            "color": [
+              0.504,
+              0.469,
+              0.34
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -8.534,
+              -1.39,
+              -8.103
+            ],
+            "scale": 2.918,
+            "color": [
+              0.319,
+              0.592,
+              0.679
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.268,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "small_islet",
+            "pos": [
+              -0.839,
+              0.675,
+              -11.314
+            ],
+            "scale": 1.342,
+            "color": [
+              0.504,
+              0.403,
+              0.343
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              1.377,
+              1.992,
+              -12.689
+            ],
+            "scale": 0.565,
+            "color": [
+              0.784,
+              0.578,
+              0.417
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              -4.625,
+              -0.63,
+              -11.466
+            ],
+            "scale": 2.972,
+            "color": [
+              0.356,
+              0.663,
+              0.717
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.219,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "atoll_ring",
+            "pos": [
+              -0.387,
+              -0.158,
+              -13.536
+            ],
+            "scale": 0.738,
+            "color": [
+              0.468,
+              0.659,
+              0.761
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "crater_rim",
+            "pos": [
+              7.42,
+              3.745,
+              -16.415
+            ],
+            "scale": 0.801,
+            "color": [
+              0.829,
+              0.625,
+              0.374
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ocean_swell",
+            "pos": [
+              0.358,
+              -1.632,
+              -14.565
+            ],
+            "scale": 3.435,
+            "color": [
+              0.357,
+              0.608,
+              0.799
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.163,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a14",
+    "#8b7355",
+    "#4a9a8f",
+    "#6db8d8",
+    "#a8d8e8"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.4
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "waypoints": [
+      [
+        0,
+        2,
+        -15
+      ],
+      [
+        12,
+        1.5,
+        -8
+      ],
+      [
+        15,
+        2,
+        0
+      ],
+      [
+        12,
+        1.5,
+        10
+      ],
+      [
+        0,
+        2,
+        15
+      ],
+      [
+        -12,
+        1.5,
+        10
+      ],
+      [
+        -15,
+        2,
+        0
+      ],
+      [
+        -12,
+        1.5,
+        -8
+      ],
+      [
+        -5,
+        2.5,
+        -12
+      ],
+      [
+        5,
+        2.5,
+        -12
+      ],
+      [
+        8,
+        2,
+        8
+      ]
+    ],
+    "speed": 0.0,
+    "fov": 62,
+    "near": 0.4,
+    "far": 34.0,
+    "max_strokes": 55,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_radius": 8.5,
+    "orbit_height": 1.5,
+    "laser_max_strokes": null,
+    "disable_plane": false,
+    "mirror_x": true,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 50.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.6,
+      "feedback": 0.4,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "ocean_bed",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0
+        ],
+        "level": 0.55,
+        "tone": 0.2,
+        "detune": 0.008,
+        "sub": 0.65,
+        "pan": 0.0,
+        "env": {
+          "attack": 8.0,
+          "decay": 1.5,
+          "sustain": 0.88,
+          "release": 4.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "warm_pad",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 48,
+        "chord": [
+          0,
+          7,
+          12,
+          15
+        ],
+        "level": 0.42,
+        "tone": 0.28,
+        "detune": 0.012,
+        "pan": 0.0,
+        "env": {
+          "attack": 6.0,
+          "decay": 2.0,
+          "sustain": 0.82,
+          "release": 3.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "sway",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 55,
+        "chord": [
+          0,
+          3,
+          7
+        ],
+        "level": 0.6,
+        "tone": 0.32,
+        "detune": 0.015,
+        "pan": -0.25,
+        "env": {
+          "attack": 7.0,
+          "decay": 1.8,
+          "sustain": 0.8,
+          "release": 3.2
+        },
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.5
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "breeze",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.25,
+        "pan": 0.2,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.032,
+          "depth": 0.6
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.258,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.27,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "a detailed topo map of a pacific island, an atoll with a large volcano. fly around it and explore the environment",
+  "audio_prompt": "water, swaying palm trees, swishing, warm",
+  "generation_settings": {
+    "size": 340,
+    "warmth": 0.99,
+    "energy": 0.3,
+    "evolution": 0.43,
+    "kind": "3d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 4476,
+      "output_tokens": 8321,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0461
+    },
+    "expansion": {
+      "authored": 76,
+      "total": 340
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}
