@@ -463,6 +463,7 @@
     box-shadow:0 0 10px 1px var(--cyan);transition:width .1s linear}
   .vu-clip.hot{background:var(--red);box-shadow:0 0 8px var(--red)}
 </style>
+<script src="/static/renderer.js"></script>
 </head>
 <body>
 <header>
@@ -2873,23 +2874,7 @@ function syncMonitorFilters(s){
 // Exact for a box-clipped image: reflecting a convex box across its own
 // centre line always lands back inside the same box, so drawing the canvas
 // onto itself (flipped) is safe and needs no separate offscreen buffer.
-function applyMirror(ctx, canvas, mirrorX, mirrorY){
-  const w = canvas.width, h = canvas.height;
-  ctx.shadowBlur = 0;
-  ctx.globalCompositeOperation = "source-over";
-  if (mirrorX){
-    ctx.save();
-    ctx.translate(w, 0); ctx.scale(-1, 1);
-    ctx.drawImage(canvas, 0, 0, w/2, h, 0, 0, w/2, h);
-    ctx.restore();
-  }
-  if (mirrorY){
-    ctx.save();
-    ctx.translate(0, h); ctx.scale(1, -1);
-    ctx.drawImage(canvas, 0, 0, w, h/2, 0, 0, w, h/2);
-    ctx.restore();
-  }
-}
+// WebGL2 rendering moved to renderer.js
 
 // Output viewport ratio (Settings > Output). The preview canvas is reshaped to
 // match, so [-1,1] normalised space maps onto it directly and what's on screen
@@ -2918,58 +2903,20 @@ function syncOutputRatio(s){
 $("o-ratio").onchange = () =>
   send({type:"set", key:"output_ratio", value:$("o-ratio").value});
 
-const cv = $("view"), cx = cv.getContext("2d");
-// Same bilinear keystone formula as output/ilda.py's PathPlanner._to_dac_vec
-// (x corrected first, then y using the CORRECTED x) — kept in exact sync so
-// this visualiser is a faithful preview of what the real DAC will draw, not
-// an approximation of it.
-function applyKeystone(x, y, kh, kv){
-  const xk = x * (1 + kh * y);
-  const yk = y * (1 + kv * xk);
-  return [Math.max(-1, Math.min(1, xk)), Math.max(-1, Math.min(1, yk))];
+const cv = $("view");
+let previewRenderer = null;
+
+function initPreviewRenderer() {
+  if (!previewRenderer) {
+    previewRenderer = new PromptWaverRenderer(cv);
+  }
 }
 
 function paintPreview(scene){
-  const w = cv.width, h = cv.height;
-  const { glow, trail, mirrorX, mirrorY, keystoneH, keystoneV } = monitorFilters;
-  cx.shadowBlur = 0;   // never let a glow from the previous frame bleed into the clear/fade below
-  cx.globalCompositeOperation = "source-over";
-  cx.fillStyle = trail > 0 ? `rgba(0,0,0,${(1 - trail).toFixed(3)})` : "#000";
-  cx.fillRect(0,0,w,h);
-  const map = (x,y) => {
-    const [xk, yk] = applyKeystone(x, y, keystoneH, keystoneV);
-    return [ (xk*0.5+0.5)*w, (0.5-yk*0.5)*h ];
-  };
-  cx.lineWidth = 1.4; cx.lineJoin = "round";
-  // Single shadowBlur pass, not the multi-pass additive version tried
-  // earlier — that one called .stroke() with shadowBlur set 2-3x per
-  // stroke, and shadowBlur is one of the most expensive canvas 2D ops (a
-  // real blur convolution per call); doing it multiple times per stroke,
-  // per frame, made the whole preview unusably slow. Back to the cheap
-  // version — glow is more subtle without trails, but it doesn't cost
-  // anything close to that.
-  // Per-stroke glow (st.g, authored by pattern2d) takes the scene's global
-  // glow as its floor. Rounded to whole pixels and held in `curBlur` so the
-  // expensive property is only written when it actually changes — with a
-  // uniform-glow scene that is once per frame instead of once per stroke,
-  // which is fewer state changes than the previous version, not more.
-  const unit = Math.min(w,h) * 0.05;
-  let curBlur = -1;
-  for (const st of scene){
-    const [r,g,b] = st.c;
-    const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
-    cx.strokeStyle = col;
-    const px = Math.round(Math.max(glow, st.g || 0) * unit);
-    const blurCap = Math.min(16, px);  // cap at 16px — diminishing returns beyond this at HD+
-    if (blurCap !== curBlur) { cx.shadowBlur = blurCap; curBlur = blurCap; }
-    if (px > 0) cx.shadowColor = col;
-    cx.beginPath();
-    st.p.forEach((pt,i)=>{ const [X,Y]=map(pt[0],pt[1]);
-      i? cx.lineTo(X,Y): cx.moveTo(X,Y); });
-    cx.stroke();
+  if (!previewRenderer) initPreviewRenderer();
+  if (previewRenderer) {
+    previewRenderer.render(scene, monitorFilters, { width: cv.width, height: cv.height });
   }
-  cx.shadowBlur = 0;   // don't leak this frame's glow into the next clear/fade
-  if (mirrorX || mirrorY) applyMirror(cx, cv, mirrorX, mirrorY);
 }
 
 // `midiKey` defaults to `key`; pass null for controls that aren't worth a

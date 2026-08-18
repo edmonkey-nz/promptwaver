@@ -28,6 +28,7 @@
   #fps b{color:#33e0d0;font-weight:normal}
   #fps .warn{color:#f2a623}
 </style>
+<script src="/static/renderer.js"></script>
 </head>
 <body>
 <canvas id="out"></canvas>
@@ -36,17 +37,23 @@
 <div id="title"></div>
 <div id="fps"></div>
 <script>
-const cv = document.getElementById("out"), cx = cv.getContext("2d");
+const cv = document.getElementById("out");
 const statusEl = document.getElementById("status");
+let renderer = null;
 const hintEl = document.getElementById("hint");
 
 function resize(){
   const dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(window.innerWidth * dpr);
   cv.height = Math.round(window.innerHeight * dpr);
+  if (renderer) {
+    renderer.destroy();
+    renderer = new PromptWaverRenderer(cv);
+  }
 }
 window.addEventListener("resize", resize);
 resize();
+if (!renderer) renderer = new PromptWaverRenderer(cv);
 
 setTimeout(() => hintEl.classList.add("gone"), 4000);
 
@@ -95,136 +102,7 @@ window.addEventListener("storage", e => {
   if (e.key === "pw_output_fps") setFpsVisible(e.newValue === "1");
 });
 
-// Same bilinear formula as output/ilda.py's PathPlanner._to_dac_vec and
-// index.html's matching applyKeystone — kept in sync so this is a faithful
-// stand-in for what a real keystone-corrected screen would show.
-function applyKeystone(x, y, kh, kv){
-  const xk = x * (1 + kh * y);
-  const yk = y * (1 + kv * xk);
-  return [Math.max(-1, Math.min(1, xk)), Math.max(-1, Math.min(1, yk))];
-}
-
-// Reflects one half of the canvas over the centre line onto the other half
-// (kaleidoscope-style) — the shared "mirror" effect (Global section).
-function applyMirror(ctx, canvas, mirrorX, mirrorY){
-  const w = canvas.width, h = canvas.height;
-  ctx.shadowBlur = 0;
-  ctx.globalCompositeOperation = "source-over";
-  if (mirrorX){
-    ctx.save();
-    ctx.translate(w, 0); ctx.scale(-1, 1);
-    ctx.drawImage(canvas, 0, 0, w/2, h, 0, 0, w/2, h);
-    ctx.restore();
-  }
-  if (mirrorY){
-    ctx.save();
-    ctx.translate(0, h); ctx.scale(1, -1);
-    ctx.drawImage(canvas, 0, 0, w, h/2, 0, 0, w, h/2);
-    ctx.restore();
-  }
-}
-
-// Reverses the WHOLE image, no reflection — the per-output-monitor "flip"
-// (Settings > Output monitors). Distinct from applyMirror above: this
-// never creates symmetry, it just runs the finished frame through a
-// physical-orientation correction for this specific screen.
-function applyFlip(ctx, canvas, flipX, flipY){
-  const w = canvas.width, h = canvas.height;
-  ctx.save();
-  ctx.shadowBlur = 0;
-  ctx.globalCompositeOperation = "source-over";
-  ctx.translate(flipX ? w : 0, flipY ? h : 0);
-  ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
-  ctx.drawImage(canvas, 0, 0, w, h);
-  ctx.restore();
-}
-
-// Kaleidoscope: wedge-based radial symmetry with alternating mirrors
-function applyKaleidoscope(ctx, canvas, segments){
-  if (segments < 3) return;
-  const w = canvas.width, h = canvas.height;
-  const cx = w / 2, cy = h / 2;
-  const radius = Math.sqrt(cx * cx + cy * cy) * 1.5;
-
-  ctx.save();
-  ctx.shadowBlur = 0;
-  ctx.globalCompositeOperation = "source-over";
-
-  const angleStep = (Math.PI * 2) / segments;
-  for (let i = 0; i < segments; i++) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angleStep * i);
-
-    // Create a triangular clipping region (wedge/pie slice)
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(radius * Math.cos(0), radius * Math.sin(0));
-    ctx.arc(0, 0, radius, 0, angleStep, false);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.clip();
-
-    // Alternate between normal and horizontally-flipped versions
-    if (i % 2 === 1) {
-      ctx.scale(-1, 1);
-    }
-
-    ctx.translate(-cx, -cy);
-    ctx.drawImage(canvas, 0, 0, w, h);
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-function paint(scene){
-  const w = cv.width, h = cv.height;
-  cx.shadowBlur = 0;   // never let a glow from the previous frame bleed into the clear/fade below
-  cx.globalCompositeOperation = "source-over";
-  cx.fillStyle = filters.trail > 0 ? `rgba(0,0,0,${(1 - filters.trail).toFixed(3)})` : "#000";
-  cx.fillRect(0, 0, w, h);
-  if (!scene || !scene.length) return;
-  // Fit the -1..1 viewport into the window letterboxed, never stretched — but
-  // the viewport is `filters.aspect` wide per unit tall, not necessarily
-  // square, so scale x and y separately. Set the ratio to match the screen and
-  // the bars disappear; leave it at 1:1 on a widescreen and you get pillarbox,
-  // which is correct rather than a bug.
-  const a = filters.aspect || 1;
-  let sx = w * 0.5, sy = sx / a;
-  if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
-  const cx0 = w / 2, cy0 = h / 2;
-  const map = (x, y) => {
-    const [xk, yk] = applyKeystone(x, y, filters.keystoneH, filters.keystoneV);
-    return [cx0 + xk * sx, cy0 - yk * sy];
-  };
-  cx.lineWidth = Math.max(1, Math.min(sx, sy) / 260);
-  cx.lineJoin = "round";
-  // Single shadowBlur pass — see index.html's matching comment: a multi-pass
-  // additive version (stroking 2-3x per stroke with shadowBlur set) made the
-  // whole preview unusably slow, since shadowBlur is one of the more
-  // expensive canvas 2D ops per call.
-  // Per-stroke glow (st.g) floored by the scene's global glow — kept
-  // identical to index.html's paintPreview so the projector and the in-page
-  // preview never disagree about what a scene looks like.
-  const unit = Math.min(w, h) * 0.05;
-  let curBlur = -1;
-  for (const st of scene) {
-    const [r, g, b] = st.c;
-    const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
-    cx.strokeStyle = col;
-    const px = Math.round(Math.max(filters.glow, st.g || 0) * unit);
-    const blurCap = Math.min(16, px);  // cap at 16px — diminishing returns beyond this at HD+
-    if (blurCap !== curBlur) { cx.shadowBlur = blurCap; curBlur = blurCap; }
-    if (px > 0) cx.shadowColor = col;
-    cx.beginPath();
-    st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
-    cx.stroke();
-  }
-  cx.shadowBlur = 0;
-  if (filters.kaleidoscopeSegments > 2) applyKaleidoscope(cx, cv, Math.round(filters.kaleidoscopeSegments));
-  if (filters.mirrorX || filters.mirrorY) applyMirror(cx, cv, filters.mirrorX, filters.mirrorY);
-  if (filters.flipX || filters.flipY) applyFlip(cx, cv, filters.flipX, filters.flipY);
-}
+// WebGL2 rendering moved to renderer.js
 
 // --- frame-rate meter -------------------------------------------------------
 //
@@ -292,13 +170,13 @@ function connect(){
         // Timed around the real thing, filters and all — a number that
         // excluded the glow/mirror/keystone passes would miss the usual cause.
         const t0 = performance.now();
-        paint(m.preview);
+        if (renderer) renderer.render(m.preview, filters, { width: cv.width, height: cv.height });
         const ms = performance.now() - t0;
         _frames++; _paintMs += ms;
         if (ms > _paintMax) _paintMax = ms;
         _strokes = (m.preview || []).length;
       } else {
-        paint(m.preview);
+        if (renderer) renderer.render(m.preview, filters, { width: cv.width, height: cv.height });
       }
     } else if (m.type === "show_title") {
       clearTimeout(titleTimeout);
