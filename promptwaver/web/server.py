@@ -130,7 +130,7 @@ def make_app(engine) -> web.Application:
                         try:
                             if meta.get("hq"):
                                 if payload_hq is None:
-                                    preview_hq = engine.preview(max_points=6000, stroke_thin=300)
+                                    preview_hq = engine.preview(max_points=3000, stroke_thin=150)
                                     payload_hq = json.dumps({"type": "state", "state": state, "preview": preview_hq})
                                 await ws.send_str(payload_hq)
                             else:

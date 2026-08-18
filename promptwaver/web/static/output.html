@@ -213,7 +213,8 @@ function paint(scene){
     const col = `rgb(${r*255|0},${g*255|0},${b*255|0})`;
     cx.strokeStyle = col;
     const px = Math.round(Math.max(filters.glow, st.g || 0) * unit);
-    if (px !== curBlur) { cx.shadowBlur = px; curBlur = px; }
+    const blurCap = Math.min(16, px);  // cap at 16px — diminishing returns beyond this at HD+
+    if (blurCap !== curBlur) { cx.shadowBlur = blurCap; curBlur = blurCap; }
     if (px > 0) cx.shadowColor = col;
     cx.beginPath();
     st.p.forEach((pt, i) => { const [X, Y] = map(pt[0], pt[1]); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
