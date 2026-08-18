@@ -5,8 +5,11 @@
  */
 
 class PromptWaverRenderer {
-  constructor(canvas) {
+  // options.lineWidthMode: "viewport" (projector output, stroke scales with
+  // window size) or "fixed" (in-page preview hairline). See _getLineWidth.
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
+    this.lineWidthMode = options.lineWidthMode || "fixed";
     this.gl = null;
     this.contextLost = false;
     this.programs = {};
@@ -52,7 +55,12 @@ class PromptWaverRenderer {
     // Set up initial GL state
     const gl = this.gl;
     gl.clearColor(0, 0, 0, 1);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // ONE, ONE_MINUS_SRC_ALPHA — premultiplied alpha blending. Matches the
+    // fragment shader's premultiplied output (see the line-shader comment);
+    // needed because adjacent line-segment quads deliberately overlap at
+    // joints, and non-premultiplied blending double-composites that overlap
+    // into visible seams.
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
 
     this.buildGLResources();
@@ -67,7 +75,12 @@ class PromptWaverRenderer {
     // Phase 1: line rendering with capsule-SDF
     const gl = this.gl;
 
-    // Vertex shader: expand quads around line segments, apply transforms
+    // Vertex shader: expand quads around line segments, apply transforms.
+    // Everything here stays in normalized [-1,1] engine space until the very
+    // last line (gl_Position = projection * ...), which converts directly to
+    // GL clip space. lineHalfWidth/aaEdge are pre-converted to normalized-space
+    // units by the caller (see render()) — they must NOT be raw pixel values,
+    // since this shader never touches pixel space.
     const lineVS = `#version 300 es
 precision highp float;
 
@@ -76,23 +89,25 @@ in vec2 p0, p1;
 in vec3 color;
 in float capStart, capEnd;
 
-// Per-frame uniforms
+// Per-frame uniforms — projection maps normalized [-1,1] engine space
+// straight to GL clip space [-1,1] (see _buildProjectionMatrix).
 uniform mat4 projection;
-uniform float lineWidth;
-uniform vec2 keystoneH_keystoneV;
+uniform float lineHalfWidth;  // normalized-space half-width (SDF radius)
+uniform float aaEdge;         // normalized-space AA feather half-width
+uniform vec2 keystoneHV;
 
-// Per-vertex quad data (0-3 for the four corners of the bounding quad)
-in vec2 quadPos;  // (-1,-1) to (1,1), expanded by line width
+// Per-vertex quad corner, x in [-1,1] along the segment, y in [-1,1] across it
+in vec2 quadPos;
 
 out vec3 vColor;
 out vec2 vPos;
 out vec2 vLineStart, vLineEnd;
-out float vCapStart, vCapEnd;
-out float vLineLen;
+out float vRadius;
+out float vEdge;
 
 vec2 applyKeystone(vec2 p) {
-  float kh = keystoneH_keystoneV.x;
-  float kv = keystoneH_keystoneV.y;
+  float kh = keystoneHV.x;
+  float kv = keystoneHV.y;
   float xk = p.x * (1.0 + kh * p.y);
   float yk = p.y * (1.0 + kv * xk);
   return vec2(
@@ -103,62 +118,70 @@ vec2 applyKeystone(vec2 p) {
 
 void main() {
   vColor = color;
-  vCapStart = capStart;
-  vCapEnd = capEnd;
+  vRadius = lineHalfWidth;
+  vEdge = aaEdge;
 
-  // Apply keystone to endpoints
   vec2 p0k = applyKeystone(p0);
   vec2 p1k = applyKeystone(p1);
-
   vLineStart = p0k;
   vLineEnd = p1k;
 
   vec2 delta = p1k - p0k;
-  vLineLen = length(delta);
-
-  vec2 dir = normalize(delta);
+  float len = length(delta);
+  vec2 dir = len > 0.00001 ? delta / len : vec2(1.0, 0.0);
   vec2 perp = vec2(-dir.y, dir.x);
 
-  // Expand quad around the line segment
-  vec2 quad = quadPos * (lineWidth / 2.0);
-  vec2 along = dir * quad.x * vLineLen;
-  vec2 across = perp * quad.y;
+  // Margin so a round join/cap (which bulges past the true segment
+  // endpoints by up to the SDF radius) has geometry to rasterize into —
+  // without this the capsule's rounded ends get silently clipped by the
+  // quad itself before the fragment shader ever sees them.
+  float margin = vRadius + vEdge;
+
+  // quadPos.x arrives as [-1,1]; remap to [0,1] so t=0 is p0 and t=1 is p1
+  // (using quadPos.x directly here, without this remap, doubles the quad's
+  // span and mis-centers it on p0 instead of spanning p0->p1).
+  float t = quadPos.x * 0.5 + 0.5;
+  float alongDist = mix(-margin, len + margin, t);
+  vec2 along = dir * alongDist;
+  vec2 across = perp * quadPos.y * margin;
 
   vPos = p0k + along + across;
-
   gl_Position = projection * vec4(vPos, 0.0, 1.0);
 }
 `;
 
-    // Fragment shader: capsule SDF with round joins and AA
+    // Fragment shader: capsule SDF with round joins and AA. vPos/vLineStart/
+    // vLineEnd/vRadius/vEdge are all in normalized engine space (see vertex
+    // shader comment) — this shader never converts to or compares against
+    // pixel units, so there's nothing here that needs canvas size.
     const lineFS = `#version 300 es
 precision highp float;
 
 in vec3 vColor;
 in vec2 vPos;
 in vec2 vLineStart, vLineEnd;
-in float vCapStart, vCapEnd;
-in float vLineLen;
+in float vRadius;
+in float vEdge;
 
 out vec4 outColor;
 
 float sdfCapsule(vec2 p, vec2 a, vec2 b, float r) {
   vec2 pa = p - a, ba = b - a;
-  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0.0, 1.0);
   return length(pa - ba * h) - r;
 }
 
 void main() {
-  float r = 1.0;  // radius for SDF
-  float d = sdfCapsule(vPos, vLineStart, vLineEnd, r);
-
-  // Smooth antialiasing over ~1.5px
-  float edge = 1.5;
-  float alpha = 1.0 - smoothstep(-edge, edge, d);
-
+  float d = sdfCapsule(vPos, vLineStart, vLineEnd, vRadius);
+  float alpha = 1.0 - smoothstep(-vEdge, vEdge, d);
   if (alpha < 0.01) discard;
-
-  outColor = vec4(vColor, alpha);
+  // Premultiplied alpha: adjacent segments' quads deliberately overlap at
+  // joints (see the margin comment in the vertex shader) so round joins have
+  // geometry to rasterize into. Un-premultiplied SRC_ALPHA blending double-
+  // composites that overlap and shows up as visible seams/dots at every
+  // joint; premultiplied output + ONE/ONE_MINUS_SRC_ALPHA blending (set in
+  // init()) composites overlapping semi-transparent edges correctly.
+  outColor = vec4(vColor * alpha, alpha);
 }
 `;
 
@@ -244,34 +267,43 @@ void main() {
     const gl = this.gl;
     const w = canvasSize.width, h = canvasSize.height;
 
-    // Clear
+    // Defensive: GL's viewport doesn't auto-follow canvas.width/height changes,
+    // only context-creation-time size. Cheap to set every frame.
+    gl.viewport(0, 0, w, h);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     if (!scene || !scene.length) return;
 
-    // Flatten scene into line segments
     const segments = this._buildSegments(scene, filters);
     if (segments.length === 0) return;
 
-    // Upload instance data
     this._uploadSegments(segments);
 
-    // Set up projection
-    const proj = this._buildProjectionMatrix(w, h, filters);
+    // Letterbox scale in PIXELS — same formula as the old Canvas2D paint().
+    // This is also "pixels per normalized-space unit", which is exactly the
+    // conversion factor needed to turn a desired pixel line-width/AA-feather
+    // into the normalized-space units the shader actually operates in.
+    const a = filters.aspect || 1;
+    let sx = w * 0.5, sy = sx / a;
+    if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
+    const scale = Math.min(sx, sy);
 
-    // Render
+    const proj = this._buildProjectionMatrix(w, h, sx, sy);
+
     gl.useProgram(this.programs.line);
     gl.bindVertexArray(this.buffers.instanceVao);
 
-    const projLoc = gl.getUniformLocation(this.programs.line, 'projection');
-    gl.uniformMatrix4fv(projLoc, false, proj);
+    gl.uniformMatrix4fv(gl.getUniformLocation(this.programs.line, 'projection'), false, proj);
 
-    const lineWidthLoc = gl.getUniformLocation(this.programs.line, 'lineWidth');
-    const lineWidth = this._getLineWidth(w, h);
-    gl.uniform1f(lineWidthLoc, lineWidth);
-
-    const ksLoc = gl.getUniformLocation(this.programs.line, 'keystoneH_keystoneV');
-    gl.uniform2f(ksLoc, filters.keystoneH || 0, filters.keystoneV || 0);
+    const pixelWidth = this._getLineWidth(scale);
+    gl.uniform1f(gl.getUniformLocation(this.programs.line, 'lineHalfWidth'), (pixelWidth / 2) / scale);
+    // Half-pixel feather, so the AA transition spans ~1px total. This must
+    // stay well under the line's half-width: a feather wider than the line
+    // means alpha never reaches 1.0 even at the stroke's centre, leaving
+    // every line semi-transparent and every overlapping joint visibly
+    // brighter than the line it joins (reads as dots along the stroke).
+    gl.uniform1f(gl.getUniformLocation(this.programs.line, 'aaEdge'), 0.5 / scale);
+    gl.uniform2f(gl.getUniformLocation(this.programs.line, 'keystoneHV'), filters.keystoneH || 0, filters.keystoneV || 0);
 
     gl.drawElementsInstanced(gl.TRIANGLES, this.buffers.quadIndexCount, gl.UNSIGNED_SHORT, 0, segments.length);
   }
@@ -344,43 +376,51 @@ void main() {
     gl.vertexAttribPointer(this.buffers.instanceBuffers.color.loc, 3, gl.FLOAT, false, 0, 0);
     gl.vertexAttribDivisor(this.buffers.instanceBuffers.color.loc, 1);
 
-    // cap flags (both in the same buffer, different offsets)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.capStart.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, capData, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.capStart.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.capStart.loc, 1, gl.FLOAT, false, 8, 0);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.capStart.loc, 1);
-
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.capEnd.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.capEnd.loc, 1, gl.FLOAT, false, 8, 4);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.capEnd.loc, 1);
+    // Cap flags — uploaded even though the current shader doesn't read them
+    // yet (every join renders round for now; butt-vs-round endpoint capping
+    // is a Phase 1 refinement). GLSL strips unused attributes at compile
+    // time, so their location is legitimately -1 until the shader actually
+    // references them — guard rather than assume they're always bound.
+    const capStartLoc = this.buffers.instanceBuffers.capStart.loc;
+    const capEndLoc = this.buffers.instanceBuffers.capEnd.loc;
+    if (capStartLoc !== -1 || capEndLoc !== -1) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.capStart.vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, capData, gl.DYNAMIC_DRAW);
+      if (capStartLoc !== -1) {
+        gl.enableVertexAttribArray(capStartLoc);
+        gl.vertexAttribPointer(capStartLoc, 1, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(capStartLoc, 1);
+      }
+      if (capEndLoc !== -1) {
+        gl.enableVertexAttribArray(capEndLoc);
+        gl.vertexAttribPointer(capEndLoc, 1, gl.FLOAT, false, 8, 4);
+        gl.vertexAttribDivisor(capEndLoc, 1);
+      }
+    }
 
     gl.bindVertexArray(null);
   }
 
-  _buildProjectionMatrix(w, h, filters) {
-    // Letterbox the -1..1 space into the window, preserving aspect ratio
-    const a = filters.aspect || 1;
-    let sx = w * 0.5, sy = sx / a;
-    if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
+  _buildProjectionMatrix(w, h, sx, sy) {
+    // gl_Position must land in GL clip space [-1,1], NOT pixel space — sx/sy
+    // (pixels of letterboxed viewport per normalized-space unit) get rescaled
+    // here into "clip-space units per normalized-space unit" by dividing out
+    // the canvas's own pixel-to-clip ratio (canvas width/height maps to 2
+    // clip units). No Y flip: clip space is Y-up, same as our normalized
+    // engine space, unlike a 2D canvas's Y-down pixel space.
+    const scaleX = sx * 2 / w;
+    const scaleY = sy * 2 / h;
 
-    const cx = w / 2, cy = h / 2;
-
-    // Orthographic projection: map normalized coords to pixel coords
-    // [-1,1] -> letterboxed viewport
     const proj = new Float32Array(16);
-    proj[0] = sx;    proj[1] = 0;     proj[2] = 0;  proj[3] = 0;
-    proj[4] = 0;     proj[5] = -sy;   proj[6] = 0;  proj[7] = 0;
-    proj[8] = 0;     proj[9] = 0;     proj[10] = 1; proj[11] = 0;
-    proj[12] = cx;   proj[13] = cy;   proj[14] = 0; proj[15] = 1;
-
+    proj[0] = scaleX; proj[5] = scaleY; proj[10] = 1; proj[15] = 1;
     return proj;
   }
 
-  _getLineWidth(w, h) {
-    // output.html: scale with viewport, index.html: fixed 1.4
-    // For now, use the fixed value; we'll make it per-page in Phase 1 refinement
-    return 1.4;
+  _getLineWidth(scale) {
+    // Preserves the two surfaces' original Canvas2D widths exactly: the
+    // projector window scaled its stroke to the viewport, while the small
+    // in-page preview used a fixed hairline.
+    return this.lineWidthMode === "viewport" ? Math.max(1, scale / 260) : 1.4;
   }
 
   // Utility: compile a shader

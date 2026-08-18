@@ -48,12 +48,12 @@ function resize(){
   cv.height = Math.round(window.innerHeight * dpr);
   if (renderer) {
     renderer.destroy();
-    renderer = new PromptWaverRenderer(cv);
+    renderer = new PromptWaverRenderer(cv, { lineWidthMode: "viewport" });
   }
 }
 window.addEventListener("resize", resize);
 resize();
-if (!renderer) renderer = new PromptWaverRenderer(cv);
+if (!renderer) renderer = new PromptWaverRenderer(cv, { lineWidthMode: "viewport" });
 
 setTimeout(() => hintEl.classList.add("gone"), 4000);
 
