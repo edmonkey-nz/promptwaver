@@ -46,10 +46,9 @@ function resize(){
   const dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(window.innerWidth * dpr);
   cv.height = Math.round(window.innerHeight * dpr);
-  if (renderer) {
-    renderer.destroy();
-    renderer = new PromptWaverRenderer(cv, { lineWidthMode: "viewport" });
-  }
+  // No renderer teardown here: it resizes its own offscreen targets when the
+  // canvas changes. Rebuilding recompiled every shader on each resize event
+  // of a window drag.
 }
 window.addEventListener("resize", resize);
 resize();

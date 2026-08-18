@@ -5,6 +5,14 @@
  */
 
 class PromptWaverRenderer {
+  // Bloom tuning. SPREAD is the blur's tap spacing as a fraction of the
+  // smaller canvas dimension (four taps each side, so the visible radius is
+  // roughly four times this); INTENSITY is the gain applied to the blurred
+  // layer when it's added back over the sharp strokes. These are the two
+  // knobs worth touching if the glow reads too tight/wide or too weak/hot.
+  static BLOOM_SPREAD = 0.005;
+  static BLOOM_INTENSITY = 2.5;
+
   // options.lineWidthMode: "viewport" (projector output, stroke scales with
   // window size) or "fixed" (in-page preview hairline). See _getLineWidth.
   constructor(canvas, options = {}) {
@@ -88,6 +96,7 @@ precision highp float;
 in vec2 p0, p1;
 in vec3 color;
 in float capStart, capEnd;
+in float glow;         // this stroke's own 0..1 bloom (Path.glow)
 
 // Per-frame uniforms — projection maps normalized [-1,1] engine space
 // straight to GL clip space [-1,1] (see _buildProjectionMatrix).
@@ -95,6 +104,7 @@ uniform mat4 projection;
 uniform float lineHalfWidth;  // normalized-space half-width (SDF radius)
 uniform float aaEdge;         // normalized-space AA feather half-width
 uniform vec2 keystoneHV;
+uniform float globalGlow;     // scene-wide glow, acts as a floor per stroke
 
 // Per-vertex quad corner, x in [-1,1] along the segment, y in [-1,1] across it
 in vec2 quadPos;
@@ -104,6 +114,7 @@ out vec2 vPos;
 out vec2 vLineStart, vLineEnd;
 out float vRadius;
 out float vEdge;
+out float vGlow;
 
 vec2 applyKeystone(vec2 p) {
   float kh = keystoneHV.x;
@@ -120,6 +131,9 @@ void main() {
   vColor = color;
   vRadius = lineHalfWidth;
   vEdge = aaEdge;
+  // Same rule the Canvas2D renderer used: a stroke's own glow, floored by
+  // the scene-wide glow slider.
+  vGlow = max(globalGlow, glow);
 
   vec2 p0k = applyKeystone(p0);
   vec2 p1k = applyKeystone(p1);
@@ -162,8 +176,13 @@ in vec2 vPos;
 in vec2 vLineStart, vLineEnd;
 in float vRadius;
 in float vEdge;
+in float vGlow;
 
-out vec4 outColor;
+// Two targets in one geometry pass: the crisp strokes, and the same strokes
+// scaled by their glow to seed the bloom blur. Drawing the geometry twice
+// instead would double the vertex work for no benefit.
+layout(location = 0) out vec4 outSharp;
+layout(location = 1) out vec4 outGlowSrc;
 
 float sdfCapsule(vec2 p, vec2 a, vec2 b, float r) {
   vec2 pa = p - a, ba = b - a;
@@ -181,11 +200,88 @@ void main() {
   // composites that overlap and shows up as visible seams/dots at every
   // joint; premultiplied output + ONE/ONE_MINUS_SRC_ALPHA blending (set in
   // init()) composites overlapping semi-transparent edges correctly.
-  outColor = vec4(vColor * alpha, alpha);
+  //
+  // Both targets stay premultiplied and share one blend function (WebGL2
+  // core has no per-attachment blending), so the glow target scales only
+  // its colour and keeps the same coverage alpha — the bloom is a dimmer
+  // copy of the same shape, not a differently-shaped one. Blurring
+  // premultiplied colour is well-defined, which is why the blur pass can
+  // filter this directly without haloing.
+  outSharp = vec4(vColor * alpha, alpha);
+  outGlowSrc = vec4(vColor * alpha * vGlow, alpha);
 }
 `;
 
     this.programs.line = this.linkProgram(lineVS, lineFS, "line");
+
+    // Fullscreen pass geometry, generated from gl_VertexID — a single
+    // oversized triangle rather than two quad triangles, so there's no
+    // diagonal seam where the halves meet and no vertex buffer to manage.
+    const fullscreenVS = `#version 300 es
+precision highp float;
+out vec2 vUv;
+void main() {
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  vUv = p;
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+`;
+
+    // Separable Gaussian, run once horizontally then once vertically. Nine
+    // taps with the standard normalised weights; separability is what makes
+    // the radius essentially free, unlike Canvas2D's shadowBlur where cost
+    // scaled with radius and forced the old 16px cap.
+    const blurFS = `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uSrc;
+uniform vec2 uStep;   // UV offset per tap; direction encodes the axis
+out vec4 outColor;
+
+const float W0 = 0.2270270270;
+const float W1 = 0.1945945946;
+const float W2 = 0.1216216216;
+const float W3 = 0.0540540541;
+const float W4 = 0.0162162162;
+
+void main() {
+  vec4 c = texture(uSrc, vUv) * W0;
+  c += texture(uSrc, vUv + uStep * 1.0) * W1;
+  c += texture(uSrc, vUv - uStep * 1.0) * W1;
+  c += texture(uSrc, vUv + uStep * 2.0) * W2;
+  c += texture(uSrc, vUv - uStep * 2.0) * W2;
+  c += texture(uSrc, vUv + uStep * 3.0) * W3;
+  c += texture(uSrc, vUv - uStep * 3.0) * W3;
+  c += texture(uSrc, vUv + uStep * 4.0) * W4;
+  c += texture(uSrc, vUv - uStep * 4.0) * W4;
+  outColor = c;
+}
+`;
+
+    // Final combine. Both inputs are premultiplied, and the destination is
+    // opaque black, so the sharp layer's colour is already its contribution
+    // and the bloom simply adds on top — the additive look real glow has.
+    const compositeFS = `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uSharp;
+uniform sampler2D uBloom;
+uniform float uBloomIntensity;
+out vec4 outColor;
+
+void main() {
+  vec3 sharp = texture(uSharp, vUv).rgb;
+  vec3 bloom = texture(uBloom, vUv).rgb * uBloomIntensity;
+  outColor = vec4(sharp + bloom, 1.0);
+}
+`;
+
+    this.programs.blur = this.linkProgram(fullscreenVS, blurFS, "blur");
+    this.programs.composite = this.linkProgram(fullscreenVS, compositeFS, "composite");
+
+    // The fullscreen triangle uses no attributes, but WebGL2 still requires
+    // a bound VAO to draw.
+    this.buffers.emptyVao = gl.createVertexArray();
 
     // Create the quad geometry (4 corners, 6 indices)
     const quadVerts = new Float32Array([
@@ -226,19 +322,22 @@ void main() {
     const p1Vbo = gl.createBuffer();
     const colorVbo = gl.createBuffer();
     const capVbo = gl.createBuffer();
+    const glowVbo = gl.createBuffer();
 
     const p0Loc = gl.getAttribLocation(this.programs.line, 'p0');
     const p1Loc = gl.getAttribLocation(this.programs.line, 'p1');
     const colorLoc = gl.getAttribLocation(this.programs.line, 'color');
     const capStartLoc = gl.getAttribLocation(this.programs.line, 'capStart');
     const capEndLoc = gl.getAttribLocation(this.programs.line, 'capEnd');
+    const glowLoc = gl.getAttribLocation(this.programs.line, 'glow');
 
     this.buffers.instanceBuffers = {
       p0: { vbo: p0Vbo, loc: p0Loc, size: 2 },
       p1: { vbo: p1Vbo, loc: p1Loc, size: 2 },
       color: { vbo: colorVbo, loc: colorLoc, size: 3 },
       capStart: { vbo: capVbo, loc: capStartLoc, size: 1 },
-      capEnd: { vbo: capVbo, loc: capEndLoc, size: 1 }
+      capEnd: { vbo: capVbo, loc: capEndLoc, size: 1 },
+      glow: { vbo: glowVbo, loc: glowLoc, size: 1 }
     };
 
     gl.bindVertexArray(null);
@@ -262,50 +361,144 @@ void main() {
   }
 
   render(scene, filters, canvasSize) {
-    if (!this.gl || this.contextLost) return;
+    if (!this.gl || this.contextLost || !this.programs.line) return;
 
     const gl = this.gl;
     const w = canvasSize.width, h = canvasSize.height;
+    if (w < 1 || h < 1) return;
 
-    // Defensive: GL's viewport doesn't auto-follow canvas.width/height changes,
-    // only context-creation-time size. Cheap to set every frame.
+    if (!this._ensureTargets(w, h)) return;
+
+    const segments = (scene && scene.length) ? this._buildSegments(scene, filters) : [];
+
+    // --- pass 1: geometry into the offscreen scene buffer (sharp + glow) ---
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.scene.fb);
+    gl.drawBuffers(this.fbos.scene.drawBuffers);
     gl.viewport(0, 0, w, h);
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    if (!scene || !scene.length) return;
+    if (segments.length) {
+      this._uploadSegments(segments);
 
-    const segments = this._buildSegments(scene, filters);
-    if (segments.length === 0) return;
+      // Letterbox scale in PIXELS — same formula as the old Canvas2D paint().
+      // This is also "pixels per normalized-space unit", which is exactly the
+      // conversion factor needed to turn a desired pixel line-width/AA-feather
+      // into the normalized-space units the shader actually operates in.
+      const a = filters.aspect || 1;
+      let sx = w * 0.5, sy = sx / a;
+      if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
+      const scale = Math.min(sx, sy);
 
-    this._uploadSegments(segments);
+      const prog = this.programs.line;
+      gl.useProgram(prog);
+      gl.bindVertexArray(this.buffers.instanceVao);
+      gl.enable(gl.BLEND);
 
-    // Letterbox scale in PIXELS — same formula as the old Canvas2D paint().
-    // This is also "pixels per normalized-space unit", which is exactly the
-    // conversion factor needed to turn a desired pixel line-width/AA-feather
-    // into the normalized-space units the shader actually operates in.
-    const a = filters.aspect || 1;
-    let sx = w * 0.5, sy = sx / a;
-    if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
-    const scale = Math.min(sx, sy);
+      gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'projection'), false,
+                          this._buildProjectionMatrix(w, h, sx, sy));
 
-    const proj = this._buildProjectionMatrix(w, h, sx, sy);
+      const pixelWidth = this._getLineWidth(scale);
+      gl.uniform1f(gl.getUniformLocation(prog, 'lineHalfWidth'), (pixelWidth / 2) / scale);
+      // Half-pixel feather, so the AA transition spans ~1px total. This must
+      // stay well under the line's half-width: a feather wider than the line
+      // means alpha never reaches 1.0 even at the stroke's centre, leaving
+      // every line semi-transparent and every overlapping joint visibly
+      // brighter than the line it joins (reads as dots along the stroke).
+      gl.uniform1f(gl.getUniformLocation(prog, 'aaEdge'), 0.5 / scale);
+      gl.uniform2f(gl.getUniformLocation(prog, 'keystoneHV'),
+                   filters.keystoneH || 0, filters.keystoneV || 0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'globalGlow'), filters.glow || 0);
 
-    gl.useProgram(this.programs.line);
-    gl.bindVertexArray(this.buffers.instanceVao);
+      gl.drawElementsInstanced(gl.TRIANGLES, this.buffers.quadIndexCount,
+                               gl.UNSIGNED_SHORT, 0, segments.length);
+    }
 
-    gl.uniformMatrix4fv(gl.getUniformLocation(this.programs.line, 'projection'), false, proj);
+    // --- passes 2 & 3: separable blur of the glow target, at half res ---
+    // The blur passes and the final combine all overwrite their whole target,
+    // so blending is off for them; leaving it on would composite each pass
+    // against whatever the previous frame left behind.
+    gl.disable(gl.BLEND);
+    gl.bindVertexArray(this.buffers.emptyVao);
+    gl.useProgram(this.programs.blur);
+    gl.uniform1i(gl.getUniformLocation(this.programs.blur, 'uSrc'), 0);
+    gl.activeTexture(gl.TEXTURE0);
 
-    const pixelWidth = this._getLineWidth(scale);
-    gl.uniform1f(gl.getUniformLocation(this.programs.line, 'lineHalfWidth'), (pixelWidth / 2) / scale);
-    // Half-pixel feather, so the AA transition spans ~1px total. This must
-    // stay well under the line's half-width: a feather wider than the line
-    // means alpha never reaches 1.0 even at the stroke's centre, leaving
-    // every line semi-transparent and every overlapping joint visibly
-    // brighter than the line it joins (reads as dots along the stroke).
-    gl.uniform1f(gl.getUniformLocation(this.programs.line, 'aaEdge'), 0.5 / scale);
-    gl.uniform2f(gl.getUniformLocation(this.programs.line, 'keystoneHV'), filters.keystoneH || 0, filters.keystoneV || 0);
+    // Tap spacing in full-resolution pixels, scaled with the canvas so the
+    // bloom reads the same at preview size and on a projector. Expressed in
+    // UV, so it's independent of the (half-res) buffer being sampled.
+    const stepPx = Math.max(1.0, Math.min(w, h) * PromptWaverRenderer.BLOOM_SPREAD);
+    const bw = this.fbos.bloomA.width, bh = this.fbos.bloomA.height;
 
-    gl.drawElementsInstanced(gl.TRIANGLES, this.buffers.quadIndexCount, gl.UNSIGNED_SHORT, 0, segments.length);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.bloomA.fb);
+    gl.viewport(0, 0, bw, bh);
+    gl.bindTexture(gl.TEXTURE_2D, this.fbos.scene.textures[1]);
+    gl.uniform2f(gl.getUniformLocation(this.programs.blur, 'uStep'), stepPx / w, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.bloomB.fb);
+    gl.viewport(0, 0, bw, bh);
+    gl.bindTexture(gl.TEXTURE_2D, this.fbos.bloomA.textures[0]);
+    gl.uniform2f(gl.getUniformLocation(this.programs.blur, 'uStep'), 0, stepPx / h);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // --- pass 4: combine sharp + bloom to the screen ---
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const comp = this.programs.composite;
+    gl.useProgram(comp);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.fbos.scene.textures[0]);
+    gl.uniform1i(gl.getUniformLocation(comp, 'uSharp'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.fbos.bloomB.textures[0]);
+    gl.uniform1i(gl.getUniformLocation(comp, 'uBloom'), 1);
+    gl.uniform1f(gl.getUniformLocation(comp, 'uBloomIntensity'),
+                 PromptWaverRenderer.BLOOM_INTENSITY);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.bindVertexArray(null);
+    gl.enable(gl.BLEND);
+  }
+
+  // Allocate (or reallocate) the offscreen targets for the current canvas
+  // size. Canvas resizes do not resize an attached texture, so a stale FBO
+  // would keep rendering at the old resolution and show up as a scaled or
+  // cropped image rather than an obvious failure.
+  _ensureTargets(w, h) {
+    if (this.fbos.scene && this.fbos.scene.width === w && this.fbos.scene.height === h) {
+      return true;
+    }
+    this._destroyTargets();
+
+    const bw = Math.max(1, w >> 1), bh = Math.max(1, h >> 1);
+    // RGBA16F so bloom can carry values above 1.0 — Canvas2D's shadow was
+    // clamped to the 8-bit range, which is what kept its glow flat.
+    const scene = this.createFBO(w, h, "RGBA16F", 2);
+    const bloomA = this.createFBO(bw, bh, "RGBA16F", 1);
+    const bloomB = this.createFBO(bw, bh, "RGBA16F", 1);
+
+    if (!scene || !bloomA || !bloomB) {
+      console.error("[PromptWaver] could not allocate render targets");
+      this._destroyTargets();
+      return false;
+    }
+    this.fbos = { scene, bloomA, bloomB };
+    return true;
+  }
+
+  _destroyTargets() {
+    if (!this.gl) return;
+    const gl = this.gl;
+    for (const fbo of Object.values(this.fbos)) {
+      if (!fbo) continue;
+      fbo.textures.forEach(t => gl.deleteTexture(t));
+      gl.deleteFramebuffer(fbo.fb);
+    }
+    this.fbos = {};
   }
 
   _buildSegments(scene, filters) {
@@ -313,6 +506,11 @@ void main() {
     for (const stroke of scene) {
       const pts = stroke.p;
       if (!pts || pts.length < 2) continue;
+
+      // Absent "g" means no per-stroke glow; the scene-wide glow still
+      // applies as a floor, but that's done in the shader so the global
+      // slider doesn't require re-uploading every segment.
+      const glow = stroke.g || 0;
 
       for (let i = 0; i < pts.length - 1; i++) {
         const p0 = pts[i];
@@ -324,7 +522,7 @@ void main() {
           p0: [p0[0], p0[1]],
           p1: [p1[0], p1[1]],
           color: stroke.c,
-          capStart, capEnd
+          capStart, capEnd, glow
         });
       }
     }
@@ -339,6 +537,7 @@ void main() {
     const p1Data = new Float32Array(count * 2);
     const colorData = new Float32Array(count * 3);
     const capData = new Float32Array(count * 2);
+    const glowData = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
       const seg = segments[i];
@@ -351,6 +550,7 @@ void main() {
       colorData[i * 3 + 2] = seg.color[2];
       capData[i * 2] = seg.capStart;
       capData[i * 2 + 1] = seg.capEnd;
+      glowData[i] = seg.glow;
     }
 
     gl.bindVertexArray(this.buffers.instanceVao);
@@ -375,6 +575,13 @@ void main() {
     gl.enableVertexAttribArray(this.buffers.instanceBuffers.color.loc);
     gl.vertexAttribPointer(this.buffers.instanceBuffers.color.loc, 3, gl.FLOAT, false, 0, 0);
     gl.vertexAttribDivisor(this.buffers.instanceBuffers.color.loc, 1);
+
+    // glow
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.glow.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, glowData, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(this.buffers.instanceBuffers.glow.loc);
+    gl.vertexAttribPointer(this.buffers.instanceBuffers.glow.loc, 1, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribDivisor(this.buffers.instanceBuffers.glow.loc, 1);
 
     // Cap flags — uploaded even though the current shader doesn't read them
     // yet (every join renders round for now; butt-vs-round endpoint capping
@@ -506,6 +713,11 @@ void main() {
       fbo.textures.push(tex);
     }
 
+    // Without this, only attachment 0 is written and the second MRT target
+    // silently stays blank — the fragment shader's extra outputs go nowhere.
+    fbo.drawBuffers = fbo.textures.map((_, i) => gl[`COLOR_ATTACHMENT${i}`]);
+    gl.drawBuffers(fbo.drawBuffers);
+
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
       console.error("[PromptWaver] FBO incomplete");
       gl.deleteFramebuffer(fbo.fb);
@@ -539,13 +751,21 @@ void main() {
     if (!this.gl) return;
     const gl = this.gl;
 
-    Object.values(this.fbos).forEach(fbo => {
-      fbo.textures.forEach(tex => gl.deleteTexture(tex));
-      gl.deleteFramebuffer(fbo.fb);
-    });
+    this._destroyTargets();
 
-    Object.values(this.buffers).forEach(buf => gl.deleteBuffer(buf));
-    Object.values(this.programs).forEach(prog => gl.deleteProgram(prog));
+    // `buffers` holds VAOs and a plain count alongside the actual buffers,
+    // so each kind has to be released with its matching delete call rather
+    // than passing the lot to deleteBuffer.
+    const b = this.buffers;
+    // Deduped: capStart and capEnd deliberately share one interleaved buffer.
+    const vbos = new Set([b.quadVbo, b.quadEbo]);
+    Object.values(b.instanceBuffers || {}).forEach(e => vbos.add(e.vbo));
+    vbos.forEach(v => v && gl.deleteBuffer(v));
+    [b.instanceVao, b.emptyVao].forEach(v => v && gl.deleteVertexArray(v));
+    Object.values(this.programs).forEach(p => p && gl.deleteProgram(p));
+
+    this.buffers = {};
+    this.programs = {};
   }
 }
 
