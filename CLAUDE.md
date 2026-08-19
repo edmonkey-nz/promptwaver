@@ -129,11 +129,17 @@ Cross-cutting render inputs are passed as underscore-prefixed keys on the resolv
 
 ### Laser vs display are deliberately different
 
-Monitor filters — glow, trails, mirror, kaleidoscope, keystone — are **canvas-only** and never touch the vector data sent to the DAC. They're implemented in the browser (`web/static/index.html`) and stored per-scene in `spec.camera`.
+Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve — are **browser-only** and never touch the vector data sent to the DAC. They're implemented in `web/static/renderer.js` and stored per-scene in `spec.camera`.
 
-`Path.glow` (per-stroke, authored by `pattern2d`) is monitor-only for the same reason: the DAC's per-point intensity channel is written as a constant 255, so brightness on a laser is carried by RGB, not blur. Note the renderer is **duplicated** in `web/static/output.html` — a change to how strokes are drawn needs making in both, or the projector and the preview will disagree.
+**`line_curve` is bipolar** (-1..1) where every other filter is unipolar: 0 means "draw the polyline exactly as authored", positive resamples it through a spline, negative drops points. It is centred rather than based at 0 specifically so the default leaves saved geometry untouched — don't "normalise" it to 0..1.
 
-For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing and inserts blanking and dwell points **between every stroke** (~8 fixed points per stroke transition). So the PPS budget is dominated by *stroke count*, not geometry complexity: at 28000 PPS and 45fps you have roughly 620 points per frame, and a full-width stroke alone costs ~67. Chaining strokes into continuous polylines is the highest-leverage optimisation for dense flat content. `shadowBlur` in the canvas renderer is also expensive per state change — there's a comment recording a previous multi-pass glow attempt that made the preview unusable.
+`Path.glow` (per-stroke, authored by `pattern2d`) is monitor-only for the same reason: the DAC's per-point intensity channel is written as a constant 255, so brightness on a laser is carried by RGB, not blur.
+
+**Both surfaces share one renderer.** `web/static/renderer.js` is loaded by `index.html` and `output.html` alike and owns all drawing; each page only supplies a `filters` object and a canvas. This replaced a hand-duplicated pair of paint functions, so a change to how strokes are drawn is now made once. What legitimately differs is what each page puts in `filters`: the in-page preview has no flip (it isn't a physical screen) and a fixed hairline line width, while the output window scales width with the viewport and carries per-monitor flip/keystone from localStorage.
+
+For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing and inserts blanking and dwell points **between every stroke** (~8 fixed points per stroke transition). So the PPS budget is dominated by *stroke count*, not geometry complexity: at 28000 PPS and 45fps you have roughly 620 points per frame, and a full-width stroke alone costs ~67. Chaining strokes into continuous polylines is the highest-leverage optimisation for dense flat content.
+
+The browser side is no longer the bottleneck it was: rendering is WebGL2 and a full-HD frame with bloom costs ~0.5ms, against a 50ms budget. **Assume the monitor's frame rate is limited by the ~20Hz broadcast, not by drawing** — if it reads low, profile `engine.preview()`/`state()` and the broadcaster before touching the renderer.
 
 ### Scene JSON round-trip
 

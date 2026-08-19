@@ -414,17 +414,19 @@ void main() {
     this.buildGLResources();
   }
 
+  // Shown as a DOM overlay rather than painted into the canvas: once a
+  // webgl2 context exists on an element, getContext("2d") on it returns
+  // null, so drawing the message was silently impossible on exactly the
+  // path that reports a missing GL feature — the machine got a black
+  // screen and nothing else.
   showWebGLError(msg) {
     console.error("[PromptWaver]", msg);
-    const canvas = this.canvas;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#a04040";
-      ctx.font = "14px monospace";
-      ctx.fillText(msg, 20, 30);
-    }
+    const el = document.createElement("div");
+    el.textContent = `PromptWaver — ${msg}`;
+    el.style.cssText = "position:absolute;z-index:9;left:0;right:0;top:40%;" +
+      "text-align:center;color:#a04040;background:#000;padding:12px;" +
+      "font:13px ui-monospace,Menlo,Consolas,monospace;pointer-events:none";
+    (this.canvas.parentNode || document.body).appendChild(el);
   }
 
   render(scene, filters, canvasSize) {

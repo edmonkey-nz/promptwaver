@@ -8,6 +8,52 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.77.0]
+
+### WebGL2 renderer
+
+The browser-side visuals are rendered with WebGL2 instead of Canvas2D. A dense
+2D scene that ran at 5–13fps on a full-HD projector now draws in about 0.5ms a
+frame. **Chrome (or another Chromium browser) with hardware acceleration is now
+required** — there is no Canvas2D fallback.
+
+- **GPU bloom** replaces `shadowBlur`, which was CPU-bound and had to be capped
+  at a 16px radius to stay usable. A separable Gaussian costs the same at any
+  radius, and the buffer is half-float, so overlapping strokes push past white
+  the way real light does rather than clamping flat.
+- **One renderer for both surfaces.** `web/static/renderer.js` is shared by the
+  control page and the output window, replacing a hand-duplicated pair of paint
+  functions that had to be kept in step by hand.
+- **Kaleidoscope** is a single shader pass instead of one clipped full-canvas
+  blit per wedge per frame. It now mirrors alternate wedges so neighbours meet
+  along a shared edge; the old version flipped odd wedges about the canvas
+  centre, which sampled an unrelated part of the image. Affects `cutlery
+  drawer`, the only scene using it.
+- The **in-page preview now applies kaleidoscope**, which it previously ignored,
+  so it no longer disagrees with the projector.
+
+### New monitor controls
+
+- **Bloom shape** — `bloom_spread` and `bloom_intensity`, per-scene, under a
+  collapsed *Bloom shape* section. Defaults match the previous fixed look.
+- **Line curve** — bipolar, per-scene. 0 draws polylines exactly as authored;
+  right resamples through a cardinal spline (smooth), left drops points
+  (angular). MIDI-bindable and a modulation destination. Monitor-only: the DAC
+  still receives the authored path.
+
+### Broadcast rate
+
+The output window was capped near 13fps by the server, not by drawing. Three
+fixes take it to the intended 20Hz:
+
+- The broadcaster slept a flat 50ms *after* its work, making the real period
+  `work + 50ms`, so 20Hz was unreachable by construction. It now sleeps only the
+  unused remainder of the budget.
+- `preview()` rounded every coordinate in a Python loop; vectorised with numpy,
+  the high-quality path went 13.15ms → 4.76ms. Output is byte-identical.
+- The control-page payload was built even when only an output window was
+  connected. Both payloads are now built lazily.
+
 ## [0.76.0]
 
 ### `bell` — a second percussive voice

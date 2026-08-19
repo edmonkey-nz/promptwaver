@@ -1,8 +1,9 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.76.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.77.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
+![browser](https://img.shields.io/badge/browser-Chrome%20(WebGL2)-important)
 ![ai-code](https://img.shields.io/badge/AI%20coded-YES-orange)
 
 > **Pre-release, active development.** Version stays 0.x until things settle;
@@ -37,13 +38,24 @@ Note: the roots of this reflected on a exploratory game on PS1 called 'Fluid' (1
 - **Full-featured synth** — pad/pluck/osc/noise voices, ADSR envelopes, arpeggiator, per-voice LFO, EQ, delay, distortion
 - **MIDI control** — learn any control to a hardware knob; slots persist across scene changes
 - **Dual output** — laser + data projector simultaneously with independent keystone/flip per screen
-- **Monitor effects** — glow, trails, kaleidoscope (display-only, laser unaffected)
+- **Monitor effects** — GPU bloom, trails, mirror, kaleidoscope, and an angular↔smooth line curve (display-only, laser unaffected)
 - **3D immersive scenes** — orbit/drift/fly camera modes through composed worlds
 - **Scene types** — every scene is 2D (flat, no camera) or 3D (navigable), badged in the library
 - **Scene library** — save, load, crossfade, regenerate audio for existing visuals
 - **Multi-model support** — choose Haiku (fast/cheap), Sonnet (better), or Opus (best)
 
 ## Install
+
+### Browser requirement
+
+The visual output is rendered with **WebGL2**, so both the control page and
+the output/projector window need a browser that supports it with hardware
+acceleration enabled — in practice **Chrome** (or another Chromium browser).
+There is no Canvas2D fallback: on a browser without WebGL2 the canvas stays
+black and the page prints the reason instead of drawing.
+
+If the output window is black but the UI works, check `chrome://gpu` for
+hardware acceleration, and the browser console for a `[PromptWaver]` message.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate

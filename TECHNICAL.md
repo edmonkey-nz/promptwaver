@@ -233,7 +233,7 @@ Since the browser only updates at ~20Hz anyway (below), running the engine at `-
 
 Profiling now puts the remaining heavy frame time in `Camera.project` / `_clip_and_project` — that is where to look if this ceiling ever needs raising again.
 
-**Engine fps is not monitor fps.** The websocket broadcasts at ~20Hz (`web/server.py`) and the canvas paints on message arrival, with no `requestAnimationFrame`. Rendering above ~20fps only benefits the laser; raising `--fps` toward a 60Hz monitor's refresh would tighten the frame budget without the monitor ever seeing the extra frames.
+**Engine fps is not monitor fps.** The websocket broadcasts at ~20Hz (`web/server.py`) and the canvas paints on message arrival, with no `requestAnimationFrame`. That 20Hz is the real ceiling for what a screen shows: the broadcaster sleeps the remainder of a 50ms budget after building each payload, so the monitor's rate falls below 20 only when `state()` + `preview()` + serialisation exceed that budget — which is a server-side cost, not a drawing one. Rendering above ~20fps only benefits the laser; raising `--fps` toward a 60Hz monitor's refresh would tighten the frame budget without the monitor ever seeing the extra frames.
 
 ### Asking for a big world: the node slider
 
@@ -296,16 +296,24 @@ Two settings govern draw rate, in the **Output** group:
 - **max PPS** — the hardware ceiling. Persists in `settings.json` and is sent to Claude with every generation, so scenes are authored within your rig's real budget
 - **scene PPS** — an optional per-scene override, blank by default. Saved into the scene JSON as `"pps"`, so it round-trips through the library
 
-## Monitor filters — glow / trails / kaleidoscope
+## Monitor filters — bloom / trails / kaleidoscope / line curve
 
-**Canvas-only display effects** — they never touch the vector data sent to the laser, only how it's drawn on screen:
+**Display-only effects** — they never touch the vector data sent to the laser, only how it's drawn on screen:
 
-- **glow** — a soft blur halo around each stroke
-- **trails** — instead of clearing to black each frame, fades the previous frame slightly, so motion leaves a persistence trail
-- **mirror x/y** — reflects one half of the frame over the centre line onto the other (kaleidoscope-style)
-- **kaleidoscope segments** — wedge-based radial symmetry with alternating mirrors (3-12 segments)
+- **glow** — per-stroke bloom intensity, floored by the scene-wide slider
+- **bloom shape** — `bloom_spread` (halo width, as a fraction of the smaller screen dimension) and `bloom_intensity` (how hard the blurred layer is added back). Collapsed under *Bloom shape* since they're set once while authoring; 0 intensity disables bloom
+- **trails** — instead of clearing to black each frame, retains the previous frame scaled by `trail`, so motion leaves a persistence trail
+- **mirror x/y** — copies one half of the frame over the other (an asymmetric overwrite, not a symmetric fold)
+- **kaleidoscope segments** — wedge-based radial symmetry, mirroring alternate wedges (3-12 segments)
+- **line curve** — bipolar. 0 draws polylines exactly as authored; positive resamples through a cardinal spline (smooth), negative drops points (angular, the faceted look the low-resolution preview has)
 
-All three are **per-scene settings**: they save into the scene's JSON via **Save Camera settings** / **Save all scene settings**, and load back with whichever scene set them. They apply identically in the preview and any open Output Window.
+All are **per-scene settings**: they save into the scene's JSON via **Save Camera settings** / **Save all scene settings**, and load back with whichever scene set them. They apply identically in the preview and any open Output Window.
+
+### How they're rendered
+
+Everything above runs in **WebGL2** (`web/static/renderer.js`, shared by the control page and the output window — there is no Canvas2D path, and no fallback). One pass draws the strokes as capsule-SDF quads into a half-float buffer with a second target scaled by each stroke's glow; that target is blurred with a separable Gaussian at half resolution and added back; the result composites over the previous frame scaled by `trail`; a final pass applies kaleidoscope, mirror and flip as composed source lookups.
+
+A full-HD frame with bloom costs about **0.5ms**, so drawing is nowhere near the limiting factor — see the note on engine fps vs monitor fps above.
 
 ## Keystone correction & dual output windows
 
