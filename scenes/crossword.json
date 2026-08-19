@@ -1,0 +1,277 @@
+{
+  "name": "crossword",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "arm": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.16,
+                  0.16
+                ],
+                "b": [
+                  0.16,
+                  0.93
+                ]
+              }
+            ]
+          },
+          "petal": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.24,
+                  0.0
+                ],
+                "b": [
+                  0.62,
+                  0.05
+                ]
+              }
+            ]
+          },
+          "core": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 3,
+                "r": 0.13
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "arm",
+            "color": [
+              0.25,
+              0.8,
+              1.0
+            ],
+            "glow": 0.85,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 4,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "petal",
+            "color": [
+              0.4,
+              1.0,
+              0.75
+            ],
+            "glow": 0.75,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.04,
+              "n": 2,
+              "hue_step": 0.06
+            },
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.02
+            }
+          },
+          {
+            "def": "core",
+            "color": [
+              0.4,
+              1.0,
+              0.75
+            ],
+            "glow": 1.0,
+            "closed": true,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.6,
+              "n": 3,
+              "hue_step": 0.09
+            }
+          }
+        ],
+        "scale": 3.07,
+        "rotate": 0.09,
+        "spread": 1.0,
+        "glow": 0.0,
+        "max_strokes": 420
+      }
+    }
+  ],
+  "palette": [
+    "#05060f",
+    "#33e0d0",
+    "#ff6fd8"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "triangle",
+    "voices": 4,
+    "attack": 3.0,
+    "release": 6.0,
+    "base_note": 45,
+    "chord": [
+      0,
+      7,
+      12,
+      15
+    ]
+  },
+  "modulation": [
+    {
+      "source": "voice.bells",
+      "dest": "visual.scale",
+      "depth": 0.18
+    },
+    {
+      "source": "synth_high",
+      "dest": "visual.spread",
+      "depth": 0.25
+    }
+  ],
+  "camera": {
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.36,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 60.0,
+    "master": 0.8,
+    "distortion": 0.05,
+    "delay": {
+      "time": 0.45,
+      "feedback": 0.35,
+      "mix": 0.3
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.6,
+    "swell_period": 24.0,
+    "voices": [
+      {
+        "name": "drone",
+        "type": "pad",
+        "waveform": "saw",
+        "note": 36,
+        "chord": [
+          0,
+          7,
+          12,
+          19
+        ],
+        "level": 0.5,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "bells",
+        "type": "pluck",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "level": 0.28,
+        "rate": 0.5,
+        "decay": 1.6,
+        "pan": 0.25,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "air",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.4,
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "a epic crossword of complexiity",
+  "audio_prompt": "thinking",
+  "generation_settings": {
+    "size": 340,
+    "warmth": 0.71,
+    "energy": 0.51,
+    "evolution": 1,
+    "kind": "2d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 9544,
+      "output_tokens": 22644,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.1228
+    },
+    "expansion": null
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

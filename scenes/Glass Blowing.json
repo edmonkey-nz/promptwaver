@@ -5292,7 +5292,7 @@
     {
       "source": "audio_level",
       "dest": "camera.speed",
-      "depth": 0.4
+      "depth": 0.065
     }
   ],
   "camera": {
@@ -5352,8 +5352,8 @@
     "speed": 0.0,
     "fov": 77.0,
     "near": 0.4,
-    "far": 40,
-    "max_strokes": 20,
+    "far": 6.0,
+    "max_strokes": 155,
     "depth": {
       "mode": "cull"
     },
@@ -5363,8 +5363,8 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.31,
-    "trail": 0.0,
+    "glow": 0.59,
+    "trail": 0.37,
     "kaleidoscope_segments": 0
   },
   "pps": null,

@@ -1,0 +1,953 @@
+{
+  "name": "Circuitz",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "pcb_board": [
+            {
+              "op": "rect",
+              "w": 16,
+              "h": 12,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "grid",
+              "w": 15,
+              "h": 11,
+              "nx": 6,
+              "ny": 5,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0.01
+              ]
+            }
+          ],
+          "ic_chip": [
+            {
+              "op": "box",
+              "size": [
+                1.2,
+                1.2,
+                0.4
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "rect",
+              "w": 0.8,
+              "h": 0.8,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0.21
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.5,
+                -0.5,
+                0.21
+              ],
+              "b": [
+                -0.5,
+                0.5,
+                0.21
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.5,
+                0.5,
+                0.21
+              ],
+              "b": [
+                0.5,
+                0.5,
+                0.21
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.5,
+                0.5,
+                0.21
+              ],
+              "b": [
+                0.5,
+                -0.5,
+                0.21
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.5,
+                -0.5,
+                0.21
+              ],
+              "b": [
+                -0.5,
+                -0.5,
+                0.21
+              ]
+            }
+          ],
+          "capacitor": [
+            {
+              "op": "circle",
+              "r": 0.35,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                -0.45,
+                0
+              ],
+              "b": [
+                0,
+                -0.8,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.45,
+                0
+              ],
+              "b": [
+                0,
+                0.8,
+                0
+              ]
+            }
+          ],
+          "resistor": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.8,
+                  0
+                ],
+                [
+                  0.1,
+                  -0.5,
+                  0
+                ],
+                [
+                  -0.1,
+                  -0.3,
+                  0
+                ],
+                [
+                  0.1,
+                  -0.1,
+                  0
+                ],
+                [
+                  -0.1,
+                  0.1,
+                  0
+                ],
+                [
+                  0.1,
+                  0.3,
+                  0
+                ],
+                [
+                  -0.1,
+                  0.5,
+                  0
+                ],
+                [
+                  0,
+                  0.8,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "diode": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                -0.8,
+                0
+              ],
+              "b": [
+                0,
+                0.8,
+                0
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.15,
+                  -0.3,
+                  0
+                ],
+                [
+                  0.15,
+                  -0.3,
+                  0
+                ],
+                [
+                  0,
+                  0.3,
+                  0
+                ],
+                [
+                  -0.15,
+                  -0.3,
+                  0
+                ]
+              ],
+              "closed": true
+            }
+          ],
+          "crystal": [
+            {
+              "op": "box",
+              "size": [
+                0.8,
+                0.4,
+                0.3
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.4,
+                0,
+                0.15
+              ],
+              "b": [
+                -0.4,
+                0,
+                -0.8
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.4,
+                0,
+                0.15
+              ],
+              "b": [
+                0.4,
+                0,
+                -0.8
+              ]
+            }
+          ],
+          "led": [
+            {
+              "op": "circle",
+              "r": 0.3,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                -0.4,
+                0
+              ],
+              "b": [
+                0,
+                -0.9,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0.4,
+                0
+              ],
+              "b": [
+                0,
+                0.9,
+                0
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -0.2,
+                  0.15,
+                  0
+                ],
+                [
+                  -0.2,
+                  -0.15,
+                  0
+                ],
+                [
+                  0.2,
+                  0.15,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "connector": [
+            {
+              "op": "box",
+              "size": [
+                2,
+                0.5,
+                0.3
+              ],
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.8,
+                0,
+                0.15
+              ],
+              "b": [
+                -0.8,
+                -0.8,
+                0.15
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.2,
+                0,
+                0.15
+              ],
+              "b": [
+                -0.2,
+                -0.8,
+                0.15
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.4,
+                0,
+                0.15
+              ],
+              "b": [
+                0.4,
+                -0.8,
+                0.15
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.8,
+                0,
+                0.15
+              ],
+              "b": [
+                0.8,
+                -0.8,
+                0.15
+              ]
+            }
+          ],
+          "trace_path": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -6,
+                  -4,
+                  0.02
+                ],
+                [
+                  -4,
+                  -4,
+                  0.02
+                ],
+                [
+                  -4,
+                  -2,
+                  0.02
+                ],
+                [
+                  -2,
+                  -2,
+                  0.02
+                ],
+                [
+                  -2,
+                  0,
+                  0.02
+                ],
+                [
+                  0,
+                  0,
+                  0.02
+                ],
+                [
+                  0,
+                  3,
+                  0.02
+                ],
+                [
+                  3,
+                  3,
+                  0.02
+                ],
+                [
+                  3,
+                  1,
+                  0.02
+                ],
+                [
+                  5,
+                  1,
+                  0.02
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "via": [
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0.02
+              ],
+              "seg": 8
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "pcb_board",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.05,
+              0.15,
+              0.12
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "ic_chip",
+            "pos": [
+              -4,
+              3,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.15,
+              0.12,
+              0.08
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "capacitor",
+            "pos": [
+              2,
+              4,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.8,
+              0.7,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2,
+              "amp": 0.15,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "capacitor",
+            "pos": [
+              5,
+              -2,
+              0
+            ],
+            "scale": 0.9,
+            "color": [
+              0.8,
+              0.7,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.12,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "resistor",
+            "pos": [
+              -2,
+              2,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.9,
+              0.6,
+              0.2
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "diode",
+            "pos": [
+              3,
+              -1,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.2,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.5,
+              "amp": 0.2,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "crystal",
+            "pos": [
+              -5,
+              -3,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.6,
+              0.6,
+              0.9
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "led",
+            "pos": [
+              6,
+              2,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0,
+              1,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.25,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "connector",
+            "pos": [
+              0,
+              -5,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.7,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "trace_path",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.6,
+              0.1
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "via",
+            "pos": [
+              -4,
+              -2,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.5,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1,
+              "amp": 0.08,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "via",
+            "pos": [
+              0,
+              3,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.5,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.08,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "via",
+            "pos": [
+              3,
+              1,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.5,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.9,
+              "amp": 0.08,
+              "axis": "z"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0a0f0c",
+    "#ccb822",
+    "#ff3333",
+    "#00ff4d",
+    "#9699e6",
+    "#b3b3cc"
+  ],
+  "audio_patch": {
+    "engine": "acid",
+    "waveform": "square",
+    "voices": 3,
+    "attack": 0.08,
+    "release": 0.3,
+    "base_note": 43,
+    "chord": [
+      0,
+      7,
+      12
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "drift",
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "orbit_radius": 12,
+    "far": 19.0,
+    "speed": 0.15,
+    "max_strokes": 110,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_height": 1.5,
+    "fov": 60.0,
+    "near": 0.4,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.19,
+    "trail": 0.75,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 10,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 124.0,
+    "master": 0.7,
+    "distortion": 0.27,
+    "delay": {
+      "time": 0.25,
+      "feedback": 0.4,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "acid_bass",
+        "type": "pad",
+        "waveform": "square",
+        "note": 36,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.55,
+        "tone": 0.81,
+        "detune": 0.02,
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "env": {
+          "attack": 3.0,
+          "decay": 0.06,
+          "sustain": 0.85,
+          "release": 2.5
+        },
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2.0,
+          "decay": 0.55
+        },
+        "lfo": {
+          "on": true,
+          "rate": 0.015,
+          "shape": "random",
+          "depth": 0.69,
+          "dest": "tone"
+        },
+        "distortion": 0.0
+      },
+      {
+        "name": "tb303_lead",
+        "type": "pluck",
+        "waveform": "triangle",
+        "note": 60,
+        "scale": [
+          0,
+          3,
+          5,
+          7,
+          10,
+          12
+        ],
+        "level": 0.35,
+        "rate": 1.0,
+        "decay": 0.4,
+        "pan": 0.15,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.025,
+          "shape": "sine",
+          "depth": 0.73,
+          "dest": "pan"
+        },
+        "distortion": 0.0
+      },
+      {
+        "name": "808_kick",
+        "type": "sub",
+        "waveform": "sine",
+        "note": 24,
+        "chord": [
+          0
+        ],
+        "level": 0.5,
+        "tone": 0.5,
+        "detune": 0.0,
+        "pan": -0.1,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "distortion": 0.0
+      },
+      {
+        "name": "tech_texture",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.6,
+        "pan": -0.15,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "distortion": 0.0
+      }
+    ],
+    "eq": {
+      "low": -5.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_amount": 0.69,
+    "swell_period": 60.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.55,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [
+    {
+      "shape": "capacitor",
+      "voice": "acid_bass",
+      "param": "level",
+      "dest": "scale",
+      "range": [
+        0.5,
+        1.5
+      ]
+    }
+  ],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

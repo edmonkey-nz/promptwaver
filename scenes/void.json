@@ -707,7 +707,8 @@
               "type": "none"
             }
           }
-        ]
+        ],
+        "shape_speed": 0.17
       }
     }
   ],
@@ -750,19 +751,23 @@
     "orbit_radius": 8.5,
     "far": 19.0,
     "speed": 0.05,
-    "max_strokes": 55,
+    "max_strokes": 105,
     "depth": {
       "mode": "cull"
     },
     "orbit_height": 1.5,
     "fov": 60.0,
     "near": 0.4,
-    "disable_plane": false,
+    "disable_plane": true,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.56,
-    "trail": 0.82,
-    "kaleidoscope_segments": 0
+    "glow": 0.49,
+    "trail": 0.34,
+    "kaleidoscope_segments": 0,
+    "laser_max_strokes": null,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.24
   },
   "pps": null,
   "soundscape": {
@@ -917,7 +922,9 @@
       "high": 0.0
     },
     "swell_amount": 0.51,
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
