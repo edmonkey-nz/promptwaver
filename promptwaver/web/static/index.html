@@ -567,8 +567,8 @@
       <div class="field"><label>kaleidoscope (beta)</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
-      <div class="field"><label title="Rounds the polylines the engine produces. 0 draws them exactly as authored; higher values interpolate a spline through the same points. Screen only — the laser still gets the angular path.">line curve</label>
-        <input type="range" id="mf-curve" min="0" max="1" step="0.01" value="0">
+      <div class="field"><label title="Reshapes the polylines the engine produces. 0 draws them exactly as authored; right interpolates a spline through the same points (smooth); left drops points (angular/faceted). Screen only — the laser always gets the authored path.">line curve<br><span style="font-size:10px;color:var(--dim)">angular ← → smooth</span></label>
+        <input type="range" id="mf-curve" min="-1" max="1" step="0.01" value="0">
         <span class="val" id="v-mfcurve">0.00</span></div>
       <details class="accordion nested" id="acc-bloom" closed>
         <summary>Bloom shape</summary>

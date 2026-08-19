@@ -400,10 +400,13 @@ class Engine:
         # something else for a route to fight over.
         self.bloom_spread = 0.005
         self.bloom_intensity = 2.5
-        # 0 = polylines drawn exactly as authored (angular), 1 = full
-        # Catmull-Rom through the same points (smooth). MONITOR ONLY, like
-        # the filters above: the DAC still receives the unsmoothed path, so
-        # a laser will look angular where the screen looks curved.
+        # Bipolar. 0 draws polylines exactly as authored; positive resamples
+        # them through a spline (smooth); negative drops points (angular, the
+        # faceted look the low-resolution in-page preview has). Centred on 0
+        # rather than running 0..1 so the existing default keeps every scene's
+        # geometry untouched. MONITOR ONLY, like the filters above: the DAC
+        # still receives the authored path, so a laser looks angular where the
+        # screen looks curved.
         self.line_curve = 0.0
         self._mod_line_curve = 0.0
         # Modulated versions (live values, updated every tick)
@@ -510,7 +513,7 @@ class Engine:
         elif key == "bloom_intensity":
             self.bloom_intensity = max(0.0, min(5.0, float(value)))
         elif key == "line_curve":
-            self.line_curve = max(0.0, min(1.0, float(value)))
+            self.line_curve = max(-1.0, min(1.0, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -1595,7 +1598,7 @@ class Engine:
             "kaleidoscope_segments": max(0, round(self._mod_kaleidoscope_segments)),
             "bloom_spread": self.bloom_spread,
             "bloom_intensity": self.bloom_intensity,
-            "line_curve": max(0.0, min(1.0, self._mod_line_curve)),
+            "line_curve": max(-1.0, min(1.0, self._mod_line_curve)),
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),

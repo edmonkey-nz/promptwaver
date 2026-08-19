@@ -627,16 +627,17 @@ void main() {
 
   _buildSegments(scene, filters) {
     const segments = [];
-    // Subdivision count rises with the curve amount, so at 0 this is exactly
-    // one segment per authored span and the geometry is bit-identical to an
-    // unsmoothed frame — the smoothing costs nothing when it's off.
-    const curve = Math.max(0, Math.min(1, filters.lineCurve || 0));
-    const steps = 1 + Math.round(curve * 5);
+    // Bipolar: positive resamples through a spline (smooth), negative drops
+    // points (angular). At 0 neither runs, so the geometry is bit-identical
+    // to an unprocessed frame and the control costs nothing when centred.
+    const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
+    const steps = 1 + Math.round(Math.max(0, curve) * 5);
 
     for (const stroke of scene) {
       let pts = stroke.p;
       if (!pts || pts.length < 2) continue;
-      if (steps > 1) pts = PromptWaverRenderer._spline(pts, curve, steps);
+      if (curve > 0) pts = PromptWaverRenderer._spline(pts, curve, steps);
+      else if (curve < 0) pts = PromptWaverRenderer._decimate(pts, -curve);
 
       // Absent "g" means no per-stroke glow; the scene-wide glow still
       // applies as a floor, but that's done in the shader so the global
@@ -658,6 +659,33 @@ void main() {
       }
     }
     return segments;
+  }
+
+  // Drop points from a polyline to make it visibly faceted — the same kind
+  // of coarseness the low-resolution in-page preview shows, but as a
+  // deliberate look rather than a budget. Endpoints are always kept, so a
+  // stroke never shortens as it coarsens; at full amount a stroke collapses
+  // to about three points, which turns a circle into a triangle.
+  static _decimate(pts, amount) {
+    const n = pts.length;
+    const target = Math.max(3, Math.round(n * (1 - amount * 0.85)));
+    if (target >= n) return pts;
+    // Fractional spacing, rounded to the nearest ORIGINAL vertex. A plain
+    // integer stride only reaches n/1, n/2, n/3… so the slider jumped
+    // between a handful of point counts instead of sweeping; sampling at
+    // fractional positions makes the count continuous. Rounding to real
+    // vertices rather than interpolating along the chords keeps any
+    // deliberate sharp corner a corner, which is the point of this end of
+    // the control.
+    const out = [];
+    const step = n / target;
+    let prev = -1;
+    for (let i = 0; i < target; i++) {
+      const idx = Math.min(n - 1, Math.round(i * step));
+      if (idx !== prev) { out.push(pts[idx]); prev = idx; }
+    }
+    if (prev !== n - 1) out.push(pts[n - 1]);
+    return out.length >= 2 ? out : pts;
   }
 
   // Cardinal-spline resample of a polyline, passing through every original
