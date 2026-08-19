@@ -627,9 +627,16 @@ void main() {
 
   _buildSegments(scene, filters) {
     const segments = [];
+    // Subdivision count rises with the curve amount, so at 0 this is exactly
+    // one segment per authored span and the geometry is bit-identical to an
+    // unsmoothed frame — the smoothing costs nothing when it's off.
+    const curve = Math.max(0, Math.min(1, filters.lineCurve || 0));
+    const steps = 1 + Math.round(curve * 5);
+
     for (const stroke of scene) {
-      const pts = stroke.p;
+      let pts = stroke.p;
       if (!pts || pts.length < 2) continue;
+      if (steps > 1) pts = PromptWaverRenderer._spline(pts, curve, steps);
 
       // Absent "g" means no per-stroke glow; the scene-wide glow still
       // applies as a floor, but that's done in the shader so the global
@@ -651,6 +658,43 @@ void main() {
       }
     }
     return segments;
+  }
+
+  // Cardinal-spline resample of a polyline, passing through every original
+  // point. `amount` scales the tangents: 0 leaves the path straight between
+  // points (the shape as authored), 0.5 is standard Catmull-Rom. Anything
+  // above that overshoots into loops at sharp corners, which is why the
+  // slider's top end maps to 0.5 rather than 1.
+  //
+  // Interpolating here rather than asking the engine for denser strokes is
+  // deliberate: this is a look, not extra fidelity, and the points arrive
+  // already thinned for the wire. It is also why this is monitor-only — the
+  // DAC still gets the authored path.
+  static _spline(pts, amount, steps) {
+    const n = pts.length;
+    const a = amount * 0.5;
+    // Clamped at both ends, so the first and last spans get a tangent
+    // without inventing points beyond the stroke.
+    const at = (i) => pts[i < 0 ? 0 : (i > n - 1 ? n - 1 : i)];
+    const out = [];
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = at(i - 1), p1 = pts[i], p2 = pts[i + 1], p3 = at(i + 2);
+      const m1x = a * (p2[0] - p0[0]), m1y = a * (p2[1] - p0[1]);
+      const m2x = a * (p3[0] - p1[0]), m2y = a * (p3[1] - p1[1]);
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps, t2 = t * t, t3 = t2 * t;
+        const h00 = 2 * t3 - 3 * t2 + 1;
+        const h10 = t3 - 2 * t2 + t;
+        const h01 = -2 * t3 + 3 * t2;
+        const h11 = t3 - t2;
+        out.push([
+          h00 * p1[0] + h10 * m1x + h01 * p2[0] + h11 * m2x,
+          h00 * p1[1] + h10 * m1y + h01 * p2[1] + h11 * m2y,
+        ]);
+      }
+    }
+    out.push(pts[n - 1]);
+    return out;
   }
 
   _uploadSegments(segments) {

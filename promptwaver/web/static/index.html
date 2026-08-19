@@ -567,6 +567,9 @@
       <div class="field"><label>kaleidoscope (beta)</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
+      <div class="field"><label title="Rounds the polylines the engine produces. 0 draws them exactly as authored; higher values interpolate a spline through the same points. Screen only — the laser still gets the angular path.">line curve</label>
+        <input type="range" id="mf-curve" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="v-mfcurve">0.00</span></div>
       <details class="accordion nested" id="acc-bloom" closed>
         <summary>Bloom shape</summary>
         <div class="accordion-body">
@@ -2866,6 +2869,11 @@ function syncMonitorFilters(s){
     $("mf-kaleidoscope").value = monitorFilters.kaleidoscopeSegments;
     $("v-mfkaleidoscope").textContent = monitorFilters.kaleidoscopeSegments === 0 ? "off" : monitorFilters.kaleidoscopeSegments + " way";
   }
+  monitorFilters.lineCurve = s.line_curve ?? 0;
+  if (document.activeElement !== $("mf-curve")) {
+    $("mf-curve").value = monitorFilters.lineCurve;
+    $("v-mfcurve").textContent = monitorFilters.lineCurve.toFixed(2);
+  }
   monitorFilters.bloomSpread = s.bloom_spread ?? 0.005;
   monitorFilters.bloomIntensity = s.bloom_intensity ?? 2.5;
   if (document.activeElement !== $("mf-bloomspread")) {
@@ -2967,6 +2975,7 @@ slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0
 // null midiKey, as for kaleidoscope: these set a scene's bloom character
 // once while authoring, rather than being reached for mid-performance. The
 // glow slider above is the MIDI-bindable one, and it drives the same bloom.
+slider("mf-curve", "line_curve", "mfcurve");
 slider("mf-bloomspread", "bloom_spread", "mfbloomspread", (v)=>(+v).toFixed(3), null);
 slider("mf-bloomint", "bloom_intensity", "mfbloomint", (v)=>(+v).toFixed(1), null);
 // The three layer0.* sliders that stood here are gone — they hardcoded

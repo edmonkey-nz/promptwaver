@@ -400,6 +400,12 @@ class Engine:
         # something else for a route to fight over.
         self.bloom_spread = 0.005
         self.bloom_intensity = 2.5
+        # 0 = polylines drawn exactly as authored (angular), 1 = full
+        # Catmull-Rom through the same points (smooth). MONITOR ONLY, like
+        # the filters above: the DAC still receives the unsmoothed path, so
+        # a laser will look angular where the screen looks curved.
+        self.line_curve = 0.0
+        self._mod_line_curve = 0.0
         # Modulated versions (live values, updated every tick)
         self._mod_glow = 0.0
         self._mod_trail = 0.0
@@ -503,6 +509,8 @@ class Engine:
             self.bloom_spread = max(0.0, min(0.02, float(value)))
         elif key == "bloom_intensity":
             self.bloom_intensity = max(0.0, min(5.0, float(value)))
+        elif key == "line_curve":
+            self.line_curve = max(0.0, min(1.0, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -997,6 +1005,7 @@ class Engine:
                     "kaleidoscope_segments": self.kaleidoscope_segments,
                     "bloom_spread": self.bloom_spread,
                     "bloom_intensity": self.bloom_intensity,
+                    "line_curve": self.line_curve,
                 })
                 # LFO rates travel with the scene like the rest of the
                 # modulation setup. Captured from the live sources rather than
@@ -1066,6 +1075,9 @@ class Engine:
         # before these existed loads with the tuning they were authored under.
         self.bloom_spread = float(cam_cfg.get("bloom_spread", 0.005))
         self.bloom_intensity = float(cam_cfg.get("bloom_intensity", 2.5))
+        # Defaults to 0 so every existing scene keeps the exact geometry it
+        # was authored against.
+        self.line_curve = float(cam_cfg.get("line_curve", 0.0))
 
     #: Every sound-driven source. The "audio <-> visual" slider scales all of
     #: them together — it means "how much does sound move the picture", and a
@@ -1191,6 +1203,7 @@ class Engine:
         "glow": "screen glow",
         "trail": "trails",
         "kaleidoscope_segments": "kaleidoscope",
+        "line_curve": "line curve",
     }
 
     #: Generator names are registry identifiers, not UI copy. Groups not listed
@@ -1242,7 +1255,7 @@ class Engine:
         # difference, not a caveat: monitor filters are drawn in the browser
         # and never touch the vector data sent to the DAC, so a route here
         # does nothing at all on a laser.
-        for k in ("glow", "trail", "kaleidoscope_segments"):
+        for k in ("glow", "trail", "kaleidoscope_segments", "line_curve"):
             out.append(entry(k, "Monitor · screen only"))
         return out
 
@@ -1426,6 +1439,7 @@ class Engine:
             self._mod_glow = self.matrix.value("glow", self.glow)
             self._mod_trail = self.matrix.value("trail", self.trail)
             self._mod_kaleidoscope_segments = self.matrix.value("kaleidoscope_segments", self.kaleidoscope_segments)
+            self._mod_line_curve = self.matrix.value("line_curve", self.line_curve)
 
             # crossfades render two full scenes for the transition's duration
             # (see SceneManager.render) — captured before render() below,
@@ -1581,6 +1595,7 @@ class Engine:
             "kaleidoscope_segments": max(0, round(self._mod_kaleidoscope_segments)),
             "bloom_spread": self.bloom_spread,
             "bloom_intensity": self.bloom_intensity,
+            "line_curve": max(0.0, min(1.0, self._mod_line_curve)),
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),
