@@ -261,26 +261,90 @@ void main() {
 }
 `;
 
-    // Final combine. Both inputs are premultiplied, and the destination is
-    // opaque black, so the sharp layer's colour is already its contribution
-    // and the bloom simply adds on top — the additive look real glow has.
+    // Combine, with trail feedback. The sharp layer is premultiplied, so its
+    // colour is already its own contribution and it composites over what's
+    // behind it with (1 - alpha); bloom is added on top, the additive look
+    // real glow has.
+    //
+    // The trail term reproduces what the Canvas2D version was actually doing.
+    // It faded by filling black at alpha (1 - trail) in source-over, i.e.
+    // `existing = existing * trail`, then drew the new frame over that. So
+    // `trail` is a per-frame retention factor, not a duration. At 0 this
+    // reduces exactly to the previous no-feedback combine.
     const compositeFS = `#version 300 es
 precision highp float;
 in vec2 vUv;
 uniform sampler2D uSharp;
 uniform sampler2D uBloom;
+uniform sampler2D uPrev;
 uniform float uBloomIntensity;
+uniform float uTrail;
 out vec4 outColor;
 
 void main() {
-  vec3 sharp = texture(uSharp, vUv).rgb;
+  vec4 sharp = texture(uSharp, vUv);
   vec3 bloom = texture(uBloom, vUv).rgb * uBloomIntensity;
-  outColor = vec4(sharp + bloom, 1.0);
+  vec3 prev = texture(uPrev, vUv).rgb * uTrail;
+  outColor = vec4(sharp.rgb + bloom + prev * (1.0 - sharp.a), 1.0);
+}
+`;
+
+    // Monitor post-effects, composed as one set of source lookups instead of
+    // the old chain of full-canvas blits (the kaleidoscope alone used to cost
+    // one clipped blit per wedge, every frame).
+    //
+    // Applied in reverse of the Canvas2D order — that ran kaleidoscope, then
+    // mirror, then flip over the rasterised image, and asking "where does
+    // this output pixel read from" walks that chain backwards.
+    const postFS = `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uSrc;
+uniform float uSegments;   // 0 = off, otherwise 3..12
+uniform vec2 uMirror;      // x, y as 0/1
+uniform vec2 uFlip;        // x, y as 0/1
+uniform float uAspect;     // canvas w/h, so wedges stay circular
+out vec4 outColor;
+
+const float PI = 3.14159265359;
+
+void main() {
+  vec2 uv = vUv;
+
+  // Whole-image reversal (per-monitor orientation), self-inverse.
+  if (uFlip.x > 0.5) uv.x = 1.0 - uv.x;
+  if (uFlip.y > 0.5) uv.y = 1.0 - uv.y;
+
+  // Mirror is an asymmetric overwrite, not a symmetric fold: the old code
+  // copied one half over the other and left the source half untouched. The
+  // y test is inverted relative to x because texture v runs bottom-up while
+  // the canvas it was ported from ran top-down.
+  if (uMirror.x > 0.5 && uv.x > 0.5) uv.x = 1.0 - uv.x;
+  if (uMirror.y > 0.5 && uv.y < 0.5) uv.y = 1.0 - uv.y;
+
+  if (uSegments >= 3.0) {
+    vec2 p = uv - 0.5;
+    p.x *= uAspect;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    if (a < 0.0) a += 2.0 * PI;
+    float seg = 2.0 * PI / uSegments;
+    float idx = floor(a / seg);
+    float local = a - idx * seg;
+    // Mirror alternate wedges so neighbours meet along their shared edge.
+    if (mod(idx, 2.0) >= 1.0) local = seg - local;
+    p = vec2(cos(local), sin(local)) * r;
+    p.x /= uAspect;
+    uv = p + 0.5;
+  }
+
+  outColor = vec4(texture(uSrc, uv).rgb, 1.0);
 }
 `;
 
     this.programs.blur = this.linkProgram(fullscreenVS, blurFS, "blur");
     this.programs.composite = this.linkProgram(fullscreenVS, compositeFS, "composite");
+    this.programs.post = this.linkProgram(fullscreenVS, postFS, "post");
 
     // The fullscreen triangle uses no attributes, but WebGL2 still requires
     // a bound VAO to draw.
@@ -446,11 +510,13 @@ void main() {
     gl.uniform2f(gl.getUniformLocation(this.programs.blur, 'uStep'), 0, stepPx / h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-    // --- pass 4: combine sharp + bloom to the screen ---
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // --- pass 4: combine sharp + bloom over the faded previous frame ---
+    // Into a buffer rather than straight to the screen, because the result
+    // has to survive to be read as `uPrev` next frame; the default
+    // framebuffer can't be relied on for that.
+    const [prev, cur] = this._trailPair();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, cur.fb);
     gl.viewport(0, 0, w, h);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
 
     const comp = this.programs.composite;
     gl.useProgram(comp);
@@ -460,12 +526,47 @@ void main() {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.fbos.bloomB.textures[0]);
     gl.uniform1i(gl.getUniformLocation(comp, 'uBloom'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, prev.textures[0]);
+    gl.uniform1i(gl.getUniformLocation(comp, 'uPrev'), 2);
     gl.uniform1f(gl.getUniformLocation(comp, 'uBloomIntensity'),
                  filters.bloomIntensity ?? PromptWaverRenderer.BLOOM_INTENSITY);
+    gl.uniform1f(gl.getUniformLocation(comp, 'uTrail'),
+                 Math.max(0, Math.min(0.95, filters.trail || 0)));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    this._trailFlip = !this._trailFlip;
+
+    // --- pass 5: monitor post-effects, to the screen ---
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const post = this.programs.post;
+    gl.useProgram(post);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, cur.textures[0]);
+    gl.uniform1i(gl.getUniformLocation(post, 'uSrc'), 0);
+    gl.uniform1f(gl.getUniformLocation(post, 'uSegments'),
+                 Math.round(filters.kaleidoscopeSegments || 0));
+    gl.uniform2f(gl.getUniformLocation(post, 'uMirror'),
+                 filters.mirrorX ? 1 : 0, filters.mirrorY ? 1 : 0);
+    gl.uniform2f(gl.getUniformLocation(post, 'uFlip'),
+                 filters.flipX ? 1 : 0, filters.flipY ? 1 : 0);
+    gl.uniform1f(gl.getUniformLocation(post, 'uAspect'), w / h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindVertexArray(null);
     gl.enable(gl.BLEND);
+  }
+
+  // Which trail buffer is the previous frame and which is being written.
+  // Swapped after every composite so this frame's output becomes next
+  // frame's feedback source.
+  _trailPair() {
+    return this._trailFlip
+      ? [this.fbos.trailB, this.fbos.trailA]
+      : [this.fbos.trailA, this.fbos.trailB];
   }
 
   // Allocate (or reallocate) the offscreen targets for the current canvas
@@ -484,13 +585,32 @@ void main() {
     const scene = this.createFBO(w, h, "RGBA16F", 2);
     const bloomA = this.createFBO(bw, bh, "RGBA16F", 1);
     const bloomB = this.createFBO(bw, bh, "RGBA16F", 1);
+    // The trail pair is deliberately 8-bit, not 16F like the rest. It feeds
+    // back into itself every frame, so an unclamped format would let a bright
+    // static image compound toward trail/(1-trail) — about 20x at the 0.95
+    // ceiling — instead of settling. Clamping at each step is also what the
+    // Canvas2D version did implicitly, so saturation behaves as before.
+    const trailA = this.createFBO(w, h, "RGBA", 1);
+    const trailB = this.createFBO(w, h, "RGBA", 1);
 
-    if (!scene || !bloomA || !bloomB) {
+    if (!scene || !bloomA || !bloomB || !trailA || !trailB) {
       console.error("[PromptWaver] could not allocate render targets");
       this._destroyTargets();
       return false;
     }
-    this.fbos = { scene, bloomA, bloomB };
+    this.fbos = { scene, bloomA, bloomB, trailA, trailB };
+    this._trailFlip = false;
+
+    // Freshly created textures have undefined contents, and the trail pair is
+    // read before it is ever fully written — without this the first frames
+    // can feed back whatever was in the driver's memory.
+    const gl = this.gl;
+    gl.clearColor(0, 0, 0, 1);
+    for (const t of [trailA, trailB]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return true;
   }
 

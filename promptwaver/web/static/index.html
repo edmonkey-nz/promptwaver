@@ -567,13 +567,18 @@
       <div class="field"><label>kaleidoscope (beta)</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
-      <div class="hint">bloom shapes the glow above — no effect where glow is 0</div>
-      <div class="field"><label>bloom spread</label>
-        <input type="range" id="mf-bloomspread" min="0" max="0.02" step="0.001" value="0.005">
-        <span class="val" id="v-mfbloomspread">0.005</span></div>
-      <div class="field"><label>bloom intensity</label>
-        <input type="range" id="mf-bloomint" min="0" max="5" step="0.1" value="2.5">
-        <span class="val" id="v-mfbloomint">2.5</span></div>
+      <details class="accordion nested" id="acc-bloom" closed>
+        <summary>Bloom shape</summary>
+        <div class="accordion-body">
+          <div class="hint">shapes the glow slider above — no effect where glow is 0</div>
+          <div class="field"><label title="How far the glow spreads, as a fraction of the smaller screen dimension.">bloom spread</label>
+            <input type="range" id="mf-bloomspread" min="0" max="0.02" step="0.001" value="0.005">
+            <span class="val" id="v-mfbloomspread">0.005</span></div>
+          <div class="field"><label title="How hard the blurred glow is added back over the strokes. 0 disables bloom entirely.">bloom intensity</label>
+            <input type="range" id="mf-bloomint" min="0" max="5" step="0.1" value="2.5">
+            <span class="val" id="v-mfbloomint">2.5</span></div>
+        </div>
+      </details>
     </div>
 
     <!-- Built at runtime from the generator registry's schema (state.layers),
