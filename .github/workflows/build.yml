@@ -68,6 +68,14 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
+    # Creating a release WRITES to the repo, and the default GITHUB_TOKEN is
+    # read-only unless the repo says otherwise. Without this the three builds
+    # all succeed, their executables upload as artifacts, and only this last
+    # job fails with a 403 — which is why every tag from v0.70.0 to v0.78.2
+    # produced working binaries and no release to attach them to.
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +91,13 @@ jobs:
           body: |
             ## PromptWaver ${{ github.ref_name }}
 
-            **Web interface enabled by default** — executables start with `--web` automatically. Use `--headless` to run without web.
+            The browser UI is on by default at <http://localhost:8080>; `--headless`
+            turns it off. (There is no `--web` flag — earlier notes here said there
+            was, and passing it makes the app exit with an argparse error.)
+
+            **Requires Chrome**, or another Chromium browser, with hardware
+            acceleration on. The visuals render with WebGL2 and there is no Canvas2D
+            fallback; on an unsupported browser the page says so instead of drawing.
 
             ### Downloads
             - **Linux**: `promptwaver-linux-x86_64`
@@ -92,13 +106,21 @@ jobs:
 
             Run with:
             ```bash
+            chmod +x promptwaver          # Linux/macOS, first run only
             ./promptwaver
-            # or
+            # different port, no audio:
+            ./promptwaver --web-port 8097 --no-audio
+            # with Helios laser hardware:
             ./promptwaver --laser --pps 11000
-            # Headless mode:
+            # no browser UI:
             ./promptwaver --headless
             ```
 
-            See [README.md](README.md) for full usage details.
+            Generating new scenes needs an Anthropic API key (Settings > API, or
+            `ANTHROPIC_API_KEY`). Without one the app still runs and plays the
+            bundled scene library using the offline fallback director.
+
+            See [CHANGELOG.md](CHANGELOG.md) for what changed, and
+            [README.md](README.md) for full usage.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
