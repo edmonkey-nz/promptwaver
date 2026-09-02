@@ -44,7 +44,7 @@ import numpy as np
 from ..modulation import Envelope
 
 SR = 44100
-VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell")
+VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell", "harp")
 WAVEFORMS = ("sine", "saw", "square", "triangle")
 
 # Fixed inharmonic partial bank for `bell` — ratios are NOT integer multiples
@@ -64,6 +64,100 @@ WAVEFORMS = ("sine", "saw", "square", "triangle")
 BELL_PARTIAL_RATIOS = np.array([1.0, 1.41, 2.0, 2.37, 3.0])
 BELL_PARTIAL_AMPS = np.array([1.0, 0.55, 0.4, 0.32, 0.22])
 BELL_PARTIAL_AMP_SUM = float(BELL_PARTIAL_AMPS.sum())
+
+# --- harp ------------------------------------------------------------------
+# `harp` is `bell`'s renderer with both of bell's defining choices inverted.
+# The partials are HARMONIC (integer multiples of the fundamental, so it reads
+# as a string rather than a struck bar), and — the half that actually matters —
+# every partial gets its OWN decay instead of sharing the note's.
+#
+# That second point is the voice. On a real string, damping rises with
+# frequency, so a plucked note darkens as it rings. `pluck` applies one
+# envelope to a full waveform, which holds its brightness for the note's whole
+# life; over the multi-second ring times this voice exists for, that reads as
+# an organ, not a harp.
+#
+# It is also nearly free in this batching shape. `_render_bell_notes` already
+# flattens to (note x partial) rows and then repeats one per-note envelope
+# across each note's partials; giving every ROW its own time constant instead
+# is the same array, the same single `_osc()` call, and no extra passes.
+#
+# 5 partials for the same measured reason as BELL_PARTIAL_RATIOS — cost scales
+# linearly with partial count, and the note budget below is worth more to this
+# voice than a 5th harmonic that is -17dB down and damps fastest of all.
+HARP_PARTIALS = 5
+HARP_PARTIAL_K = np.arange(1, HARP_PARTIALS + 1, dtype=np.float64)
+#: ~1/k^1.2 rather than the ideal plucked string's 1/k: on a bank of pure
+#: sines the textbook spectrum came out glassy. `tone` rolls this off further.
+HARP_PARTIAL_AMPS = HARP_PARTIAL_K ** -1.2
+HARP_PARTIAL_AMP_SUM = float(HARP_PARTIAL_AMPS.sum())
+
+#: Exponent on the per-partial damping: partial k decays over
+#: `decay / k**damp` seconds. 0 makes every partial decay together (a pluck
+#: with extra harmonics bolted on); ~0.7 is harp/guitar; past ~1.2 the upper
+#: partials are gone almost immediately, which reads as a muted or felted
+#: string. Authorable per voice as "damp".
+HARP_DAMP_DEFAULT = 0.7
+
+#: Ceiling on a harp voice's "decay". Every other note voice is capped at 6s
+#: in `_normalise`; a harp's whole point is ringing longer than that, and
+#: raising the shared limit would let a runaway pluck schedule notes that
+#: never age out. Its own ceiling keeps that failure mode contained.
+HARP_MAX_DECAY = 20.0
+
+#: A harp note is dropped once it is `decay * HARP_NOTE_LIFETIME` old.
+#: `pluck`/`bell` use *6 (exp(-6), about -52dB), a sane margin at their ~1s
+#: decays and absurd at a harp's: at decay=12s it would hold notes for 72
+#: seconds. exp(-4) is about -35dB — inaudible under a mix — and cuts the
+#: resident note count by a third, which is the budget this voice is short of.
+HARP_NOTE_LIFETIME = 4.0
+
+#: Age (in multiples of the note's own decay) past which a note is rendered
+#: with HARP_PARTIALS_TAIL partials instead of the full bank. Not an
+#: approximation for its own sake: per-partial damping has ALREADY silenced
+#: the upper partials by here. At age 2*decay with damp 0.7, partial 3 sits
+#: exp(-2 * 3**0.7) = -37dB below its own onset, which is itself -14dB below
+#: the fundamental, so the step at the boundary is under -45dB. Cuts the cost
+#: of a long tail to a third without changing what it sounds like.
+HARP_TAIL_AFTER = 2.0
+HARP_PARTIALS_TAIL = 2
+
+#: Release ramp applied when a note is retired to stay under the note cap.
+#: `pluck`/`bell` drop evicted notes outright, which is fine for them: by the
+#: time one of their notes is the oldest thing alive it has decayed to nothing.
+#: A harp's hasn't. Measured at a dense setting (rate 1.0, roll 8, decay 14s)
+#: the retired note is only 1.6s old and still at -1dB of its onset amplitude,
+#: so cutting it is a step, not a fade-out. Ramping vs. cutting changes the
+#: output by -19dB relative to the signal — small, but it is the difference
+#: between a click and no click.
+HARP_RETIRE_FADE_S = 0.35
+
+#: Octave span a harp's scale walks before wrapping back to the root.
+HARP_OCTAVES = 2
+
+#: Notes per roll by default. Deliberately NOT 1: the roll is the gesture that
+#: makes this voice a harp rather than a long pluck, and HARP_OUTPUT_GAIN below
+#: is calibrated for the polyphony a roll builds up — so a bare
+#: {"type":"harp"} at roll=1 renders correctly but ~7x quieter than a pluck,
+#: which reads as broken. One constant so `_normalise`, the scheduler fallback
+#: and the UI knob can't drift apart.
+HARP_ROLL_DEFAULT = 6
+
+#: Output trim, standing where `pluck`/`bell` use a flat 0.6.
+#:
+#: Those voices can use a constant because their notes are gone in about a
+#: second, so only a handful ever overlap. A harp's whole premise is that they
+#: DON'T: measured at a typical roll (decay 9-14s, roll 6-8) the voice peaked
+#: at 2.0-2.5 against pluck's 0.5 at the same "level", which slams the master
+#: tanh and turns the ring into distortion.
+#:
+#: 0.6/sqrt(12) — calibrated so a dozen simultaneously-ringing notes land in
+#: the same range as a pluck. Deliberately a CONSTANT and not a divide by the
+#: live note count: dividing would duck the whole voice by ~3dB every time a
+#: roll fires, which is audible pumping on exactly the gesture this voice
+#: exists to play. Sparse settings (roll=1) come out quiet by design and want
+#: their "level" raised.
+HARP_OUTPUT_GAIN = 0.17
 
 #: Ceiling on a per-voice LFO's rate, in Hz. One cycle every two seconds is
 #: already brisk for ambient — the useful range in practice is an order of
@@ -552,6 +646,8 @@ class Soundscape:
                 mono = self._render_pluck(rv, n0, frames)
             elif vt == "bell":
                 mono = self._render_bell(rv, n0, frames)
+            elif vt == "harp":
+                mono = self._render_harp(rv, n0, frames)
             elif vt == "noise":
                 mono = self._render_noise(rv, frames)
             else:
@@ -948,6 +1044,234 @@ class Soundscape:
         self._active_notes = other + surviving
         return out * 0.6
 
+    # Harp's own slice of the shared MAX_ACTIVE_NOTES budget, in the same
+    # spirit as MAX_ACTIVE_BELL_NOTES but enforced at SCHEDULE time rather
+    # than render time. Bell can leave it late because its notes are short and
+    # its share of the pool drains on its own; a harp's notes are alive for
+    # tens of seconds, so without a schedule-time cap it would monopolise the
+    # shared pool and evict every other voice's notes through the oldest-first
+    # slice in `_schedule_notes` — where "oldest" is exactly the wrong metric
+    # for a voice whose oldest notes are still audible.
+    #
+    # Note that since `_render_harp_notes` was rewritten to render from a
+    # deduplicated (frequency, tau) table, this is a POLYPHONY limit and no
+    # longer really a cost limit: cost scales with the number of distinct
+    # PITCHES ringing, which a scale bounds at ~10, not with the note count.
+    # 24 notes of worst-case density measure 13ms a block.
+    MAX_ACTIVE_HARP_NOTES = 24
+
+    def _retire_excess(self, voice_name, cap, now):
+        """Ramp this voice's oldest notes out once more than `cap` are ringing,
+        rather than letting the shared MAX_ACTIVE_NOTES slice drop them mid-ring.
+
+        Only RINGING notes count against the cap. Charging the retiring ones
+        to it as well cascades: a retirement takes ~2 blocks to actually leave
+        the pool, so it keeps being counted while fresh notes arrive, each
+        block retires more to compensate, and the polyphony sawtooths (it fell
+        from 24 to 9 and back every couple of seconds — clearly audible as the
+        voice thinning out and swelling again). The cost of exempting them is
+        a bounded overshoot of roughly two blocks' worth of scheduling, and
+        those notes are old enough to land in the cheap tail bank anyway.
+        """
+        ringing = [n for n in self._active_notes
+                   if n["voice"] == voice_name and n.get("retire") is None]
+        for note in ringing[:max(0, len(ringing) - cap)]:
+            note["retire"] = now
+
+    def _schedule_harp(self, v, n0, frames):
+        """Onsets for one harp voice.
+
+        Deliberately not `_schedule_notes`: that lays notes down on a single
+        fixed interval, and the harp's characteristic gesture is a ROLL — a
+        fast sweep up the scale, then silence while the whole thing rings.
+        `roll` notes fire per beat, `roll_spread` seconds apart, which makes
+        the voice rhythmically sparse and polyphonically dense at the same
+        time. That combination is the entire reason the long decay is worth
+        paying for. `roll` of 1 degenerates to the even one-note-per-beat
+        pattern `pluck` produces.
+        """
+        tempo = float(self.spec.get("tempo", 60))
+        rate = float(v.get("rate", 0.5))              # rolls per beat
+        interval = max(int(self.sr * 60.0 / max(1e-3, tempo * rate)),
+                       int(self.sr * self.MIN_ONSET_INTERVAL_S))
+        roll = max(1, min(12, int(v.get("roll", HARP_ROLL_DEFAULT))))
+        spread = int(self.sr * max(self.MIN_ONSET_INTERVAL_S,
+                                   float(v.get("roll_spread", 0.07))))
+        if roll > 1:
+            # A roll has to finish inside its own beat, or successive rolls
+            # interleave and the ascending sweep stops reading as one gesture.
+            spread = max(1, min(spread, interval // roll))
+
+        scale = v.get("scale") or [0, 3, 7, 10]
+        root = int(v.get("note", 60))
+        decay = float(v.get("decay", 6.0))
+        tone = float(min(1.0, max(0.0, v.get("tone", 0.6))))
+        span = max(1, len(scale) * HARP_OCTAVES)
+
+        end = n0 + frames
+        # Look back far enough to catch rolls whose beat began in an earlier
+        # block but whose later notes land in this one.
+        g0 = max(0, (n0 - (roll - 1) * spread) // interval)
+        for g in range(g0, end // interval + 1):
+            for j in range(roll):
+                onset = g * interval + j * spread
+                if not (n0 <= onset < end):
+                    continue
+                # Each roll ascends from `j`, and successive rolls start one
+                # degree higher, so the gesture stays recognisable while never
+                # repeating the same sweep twice in a row.
+                d = (g + j) % span
+                self._active_notes.append(dict(
+                    start=onset, wf="sine", decay=decay, voice=v["name"], tone=tone,
+                    freq=midi_to_hz(root + scale[d % len(scale)] + 12 * (d // len(scale))),
+                    retire=None))
+
+        self._retire_excess(v["name"], self.MAX_ACTIVE_HARP_NOTES, end)
+        if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
+            self._active_notes = self._active_notes[-self.MAX_ACTIVE_NOTES:]
+
+    def _render_harp(self, v, n0, frames):
+        self._schedule_harp(v, n0, frames)
+        return self._render_harp_notes(v, n0, frames)
+
+    def _render_harp_notes(self, v, n0, frames):
+        """Harmonic partial bank with per-partial decay, rendered from a
+        DEDUPLICATED (frequency, tau) table rather than one row per
+        (note x partial).
+
+        The naive shape — which is what `_render_bell_notes` does, correctly,
+        for a voice whose notes last a second — costs one sin() and one exp()
+        per note per partial. At this voice's steady state (24 notes ringing,
+        5 partials) that is 120 rows x 8192 frames, measured at 66ms a block
+        against every other scene in the library's 5-8ms. It made the audio
+        callback overrun and drop out.
+
+        Two redundancies collapse it, both specific to how this synth works:
+
+        1. PHASE COMES FROM THE ABSOLUTE SAMPLE CLOCK, not per-note state
+           (see the module docstring). So two notes at the same pitch have
+           bit-identical oscillator rows — only their envelopes differ. A roll
+           walks a scale of ~10 distinct pitches, so 24 notes need ~10 pitches
+           worth of sines, not 24.
+
+        2. THE ENVELOPE FACTORISES. `decay` and `damp` are voice params, so
+           every note shares the same set of time constants, and
+               exp(-(t - start)/tau) == exp(-t'/tau) * exp(start'/tau)
+           with t' measured from the start of the block. The first term is one
+           row per distinct tau (normally 5, one per partial); the second is a
+           per-note SCALAR. Rebasing to block-local time is what keeps both
+           factors well-conditioned — against the absolute clock the scalar
+           overflows within seconds.
+
+        What is left is a small table of rows, each a decaying sine, and a
+        matrix of coefficients saying how much of each row every note wants.
+        Summing is then one BLAS matmul. Notes only need their own row when
+        their contribution is not a constant multiple of a shared one — i.e.
+        when they start mid-block or are fading out — and those are handled as
+        per-group masks over the same shared table.
+        """
+        name = v["name"]
+        # Clamped at read time, not just in `_normalise`: `set_param` writes
+        # live UI/MIDI values straight into the spec without going through it.
+        damp = min(1.5, max(0.0, float(v.get("damp", HARP_DAMP_DEFAULT))))
+        tone = min(1.0, max(0.0, float(v.get("tone", 0.6))))
+
+        mine, other = [], []
+        for note in self._active_notes:
+            (mine if note["voice"] == name else other).append(note)
+        if not mine:
+            return np.zeros(frames, np.float32)
+        # Hard safety net under the schedule-time cap, applied to the RINGING
+        # notes only. Retiring notes are exempt and always rendered: they sort
+        # oldest-first, so a plain `mine[-cap:]` slice would cut precisely the
+        # notes that are mid-fade and make the whole retire ramp unobservable
+        # (it did). They are self-limiting anyway — each is gone within
+        # HARP_RETIRE_FADE_S.
+        ringing = [n for n in mine if n.get("retire") is None]
+        if len(ringing) > self.MAX_ACTIVE_HARP_NOTES:
+            dropped = set(id(n) for n in ringing[:-self.MAX_ACTIVE_HARP_NOTES])
+            mine = [n for n in mine if id(n) not in dropped]
+
+        sr = self.sr
+        last = n0 + frames - 1
+        t_end = last / sr
+        amps = HARP_PARTIAL_AMPS * (max(tone, 0.05) ** np.arange(HARP_PARTIALS))
+        fade_len = sr * HARP_RETIRE_FADE_S
+
+        rows: dict[tuple[float, float], int] = {}   # (freq, tau) -> row index
+        groups: dict[tuple, dict[int, float]] = {}  # mask key -> {row: coeff}
+        alive = []
+
+        for note in mine:
+            decay = max(0.05, float(note["decay"]))
+            start = note["start"]
+            retire = note.get("retire")
+            age_end = t_end - start / sr
+
+            # Still RENDERED in the block it dies in — pruning before the sum
+            # would cut its final tail and put a step where a fade belongs.
+            keep = age_end <= decay * HARP_NOTE_LIFETIME
+            if retire is not None and (last - retire) / fade_len >= 1.0:
+                keep = False
+            if keep:
+                alive.append(note)
+
+            # Old notes drop to HARP_PARTIALS_TAIL — per-partial damping has
+            # already silenced the rest (see HARP_TAIL_AFTER).
+            n_partials = (HARP_PARTIALS_TAIL if age_end > HARP_TAIL_AFTER * decay
+                          else HARP_PARTIALS)
+            # A note needs its own mask only if it begins inside this block or
+            # is fading. Everything else — the overwhelming majority — shares
+            # the unmasked group and collapses into pure coefficients.
+            key = (start if start > n0 else None, retire)
+            g = groups.setdefault(key, {})
+            startloc = (start - n0) / sr
+            for ki in range(n_partials):
+                tau = decay / HARP_PARTIAL_K[ki] ** damp
+                row = rows.setdefault((note["freq"] * HARP_PARTIAL_K[ki], tau), len(rows))
+                g[row] = g.get(row, 0.0) + amps[ki] * math.exp(startloc / tau)
+
+        self._active_notes = other + alive
+        if not rows:
+            return np.zeros(frames, np.float32)
+
+        # --- the table: one decaying sine per distinct (freq, tau) ----------
+        n_rows = len(rows)
+        freqs = np.empty(n_rows)
+        taus = np.empty(n_rows)
+        for (f, tau), i in rows.items():
+            freqs[i] = f
+            taus[i] = tau
+        tloc = np.arange(frames) / sr                       # block-local
+        tabs = np.arange(n0, n0 + frames) / sr              # absolute, for phase
+
+        wave = np.sin((2.0 * np.pi) * freqs[:, None] * tabs[None, :])
+        # exp() only for the distinct time constants — normally HARP_PARTIALS
+        # of them for the whole voice, rather than one per row.
+        utau, tinv = np.unique(taus, return_inverse=True)
+        wave *= np.exp(-tloc[None, :] / utau[:, None])[tinv]
+
+        # --- coefficients, one row per mask group, summed by BLAS -----------
+        coeff = np.zeros((len(groups), n_rows))
+        for gi, table in enumerate(groups.values()):
+            for row, c in table.items():
+                coeff[gi, row] = c
+        mixed = coeff @ wave                                # (groups, frames)
+
+        out = np.zeros(frames)
+        for gi, (start, retire) in enumerate(groups.keys()):
+            if start is None and retire is None:
+                out += mixed[gi]
+                continue
+            m = np.ones(frames)
+            if start is not None:
+                m[:max(0, min(frames, int(start - n0)))] = 0.0
+            if retire is not None:
+                m *= np.clip(1.0 - (np.arange(n0, n0 + frames) - retire) / fade_len, 0.0, 1.0)
+            out += mixed[gi] * m
+
+        return (out / HARP_PARTIAL_AMP_SUM).astype(np.float32) * HARP_OUTPUT_GAIN
+
     @staticmethod
     def _arp_note(chord, mode, step):
         n = len(chord)
@@ -992,8 +1316,6 @@ class Soundscape:
 
         self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
         return self._render_note_events(v["name"], n0, frames)
-        self._active_notes = alive
-        return out * 0.6
 
     def _render_noise(self, v, frames):
         tone = float(v.get("tone", 0.5))
@@ -1195,7 +1517,21 @@ def _normalise(spec: dict) -> dict:
         v["tone"] = _clamp(v.get("tone"), 0.0, 1.0, 0.4)
         v["detune"] = _clamp(v.get("detune"), 0.0, 0.05, 0.01)
         v["rate"] = _clamp(v.get("rate"), 0.05, 8.0, 0.5)
-        v["decay"] = _clamp(v.get("decay"), 0.05, 6.0, 1.2)
+        # `harp` rings for far longer than any other note voice — that IS the
+        # voice — so it gets its own ceiling rather than raising the shared
+        # one, which would let a runaway pluck schedule notes that never age
+        # out. See HARP_MAX_DECAY.
+        if v["type"] == "harp":
+            v["decay"] = _clamp(v.get("decay"), 0.05, HARP_MAX_DECAY, 6.0)
+            # Harp-only fields, set only on harp voices: `_normalise`'s output
+            # is what gets written back to scenes/<name>.json, and defaulting
+            # these on every voice would churn the whole tracked library on
+            # the next save for no benefit.
+            v["damp"] = _clamp(v.get("damp"), 0.0, 1.5, HARP_DAMP_DEFAULT)
+            v["roll"] = int(_clamp(v.get("roll"), 1, 12, HARP_ROLL_DEFAULT))
+            v["roll_spread"] = _clamp(v.get("roll_spread"), 0.03, 0.4, 0.07)
+        else:
+            v["decay"] = _clamp(v.get("decay"), 0.05, 6.0, 1.2)
         v["unison"] = int(_clamp(v.get("unison"), 1, 7, 1))
         v["sub"] = _clamp(v.get("sub"), 0.0, 1.0, 0.0)
         v["distortion"] = _clamp(v.get("distortion"), 0.0, 1.0, 0.0)

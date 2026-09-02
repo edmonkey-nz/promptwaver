@@ -113,6 +113,18 @@ Routes are editable at runtime (add/remove/repoint) and the destination list is 
 
 `shape_modulation` is a separate, narrower mechanism: `world`-only, `scale`-only, and it reads *synth voice params/LFOs* rather than the matrix. Its UI says so explicitly on 2D scenes rather than presenting controls that do nothing.
 
+### Audio renders a block AHEAD of the callback, not inside it
+
+`synth.py`'s PortAudio callback used to call `Soundscape.render()` directly, which put full numpy synthesis on the realtime thread, behind the GIL, competing with the 45fps render loop and the 20Hz broadcaster. That — not DSP cost — was the long-standing source of audio dropouts: the callback measured a 75ms average and 368ms max against a 186ms budget while the actual DSP work was 5–15ms.
+
+A producer thread now renders `PRERENDER_BLOCKS` ahead into a queue and **the callback only copies** — no numpy, no allocation, no lock. Keep it that way; anything added to `_callback` runs on the realtime thread. The queue depth is deliberately the smallest that measures clean (1), because it is pure output latency, and `output_latency` must keep including it or audio-driven visuals will lead the sound.
+
+### Synth voices have a formula — read `INSTRUMENTS.md` before adding one
+
+**`INSTRUMENTS.md` is the recipe for adding a voice type to `audio/dsp.py`**: the two rendering shapes and when each applies, the measured cost model (~0.6ms per note×partial row against a 186ms block budget, 120 rows the safe ceiling for one voice), the note-lifecycle guards and the assumptions a sustaining voice breaks, output-gain calibration, and the **five registration points** — `VOICE_TYPES`, the `render` dispatch, `_normalise`, `_SOUNDSCAPE_GUIDE`, and the `#voices` panel — none of which check each other, so missing one leaves the voice inaudible, unselectable, or invisible.
+
+Two things from it that bite outside the audio module: `_normalise`'s output is what gets written to `scenes/<name>.json`, so defaulting a new field on every voice churns the whole tracked library on the next save — gate voice-specific fields on `v["type"]`. And **`set_param` bypasses `_normalise`**, so live UI/MIDI writes land in the spec unclamped and anything dangerous must also be clamped where it's read.
+
 ### The scene clock is an accumulator, not wall time
 
 `Engine._scene_t` advances by `dt * motion_rate`, and `t` is what every time-driven thing reads. That's what makes **Freeze** work: ramping one number decelerates LFO phase, node motion and camera travel together. Note the deliberate asymmetry — `matrix.update()` gets **real** `dt` while `t` is frozen, so audio-driven sources keep slewing and a frozen pattern still reacts to sound. Don't "fix" that by passing the scaled dt to both.
@@ -136,6 +148,19 @@ Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve �
 `Path.glow` (per-stroke, authored by `pattern2d`) is monitor-only for the same reason: the DAC's per-point intensity channel is written as a constant 255, so brightness on a laser is carried by RGB, not blur.
 
 **Both surfaces share one renderer.** `web/static/renderer.js` is loaded by `index.html` and `output.html` alike and owns all drawing; each page only supplies a `filters` object and a canvas. This replaced a hand-duplicated pair of paint functions, so a change to how strokes are drawn is now made once. What legitimately differs is what each page puts in `filters`: the in-page preview has no flip (it isn't a physical screen) and a fixed hairline line width, while the output window scales width with the viewport and carries per-monitor flip/keystone from localStorage.
+
+### Output ratio and content aspect are two different numbers
+
+`output_ratio` (Settings > Output) is the shape of the **surface** — a rig setting, stored in `settings.json`, reapplied on every scene load. `Engine.content_aspect()` is the shape of the **`[-1,1]` box the renderers receive**, and they are not the same:
+
+- **3D**: the camera divides x by the viewport aspect (`scene3d._clip_and_project`), so its normalized box already *is* the viewport's shape. Content aspect = output aspect.
+- **2D**: `pattern2d` composes in a square and never sees the ratio. Content aspect = 1.0, whatever the rig is.
+
+Derived from `Scene.is_3d`, same as everything else that asks that question — don't store it. Every consumer (`renderer.js`'s letterbox, `ilda.PathPlanner`) takes the **content** aspect; assuming the box always filled the viewport is what stretched every flat pattern on a non-1:1 rig and squeezed it vertically on the beam.
+
+`output_fit` (`fit` / `fill` / `stretch`) resolves the remaining mismatch — letterbox, pan-and-scan, or distort. It only has a visible effect when the two aspects differ, i.e. a 2D scene on a non-square ratio, or an output window whose physical shape isn't the configured ratio.
+
+Both browser surfaces read `content_aspect` + `output_fit` straight off engine state. **`index.html`'s `syncMonitorFilters` must keep setting them**: it originally didn't, and the preview silently fell back to a square box inside a canvas already reshaped to the ratio, so 3D scenes rendered horizontally squashed there and correct in the output window.
 
 For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing and inserts blanking and dwell points **between every stroke** (~8 fixed points per stroke transition). So the PPS budget is dominated by *stroke count*, not geometry complexity: at 28000 PPS and 45fps you have roughly 620 points per frame, and a full-width stroke alone costs ~67. Chaining strokes into continuous polylines is the highest-leverage optimisation for dense flat content.
 

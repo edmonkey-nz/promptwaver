@@ -12,11 +12,37 @@ interval jitter) instead of guessed at — see `promptwaver/audio/diagnostics.py
 
 from __future__ import annotations
 
+import queue
 import threading
 import time
 
 from .dsp import SoundscapeMixer, default_soundscape, SR
 from .diagnostics import CallbackStats, list_devices
+
+#: Blocks rendered AHEAD of the audio callback, by a normal Python thread.
+#:
+#: The callback used to call `Soundscape.render()` directly, which meant the
+#: realtime audio thread had to win the GIL against the 45fps visual render
+#: thread and the ~20Hz websocket broadcaster before it could produce a single
+#: sample. Measured: a soundscape costing 14.5ms on its own took 28ms with one
+#: competing CPU-bound thread and spiked to 43ms; in the real app the callback
+#: reported a 75ms average and a 368ms max against a 186ms budget, with the
+#: callback itself being *delivered* late (avg interval 200ms vs 186 expected).
+#: That is what the dropouts were — not DSP cost, which had plenty of headroom.
+#:
+#: Now the callback only copies an already-rendered block. It does no numpy
+#: work, allocates nothing, and takes no lock, so GIL pressure can delay the
+#: *producer* without the output ever gapping: the producer needs ~15-30ms to
+#: fill a block the callback consumes every 186ms, so it can fall behind by an
+#: order of magnitude and still keep up.
+#:
+#: The cost is latency — a parameter change is heard this many blocks later,
+#: and `output_latency` accounts for it so audio-driven visuals stay in sync.
+#: So this is kept at the smallest value that measures clean rather than the
+#: largest that fits: at 1 (370ms total) there were zero underruns with six
+#: competing CPU-bound threads AND repeated 250ms stalls holding the render
+#: lock; depth 2 was no better and costs another 186ms of lag.
+PRERENDER_BLOCKS = 1
 
 
 class NullSynth:
@@ -64,26 +90,107 @@ class SoundscapeSynth:
         # still report itself as healthy. It's now a real instance flag set
         # only on an actual successful stream start.
         self.online = False
+        # Prerender pipeline — see PRERENDER_BLOCKS.
+        self._q: queue.Queue | None = None
+        self._producer: threading.Thread | None = None
+        self._producer_stop: threading.Event | None = None
+        self._residual = None       # tail of a block the last callback didn't use
+
+    def _produce(self):
+        """Render blocks ahead of the callback, forever, on a normal thread.
+
+        `pending` is held across loop iterations on purpose: if the queue is
+        full we must retry putting the SAME block rather than rendering a
+        fresh one, or every full-queue moment would silently drop a block of
+        audio and put a gap in the output.
+        """
+        pending = None
+        while not self._producer_stop.is_set():
+            if pending is None:
+                try:
+                    with self._lock:
+                        crossfading = self._scape._phase is not None
+                        pending = (self._scape.render(self.blocksize), crossfading)
+                except Exception:
+                    # A broken soundscape must not kill the audio thread and
+                    # take the stream down with it — emit silence and carry on,
+                    # so the app stays usable and the next scene can recover.
+                    import numpy as np
+                    pending = (np.zeros((self.blocksize, 2), np.float32), False)
+            try:
+                self._q.put(pending, timeout=0.1)
+                pending = None
+            except queue.Full:
+                pass                       # re-check the stop flag, then retry
 
     def _callback(self, outdata, frames, time_info, status):
-        if not self._diag_enabled:
-            with self._lock:
-                outdata[:] = self._scape.render(frames)
-            return
-        t0 = time.perf_counter()
-        with self._lock:
-            crossfading = self._scape._phase is not None
-            outdata[:] = self._scape.render(frames)
-        self.stats.record(time.perf_counter() - t0, status, crossfading=crossfading)
+        """Realtime thread. Copies only — no synthesis, no allocation, no lock.
+
+        Loops rather than assuming `frames == blocksize`: PortAudio is free to
+        ask for a different count than requested, and a partially-consumed
+        block carries over in `_residual`.
+        """
+        t0 = time.perf_counter() if self._diag_enabled else 0.0
+        crossfading = False
+        pos = 0
+        while pos < frames:
+            if self._residual is None or len(self._residual) == 0:
+                try:
+                    self._residual, crossfading = self._q.get_nowait()
+                except queue.Empty:
+                    # Underrun. Silence for the remainder — never block the
+                    # realtime thread waiting for the producer.
+                    outdata[pos:] = 0.0
+                    pos = frames
+                    break
+            take = min(frames - pos, len(self._residual))
+            outdata[pos:pos + take] = self._residual[:take]
+            self._residual = self._residual[take:]
+            pos += take
+        if self._diag_enabled:
+            self.stats.record(time.perf_counter() - t0, status, crossfading=crossfading)
 
     def start(self):
         self.stats = CallbackStats(self.sr, self.blocksize)
-        self._stream = self._sd.OutputStream(
-            samplerate=self.sr, channels=2, dtype="float32",
-            blocksize=self.blocksize, latency=self.latency, device=self.device,
-            callback=self._callback)
-        self._stream.start()
+        self._q = queue.Queue(maxsize=PRERENDER_BLOCKS)
+        self._residual = None
+        self._producer_stop = threading.Event()
+        self._producer = threading.Thread(target=self._produce, daemon=True,
+                                          name="soundscape-render")
+        # Started BEFORE the stream, then primed: opening the stream takes only
+        # a few ms while the first block needs 15-30ms to render, so without
+        # waiting here the very first callback reliably finds an empty queue
+        # and opens with a click. Bounded so a pathologically slow first render
+        # delays startup rather than hanging it.
+        self._producer.start()
+        deadline = time.perf_counter() + 2.0 * self.blocksize / float(self.sr)
+        while self._q.empty() and time.perf_counter() < deadline:
+            time.sleep(0.002)
+        try:
+            self._stream = self._sd.OutputStream(
+                samplerate=self.sr, channels=2, dtype="float32",
+                blocksize=self.blocksize, latency=self.latency, device=self.device,
+                callback=self._callback)
+            self._stream.start()
+        except Exception:
+            # `reconfigure` walks a ladder of blocksizes and expects failures;
+            # each failed attempt must not leak a producer thread rendering
+            # into an orphaned queue.
+            self._stop_producer()
+            raise
         self.online = True
+
+    def _stop_producer(self):
+        if self._producer_stop is not None:
+            self._producer_stop.set()
+        if self._producer is not None:
+            # The producer only ever blocks on a 0.1s queue put, so this joins
+            # promptly; the timeout is a backstop, not the expected path.
+            self._producer.join(timeout=1.0)
+        self._producer = None
+        self._producer_stop = None
+        self._q = None
+        self._residual = None
 
     def stop(self):
         if self._stream is not None:
@@ -92,6 +199,7 @@ class SoundscapeSynth:
             except Exception:
                 pass
             self._stream = None
+        self._stop_producer()
         self.online = False
 
     @property
@@ -102,19 +210,25 @@ class SoundscapeSynth:
         Needed because the modulation matrix reads each block's energy at the
         moment the block is *generated*, so anything driven by the engine's
         own sound would otherwise react this far ahead of it. Measured on this
-        machine it comes back as exactly one blocksize (186ms at 8192).
-        Returns 0.0 when no stream is open, which correctly means "nothing to
-        compensate".
+        machine PortAudio reports exactly one blocksize (186ms at 8192).
+
+        Since blocks are now rendered ahead of the callback (see
+        PRERENDER_BLOCKS), the queue sits between generation and playback and
+        counts toward this too — without it, audio-reactive visuals would lead
+        the sound by the whole queue depth. Returns 0.0 when no stream is
+        open, which correctly means "nothing to compensate".
         """
         st = self._stream
         if st is None:
             return 0.0
+        block_s = self.blocksize / float(self.sr)
         try:
-            return float(st.latency)
+            device_s = float(st.latency)
         except Exception:
             # Some backends don't report it; fall back to the one figure we
             # can always derive, which is what it measured as anyway.
-            return self.blocksize / float(self.sr)
+            device_s = block_s
+        return device_s + PRERENDER_BLOCKS * block_s
 
     # Blocksizes tried, largest first, when a requested size fails to open.
     # Some backends (notably PulseAudio/PipeWire virtual devices, which is
@@ -200,6 +314,27 @@ class SoundscapeSynth:
     def set_muted(self, muted: bool, fade: float = 0.0):
         with self._lock:
             self._scape.set_muted(bool(muted), fade)
+        if muted and fade <= 0.0:
+            # An UNFADED mute is the safety gate behind Stop/Blank, and it has
+            # to be immediate. Blocks already queued were rendered before the
+            # mute and would keep playing for the whole queue depth, so drop
+            # them — silence is exactly what was asked for, so the gap a flush
+            # would otherwise cause is the desired output here. A faded mute is
+            # left alone: it is a musical fade, and cutting the queue would
+            # defeat the fade it is asking for.
+            self._flush()
+
+    def _flush(self):
+        """Discard prerendered audio. Only safe where silence is acceptable."""
+        q = self._q
+        self._residual = None
+        if q is None:
+            return
+        try:
+            while True:
+                q.get_nowait()
+        except queue.Empty:
+            pass
 
     def soundscape(self):
         return self._scape.spec

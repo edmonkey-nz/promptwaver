@@ -75,11 +75,14 @@ const filters = {
   glow: 0, trail: 0, mirrorX: false, mirrorY: false,
   // Post-processing effects
   kaleidoscopeSegments: 0,  // 0=off, 3-12=number of radial segments
-  // Output viewport ratio (Settings > Output), width/height. Comes from the
-  // engine rather than this window's own shape: normalised -1..1 space now
-  // represents a viewport of THIS ratio, so the letterbox below has to fit
-  // that shape into the window instead of assuming a square.
-  aspect: 1,
+  // Shape of the -1..1 box the preview carries, and how to place it in this
+  // window. Comes from the engine rather than being guessed here: for a 3D
+  // scene it's the configured output ratio (the camera already widened x for
+  // it), for a flat one it's square whatever the ratio is. See
+  // Engine.content_aspect — assuming it always matched the ratio is what
+  // stretched 2D scenes on every non-1:1 rig.
+  contentAspect: 1,
+  fit: "fit",
   flipX: localStorage.getItem(`pw_filter_flipx_${outputId}`) === "1",
   flipY: localStorage.getItem(`pw_filter_flipy_${outputId}`) === "1",
   // This window's OWN keystone (Settings > Output monitors) — independent
@@ -167,7 +170,8 @@ function connect(){
       filters.bloomSpread = s.bloom_spread;
       filters.bloomIntensity = s.bloom_intensity;
       filters.lineCurve = s.line_curve;
-      filters.aspect = s.output_aspect || 1;
+      filters.contentAspect = s.content_aspect || 1;
+      filters.fit = s.output_fit || "fit";
       if (showFps) {
         // Timed around the real thing, filters and all — a number that
         // excluded the glow/mirror/keystone passes would miss the usual cause.

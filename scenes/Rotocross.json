@@ -1,0 +1,383 @@
+{
+  "name": "Rotocross",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "leg": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.14,
+                  0.14
+                ],
+                "b": [
+                  0.92,
+                  0.92
+                ]
+              }
+            ]
+          },
+          "barb": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.34,
+                    0.62
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    0.62,
+                    0.34
+                  ]
+                ]
+              }
+            ]
+          },
+          "core": {
+            "space": "polar",
+            "seg": 18,
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.1,
+                    0.0
+                  ],
+                  [
+                    0.19,
+                    0.125
+                  ],
+                  [
+                    0.1,
+                    0.25
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "leg",
+            "color": [
+              0.25,
+              0.95,
+              0.55
+            ],
+            "glow": 0.8,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.05,
+              "n": 3,
+              "hue_step": 0.07
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "barb",
+            "color": [
+              0.95,
+              0.65,
+              0.15
+            ],
+            "glow": 0.7,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.075,
+              "n": 3,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "core",
+            "color": [
+              1.0,
+              0.45,
+              0.1
+            ],
+            "glow": 1.0,
+            "symmetry": {
+              "radial": 8
+            }
+          }
+        ],
+        "rotate": 0.0,
+        "spread": 0.13,
+        "scale": 4.3,
+        "max_strokes": 480
+      }
+    }
+  ],
+  "palette": [
+    "#0a1408",
+    "#3ef08a",
+    "#ffa724"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.spread",
+      "depth": 0.095
+    }
+  ],
+  "camera": {
+    "glow": 0.0,
+    "trail": 0.35,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 80.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "foundation",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "level": 0.5,
+        "tone": 0.25,
+        "detune": 0.008,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "body",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 44,
+        "chord": [
+          0,
+          5,
+          9,
+          12
+        ],
+        "level": 0.35,
+        "tone": 0.35,
+        "detune": 0.012,
+        "pan": 0.0,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.0,
+          "sustain": 0.75,
+          "release": 2.8
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "pulse_lead",
+        "type": "osc",
+        "waveform": "square",
+        "note": 52,
+        "chord": [
+          0,
+          7,
+          14
+        ],
+        "unison": 2,
+        "detune": 0.018,
+        "sub": 0.15,
+        "level": 0.32,
+        "tone": 0.48,
+        "pan": 0.15,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.06,
+          "depth": 0.45
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "data_bells",
+        "type": "bell",
+        "note": 68,
+        "scale": [
+          0,
+          2,
+          5,
+          9,
+          12
+        ],
+        "level": 0.28,
+        "rate": 0.35,
+        "decay": 1.8,
+        "tone": 0.65,
+        "pan": -0.2,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "bit_sequence",
+        "type": "osc",
+        "waveform": "triangle",
+        "note": 56,
+        "chord": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "level": 0.22,
+        "pan": 0.2,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 1.5,
+          "decay": 0.25
+        },
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "digital_drift",
+        "type": "noise",
+        "level": 0.12,
+        "tone": 0.55,
+        "pan": -0.15,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.5
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.3,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "[demo] pattern x",
+  "audio_prompt": "surfing the network on bits and bytes",
+  "generation_settings": {
+    "audio_cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 4914,
+      "output_tokens": 888,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0094
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.02,
+    "lfo_mid": 0.2
+  }
+}

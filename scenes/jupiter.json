@@ -278,9 +278,12 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.69,
-    "trail": 0.64,
-    "kaleidoscope_segments": 0
+    "glow": 0.0,
+    "trail": 0.05,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0
   },
   "pps": null,
   "soundscape": {
@@ -459,7 +462,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 38.0
+    "swell_period": 38.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.9,
   "midi_overrides": {},

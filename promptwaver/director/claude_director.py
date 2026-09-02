@@ -118,6 +118,27 @@ Soundscape guidance: ambient and calm. Voice types:
           reach for this over "pluck" when the brief actually wants a bell,
           chime, or mallet-struck sound rather than a plucked string
           (params: scale, rate, decay, tone)
+  "harp"  long-ringing plucked STRING. Harmonic partials that each decay at
+          their own rate, so the note darkens as it rings — the sound keeps
+          blooming and overlapping into itself long after it was played.
+          Reach for this when the brief wants something spacious, liquid,
+          shimmering, cascading, or harp/dulcimer/kalimba-like
+          (params: scale, rate, decay, tone, damp, roll, roll_spread)
+            "decay" up to 20s here, unlike every other voice's 6s ceiling.
+                    6-12 is the useful range; that long ring IS the voice.
+            "damp"  0-1.5, how much faster the high partials die than the
+                    fundamental. 0.7 is a harp; 0.3 is glassier and more
+                    sustained; 1.2+ is muted, felted, almost woody.
+            "roll"  notes per gesture, 1-12. This is the important one: at
+                    1 it plays even single notes, at 6-8 each beat fires a
+                    fast ascending sweep that then rings on together. Use
+                    5-8 for the characteristic harp gesture.
+            "roll_spread" seconds between the notes of one roll, 0.03-0.4.
+                    0.05-0.09 is a strum; 0.2+ is a slow arpeggio.
+          Because notes pile up, set "rate" LOW — 0.2-0.5 rolls per beat.
+          A high rate plus a big roll is a continuous glissando, which drowns
+          the scene and defeats the long decay (the oldest notes get cut to
+          stay in budget). Sparse and ringing, not busy.
   "noise" wind/air texture (params: tone)
 
 "tone" (0-1) is the brightness of EVERY voice type — it behaves like a filter
@@ -171,7 +192,7 @@ VOICE ORDER MATTERS — always list "voices" in this fixed priority order:
   1. foundation: the lowest, most sustained voice (bass/sub/drone pad)
   2. body: mid-register pads and harmonic texture
   3. lead: whatever carries the melody or the most movement
-  4. detail: plucks, bells, sequences, arps
+  4. detail: plucks, bells, harps, sequences, arps
   5. air: noise/atmosphere beds
 Omit any tier the scene doesn't need, but never reorder the ones you do use.
 Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
@@ -258,7 +279,9 @@ of authored geometry that expand into 60-300 strokes.
 
 "defs" maps a motif name to {"space": "cart"|"polar", "ops": [ ... ]}.
 
-OPS (coordinates are LOCAL to the motif):
+OPS (coordinates are LOCAL to the motif). Every op is a FLAT dict carrying its
+name under an "op" key — {"op":"line", "a":[0,0], "b":[0,0.8]}. Do NOT nest the
+arguments under the op name ({"line":{...}} is wrong and draws nothing):
   line     {"a":[x,y], "b":[x,y]}
   polyline {"pts":[[x,y],...], "closed":false}
   circle   {"r":0.5, "c":[x,y], "seg":48}
@@ -295,6 +318,12 @@ Each node then multiplies its motif:
 
 Node keys: "def", "at":[x,y] or "at_polar":[radius,turns], "scale", "rotate"
 (turns), "color":[r,g,b] 0..1, "glow" 0..1, "closed", "repeat", "symmetry".
+
+"at" IS IN FRAME UNITS, THE SAME [-1,1] AS EVERYTHING ELSE — the visible frame
+runs -1..1 on both axes and (0,0) is the centre. A node at [-40,20] or [55,-30]
+is entirely off-screen and the scene renders black. If you catch yourself
+writing placements in tens, you are thinking in pixels or degrees: divide back
+down so the whole composition lives inside about -0.95..0.95.
 
 GLOW IS THE LOOK. These patterns read as neon tubing, and "glow" is what sells
 it. Give most nodes 0.5-0.9, and push the focal shape to 1.0. A pattern with no
@@ -780,7 +809,10 @@ def _character_hints(warmth: float | None, energy: float | None) -> str:
             lines.append(
                 "Tone: warm and mellow. Favour \"pad\"/\"sub\"/\"osc\" voices over "
                 "\"pluck\"/\"bell\" — at most one sparse pluck or bell accent, the "
-                "rest sustained. Set \"tone\" 0.15-0.4 on EVERY voice (it works on all "
+                "rest sustained. A \"harp\" is the exception and fits a warm brief "
+                "well: its long ring is sustained rather than percussive, so use it "
+                "over a pluck when the detail voice should bloom rather than tick. "
+                "Set \"tone\" 0.15-0.4 on EVERY voice (it works on all "
                 "of them and is the difference between a round analogue warmth and "
                 "a thin digital buzz), and a longer attack (4-10s) for a slow build "
                 "rather than an immediately-present sound. Put real weight "

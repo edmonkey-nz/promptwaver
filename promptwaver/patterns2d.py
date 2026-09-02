@@ -131,6 +131,27 @@ def _polar_to_cart(P: np.ndarray, seg: int = 12) -> np.ndarray:
     return np.stack([r * np.cos(th), r * np.sin(th)], 1).astype(np.float32)
 
 
+def _coerce_op(op):
+    """Normalise one op to the documented `{"op":"line", ...}` form, or None.
+
+    Also accepts the nested `{"line": {"a":..., "b":...}}` shape, which models
+    emit often enough to be worth tolerating: both forms are unambiguous, and
+    the failure mode when we don't is a scene that renders as a completely
+    black screen with no error anywhere — the op is skipped, every def comes
+    back empty, and there is nothing to see or debug. Cheap to accept, very
+    expensive to reject silently.
+    """
+    if not isinstance(op, dict):
+        return None
+    if "op" in op:
+        return op if op["op"] in _OPS else None
+    if len(op) == 1:
+        name, args = next(iter(op.items()))
+        if name in _OPS and isinstance(args, dict):
+            return {"op": name, **args}
+    return None
+
+
 def build_def(d) -> list[np.ndarray]:
     """Expand one motif definition into local 2D polylines.
 
@@ -146,9 +167,10 @@ def build_def(d) -> list[np.ndarray]:
 
     out: list[np.ndarray] = []
     for op in ops:
-        fn = _OPS.get((op or {}).get("op"))
-        if fn is None:
+        op = _coerce_op(op)
+        if op is None:
             continue
+        fn = _OPS[op["op"]]
         args = {k: v for k, v in op.items() if k != "op"}
         try:
             out.extend(fn(**args))

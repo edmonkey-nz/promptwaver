@@ -29,7 +29,53 @@ class PromptWaverRenderer {
     this.init();
   }
 
+  // Chromium is a hard requirement (see the 0.77.0 notes) — the renderer is
+  // built against Chrome's WebGL2 and there is no Canvas2D fallback. This is
+  // deliberately separate from the WebGL2 check below: Firefox and Safari BOTH
+  // give you a working webgl2 context, so the context test passes and the page
+  // then misbehaves in ways that don't point at the browser. Warn on the
+  // browser itself, up front, before anything renders.
+  //
+  // `userAgentData` is Chromium-only, so its presence is already most of the
+  // answer; the UA-string arm is the fallback for Chromium builds that don't
+  // expose it. `window.chrome` is checked too because Safari's UA contains
+  // "Chrome" in some webviews while Firefox's never does.
+  static isChromium() {
+    const brands = navigator.userAgentData && navigator.userAgentData.brands;
+    if (brands && brands.length) {
+      return brands.some(b => b.brand === "Chromium" || b.brand === "Google Chrome");
+    }
+    return /Chrome\/\d+/.test(navigator.userAgent) && !!window.chrome;
+  }
+
+  // Fixed banner, shown once per page. Not a modal or an alert(): both pages
+  // are things you leave running for hours — the output window in particular
+  // is on a projector with no keyboard near it — so this must be dismissible
+  // and must never block the show.
+  static warnIfNotChromium() {
+    if (PromptWaverRenderer.isChromium() || PromptWaverRenderer._browserWarned) return;
+    PromptWaverRenderer._browserWarned = true;
+    console.warn("[PromptWaver] Non-Chromium browser — WebGL2 rendering is only supported in Chrome.");
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;z-index:99999;left:0;right:0;top:0;padding:10px 44px 10px 14px;" +
+      "text-align:center;color:#04211f;background:#f2a623;" +
+      "font:13px ui-monospace,Menlo,Consolas,monospace;line-height:1.5";
+    el.innerHTML = "<b>Unsupported browser.</b> PromptWaver renders with WebGL2 and is only "
+      + "tested in Chrome (or another Chromium browser). Expect wrong or missing visuals here.";
+    const x = document.createElement("button");
+    x.textContent = "×";
+    x.title = "Dismiss";
+    x.style.cssText = "position:absolute;top:4px;right:8px;background:none;border:0;cursor:pointer;"
+      + "color:#04211f;font:18px/1 ui-monospace,Menlo,Consolas,monospace;padding:4px 6px";
+    x.onclick = () => el.remove();
+    el.appendChild(x);
+    const put = () => document.body.appendChild(el);
+    if (document.body) put(); else document.addEventListener("DOMContentLoaded", put);
+  }
+
   init() {
+    PromptWaverRenderer.warnIfNotChromium();
+
     // Try to get WebGL2 context
     this.gl = this.canvas.getContext("webgl2", {
       preserveDrawingBuffer: true,
@@ -450,13 +496,31 @@ void main() {
     if (segments.length) {
       this._uploadSegments(segments);
 
-      // Letterbox scale in PIXELS — same formula as the old Canvas2D paint().
-      // This is also "pixels per normalized-space unit", which is exactly the
-      // conversion factor needed to turn a desired pixel line-width/AA-feather
-      // into the normalized-space units the shader actually operates in.
-      const a = filters.aspect || 1;
+      // Letterbox scale in PIXELS. This is also "pixels per normalized-space
+      // unit", which is exactly the conversion factor needed to turn a desired
+      // pixel line-width/AA-feather into the normalized-space units the shader
+      // actually operates in.
+      //
+      // `contentAspect` is the display width/height of the [-1,1] box, NOT the
+      // shape of this canvas and NOT the rig's output ratio — see
+      // Engine.content_aspect. A 3D scene's box is already the viewport's
+      // shape (its camera divided x by the aspect); a flat one's is square
+      // however wide the rig is. Fitting the former into a canvas of the same
+      // shape is a no-op, which is why this only visibly does anything for 2D
+      // scenes on a non-1:1 ratio, or an output window whose physical shape
+      // differs from the configured ratio.
+      const a = filters.contentAspect || 1;
       let sx = w * 0.5, sy = sx / a;
-      if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
+      if (filters.fit === "stretch") {
+        // Fill the canvas on both axes and accept the distortion.
+        sx = w * 0.5; sy = h * 0.5;
+      } else if (filters.fit === "fill") {
+        // Cover: scale until the short axis is filled, cropping the long one.
+        if (sy < h * 0.5) { sy = h * 0.5; sx = sy * a; }
+      } else {
+        // Contain (default): the whole image survives, with bars.
+        if (sy > h * 0.5) { sy = h * 0.5; sx = sy * a; }
+      }
       const scale = Math.min(sx, sy);
 
       const prog = this.programs.line;

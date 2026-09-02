@@ -116,9 +116,30 @@
                flex-direction:column;align-items:center;justify-content:center;gap:14px;
                background:rgba(10,12,18,.82);backdrop-filter:blur(2px);border-radius:12px}
   .gen-overlay.on{display:flex}
-  .gen-overlay .ring{width:54px;height:54px;border-radius:50%;
-                     border:3px solid rgba(51,224,208,.18);border-top-color:var(--cyan);
-                     animation:spin .9s linear infinite}
+
+  /* Flowing sine wave, used everywhere a generation is in flight.
+     It replaces a set of progress BARS that were driven by
+     `director_progress` — an estimate, not measured progress, so the bar
+     regularly stalled at 80% or jumped, which is worse than showing nothing.
+     This is deliberately indeterminate: it says "working" without implying a
+     position. Two counter-phased waves at different speeds so the crossing
+     pattern never visibly repeats.
+
+     Drawn as one 240-unit path (six full periods, period 40) inside a
+     120-unit viewBox, and translated by exactly one period. Because the path
+     is periodic, that loop is seamless and there is always drawn geometry to
+     scroll into view. `preserveAspectRatio="none"` lets it stretch to any
+     width the container happens to be. */
+  .wave{overflow:hidden;line-height:0}
+  .wave svg{display:block;width:100%;height:100%}
+  .wave path{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linecap:round;
+             transform-box:view-box;transform-origin:0 0;
+             animation:wave-flow 2.6s linear infinite}
+  .wave .w2{opacity:.32;stroke-width:1.5;animation-duration:4.3s}
+  @keyframes wave-flow{from{transform:translateX(0)}to{transform:translateX(-40px)}}
+  @media (prefers-reduced-motion: reduce){ .wave path{animation:none} }
+
+  .gen-overlay .wave{width:210px;height:46px;filter:drop-shadow(0 0 6px rgba(51,224,208,.45))}
   .gen-overlay .msg{font-size:13px;color:var(--ink);letter-spacing:.02em}
   .gen-overlay .sub{font-size:11px;color:var(--dim);max-width:70%;text-align:center;line-height:1.6}
   .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(4,33,31,.35);
@@ -174,11 +195,10 @@
             min-width:110px}
   button.amber{border-color:var(--amber)}
   button:disabled{opacity:.7;cursor:default}
-  .progress{width:100%;height:5px;border-radius:3px;background:var(--panel2);
-            overflow:hidden;display:none}
+  /* Was a 5px determinate bar; now the same show/hide contract (`.active`)
+     wrapping a flowing wave — see .wave above for why. */
+  .progress{width:100%;height:24px;display:none}
   .progress.active{display:block}
-  .progress .bar{height:100%;background:var(--cyan);width:0%;
-                 transition:width .15s ease-out}
 
   /* Generation status strip — replaces the old behaviour of forcing the
      Generate modal to stay open (and so the whole page blocked behind its
@@ -212,9 +232,7 @@
   @media (prefers-reduced-motion: reduce){ .genstrip.attention{animation:none} }
   .genstrip .msg{color:var(--ink);flex:0 0 auto}
   .genstrip .elapsed{flex:0 0 auto;font-family:var(--mono)}
-  .genstrip .track{flex:1 1 auto;height:3px;border-radius:2px;background:var(--bg);
-                   overflow:hidden;min-width:60px}
-  .genstrip .fill{height:100%;width:2%;background:var(--cyan);transition:width .3s ease-out}
+  .genstrip .wave{flex:1 1 auto;height:16px;min-width:60px}
   /* Sits inside a clickable strip (click elsewhere opens the modal) — its own
      click has to stop propagation or every press would also pop the modal
      open. Two states, not a native confirm() dialog: a quick second click
@@ -500,7 +518,10 @@
   <span class="dot" id="genstrip-dot"></span>
   <span class="msg" id="genstrip-msg">Composing scene…</span>
   <span class="elapsed" id="genstrip-elapsed"></span>
-  <div class="track"><div class="fill" id="genstrip-fill"></div></div>
+  <div class="wave" id="genstrip-wave"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+    <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
+    <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
+  </svg></div>
   <button class="cancel-btn" id="genstrip-cancel" title="Stop this generation">Cancel</button>
   <button class="play-btn" id="genstrip-play" title="Start this scene">▶ Play</button>
 </div>
@@ -817,7 +838,10 @@
 <div class="modal-backdrop" id="modal-generate">
   <div class="modal" id="gen-modal" style="position:relative">
     <div class="gen-overlay" id="gen-overlay">
-      <div class="ring" id="gen-ring"></div>
+      <div class="wave" id="gen-ring"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+        <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
+        <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
+      </svg></div>
       <div class="msg" id="gen-overlay-msg">Composing scene…</div>
       <div class="sub" id="gen-overlay-sub">Claude is authoring the geometry and soundscape.</div>
       <div class="sub" id="gen-overlay-elapsed" style="font-family:var(--mono);opacity:.75"></div>
@@ -907,7 +931,10 @@
       <button class="go" id="gen" style="width:100%">Generate new scene</button>
     </div>
 
-    <div class="progress" id="genprog" style="display:none"><div class="bar" id="genbar"></div></div>
+    <div class="progress wave" id="genprog" style="display:none"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+      <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
+      <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
+    </svg></div>
     <div class="hint" id="dirhint-modal" style="display:none"></div>
   </div>
 </div>
@@ -915,7 +942,10 @@
 <div class="modal-backdrop" id="modal-audio-regen">
   <div class="modal" id="audio-regen-modal" style="position:relative">
     <div class="gen-overlay" id="audio-regen-overlay">
-      <div class="ring"></div>
+      <div class="wave"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+        <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
+        <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
+      </svg></div>
       <div class="msg">Composing soundscape…</div>
       <div class="sub">Claude is writing a new soundscape for this scene's existing visuals. Usually 10–30 seconds.</div>
     </div>
@@ -932,7 +962,10 @@
 
     <button class="go" id="apply-audio-regen" style="width:100%;margin-top:12px">Generate new audio</button>
 
-    <div class="progress" id="audio-regen-prog" style="display:none"><div class="bar" id="audio-regen-bar"></div></div>
+    <div class="progress wave" id="audio-regen-prog" style="display:none"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+      <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
+      <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
+    </svg></div>
     <div class="hint" id="audio-regen-hint" style="display:none"></div>
   </div>
 </div>
@@ -995,6 +1028,14 @@
         <b>more at the sides</b> rather than cropping — the field of view stays
         vertical. <b>1:1</b> is a laser's native shape; the galvos scan a square,
         so a wider ratio is letterboxed into it.</div>
+      <div class="field" style="margin-top:8px"><label>flat scenes</label>
+        <select id="o-fit" style="flex:1"></select></div>
+      <div class="hint">only <b>2D</b> scenes need this. A 3D camera widens its
+        field of view to match the ratio above, but a flat pattern is composed
+        in a square and has to be placed in a wider frame somehow.
+        <b>letterbox</b> keeps the whole pattern with bars at the sides,
+        <b>pan/scan</b> fills the frame and crops the top and bottom, and
+        <b>stretch</b> distorts it to fit.</div>
     </div>
 
     <div class="group">
@@ -1247,7 +1288,6 @@ ws.onmessage = e => {
       _audioRegenTarget = null;
       return;
     }
-    $("genbar").style.width = "100%";
     $("scenename").value = "";
     // The modal deliberately stays OPEN and switches to its completion state.
     // `generating` is cleared so the safety timer and the elapsed counter
@@ -1319,11 +1359,11 @@ function paintState(s){
     $("d-effort").value = s.director_effort || "med";
     $("d-cap").value = (s.director_cost_cap ?? 0.5).toFixed(2);
   }
-  if (generating && typeof s.director_progress === "number") {
-    const pct = Math.max(2, Math.round(s.director_progress*100)) + "%";
-    $("genbar").style.width = pct;
-    $("genstrip-fill").style.width = pct;
-  }
+  // `director_progress` is deliberately NOT rendered any more. It is an
+  // estimate derived from elapsed time against an expected duration, not
+  // measured progress, so it stalled and jumped; the wave says "working"
+  // without claiming a position. The elapsed-seconds readout is the honest
+  // number and is still shown.
   setDirhint(s.director_online
     ? "keyword → Claude scene spec (cached; ~1 call per new keyword)"
     : "keyword → local scene (set a key to use Claude)");
@@ -1444,6 +1484,7 @@ function paintState(s){
     $("o-maxpps").value = s.max_pps;
   }
   syncOutputRatio(s);
+  syncOutputFit(s);
   if (document.activeElement !== $("diag-enabled-toggle") && typeof s.diagnostics_enabled === "boolean") {
     $("diag-enabled-toggle").checked = s.diagnostics_enabled;
   }
@@ -2672,6 +2713,16 @@ function renderSoundscape(s){
       el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
     if (v.type==="pluck")
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
+    if (v.type==="harp"){
+      // decay runs to 20s here, not the 6s every other voice is clamped to —
+      // the long ring is the voice. See HARP_MAX_DECAY in dsp.py.
+      el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.6, x=>x.toFixed(2), {midi: mk("tone")}));
+      el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
+      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.5,20,0.1, v.decay ?? 6, x=>x.toFixed(1), {midi: mk("decay")}));
+      el.appendChild(knob("damp",`voice.${v.name}.damp`,0,1.5,0.01, v.damp ?? 0.7, x=>x.toFixed(2), {midi: mk("damp")}));
+      el.appendChild(knob("roll",`voice.${v.name}.roll`,1,12,1, v.roll ?? 6, x=>x.toFixed(0), {midi: mk("roll")}));
+      el.appendChild(knob("roll spread",`voice.${v.name}.roll_spread`,0.03,0.4,0.005, v.roll_spread ?? 0.07, x=>x.toFixed(3), {midi: mk("roll_spread")}));
+    }
     if (v.type==="osc"){
       el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
       el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
@@ -2836,7 +2887,7 @@ function renderSoundscape(s){
 // any of this). Synced across this page and any open Output Window via
 // localStorage + the "storage" event, since they're separate browser
 // windows/tabs with no other shared state.
-const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, kaleidoscopeSegments: 0, keystoneH: 0, keystoneV: 0 };
+const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, kaleidoscopeSegments: 0, keystoneH: 0, keystoneV: 0, contentAspect: 1, fit: "fit" };
 // Populated from server state (see paintState's call to this), NOT
 // localStorage — glow/trail/mirror are per-scene settings now (saved via
 // Save Camera settings / Save all scene settings, loaded with the scene
@@ -2854,6 +2905,13 @@ function syncMonitorFilters(s){
   monitorFilters.mirrorY = !!s.mirror_y;
   monitorFilters.keystoneH = s.keystone_h ?? 0;
   monitorFilters.keystoneV = s.keystone_v ?? 0;
+  // Was missing entirely, which is why this preview and the output window
+  // disagreed on every non-1:1 ratio: the renderer fell back to a square box
+  // and pillarboxed it inside a canvas already reshaped to the output ratio,
+  // so a 3D scene came out horizontally squashed here and correct there. The
+  // output window reads the same two fields — see output.html.
+  monitorFilters.contentAspect = s.content_aspect ?? 1;
+  monitorFilters.fit = s.output_fit || "fit";
   if (document.activeElement !== $("mf-glow")) {
     $("mf-glow").value = monitorFilters.glow;
     $("v-mfglow").textContent = monitorFilters.glow.toFixed(2);
@@ -2932,6 +2990,25 @@ function syncOutputRatio(s){
 }
 $("o-ratio").onchange = () =>
   send({type:"set", key:"output_ratio", value:$("o-ratio").value});
+
+// Fit mode (Settings > Output > flat scenes). Its own fingerprint rather than
+// being folded into _ratioFp above, because that one gates a canvas resize and
+// this changes no geometry — only how the renderer places it.
+const FIT_LABELS = { fit: "letterbox", fill: "pan / scan", stretch: "stretch" };
+let _fitFp = "";
+function syncOutputFit(s){
+  const sel = $("o-fit");
+  const fp = (s.output_fits || []).join(",") + "|" + s.output_fit;
+  if (fp === _fitFp) return;
+  _fitFp = fp;
+  if (sel.options.length !== (s.output_fits || []).length) {
+    sel.innerHTML = (s.output_fits || [])
+      .map(f => `<option value="${f}">${FIT_LABELS[f] || f}</option>`).join("");
+  }
+  if (document.activeElement !== sel && s.output_fit) sel.value = s.output_fit;
+}
+$("o-fit").onchange = () =>
+  send({type:"set", key:"output_fit", value:$("o-fit").value});
 
 const cv = $("view");
 let previewRenderer = null;
@@ -3036,7 +3113,6 @@ function startGen(kindLabel){
   genElapsedTimer = setInterval(tick, 1000);
   $("genprog").style.display = "block";
   $("genprog").classList.add("active");
-  $("genbar").style.width = "2%";
   $("dirhint-modal").style.display = "block";
   // Safety restore, deliberately LONGER than the director's own abort
   // (DEFAULT_GEN_TIMEOUT, 240s) so the server-side stop is the one that fires
@@ -3060,7 +3136,6 @@ function endGen(){
   enableGenModal();
   $("gen-overlay").classList.remove("on");
   $("genprog").classList.remove("active");
-  $("genbar").style.width = "0%";
   if (genTimer) { clearTimeout(genTimer); genTimer = null; }
   clearInterval(genElapsedTimer); genElapsedTimer = null;
   genstripHide();
@@ -3090,8 +3165,7 @@ function genstripShow(msg){
   $("genstrip-msg").textContent = msg;
   $("genstrip-elapsed").style.display = "";
   $("genstrip-elapsed").textContent = "0s";
-  $("genstrip-fill").parentElement.style.display = "";
-  $("genstrip-fill").style.width = "2%";
+  $("genstrip-wave").style.display = "";
   resetCancelBtn();
   // Pulsing border for the first few seconds — the strip alone is easy to
   // miss right as a full-screen modal closes; this fades away well before
@@ -3109,7 +3183,7 @@ function genstripDone(msg){
   el.title = "Click to play this scene";
   $("genstrip-msg").textContent = msg;
   $("genstrip-elapsed").style.display = "none";
-  $("genstrip-fill").parentElement.style.display = "none";
+  $("genstrip-wave").style.display = "none";
   // Deliberately NOT auto-cleared — stays up until the scene is actually
   // played (or the strip/modal is otherwise dismissed), so a finished
   // generation can't be missed just because you looked away for a bit.
@@ -3506,7 +3580,6 @@ $("audio-regen-open").onclick = () => {
   $("audiokw-regen").value = "";
   $("audio-regen-prog").style.display = "none";
   $("audio-regen-prog").classList.remove("active");
-  $("audio-regen-bar").style.width = "0%";
   $("audio-regen-hint").style.display = "none";
   $("audio-regen-hint").textContent = "";
 };

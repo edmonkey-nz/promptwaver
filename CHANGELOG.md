@@ -8,6 +8,107 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.78.0]
+
+### `harp` — a long-ringing string voice
+
+The third note-based voice, after `pluck` and `bell`. Where a pluck ticks and a
+bell strikes, a harp note *blooms*: harmonic partials that each decay at their
+own rate, so the note darkens as it rings and keeps overlapping into itself.
+
+- **Per-partial damping** (`damp`, 0–1.5) is what makes it a string rather than
+  a longer pluck — the highs die faster than the fundamental. 0.7 is a harp,
+  0.3 is glassier, 1.2+ is felted and almost woody.
+- **`roll` / `roll_spread`** turn a beat into a gesture: `roll` notes fired
+  `roll_spread` seconds apart as an ascending sweep that then rings on
+  together. 5–8 at 0.05–0.09s is the characteristic strum; `roll` 1 plays
+  single notes.
+- **`decay` goes to 20s**, against every other voice's 6s ceiling. That long
+  ring *is* the voice, so `HARP_MAX_DECAY` is a separate clamp rather than a
+  relaxation of the shared one.
+- Notes therefore pile up in a way no previous voice did, so the note budget
+  needed a new shape. `MAX_ACTIVE_HARP_NOTES = 24` is enforced at **schedule**
+  time by `_retire_excess` rather than at render time, so a still-ringing note
+  is retired deliberately instead of being dropped mid-ring by the shared
+  `MAX_ACTIVE_NOTES` slice — which was audible as the voice thinning out and
+  swelling again.
+- The director prompt warns to keep `rate` at 0.2–0.5 rolls per beat: a high
+  rate plus a big roll is a continuous glissando that drowns the scene and
+  defeats the long decay.
+
+### Audio renders a block ahead of the callback
+
+The PortAudio callback used to call `Soundscape.render()` directly, putting
+full numpy synthesis on the realtime thread, behind the GIL, competing with the
+45fps render loop and the 20Hz broadcaster. **That was the long-standing source
+of audio dropouts, not DSP cost** — the callback measured a 75ms average and
+368ms max against a 186ms budget while the actual DSP work was 5–15ms.
+
+- A producer thread now renders `PRERENDER_BLOCKS` ahead into a queue and the
+  **callback only copies** — no numpy, no allocation, no lock.
+- Queue depth is deliberately 1, the smallest that measures clean, because it
+  is pure output latency. `output_latency` includes it, so audio-driven visuals
+  don't lead the sound.
+- Muting flushes the queue: prerendered blocks would otherwise outlive the mute
+  by the whole queue depth.
+
+### Output ratio: flat scenes are no longer stretched
+
+`output_ratio` describes the **surface**; the shape of the `[-1,1]` box the
+renderers actually receive is a different number, and nothing distinguished
+them. A 3D camera divides x by the viewport aspect, so its box really is 16:9 —
+but `pattern2d` composes in a square and never sees the ratio, so every flat
+scene was stretched horizontally in the browser and squeezed vertically on the
+beam.
+
+- **`Engine.content_aspect()`** derives the box's true shape from `Scene.is_3d`
+  and is what `renderer.js` and `ilda.PathPlanner` now letterbox against.
+- **New `output_fit` setting** (Settings > Output > *flat scenes*): `fit`
+  (letterbox, default), `fill` (pan and scan), `stretch` (the old behaviour).
+  MIDI-free rig setting, stored beside `output_ratio`.
+- **Fixed: the in-page preview disagreed with the output window** on every
+  non-1:1 ratio. `syncMonitorFilters` never set the aspect, so the shared
+  renderer fell back to a square box inside a canvas already reshaped to the
+  ratio and drew 3D scenes horizontally squashed. A 0.77.0 regression — the old
+  Canvas2D preview scaled straight to the canvas and was accidentally correct.
+
+### Unsupported-browser warning
+
+Firefox and Safari both hand you a working WebGL2 context, so the existing
+context check passed and the page then misbehaved in ways that didn't point at
+the browser. A dismissible banner now names the cause up front, on both the
+control page and the output window. Not a modal or an `alert()`: the output
+window runs for hours on a projector with no keyboard near it.
+
+### Generated scenes that rendered pure black
+
+Two failure modes that produced a completely black screen with no error
+anywhere — nothing raised, nothing logged, nothing to debug.
+
+- **Nested ops.** The documented op shape is flat (`{"op":"line", ...}`) but
+  models emit `{"line": {...}}` often enough to be worth tolerating. Both forms
+  are unambiguous, so `_coerce_op` now accepts either; previously the op was
+  skipped, every def came back empty, and the scene drew nothing. The prompt
+  spells the flat form out as well.
+- **Placements in the wrong units.** One real scene measured `at` over
+  [-55..65] against a `[-1,1]` frame, so every motif landed off-screen. The
+  composition is fine in that case and the error is uniform, so `pattern2d`
+  rescales to fit and logs it once, rather than showing nothing. The threshold
+  (3.0) is well clear of any deliberate composition.
+
+### Generation progress
+
+The determinate progress bars are gone, replaced everywhere by a flowing sine
+wave. They were driven by `director_progress`, which is an estimate against an
+expected duration rather than measured progress, so the bar regularly stalled
+at 80% or jumped. The wave says "working" without claiming a position; the
+elapsed-seconds readout is the honest number and is still shown.
+
+### Scene library
+
+`magic harp` and `mushrooms` added, `Rotocross` added, `crossword` and `falling
+sand 5` removed, `jupiter` retuned.
+
 ## [0.77.0]
 
 ### WebGL2 renderer

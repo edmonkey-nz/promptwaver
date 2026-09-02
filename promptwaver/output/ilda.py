@@ -61,7 +61,7 @@ class PathPlanner:
 
     def __init__(self, max_step=0.03, invert_x=False, invert_y=False,
                  keystone_h=0.0, keystone_v=0.0, blank_dwell=3, corner_dwell=2,
-                 aspect=1.0):
+                 aspect=1.0, fit="fit"):
         self.max_step = max_step
         self.invert_x = invert_x
         self.invert_y = invert_y
@@ -69,12 +69,19 @@ class PathPlanner:
         self.keystone_v = keystone_v
         self.blank_dwell = blank_dwell
         self.corner_dwell = corner_dwell
-        # Output viewport ratio. The galvos scan a SQUARE field, so a wide
-        # viewport has to be letterboxed into it — otherwise a 16:9 scene
+        # CONTENT aspect — the display width/height of the [-1,1] box being
+        # drawn, which is the viewport ratio for a 3D scene and 1.0 for a flat
+        # one (see Engine.content_aspect). The galvos scan a SQUARE field, so
+        # anything wider has to be letterboxed into it — otherwise a 16:9 scene
         # would come out vertically stretched on the beam while looking
-        # correct in the browser. Squeezing y (rather than cropping x) keeps
-        # the whole image, just in a band.
+        # correct in the browser.
         self.aspect = aspect
+        # "fit" squeezes the long axis so the whole image survives in a band;
+        # "fill" scales the short axis up to cover the square instead, which
+        # crops — and on a laser that crop is a clamp, so cropped geometry
+        # piles up along the frame edge rather than disappearing. "stretch"
+        # is the pre-0.78 behaviour: fill the field and accept the distortion.
+        self.fit = fit
 
     def _to_dac_vec(self, xy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Vectorised version of the old per-point `_to_dac`: keystone, clip,
@@ -85,10 +92,19 @@ class PathPlanner:
         # still corrects the physical mounting of the image that actually gets
         # drawn rather than of a shape that never reaches the beam.
         a = self.aspect or 1.0
-        if a > 1.0:
-            y = y / a                      # wide viewport -> horizontal band
-        elif a < 1.0:
-            x = x * a                      # tall viewport -> vertical band
+        if self.fit == "fit":
+            if a > 1.0:
+                y = y / a                  # wide content -> horizontal band
+            elif a < 1.0:
+                x = x * a                  # tall content -> vertical band
+        elif self.fit == "fill":
+            # Cover the square: scale the axis the fit case would have shrunk,
+            # in the other direction. The np.clip below does the cropping.
+            if a > 1.0:
+                x = x * a
+            elif a < 1.0:
+                y = y / a
+        # "stretch": leave both axes filling the field, distortion and all.
         if self.invert_x:
             x = -x
         if self.invert_y:

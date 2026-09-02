@@ -181,6 +181,14 @@ class MidiRouter:
 #: and monitors.
 OUTPUT_RATIOS = ("1:1", "4:3", "16:10", "16:9", "21:9")
 
+#: How content whose own shape differs from the output surface is placed in it.
+#: Only 2D scenes can differ: a 3D camera divides x by the viewport aspect, so
+#: its [-1,1] box IS the viewport's shape by construction, while `pattern2d`
+#: composes in a square and knows nothing about the ratio. Before this existed
+#: every surface assumed the [-1,1] box filled the viewport, so a flat pattern
+#: came out stretched on anything but 1:1.
+OUTPUT_FITS = ("fit", "fill", "stretch")
+
 
 def ratio_to_aspect(ratio: str) -> float:
     """"16:9" -> 1.777…, i.e. width / height. Anything unparseable falls back
@@ -291,6 +299,10 @@ class Engine:
         # camera's horizontal field of view; `fov` remains the VERTICAL angle,
         # so changing ratio reveals more at the sides rather than cropping.
         self.output_ratio = str(_settings.get("output_ratio", "1:1"))
+        # Companion rig setting, stored the same way: what to do when the
+        # content's own shape isn't the surface's (see OUTPUT_FITS).
+        _fit = str(_settings.get("output_fit", "fit"))
+        self.output_fit = _fit if _fit in OUTPUT_FITS else "fit"
         self._audio_cfg = {
             "device": _settings.get("audio_device"),
             "blocksize": int(_settings.get("audio_blocksize", 8192)),
@@ -494,6 +506,8 @@ class Engine:
             self._apply_mod_delay()
         elif key == "output_ratio":
             self.set_output_ratio(str(value))
+        elif key == "output_fit":
+            self.set_output_fit(str(value))
         elif key == "hue_override":
             self.hue_override_on = bool(value)
         elif key == "disable_plane":
@@ -803,18 +817,47 @@ class Engine:
         _settings.set("output_ratio", ratio)
         self._apply_aspect()
 
+    def set_output_fit(self, mode: str):
+        """Set how content is placed when its shape isn't the surface's.
+        Same rig-setting lifetime as `output_ratio` — see OUTPUT_FITS."""
+        from . import settings as _settings
+        mode = mode if mode in OUTPUT_FITS else "fit"
+        self.output_fit = mode
+        _settings.set("output_fit", mode)
+        self._apply_aspect()
+
+    def content_aspect(self) -> float:
+        """Display width/height of the [-1,1] box the renderers receive.
+
+        NOT the same as the output ratio. A 3D camera already divides x by the
+        viewport aspect (`scene3d._clip_and_project`), so its normalised box is
+        the viewport's shape and must be drawn that wide. A 2D generator
+        composes in a square and never sees the ratio, so its box is square
+        whatever the surface is — drawing it at the viewport's shape is what
+        stretched every flat pattern on a non-1:1 ratio.
+
+        This is derived from `Scene.is_3d` for the same reason the library's
+        2D/3D badge is: there's no stored "kind" field to disagree with."""
+        sc = self.scenes.current
+        if sc is not None and getattr(sc, "is_3d", False):
+            return ratio_to_aspect(self.output_ratio)
+        return 1.0
+
     def _apply_aspect(self):
         a = ratio_to_aspect(self.output_ratio)
         for sc in (self.scenes.current, self.scenes._next):
             cam = getattr(sc, "camera", None) if sc else None
             if cam is not None:
                 cam.aspect = a
-        # The DAC needs it too — the galvo field is square, so a wide viewport
-        # gets letterboxed there (see PathPlanner). Without this the beam would
-        # draw a stretched version of what the browser shows.
+        # The DAC needs it too — the galvo field is square, so content wider
+        # than it gets letterboxed there (see PathPlanner). Without this the
+        # beam would draw a stretched version of what the browser shows. It
+        # takes the CONTENT aspect, not the viewport's: a square 2D pattern on
+        # a 16:9 rig needs no squeeze at all.
         planner = getattr(self.output, "planner", None)
         if planner is not None:
-            planner.aspect = a
+            planner.aspect = self.content_aspect()
+            planner.fit = self.output_fit
 
     def set_keystone(self, h: float | None = None, v: float | None = None):
         """Live horizontal/vertical keystone for the laser (Settings >
@@ -1589,6 +1632,14 @@ class Engine:
             "output_ratio": self.output_ratio,
             "output_ratios": list(OUTPUT_RATIOS),
             "output_aspect": round(ratio_to_aspect(self.output_ratio), 4),
+            # The shape of the SURFACE (above) and the shape of the [-1,1] box
+            # the preview carries (below) are different numbers — see
+            # Engine.content_aspect. Both browser surfaces need the second one
+            # to letterbox correctly; sent from here rather than re-derived in
+            # each page so they can't drift.
+            "output_fit": self.output_fit,
+            "output_fits": list(OUTPUT_FITS),
+            "content_aspect": round(self.content_aspect(), 4),
             "hue_override": self.hue_override_on,
             "disable_plane": self.disable_plane,
             "mirror_x": self.mirror_x,

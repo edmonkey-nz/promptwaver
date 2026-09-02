@@ -6,4 +6,4 @@ two so light and sound move together. Claude acts as an offline *scene
 director* (keyword -> scene spec); the local engine renders at full framerate.
 """
 
-__version__ = "0.77.0"
+__version__ = "0.78.0"

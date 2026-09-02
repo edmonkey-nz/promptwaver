@@ -96,6 +96,17 @@ class Pattern2D(Generator):
         R = _rot_matrix(g_rot).T if g_rot else None
         out: Frame = []
 
+        # Recomputed per frame rather than cached: `nodes` is a live params
+        # entry that the UI and the director can both replace, and the scan is
+        # a couple of hundred float comparisons against the geometry build
+        # below. Warned once so a rescued scene is visible in the log rather
+        # than silently "just working" at a scale nobody authored.
+        pscale = _placement_scale(nodes)
+        if pscale != 1.0 and not getattr(self, "_warned_placement", False):
+            self._warned_placement = True
+            print(f"[pattern2d] node placements are ~{1/pscale:.0f}x outside the "
+                  f"[-1,1] frame — rescaling to fit (scene JSON has the wrong units)")
+
         for node in nodes:
             if len(out) >= budget:
                 break
@@ -112,7 +123,7 @@ class Pattern2D(Generator):
             n_scale = float(node.get("scale", 1.0))
             n_rot = float(node.get("rotate", 0.0))
             NR = _rot_matrix(n_rot).T if n_rot else None
-            at = _placement(node) * spread
+            at = _placement(node) * spread * pscale
 
             color = node.get("color") or [1.0, 1.0, 1.0]
             # ADDED to the node's own glow, not a floor under it. A floor can
@@ -159,6 +170,44 @@ def _spread(items, spread: float):
         c = P.mean(axis=0)
         out.append((P + c * k, h))
     return out
+
+
+#: Largest node placement, in frame units, still treated as deliberate. The
+#: frame is [-1,1] and the prompt asks compositions to reach ~0.9, so a node
+#: at 2 or 3 is a plausible authored choice (partly off-screen, or pulled in
+#: by `spread`). An order of magnitude beyond that is not a composition, it is
+#: a units mistake.
+_PLACEMENT_SANE = 3.0
+
+
+def _placement_scale(nodes) -> float:
+    """1.0 normally; a corrective factor when a scene's placements are plainly
+    authored in the wrong units.
+
+    Generated scenes occasionally come back with `at` in some other coordinate
+    space entirely — a real one measured [-55..65] against a [-1,1] frame, so
+    every single motif landed off-screen and the scene rendered pure black
+    with no error raised anywhere. The geometry and the composition are fine
+    in that case; only the scale is wrong, and it is recoverable exactly
+    because it is uniform. Rescaling to fit beats showing nothing, and the
+    threshold is high enough that no deliberate composition trips it.
+    """
+    m = 0.0
+    for node in nodes:
+        at = node.get("at")
+        if isinstance(at, (list, tuple)) and len(at) >= 2:
+            for c in at[:2]:
+                try:
+                    m = max(m, abs(float(c)))
+                except (TypeError, ValueError):
+                    pass
+        ap = node.get("at_polar")
+        if isinstance(ap, (list, tuple)) and ap:
+            try:
+                m = max(m, abs(float(ap[0])))
+            except (TypeError, ValueError):
+                pass
+    return 1.0 if m <= _PLACEMENT_SANE else 0.92 / m
 
 
 def _placement(node: dict) -> np.ndarray:
