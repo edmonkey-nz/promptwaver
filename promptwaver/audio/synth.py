@@ -13,6 +13,7 @@ interval jitter) instead of guessed at — see `promptwaver/audio/diagnostics.py
 from __future__ import annotations
 
 import queue
+import sys
 import threading
 import time
 
@@ -42,7 +43,37 @@ from .diagnostics import CallbackStats, list_devices
 #: largest that fits: at 1 (370ms total) there were zero underruns with six
 #: competing CPU-bound threads AND repeated 250ms stalls holding the render
 #: lock; depth 2 was no better and costs another 186ms of lag.
+#:
+#: **Depth does not buy resilience here — measured, don't raise it.** Against a
+#: real 45fps render loop on `hot lava`, starvation went 18.8% at depth 1 to
+#: 21.1% at 2 and 49.1% at 4. That shape is the signature of a producer that
+#: cannot keep up on AVERAGE rather than one suffering jitter: a deeper queue
+#: only means it runs flat out for longer, competing harder for the GIL. The
+#: fix for that is GIL_SWITCH_INTERVAL below, not more buffering.
 PRERENDER_BLOCKS = 1
+
+#: CPython's GIL handover period, seconds. The default is 5ms.
+#:
+#: The producer above is a *plain* Python thread, so unlike the PortAudio
+#: callback it replaced it gets no realtime scheduling priority — it competes
+#: with the visual render loop on equal terms. On a scene whose frame cost
+#: fills the frame budget the render thread effectively never yields, and at
+#: the default switch interval the producer's ~22ms of work stretched to
+#: 200-350ms and missed the 186ms deadline outright.
+#:
+#: Measured on `hot lava` (3D, ~20-23ms a frame against a 22ms budget at
+#: 45fps, i.e. the render thread saturated):
+#:
+#:     switch interval   starved callbacks   producer p95   engine fps
+#:     5ms (default)     34.3%               648ms          40.0
+#:     0.5ms             0.0%                103ms          38.8
+#:
+#: Handing the GIL over ten times more often costs ~3% of the frame rate on
+#: that scene and nothing measurable on lighter ones (`jupiter`, `magic harp`
+#: were already clean at either setting), and it is the difference between
+#: audible dropouts and none. Set once when a real stream starts, because it
+#: is process-global and only matters when both threads exist.
+GIL_SWITCH_INTERVAL = 0.0005
 
 
 class NullSynth:
@@ -132,25 +163,35 @@ class SoundscapeSynth:
         """
         t0 = time.perf_counter() if self._diag_enabled else 0.0
         crossfading = False
+        starved = False
         pos = 0
         while pos < frames:
             if self._residual is None or len(self._residual) == 0:
                 try:
                     self._residual, crossfading = self._q.get_nowait()
                 except queue.Empty:
-                    # Underrun. Silence for the remainder — never block the
-                    # realtime thread waiting for the producer.
+                    # Starvation: the producer hasn't kept up. Silence for the
+                    # remainder — never block the realtime thread waiting for
+                    # it. Flagged for the stats because this returns ON TIME
+                    # with valid (silent) data, so PortAudio sets no underflow
+                    # status and nothing else in the diagnostics moves. See
+                    # CallbackStats.record.
                     outdata[pos:] = 0.0
                     pos = frames
+                    starved = True
                     break
             take = min(frames - pos, len(self._residual))
             outdata[pos:pos + take] = self._residual[:take]
             self._residual = self._residual[take:]
             pos += take
         if self._diag_enabled:
-            self.stats.record(time.perf_counter() - t0, status, crossfading=crossfading)
+            self.stats.record(time.perf_counter() - t0, status,
+                              crossfading=crossfading, starved=starved)
 
     def start(self):
+        # See GIL_SWITCH_INTERVAL. Done here rather than at import so a run
+        # with no audio (or with NullSynth) keeps the interpreter default.
+        sys.setswitchinterval(GIL_SWITCH_INTERVAL)
         self.stats = CallbackStats(self.sr, self.blocksize)
         self._q = queue.Queue(maxsize=PRERENDER_BLOCKS)
         self._residual = None

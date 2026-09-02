@@ -1588,7 +1588,12 @@ function renderDiagnostics(s){
     $("diag-underruns").innerHTML = "";
   } else {
     const d = s.audio_diag || {};
-    const bad = d.underruns > 0 || d.duration_budget_pct > 70;
+    // `starved` has to be in here: it is the only counter that moves when the
+    // prerender producer falls behind, and that is now the likeliest cause of
+    // audible dropouts. A starved callback returns on time with silence, so
+    // `underruns` and the duration figures all stay green while the output
+    // gaps — judging health without this reads a dropping stream as healthy.
+    const bad = d.underruns > 0 || d.starved > 0 || d.duration_budget_pct > 70;
     const mismatch = d.requested_blocksize && d.requested_blocksize !== d.blocksize;
     status.textContent = `audio: running \u00b7 blocksize ${d.blocksize} @ ${d.sr}Hz`
       + (mismatch ? ` (requested ${d.requested_blocksize})` : "");
@@ -1597,6 +1602,7 @@ function renderDiagnostics(s){
     g.innerHTML = `
       <span>callbacks</span><b>${d.callbacks ?? 0}</b>
       <span>underruns</span><b class="${d.underruns?'bad':''}">${d.underruns ?? 0}</b>
+      <span>starved</span><b class="${d.starved?'bad':''}">${d.starved ?? 0} (${d.starved_pct ?? 0}% of callbacks)</b>
       <span>avg render</span><b>${d.avg_duration_ms ?? 0} ms</b>
       <span>max render</span><b class="${(d.duration_budget_pct>70)?'bad':''}">${d.max_duration_ms ?? 0} ms (${d.duration_budget_pct ?? 0}% of budget)</b>
       <span>callback budget</span><b>${d.expected_interval_ms ?? 0} ms</b>

@@ -8,6 +8,52 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.78.1]
+
+### Audio dropouts on heavy scenes — the GIL, not the DSP
+
+`hot lava` and other expensive 3D scenes dropped audio badly. The cause is not
+DSP cost and not the prerender pipeline itself: **the producer is a plain
+Python thread, so unlike the PortAudio callback it replaced it gets no realtime
+scheduling priority.** On a scene whose frame cost fills the frame budget
+(`hot lava` renders in ~20–23ms against 22ms at 45fps) the visual render thread
+effectively never yields, and at CPython's default 5ms GIL handover the
+producer's ~22ms of work stretched past the 186ms deadline.
+
+Measured on `hot lava` under a real 45fps render loop:
+
+| | starved callbacks | producer p95 | engine fps |
+|---|---|---|---|
+| before | 34.3% | 648ms | 40.0 |
+| after | **0.0%** | 103ms | 38.8 |
+
+- **`sys.setswitchinterval(0.0005)`** when a real audio stream starts. Handing
+  the GIL over ten times more often costs ~3% of the frame rate on the worst
+  scene and nothing measurable on lighter ones. Not set at import, so a
+  `--no-audio` run keeps the interpreter default.
+- **Do not raise `PRERENDER_BLOCKS` to fix this** — measured, it makes things
+  worse: starvation went 18.8% at depth 1 to 21.1% at 2 and 49.1% at 4. A
+  deeper queue only means the producer runs flat out for longer, competing
+  harder for the GIL.
+
+For reference, 0.77.0 was also dropping on this scene (23 PortAudio underruns
+in 45s, callback averaging 73.7ms against the 186ms budget). What changed in
+0.78.0 is that the dropouts stopped being *visible*:
+
+### Diagnostics could not see the new failure mode
+
+When the prerender queue is empty the callback writes silence and returns in
+well under a millisecond — on time, with valid data — so PortAudio sets no
+underflow flag and **every counter in the audio diagnostics reported a
+perfectly healthy stream while the output was full of holes.** Verified: with
+the fix reverted, `starved` reads 30.9% while `underruns` is 0 and average
+callback duration is 0.46ms.
+
+- **New `starved` / `starved_pct` counters** in `CallbackStats`, plus a
+  `recent_starves` log, shown in Settings > Audio diagnostics and folded into
+  the panel's health colour. Counted separately from `underruns`: the two have
+  different causes and different fixes.
+
 ## [0.78.0]
 
 ### `harp` — a long-ringing string voice

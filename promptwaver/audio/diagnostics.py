@@ -34,8 +34,10 @@ class CallbackStats:
         self.durations = collections.deque(maxlen=window)
         self.intervals = collections.deque(maxlen=window)
         self.underrun_events = collections.deque(maxlen=25)
+        self.starve_events = collections.deque(maxlen=25)
         self.count = 0
         self.underrun_count = 0
+        self.starved_count = 0
         # A soundscape fade (SoundscapeMixer._phase is not None — its own
         # fade-out/swap/fade-in, independent of and often longer-lived than
         # the visual scene crossfade) still renders a live Soundscape and
@@ -51,9 +53,22 @@ class CallbackStats:
         self._last_start = None
         self._t0 = time.monotonic()
 
-    def record(self, duration: float, status, crossfading: bool = False) -> None:
+    def record(self, duration: float, status, crossfading: bool = False,
+               starved: bool = False) -> None:
         now = time.monotonic()
         self.count += 1
+        # A starved callback is a gap in the output that PortAudio CANNOT see.
+        # Since synthesis moved off the realtime thread, an empty prerender
+        # queue means the callback writes silence and returns in well under a
+        # millisecond — on time, with data, so no underflow flag is ever set.
+        # Every other number here then reports a perfectly healthy stream
+        # while the audio is full of holes, which is exactly how a badly
+        # dropping scene shipped. Counted separately from `underruns` because
+        # the two have different causes and different fixes.
+        if starved:
+            self.starved_count += 1
+            self.starve_events.append({"t": round(now - self._t0, 3),
+                                       "crossfade": crossfading})
         self.durations.append(duration)
         if self._last_start is not None:
             self.intervals.append(now - self._last_start)
@@ -83,6 +98,11 @@ class CallbackStats:
             "expected_interval_ms": round(budget_ms, 2),
             "callbacks": self.count,
             "underruns": self.underrun_count,
+            # Prerender-queue starvation — see record(). This is the number
+            # that actually moves when a heavy scene starves the producer;
+            # `underruns` stays at zero throughout.
+            "starved": self.starved_count,
+            "starved_pct": round(100.0 * self.starved_count / self.count, 1) if self.count else 0.0,
             # plain sum()/len(), not statistics.mean() — see perf.py's
             # summary() for why (mean() is ~100x slower here for no benefit,
             # and this runs on the same contended broadcaster thread).
@@ -94,6 +114,7 @@ class CallbackStats:
             "xfade_callbacks": self.xfade_count,
             "xfade_over_budget": self.xfade_over_budget,
             "recent_underruns": list(self.underrun_events),
+            "recent_starves": list(self.starve_events),
         }
 
 
