@@ -47,6 +47,23 @@ Everything else derives and needs no edit: `engine.state()` reads `__version__` 
 
 Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .venv` and check the old number survives only in CHANGELOG history.
 
+## Releasing, and how to tell whether it worked
+
+**You cannot push.** The agent environment has no GitHub credentials — HTTPS has no helper and the SSH keys in the agent are rejected. Commit and tag locally, then hand Eddie `git push origin master && git push origin vx.y.z`. Don't burn a turn discovering this again.
+
+**A tag push runs the workflow file from the TAGGED COMMIT, not from master.** So a fix to `.github/workflows/build.yml` does nothing for tags that already exist — it needs a new tag containing it. This is why the CI fixes landed as 0.78.3 and 0.78.4 rather than by re-running anything.
+
+**"The build passed" is not "the release published."** The workflow has three build jobs and a separate `release` job, and the builds succeeded on *every single tag from v0.70.0 to v0.78.2* while the release job failed each time — so the repo had working binaries in workflow artifacts and no published release at all for months. A `workflow_dispatch` run on master is not evidence either: it skips the release job entirely (`if: startsWith(github.ref, 'refs/tags/')`), so it goes green no matter how broken releasing is.
+
+Check the release, not the run:
+
+```bash
+curl -s "https://api.github.com/repos/edmonkey-nz/promptwaver/releases?per_page=3" \
+  | python3 -c 'import sys,json; [print(r["tag_name"], len(r["assets"]), "assets") for r in json.load(sys.stdin)]'
+```
+
+Three assets, named `promptwaver-{linux-x86_64,macos-arm64,windows-x86_64.exe}`, is a good release. Two assets means the historic name collision is back (see the workflow comment); zero releases means the permission problem is back. `/actions/runs/<id>/jobs` names the failing job and step without needing auth — run *logs* need a token and 403 without one.
+
 ## Architecture
 
 Read `TECHNICAL.md` for the subsystem-level detail. What follows is the load-bearing structure that isn't obvious from any single file.
