@@ -8,6 +8,30 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.78.4]
+
+### Release assets: all three platforms, correctly named
+
+0.78.3 got as far as *creating* a release — the permissions fix worked — but
+attached only two assets, named `promptwaver` and `promptwaver.exe`, with the
+Linux build missing entirely. The 28.8MB file sitting there as `promptwaver`
+was the **macOS** binary.
+
+PyInstaller names every platform's output `promptwaver` (or `promptwaver.exe`)
+and only the *artifact* was platform-specific. `download-artifact` unpacks to
+`artifacts/<artifact-name>/<file-name>`, so the release job saw two different
+files both called `promptwaver`; release asset names must be unique, the second
+collided, and the upload step failed partway through.
+
+The binary is now renamed to its platform name in the build job, so the file
+itself carries the platform — which is also what a downloader needs to see.
+Assets are `promptwaver-linux-x86_64`, `promptwaver-macos-arm64` and
+`promptwaver-windows-x86_64.exe`, matching what the release notes have always
+claimed.
+
+**Delete the v0.78.3 release** — its lone `promptwaver` asset is a macOS
+binary with nothing saying so.
+
 ## [0.78.3]
 
 ### The release pipeline actually publishes now

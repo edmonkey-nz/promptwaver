@@ -56,11 +56,24 @@ jobs:
       - name: Build executable with PyInstaller
         run: pyinstaller --onefile --name promptwaver --collect-all aiohttp --collect-all numpy --hidden-import=anthropic run.py
 
+      # PyInstaller names every platform's binary `promptwaver` (or
+      # `promptwaver.exe`), and only the ARTIFACT was platform-specific.
+      # download-artifact unpacks to `artifacts/<artifact-name>/<file-name>`,
+      # so the release job saw two different files both called `promptwaver` —
+      # Linux and macOS. Release asset names must be unique, so the second one
+      # collided, the upload step failed, and v0.78.3 published a macOS binary
+      # under the bare name `promptwaver` with the Linux build missing.
+      # Renaming here makes the FILE carry the platform, which is also what
+      # anyone downloading it needs to see.
+      - name: Name the executable for its platform
+        shell: bash
+        run: mv "dist/${{ matrix.artifact_name }}" "dist/${{ matrix.asset_name }}"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.artifact_name }}
+          path: dist/${{ matrix.asset_name }}
 
   release:
     name: Create Release
