@@ -1028,14 +1028,19 @@
         <b>more at the sides</b> rather than cropping — the field of view stays
         vertical. <b>1:1</b> is a laser's native shape; the galvos scan a square,
         so a wider ratio is letterboxed into it.</div>
-      <div class="field" style="margin-top:8px"><label>flat scenes</label>
+      <div class="field" style="margin-top:8px"><label>wide ratios</label>
         <select id="o-fit" style="flex:1"></select></div>
-      <div class="hint">only <b>2D</b> scenes need this. A 3D camera widens its
-        field of view to match the ratio above, but a flat pattern is composed
-        in a square and has to be placed in a wider frame somehow.
-        <b>letterbox</b> keeps the whole pattern with bars at the sides,
-        <b>pan/scan</b> fills the frame and crops the top and bottom, and
-        <b>stretch</b> distorts it to fit.</div>
+      <div class="hint">how a scene is placed in a frame wider than the square
+        it was composed for. <b>letterbox</b> keeps everything, with bars or
+        empty edges; <b>pan/scan</b> fills the frame edge to edge and loses the
+        top and bottom; <b>stretch</b> distorts to fit.
+        <br><b>3D</b> scenes resolve this at the camera: letterbox widens the
+        field of view, which shows more world at the sides — and if the scene
+        doesn't extend that far, those sides are simply empty. Pan/scan keeps
+        the square framing and crops vertically instead, so the picture always
+        reaches the left and right edges.
+        <br><b>2D</b> patterns are composed in a square and can't be re-framed,
+        so letterbox gives real black bars.</div>
     </div>
 
     <div class="group">

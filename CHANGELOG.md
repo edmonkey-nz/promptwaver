@@ -8,6 +8,39 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.78.2]
+
+### 3D scenes now fill a wide output
+
+At 16:9 a `world` scene left empty bands down the left and right of the
+projector. **This was never letterboxing** — an exact-16:9 output window
+computes zero bars. `fov` is the *vertical* field of view, so widening the
+ratio widens the *horizontal* view: 16:9 shows about 78% more world sideways
+than 1:1. A `world` scene's geometry has bounded lateral extent, so that extra
+view lands on nothing. Measured on `Circuitz`, lit pixels spanned the full
+width at 1:1 but only 746/800 of it at 16:9.
+
+- **`output_fit` now governs the 3D camera too.** `fill` scales the focal
+  length by the aspect, which cancels the `/aspect` in the projection and
+  restores exactly the framing a square viewport would show, cropping
+  vertically instead of widening horizontally. `Circuitz` then covers the full
+  800/800; `birds in sky` gains its full height as well.
+- `fit` is unchanged and remains the default — it keeps everything in view,
+  at the cost of those empty sides on a scene that doesn't reach that far.
+- **`fill` cannot invent content.** A scene that already fails to fill at 1:1
+  (`alien algebra` is 11.7% short there) keeps that gap afterwards; the setting
+  only removes the part caused by the ratio.
+- Culling is unaffected: `world._cone_cos` bounds the default frustum and the
+  `fill` frustum is strictly smaller, so that cone stays conservative.
+
+### The fit control was documented as 2D-only, which was wrong
+
+Introduced in 0.78.0 labelled *flat scenes*, on the claim that a 3D camera
+already handles the ratio. It doesn't — the above is exactly a 3D case, and so
+is an output window whose physical shape isn't the configured ratio. Relabelled
+*wide ratios*, with the hint now explaining what each mode does to a 3D scene
+and to a flat one separately.
+
 ## [0.78.1]
 
 ### Audio dropouts on heavy scenes — the GIL, not the DSP

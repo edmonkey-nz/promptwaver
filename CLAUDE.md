@@ -162,7 +162,12 @@ Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve �
 
 Derived from `Scene.is_3d`, same as everything else that asks that question — don't store it. Every consumer (`renderer.js`'s letterbox, `ilda.PathPlanner`) takes the **content** aspect; assuming the box always filled the viewport is what stretched every flat pattern on a non-1:1 rig and squeezed it vertically on the beam.
 
-`output_fit` (`fit` / `fill` / `stretch`) resolves the remaining mismatch — letterbox, pan-and-scan, or distort. It only has a visible effect when the two aspects differ, i.e. a 2D scene on a non-square ratio, or an output window whose physical shape isn't the configured ratio.
+`output_fit` (`fit` / `fill` / `stretch`) resolves the remaining mismatch — letterbox, pan-and-scan, or distort. **It is resolved in two different places, and that's the point:**
+
+- **3D — at the camera** (`Camera._focal`). A wide ratio widens the horizontal field of view because `fov` is the vertical angle, so 16:9 shows ~78% more world sideways than 1:1. A `world` scene's geometry has bounded lateral extent, so that extra view lands on **empty space** — measured on `Circuitz`, lit pixels covered the full width at 1:1 but only 746/800 at 16:9. `fill` scales the focal length by `aspect`, which cancels the `/aspect` in `_clip_and_project` and restores the square framing, cropping vertically instead. Circuitz then covers 800/800.
+- **2D — at the renderer's letterbox**, because a flat pattern has no camera to re-frame; `fit` there means real black bars.
+
+So "the sides are empty on a 3D scene at 16:9" is **not** a letterboxing bug — an exact-16:9 output window computes zero bars. Don't go looking in `renderer.js` for it. Equally, `fill` cannot invent content: a scene that already fails to fill at 1:1 (`alien algebra`, 11.7% dead at 1:1) still has that gap afterwards.
 
 Both browser surfaces read `content_aspect` + `output_fit` straight off engine state. **`index.html`'s `syncMonitorFilters` must keep setting them**: it originally didn't, and the preview silently fell back to a square box inside a canvas already reshaped to the ratio, so 3D scenes rendered horizontally squashed there and correct in the output window.
 

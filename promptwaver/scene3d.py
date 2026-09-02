@@ -204,7 +204,7 @@ class Camera:
 
     def __init__(self, *, fov=60.0, near=0.4, far=14.0, speed=0.6,
                  height=1.0, sway=0.12, depth: DepthCue | None = None,
-                 max_strokes=90, laser_max_strokes=None, aspect=1.0, mode="fly",
+                 max_strokes=90, laser_max_strokes=None, aspect=1.0, fit="fit", mode="fly",
                  target=(0.0, 0.0, 0.0), orbit_radius=9.0, orbit_height=1.5,
                  waypoints=None, look_at=None, lookahead=3.0, seed=0, wander=0.0):
         self.fov = fov
@@ -229,6 +229,9 @@ class Camera:
         self.laser_max_strokes = laser_max_strokes
         self.max_strokes = max_strokes
         self.aspect = aspect
+        # How a wide `aspect` is spent — see `_focal`. "fit" widens the field
+        # of view, "fill"/"stretch" keep the square framing and crop.
+        self.fit = fit
         self.mode = mode                       # "fly" | "orbit" | "drift" | "path"
         self.target = np.asarray(target, np.float32)
         self.orbit_radius = orbit_radius
@@ -360,7 +363,31 @@ class Camera:
                 _drift_axis(math.cos(p * 0.13), p, 0.051, self._phase[2], w) * r], np.float32)
 
     def _focal(self):
-        return 1.0 / math.tan(math.radians(self.fov) * 0.5)
+        f = 1.0 / math.tan(math.radians(self.fov) * 0.5)
+        if self.fit != "fill":
+            return f
+        # "fill": keep the horizontal world-extent a SQUARE viewport would
+        # show and crop vertically instead, rather than widening the field of
+        # view to suit the ratio.
+        #
+        # `_clip_and_project` divides px by aspect, so scaling f by the same
+        # factor cancels it out: px = x/z*(f*a)/a = x/z*f, exactly the 1:1
+        # framing, while py = y/z*(f*a) narrows the vertical view. Content
+        # therefore reaches the left and right edges at any ratio.
+        #
+        # This exists because the default is the opposite trade and it shows:
+        # a `world` scene's geometry has bounded lateral extent, so the extra
+        # horizontal field of view at 16:9 lands on empty space. Measured on
+        # `Circuitz` — lit pixels spanned the full width at 1:1 but only
+        # 675/800 of it at 16:9, a 15.6% dead band down each side.
+        #
+        # Only widening ratios can open that gap: at aspect < 1 the default
+        # already NARROWS the horizontal view, so clamp at 1 and leave tall
+        # viewports alone.
+        #
+        # Culling is unaffected: `world._cone_cos` bounds the DEFAULT frustum,
+        # and this one is strictly smaller, so that cone stays conservative.
+        return f * max(self.aspect, 1.0)
 
     def project(self, paths3d: list[Path3D], field_depth: float) -> Frame:
         """Project world paths to 2D. Fly mode wraps geometry in Z for an endless

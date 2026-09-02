@@ -849,6 +849,12 @@ class Engine:
             cam = getattr(sc, "camera", None) if sc else None
             if cam is not None:
                 cam.aspect = a
+                # For a 3D scene the fit is resolved at the CAMERA, not by the
+                # renderer's letterbox: a wide ratio widens the field of view,
+                # and it is that extra view — not any letterboxing — that
+                # leaves empty bands down the sides of a `world` scene. See
+                # Camera._focal.
+                cam.fit = self.output_fit
         # The DAC needs it too — the galvo field is square, so content wider
         # than it gets letterboxed there (see PathPlanner). Without this the
         # beam would draw a stretched version of what the browser shows. It
