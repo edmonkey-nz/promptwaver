@@ -8,6 +8,27 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.78.3]
+
+### The release pipeline actually publishes now
+
+No functional change to the app — this exists because **no tag has ever
+produced a published release**. Every tag from `v0.70.0` to `v0.78.2` built all
+three executables successfully and then failed on the final *Create Release*
+step, leaving working binaries in workflow artifacts and nothing attached to a
+release. The only run that ever went green was a `workflow_dispatch` on master,
+which passes because it skips that job entirely.
+
+- Creating a release writes to the repo and the workflow declared no
+  `permissions:` block, so it inherited a read-only `GITHUB_TOKEN` and
+  `softprops/action-gh-release` got a 403. Now scoped `contents: write` on the
+  release job only; the build jobs need no write access.
+- The release notes template told every downloader that the executables "start
+  with `--web` automatically". **There is no `--web` flag** — passing it makes
+  argparse exit with an error. Replaced with what the binaries really do, plus
+  the Chrome/WebGL2 requirement, which matters now there is no Canvas2D
+  fallback.
+
 ## [0.78.2]
 
 ### 3D scenes now fill a wide output
