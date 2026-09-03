@@ -86,6 +86,139 @@ sequencing are all natural follow-ons; none are in scope above.
 Poach the bluetooth controller code for driving 2D/3D camera and motion
 settings. Not started.
 
+### g) Surround output and per-voice `depth` — BUILT, needs a room test
+
+Shipped as **quad**: a front pair and a rear pair, with each voice placed on a
+front/back axis by its own `depth` alongside its existing `pan`. Driven by the
+per-voice LFO and by the swell, as scoped. Verified on this machine end to end
+except for the one thing that needs speakers — whether it *sounds* like a room.
+
+What exists now:
+
+- **`dsp.SURROUND_LAYOUTS`** maps a channel count to `(front L, front R, rear
+  L, rear R)`. 2 = stereo, 4 = quad, 6 = the same quad image carried on a 5.1
+  stream with **centre and LFE left silent**. 6 is there only because a 5.1
+  sink may refuse a 4-channel stream; on this machine's
+  `alsa_output.…hdmi-surround` (which enumerates `max_out: 6`) both 4 and 6
+  open clean, measured.
+- **`_pan_gains(pan, depth, channels)`** — one vectorised gain term per voice,
+  broadcast against its mono buffer. Equal-power on both axes (`sum(g²) == 1`
+  at every depth, verified). Returns `(channels,)` for scalar inputs and
+  `(frames, channels)` when either axis is a per-sample LFO array.
+- **Per-voice `depth`**, unipolar 0..1 — 0 is the front pair, i.e. exactly
+  where stereo put the voice. Unipolar rather than bipolar-centred because the
+  no-op has to be the default and here the no-op is an END of the range.
+- **`swell_depth_amount`** rides the *same* wave as the level swell
+  (`_swell_wave`, split out for this), so a voice at the top of its cycle is
+  both loudest and furthest forward. Independent amount, defaults 0.
+- **`depth` as an LFO destination**, in `LFO_DESTS_SMOOTH` next to `pan`.
+  Listed unconditionally, including on a stereo rig: the LFO config is scene
+  data and has to round-trip through a stereo session unchanged.
+- **`audio_channels`** is a rig setting in `settings.json`, threaded through
+  `Engine.configure_audio` → `SoundscapeSynth.reconfigure`, with a fallback to
+  stereo that reports itself in `last_error` and persists what actually
+  opened. UI: Settings > Audio > *speakers*, with each device's channel count
+  now shown in the device list.
+- **MIDI**: `voice#N.depth` on CC 70-77, `swell_depth_amount` learnable.
+
+Two properties worth not breaking:
+
+- **Stereo output is bit-identical to the pre-surround code** — verified
+  against `git show HEAD` across all 39 scene soundscapes × 4 blocks (max abs
+  sample difference 0.0, same for the band/VU readings). `depth` is ignored
+  outright at 2 channels rather than folded down, and the gain vector is left
+  at float64 so the arithmetic is the same operation it always was. The check
+  has to exclude `noise` voices: `_render_noise` uses an unseeded
+  `np.random.default_rng()`, so it is not reproducible run to run — that is
+  pre-existing, and a trap for any future numerical comparison in this file.
+- **No scene-library churn.** `depth`, `sweep` and `swell_depth_amount` go
+  through `_optional_clamp`, which leaves a field absent when it is absent and
+  unused, so `_normalise` adds no keys to any existing scene.
+
+Cost, measured at blocksize 8192 (186ms budget), median over 40 blocks:
+`Circuitz` 6.46 → 6.94 → 7.63ms and `hot lava` 9.51 → 10.24 → 10.82ms at 2/4/6
+channels. Quad is **+7.5%**, 5.1 is **+15%**, and the worst case is still
+under 6% of the block budget. Streams opened on the HDMI sink with zero
+underruns and zero starved callbacks.
+
+Still open:
+
+- **The room test.** Nothing here proves the rears are the rears, that the
+  channel ORDER matches what the receiver expects, or that a voice at depth 1
+  actually sounds behind you. `SURROUND_LAYOUTS` is one dict if the order is
+  wrong.
+- **Centre and LFE stay silent at 6 channels.** A centre send is trivial but
+  wants a reason (ambient music with no dialogue has nothing obvious for it);
+  an LFE needs a crossover, and the cheap per-voice version is the per-sample
+  recursion this file forbids. The affordable shape is one block-FFT lowpass
+  over the finished mix, reusing `_apply_eq`'s machinery — worth doing if the
+  sub sits silent on a real 5.1 receiver.
+- **Stereo fold-down.** A surround-authored scene on a stereo rig currently
+  ignores depth entirely. A distance cue wants attenuation *and* HF damping,
+  and per-voice damping is the expensive half.
+- **The director authors neither `depth` nor `sweep`.** `_SOUNDSCAPE_GUIDE` is
+  untouched, deliberately: a field that does nothing on most output devices is
+  noise in every generated scene. Revisit if surround becomes the normal rig.
+- **`camera.depth` already exists** as an unrelated culling mode. No JSON
+  collision — the new one is `soundscape.voices[].depth` — but the name is
+  taken in the other half of the spec, which is worth knowing before adding a
+  modulation destination called `depth`.
+
+### h) Per-voice filter sweep — BUILT
+
+A `sweep` knob on every voice, 0..1, default 0. The whole-mix `filter_sweep`
+could not be scaled per instrument — it is one EQ curve over the summed mix,
+so excluding a voice from it would mean giving that voice its own filter, and
+a per-voice filter is either banned per-sample recursion or its own FFT per
+voice per block. So the per-voice control sweeps the cheap brightness handle
+each voice already has: its `tone`, which selects a bandlimited wavetable.
+
+That costs nothing — `_wavetable` quantises tone to 1/100 and caches, so a
+sweeping voice warms ~100 tables once — and it runs at the same block
+granularity the whole-mix sweep already does. Both run off one `sweep_swing`
+phase computed once per block, so a scene with both up moves as a single
+gesture. Measured: one voice at `sweep=1` swings the mix's high-frequency
+fraction 4x more than baseline, all voices considerably more.
+
+Not a *filter* in the EQ sense — it is a brightness sweep. If a true
+per-instrument filter is ever wanted, that is the block-FFT-per-voice cost
+above, and it should be scoped explicitly rather than grown out of this.
+
+### i) Voice knobs now follow what the renderers read — BUILT
+
+Every voice type's panel is built from the parameters its renderer actually
+uses in `dsp.py`, rather than from whatever got UI first. The drift had
+stranded real parameters behind hand-edited JSON or a MIDI CC:
+
+| voice | was missing |
+|---|---|
+| `bell` | `rate`, `decay`, `tone` — it had **no** type-specific knobs at all |
+| `pluck` | `decay`, `tone` (it showed `rate`) |
+| `osc` | `tone` |
+| `pad`, `sub` | `detune` (and `tone` for `sub`, which renders through `_render_pad`) |
+
+Verified each one changes the output: bell/pluck `rate` schedules more notes,
+`decay` rings longer, `tone` brightens. **`tone` on a SINE does nothing** and
+that is correct — `_wavetable` builds one partial for a sine, so there is
+nothing above it to roll off (saw/square/triangle all move). The knob carries
+a tooltip saying so on sine voices, because a correct knob that does nothing
+looks like a broken one. `bell` is exempt: it ignores `waveform` and shapes
+its own five-partial inharmonic bank.
+
+**Deliberately not added: bell inharmonicity.** `BELL_PARTIAL_RATIOS` is a
+fixed table, so `tone` only changes how loud the upper partials are, never
+where they sit — the "clang vs chime" axis has no control. A `stretch`
+parameter interpolating the ratios about the fundamental
+(`1 + (ratios - 1) * k`, k default 1.0 so absent means unchanged) would be
+nearly free: the ratios array is rebuilt per block anyway and is 5 elements
+long. It was left out because it is a new DSP parameter and a new scene-format
+field, where everything above was just exposing what already existed. Worth
+doing if bells still sound one-note after playing with the knobs. Note the one
+edge it would need thinking about: at high `stretch` with a high root note the
+upper partials can pass Nyquist and alias — no scene in the library gets near
+that today (highest bell root is 72, top partial 1570Hz) and the base ratios
+have the same latent issue, but stretching widens it.
+
 ### Smaller open items
 
 - **The 2D director prompt still lets polar motifs dominate.** Generated
@@ -108,7 +241,8 @@ settings. Not started.
   director prompt names exactly one generator, so `flow_field`, `attractor`
   and `ripples` can be driven by hand but never chosen by Claude.
 - **CHANGELOG has no entries for 0.31–0.70.** Not worth reconstructing.
-- **5.1 surround audio with depth/front-back panning.** Standard term: "depth" (front/back axis). Would need per-voice depth parameter routed through modulation matrix, and graceful fallback for stereo headphones (either ignored or optional HRTF simulation). Only viable on HDMI surround setups, so conditional UI. Worth revisiting when surround hardware support is part of the scope.
+- **Surround / per-voice depth** is built — see **g)** above for what is done
+  and what still needs a real 5.1 room.
 
 ## Audio enhancements
 

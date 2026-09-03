@@ -107,7 +107,7 @@
         "rotate": 0.118,
         "spread": 0.57,
         "glow": 0.6,
-        "max_strokes": 420
+        "max_strokes": 20
       }
     }
   ],
@@ -153,7 +153,10 @@
     "mirror_y": true,
     "glow": 0.0,
     "trail": 0.0,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0
   },
   "pps": null,
   "soundscape": {
@@ -336,7 +339,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

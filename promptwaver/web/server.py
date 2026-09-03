@@ -274,7 +274,7 @@ async def _handle(engine, m: dict, app=None, ws=None):
         return None
     elif t == "audio_config":
         done = engine.configure_audio(device=m.get("device"), blocksize=m.get("blocksize"),
-                                      latency=m.get("latency"))
+                                      latency=m.get("latency"), channels=m.get("channels"))
         # Wait for the actual reconfigure to finish (generous cap — a stream
         # stop/restart is normally well under a second) rather than guessing
         # a fixed delay; see configure_audio's docstring for the false-negative

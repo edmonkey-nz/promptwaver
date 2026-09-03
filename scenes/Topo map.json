@@ -6869,9 +6869,12 @@
     "disable_plane": false,
     "mirror_x": true,
     "mirror_y": false,
-    "glow": 0.0,
+    "glow": 1.0,
     "trail": 0.0,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 1.0
   },
   "pps": null,
   "soundscape": {

@@ -842,7 +842,12 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.0
+    "trail": 0.0,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0
   },
   "pps": null,
   "soundscape": {
@@ -886,7 +891,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "rising_thermal",
@@ -918,7 +924,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       },
       {
         "name": "bird_calls",
@@ -933,7 +940,7 @@
           10
         ],
         "level": 0.22,
-        "rate": 0.6,
+        "rate": 0.3,
         "decay": 0.8,
         "pan": 0.2,
         "mute": false,
@@ -943,7 +950,15 @@
         "sub": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "distortion": 0.0,
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "pan"
+        }
       },
       {
         "name": "air_texture",
@@ -965,7 +980,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       }
     ],
     "swell_amount": 0.588,
@@ -974,7 +990,18 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 48.0,
+    "filter_sweep_amount": 0.36,
+    "filter_sweep_period": 30.0
   },
-  "audio_link": 1.0
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

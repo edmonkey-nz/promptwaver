@@ -684,7 +684,7 @@
     ],
     "orbit_radius": 6,
     "far": 30,
-    "speed": 0.15,
+    "speed": 0.0,
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
@@ -696,11 +696,16 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.0
+    "trail": 0.0,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 60,
+    "tempo": 60.0,
     "master": 0.8,
     "distortion": 0.0,
     "delay": {
@@ -728,7 +733,19 @@
           "decay": 1.5,
           "sustain": 0.8,
           "release": 3.0
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "mineral_bed",
@@ -756,7 +773,19 @@
           "shape": "sine",
           "rate": 0.04,
           "depth": 0.3
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "drip_pulse",
@@ -780,7 +809,17 @@
           "shape": "sine",
           "rate": 0.08,
           "depth": 0.4
-        }
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       },
       {
         "name": "crystal_chime",
@@ -798,7 +837,15 @@
         "rate": 0.35,
         "decay": 2.2,
         "tone": 0.65,
-        "pan": 0.2
+        "pan": 0.2,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "moisture",
@@ -812,15 +859,43 @@
           "shape": "triangle",
           "rate": 0.025,
           "depth": 0.5
-        }
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.3
+    "swell_amount": 0.3,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.27,
+    "filter_sweep_period": 91.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
   "image_prompt": "",
   "audio_prompt": "",
   "generation_settings": {},
-  "shape_modulation": []
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

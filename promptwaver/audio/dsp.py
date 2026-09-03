@@ -177,6 +177,54 @@ LFO_MAX_RATE = 0.5
 #: setting (clamped below regardless).
 FILTER_SWEEP_MAX_DB = 8.0
 
+#: How far a per-voice `sweep` of 1.0 swings that voice's own `tone`, either
+#: side of its authored value.
+#:
+#: The whole-mix sweep above cannot be scaled per instrument: it is one EQ
+#: curve over the summed mix, so excluding a voice from it would mean giving
+#: that voice its own filter, and a per-voice filter is either per-sample
+#: recursion (banned here) or its own FFT per voice per block (affordable
+#: once, over the mix — not once per voice).
+#:
+#: So the per-voice control sweeps the thing each voice ALREADY has a cheap
+#: brightness handle for: `tone`, which selects a bandlimited wavetable.
+#: Moving it costs nothing — `_wavetable` quantises tone to 1/100 and caches,
+#: so a sweeping voice just warms ~100 tables once and then hits the cache —
+#: and it is block-granular, which is exactly the granularity the whole-mix
+#: sweep already runs at. Same phase as the global sweep, so a scene where
+#: both are up moves as one gesture rather than two beating against each
+#: other. 0.4 gives an unmistakable swing without spending most of the range
+#: pinned at either end of `tone`.
+VOICE_SWEEP_TONE_RANGE = 0.4
+
+#: Output channel layouts this mixer can pan into, as
+#: `(front L, front R, rear L, rear R)` channel indices.
+#:
+#: The panning model is QUADRAPHONIC — a front pair and a rear pair — whatever
+#: the device's channel count happens to be:
+#:
+#:   2  stereo        FL FR                 rear absent, `depth` has no effect
+#:   4  quad          FL FR RL RR
+#:   6  5.1 carrier   FL FR FC LFE SL SR    FC and LFE left SILENT
+#:
+#: 6 is here only because a 5.1 sink may not accept a 4-channel stream — on
+#: this machine's HDMI output both open, but that is a property of one
+#: PulseAudio sink, not a guarantee. At 6 this is the same quad image carried
+#: on a 5.1 stream, **not** a 5.1 mix: a real centre (ambient music with no
+#: dialogue has nothing obvious to put there) and a real LFE (which needs a
+#: crossover — a per-block filter, and this file forbids the per-sample
+#: recursion the cheap version of one wants) are deliberately still open
+#: questions. See future.md rather than guessing at them here.
+SURROUND_LAYOUTS = {
+    2: (0, 1, None, None),
+    4: (0, 1, 2, 3),
+    6: (0, 1, 4, 5),
+}
+
+#: Channel counts the output stream may be opened with. Anything else falls
+#: back to stereo rather than panning into a layout nothing describes.
+SUPPORTED_CHANNELS = tuple(sorted(SURROUND_LAYOUTS))
+
 
 def midi_to_hz(n: float) -> float:
     return 440.0 * 2.0 ** ((n - 69) / 12.0)
@@ -346,16 +394,64 @@ def _apply_eq(mix: np.ndarray, eq: dict, sr: int) -> np.ndarray:
     return np.fft.irfft(spec, n=n, axis=0).astype(np.float32)
 
 
+def _pan_gains(pan, depth, channels: int):
+    """Per-channel gain for one voice at (pan, depth).
+
+    Returns a `(channels,)` vector for scalar inputs, or `(frames, channels)`
+    when either axis is a per-sample LFO array — the caller broadcasts it
+    against the voice's mono buffer in one array op. Deliberately one term
+    rather than a per-channel Python loop: this runs once per voice per block
+    on the audio producer thread, and this file's rule is one vectorised op
+    per voice, not one numpy call per channel.
+
+    **The stereo path is bit-identical to the pre-surround code.** `depth` is
+    ignored outright at 2 channels rather than folded down to a distance cue,
+    so turning surround off — or loading a surround-authored scene on a stereo
+    rig — reproduces exactly the mix that was there before this existed. A
+    fold-down would want attenuation *and* high-frequency damping to read as
+    distance, and per-voice damping is the expensive half (see future.md); a
+    bare attenuation on its own mostly just makes a voice quieter for no
+    audible reason.
+
+    Gains are left at float64 on purpose. Casting them to float32 first would
+    turn the old `float32 * float64` product into a `float32 * float32` one —
+    inaudible, but no longer bit-for-bit the same numbers, which is the
+    property that makes "surround off changes nothing" checkable rather than
+    merely plausible.
+    """
+    left = np.sqrt(0.5 * (1.0 - pan))
+    right = np.sqrt(0.5 * (1.0 + pan))
+    fl, fr, rl, rr = SURROUND_LAYOUTS.get(channels, SURROUND_LAYOUTS[2])
+    if rl is None:
+        cols = {fl: left, fr: right}
+    else:
+        # Equal-power front/rear crossfade — the same law as the L/R pan
+        # above, applied to the other axis. depth 0 is the front pair alone,
+        # so a voice that was never given a depth sits exactly where it sat in
+        # stereo; depth 1 is the rear pair alone.
+        front = np.cos(depth * (math.pi / 2))
+        back = np.sin(depth * (math.pi / 2))
+        cols = {fl: left * front, fr: right * front,
+                rl: left * back, rr: right * back}
+    return np.stack(np.broadcast_arrays(
+        *[cols.get(i, 0.0) for i in range(channels)]), axis=-1)
+
+
 class Delay:
-    """Block-granular stereo delay/echo. Delay time is clamped to >= one block
+    """Block-granular delay/echo. Delay time is clamped to >= one block
     so read/write ranges never overlap within a block — this lets the whole
     block be processed as vectorised numpy ops with no per-sample Python loop,
     which matters because this runs inside a realtime audio callback where a
-    slow block is an audible glitch, not just a slow frame."""
+    slow block is an audible glitch, not just a slow frame.
 
-    def __init__(self, sr=SR, max_seconds=2.0):
+    Width-agnostic: the buffer is as wide as the mix it is handed, so the echo
+    follows a voice into the rears instead of collapsing it to the front pair.
+    """
+
+    def __init__(self, sr=SR, max_seconds=2.0, channels: int = 2):
         self.sr = sr
-        self.buf = np.zeros((int(sr * max_seconds), 2), np.float32)
+        self.channels = int(channels)
+        self.buf = np.zeros((int(sr * max_seconds), self.channels), np.float32)
         self.buflen = len(self.buf)
         self.w = 0
 
@@ -376,10 +472,14 @@ class Delay:
 
 
 class Soundscape:
-    def __init__(self, spec: dict | None = None, sr: int = SR):
+    def __init__(self, spec: dict | None = None, sr: int = SR, channels: int = 2):
         self.sr = sr
+        # Output width. A rig property, not a scene one — it comes from the
+        # audio settings and is reapplied to whatever soundscape is loaded,
+        # the same way `output_ratio` is reapplied to whatever scene is.
+        self.channels = channels if channels in SURROUND_LAYOUTS else 2
         self._clock = 0                          # absolute sample index
-        self._delay = Delay(sr)
+        self._delay = Delay(sr, channels=self.channels)
         self._active_notes: list[dict] = []      # for pluck/arp voices
         self._voice_env: dict[str, Envelope] = {}     # ADSR per enveloped voice
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
@@ -410,6 +510,25 @@ class Soundscape:
         self._swell_phase: dict[str, float] = {}
         self._swell_period: dict[str, float] = {}
         self.set_spec(spec or default_soundscape())
+
+    def set_channels(self, channels: int):
+        """Re-point at a different output width, live.
+
+        The delay line is rebuilt rather than resized because its contents are
+        interleaved per channel — reshaping it would smear the tail of the
+        echo across the new channel map. Losing up to two seconds of echo tail
+        on a device change is the cheaper wrong answer.
+
+        Only ever called with the stream stopped (see
+        `SoundscapeSynth.reconfigure`): the render buffer's width has to match
+        what the callback copies into, so a change to it mid-block would hand
+        PortAudio a wrongly-shaped array on the realtime thread.
+        """
+        channels = channels if channels in SURROUND_LAYOUTS else 2
+        if channels == self.channels:
+            return
+        self.channels = channels
+        self._delay = Delay(self.sr, channels=channels)
 
     def set_muted(self, muted: bool, fade: float = 0.0):
         """Mute/unmute, optionally ramped over `fade` seconds (e.g. a "Disable
@@ -462,6 +581,7 @@ class Soundscape:
         parts = path.split(".")
         if len(parts) == 1 and parts[0] in ("master", "tempo", "distortion",
                                              "swell_amount", "swell_period",
+                                             "swell_depth_amount",
                                              "filter_sweep_amount", "filter_sweep_period"):
             s[parts[0]] = _coerce(parts[0], value)
         elif parts[0] == "delay" and len(parts) == 2:
@@ -486,16 +606,22 @@ class Soundscape:
     # represent an LFO faster than roughly 0.3-0.6Hz without visibly stepping,
     # and which end of that you get depends on a setting the user can change.
     #
-    #   PER-SAMPLE  level, pan — applied as arrays over the block, so they stay
-    #               smooth at any rate. Tremolo and auto-pan work up to audio
-    #               rate if you want them to.
+    #   PER-SAMPLE  level, pan, depth — applied as arrays over the block, so
+    #               they stay smooth at any rate. Tremolo, auto-pan and a
+    #               voice circling front-to-back work up to audio rate if you
+    #               want them to.
     #   PER-BLOCK   tone, detune, sub, waveform, rate — these select a
     #               wavetable, a set of frequencies or a note schedule *before*
     #               the block is rendered, so they can only change between
     #               blocks. Fine for the slow sweeps they're for; above ~0.5Hz
     #               they will audibly step, which is why the director is told
     #               to keep those slow.
-    LFO_DESTS_SMOOTH = ("level", "pan", "distortion")
+    #: `depth` is listed unconditionally, not only when surround is running.
+    #: The LFO config is scene data: a scene authored on a quad rig has to
+    #: round-trip unchanged through a stereo session, and dropping the
+    #: destination on a 2-channel rig would rewrite it to something else the
+    #: moment that scene was saved.
+    LFO_DESTS_SMOOTH = ("level", "pan", "depth", "distortion")
     LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate")
     LFO_DESTS = LFO_DESTS_SMOOTH + LFO_DESTS_STEPPED
     LFO_SHAPES = ("sine", "triangle", "saw", "square", "random")
@@ -578,6 +704,17 @@ class Soundscape:
                                            int(u * len(WAVEFORMS)))]
         return ev
 
+    def _swell_wave(self, name: str, block_t: float) -> float:
+        """This voice's raw swell oscillator, -1..1, at this block's start.
+
+        Split out from `_swell_gain` so the level swell and the depth swell
+        read the SAME phase — that is the whole point of the depth swell: a
+        voice blooming louder also moves forward, rather than the two effects
+        drifting against each other on independent oscillators."""
+        period = self._swell_period.get(name) or float(self.spec.get("swell_period", 24.0))
+        phase = self._swell_phase.get(name, 0.0)
+        return math.sin(2 * math.pi * (block_t / period) + phase)
+
     def _swell_gain(self, name: str, block_t: float) -> float:
         """This voice's slow orchestration multiplier at this block's start
         time — 1.0 (unattenuated) at the peak of its cycle, down to
@@ -588,10 +725,28 @@ class Soundscape:
         amount = float(self.spec.get("swell_amount", 0.0))
         if amount <= 0.0:
             return 1.0
-        period = self._swell_period.get(name) or float(self.spec.get("swell_period", 24.0))
-        phase = self._swell_phase.get(name, 0.0)
-        w = math.sin(2 * math.pi * (block_t / period) + phase)   # -1..1
+        w = self._swell_wave(name, block_t)
         return 1.0 - amount * (0.5 - 0.5 * w)                     # 1.0 at peak, 1-amount at trough
+
+    def _swell_depth(self, name: str, block_t: float) -> float:
+        """How far this voice is pushed backwards by the swell, 0..1, to be
+        added to its authored depth.
+
+        Zero at the peak of the cycle and `swell_depth_amount` at the trough,
+        off the same wave as `_swell_gain` — so at the top of its swell a
+        voice is both loudest and furthest forward, and at the bottom it is
+        quietest and furthest back. That coupling is the effect; it is not
+        two independent modulations that happen to share a name.
+
+        Independent of `swell_amount`, so the room can breathe without the
+        levels moving (or the other way round). Costs nothing when off, and
+        nothing at all on a stereo rig, where `_pan_gains` ignores depth.
+        """
+        amount = float(self.spec.get("swell_depth_amount", 0.0))
+        if amount <= 0.0:
+            return 0.0
+        w = self._swell_wave(name, block_t)
+        return amount * (0.5 - 0.5 * w)
 
     # --- rendering ---------------------------------------------------------
     def render(self, frames: int) -> np.ndarray:
@@ -600,8 +755,15 @@ class Soundscape:
         t = idx / self.sr
         block_t = n0 / self.sr
         block_dt = frames / self.sr
-        mix = np.zeros((frames, 2), np.float32)
+        mix = np.zeros((frames, self.channels), np.float32)
         voice_peaks: dict[str, float] = {}
+
+        # Filter-sweep phase, evaluated once for the whole block and shared by
+        # the per-voice tone sweep below and the whole-mix EQ sweep after the
+        # loop — they are two halves of one effect and must not drift apart.
+        sweep_amount = float(self.spec.get("filter_sweep_amount", 0.0))
+        sweep_period = max(1.0, float(self.spec.get("filter_sweep_period", 30.0)))
+        sweep_swing = math.sin(2 * math.pi * block_t / sweep_period)
 
         for v in self.spec["voices"]:
             vt = v.get("type", "pad")
@@ -634,6 +796,19 @@ class Soundscape:
             rv = v
             if lfo is not None and lfo[2] in self.LFO_DESTS_STEPPED:
                 rv = self._lfo_apply_stepped(v, lfo[1], lfo[2], lfo[3])
+
+            # Per-voice filter sweep: this voice's share of the scene's sweep,
+            # as a swing of its own brightness. Stacks on top of a stepped
+            # tone LFO rather than replacing it, and copies rather than
+            # mutates for the same reason `_lfo_apply_stepped` does — the spec
+            # the UI reads back (and Save writes out) must keep the AUTHORED
+            # tone, not whatever the sweep happened to be doing at that
+            # instant. Clamped on read: set_param bypasses _normalise.
+            v_sweep = min(1.0, max(0.0, float(v.get("sweep", 0.0))))
+            if v_sweep > 0.0:
+                rv = dict(rv)
+                rv["tone"] = float(min(1.0, max(0.0,
+                    rv.get("tone", 0.4) + v_sweep * VOICE_SWEEP_TONE_RANGE * sweep_swing)))
 
             arp = rv.get("arp") or {}
             if arp.get("on") and vt in ("pad", "osc"):
@@ -699,18 +874,27 @@ class Soundscape:
                 # at the extremes rather than wrapped, so a deep sweep parks
                 # at hard left/right instead of jumping to the other side.
                 pan = np.clip(pan + lfo[3] * lfo[0], -1.0, 1.0)
-            mix[:, 0] += mono * np.sqrt(0.5 * (1 - pan))
-            mix[:, 1] += mono * np.sqrt(0.5 * (1 + pan))
+            # Front/back position. Clamped on READ, not just in _normalise:
+            # set_param bypasses normalisation, so a live UI or MIDI write
+            # lands here unclamped.
+            depth = min(1.0, max(0.0, float(v.get("depth", 0.0))))
+            depth = depth + self._swell_depth(name, block_t)
+            if lfo is not None and lfo[2] == "depth":
+                depth = depth + lfo[3] * lfo[0]
+            # One clip covers the authored value, the swell and the LFO
+            # together — the same "park at the wall rather than wrap" rule
+            # the pan LFO follows, so a voice driven hard backwards sits in
+            # the rears instead of reappearing at the front.
+            depth = np.clip(depth, 0.0, 1.0)
+            mix += mono[:, None] * _pan_gains(pan, depth, self.channels)
 
         eq = self.spec.get("eq")
-        sweep_amount = float(self.spec.get("filter_sweep_amount", 0.0))
         if sweep_amount > 0:
             # Whole-mix, single-phase — see FILTER_SWEEP_MAX_DB. Swings the
             # high band's dB gain around whatever it's statically set to,
             # so amount=0 is exactly the pre-existing behaviour and this
             # never needs its own on/off flag.
-            sweep_period = max(1.0, float(self.spec.get("filter_sweep_period", 30.0)))
-            swing = sweep_amount * FILTER_SWEEP_MAX_DB * math.sin(2 * math.pi * block_t / sweep_period)
+            swing = sweep_amount * FILTER_SWEEP_MAX_DB * sweep_swing
             eq = dict(eq or {})
             eq["high"] = max(-10.0, min(10.0, float(eq.get("high", 0.0)) + swing))
         if eq and (eq.get("low") or eq.get("mid") or eq.get("high")):
@@ -775,7 +959,16 @@ class Soundscape:
         n = mix.shape[0]
         if n < 64:
             return
-        mono = mix[:, 0] + mix[:, 1]
+        # Sum the channels this layout actually pans into, so a voice sent to
+        # the rears still drives the visuals. Indexed via the layout rather
+        # than summing the whole array because at 6 channels the untouched
+        # centre/LFE slots are silent — harmless to add, but summing by layout
+        # keeps this correct if either ever stops being silent. Identical to
+        # the old `mix[:, 0] + mix[:, 1]` at 2 channels.
+        fl, fr, rl, rr = SURROUND_LAYOUTS.get(self.channels, SURROUND_LAYOUTS[2])
+        mono = mix[:, fl] + mix[:, fr]
+        if rl is not None:
+            mono = mono + mix[:, rl] + mix[:, rr]
         step = max(1, n // 2048)
         x = mono[::step]
         m = x.shape[0]
@@ -1355,9 +1548,10 @@ class SoundscapeMixer:
     has more than a couple of voices.
     """
 
-    def __init__(self, spec: dict | None = None, sr: int = SR):
+    def __init__(self, spec: dict | None = None, sr: int = SR, channels: int = 2):
         self.sr = sr
-        self.current = Soundscape(spec, sr=sr)
+        self.channels = channels if channels in SURROUND_LAYOUTS else 2
+        self.current = Soundscape(spec, sr=sr, channels=self.channels)
         self._pending_spec: dict | None = None
         self._pending_muted = False
         self._phase: str | None = None   # None | "out" | "in"
@@ -1381,6 +1575,13 @@ class SoundscapeMixer:
 
     def set_param(self, path: str, value):
         self.current.set_param(path, value)   # live tweaks always target the incoming/current one
+
+    def set_channels(self, channels: int):
+        """Re-point at a different output width. Applied to the live
+        soundscape and remembered, so the one built at the far side of a
+        crossfade opens at the same width instead of reverting to stereo."""
+        self.channels = channels if channels in SURROUND_LAYOUTS else 2
+        self.current.set_channels(self.channels)
 
     @property
     def spec(self) -> dict:
@@ -1439,7 +1640,8 @@ class SoundscapeMixer:
         if self._fade_pos >= self._fade_dur:
             if self._phase == "out":
                 # Fade out complete: swap in the new soundscape and start fading it in
-                self.current = Soundscape(self._pending_spec, sr=self.sr)
+                self.current = Soundscape(self._pending_spec, sr=self.sr,
+                                          channels=self.channels)
                 self.current.set_muted(self._pending_muted)
                 self._pending_spec = None
                 self._phase = "in"
@@ -1481,6 +1683,23 @@ def _clamp(v, lo, hi, default):
     return max(lo, min(hi, v))
 
 
+def _optional_clamp(d: dict, key: str, lo: float, hi: float, default: float):
+    """Clamp `key` in place, but leave it ABSENT when it is absent and unused.
+
+    For fields that only mean something on a rig most sessions don't have.
+    Writing them unconditionally would churn every tracked scene file on the
+    next save; dropping them when they sit at the default keeps a scene that
+    never used one byte-identical, while a scene that does use one keeps it.
+    """
+    if key not in d:
+        return
+    v = _clamp(d.get(key), lo, hi, default)
+    if v == default:
+        d.pop(key, None)
+    else:
+        d[key] = v
+
+
 def _normalise(spec: dict) -> dict:
     """Sanity-clamp every field to an ambient-appropriate range. This is the
     one place all soundscapes pass through — AI-generated, hand-authored, or
@@ -1504,6 +1723,15 @@ def _normalise(spec: dict) -> dict:
     s["eq"] = eq
     s["swell_amount"] = _clamp(s.get("swell_amount"), 0.0, 1.0, 0.0)
     s["swell_period"] = _clamp(s.get("swell_period"), 5.0, 120.0, 24.0)
+    # Surround-only fields (`swell_depth_amount` here, `depth` per voice
+    # below) are written back only when they are actually in use. `_normalise`
+    # output is what lands in scenes/<name>.json, so defaulting them on every
+    # spec would rewrite the entire tracked library the next time any scene
+    # was saved, to record a number that does nothing on a stereo rig. Same
+    # reasoning as the harp-only fields further down, and the same reason
+    # `from_dict` reads every SceneSpec field with a default: absent means
+    # "off", and stays absent.
+    _optional_clamp(s, "swell_depth_amount", 0.0, 1.0, 0.0)
     s["filter_sweep_amount"] = _clamp(s.get("filter_sweep_amount"), 0.0, 1.0, 0.0)
     s["filter_sweep_period"] = _clamp(s.get("filter_sweep_period"), 5.0, 120.0, 30.0)
     voices = []
@@ -1513,6 +1741,17 @@ def _normalise(spec: dict) -> dict:
         v.setdefault("type", "pad")
         v["level"] = _clamp(v.get("level"), 0.0, 1.0, 0.4)
         v["pan"] = _clamp(v.get("pan"), -1.0, 1.0, 0.0)
+        # Front/back position, 0 = front (exactly where stereo puts it),
+        # 1 = rear. Unipolar rather than bipolar-centred: the no-op has to be
+        # the default, and here the no-op is an END of the range, not its
+        # middle. (`line_curve` is bipolar for the same underlying reason —
+        # its no-op happens to sit in the middle.) Optional, so scenes that
+        # never touch it stay byte-identical on save.
+        _optional_clamp(v, "depth", 0.0, 1.0, 0.0)
+        # This voice's share of the scene's filter sweep. Optional for the
+        # same reason as `depth`: absent means off, and stays absent, so
+        # scenes that never use it are untouched on save.
+        _optional_clamp(v, "sweep", 0.0, 1.0, 0.0)
         v["mute"] = bool(v.get("mute", False))
         v["tone"] = _clamp(v.get("tone"), 0.0, 1.0, 0.4)
         v["detune"] = _clamp(v.get("detune"), 0.0, 0.05, 0.01)

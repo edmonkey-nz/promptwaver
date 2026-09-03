@@ -113,6 +113,10 @@ AUDIO_RANGES = {
     "eq.high": (-10.0, 10.0),
     "swell_amount": (0.0, 1.0),
     "swell_period": (5.0, 120.0),
+    # Surround only — the room breathing front-to-back. Mappable by MIDI learn
+    # but given no default CC: it does nothing on a stereo rig, and the low
+    # CCs are the scarce ones (a controller's first row of knobs).
+    "swell_depth_amount": (0.0, 1.0),
 }
 
 # Per-voice fields, addressed by slot. Ranges mirror the UI's own knob bounds
@@ -120,6 +124,8 @@ AUDIO_RANGES = {
 VOICE_RANGES = {
     "level": (0.0, 1.0),
     "pan": (-1.0, 1.0),
+    "depth": (0.0, 1.0),        # front/back; unipolar, unlike pan. Surround only.
+    "sweep": (0.0, 1.0),        # this voice's share of the scene filter sweep
     "tone": (0.0, 1.0),
     "detune": (0.0, 0.05),
     "sub": (0.0, 1.0),
@@ -173,6 +179,10 @@ DEFAULT_CC_MAP = {
     **_slot_layout(40, "tone"),
     **_slot_layout(50, "env.attack"),
     **_slot_layout(60, "env.release"),
+    # Depth sits at the far end of the default map on purpose: it is the one
+    # bank that does nothing on a stereo rig, so it should not displace a
+    # field that always works on a controller with fewer rows.
+    **_slot_layout(70, "depth"),
 }
 
 DEFAULT_MODE = "catch"

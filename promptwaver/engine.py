@@ -307,6 +307,12 @@ class Engine:
             "device": _settings.get("audio_device"),
             "blocksize": int(_settings.get("audio_blocksize", 8192)),
             "latency": _settings.get("audio_latency", "high"),
+            # Output width: 2 (stereo), 4 (quad) or 6 (quad carried on a 5.1
+            # stream). A RIG setting, like output_ratio — it belongs to the
+            # speakers, not to the scene, so it persists across scene loads
+            # and is never written into a scene file. Per-voice `depth` is the
+            # scene half of this, and does live in the soundscape spec.
+            "channels": int(_settings.get("audio_channels", 2)),
         }
         self.synth, self.audio_error = make_synth(enable_audio, enable_diagnostics=enable_diagnostics,
                                                   **self._audio_cfg)
@@ -456,9 +462,14 @@ class Engine:
         self._audio_cfg["device"] = self.synth.device
         self._audio_cfg["blocksize"] = self.synth.blocksize
         self._audio_cfg["latency"] = self.synth.latency
+        # What actually opened, not what was asked for — a surround request
+        # that fell back to stereo has to persist as stereo, or the next
+        # launch would silently re-request a width this device won't give.
+        self._audio_cfg["channels"] = getattr(self.synth, "channels", 2)
         _settings.set("audio_device", self.synth.device)
         _settings.set("audio_blocksize", self.synth.blocksize)
         _settings.set("audio_latency", self.synth.latency)
+        _settings.set("audio_channels", self._audio_cfg["channels"])
         # Blocksize and device are exactly what the compensation is derived
         # from, so recompute it here rather than at each call site — including
         # the fallback path, where the blocksize that opened may not be the
@@ -700,6 +711,15 @@ class Engine:
         except Exception as e:
             print(f"[promptwaver] could not save generation: {e}")
         def apply():
+            # A generated scene lands STOPPED, waiting for Play — even when
+            # something was already running. Generating used to swap the new
+            # scene straight into a live engine, so it started playing behind
+            # the "Generation complete / Start scene" overlay: the button
+            # offering to start it was sitting on top of a scene that had
+            # already started. Stopping FIRST also means `_install_spec` sees
+            # `active == False` and uses a zero crossfade, rather than fading
+            # from the old scene into one nobody has asked to hear yet.
+            self._set_active_now(False)
             self._install_spec(spec)
             self._current_library_name = name
         self._enqueue(apply)
@@ -727,15 +747,23 @@ class Engine:
         The fade continues after `active` goes False because the synth renders
         on its own callback thread; the render loop's inactive branch only
         stops drawing, it doesn't stop the audio callback."""
-        def apply():
-            self.active = bool(value)
-            self._sync_audio_mute(fade=self.start_fade)
-            if not self.active:
-                # Beam first, and unfaded — see the docstring. This is the one
-                # part of a Stop that must not wait for anything.
-                self.output.blank()
-                self._last_frame = []
-        self._enqueue(apply)
+        self._enqueue(lambda: self._set_active_now(value))
+
+    def _set_active_now(self, value: bool):
+        """The body of `set_active`, run directly on the render thread.
+
+        Split out so a caller that is ALREADY inside the queue (generate_scene's
+        apply) can stop playback in the same tick it installs a scene. Going
+        back through `set_active` would enqueue a second closure drained on the
+        following tick, so the new scene would render — and sound — for a frame
+        before stopping."""
+        self.active = bool(value)
+        self._sync_audio_mute(fade=self.start_fade)
+        if not self.active:
+            # Beam first, and unfaded — see set_active's docstring. This is the
+            # one part of a Stop that must not wait for anything.
+            self.output.blank()
+            self._last_frame = []
 
     def disable_audio(self, fade: float = 2.0):
         """Independent audio-only gate (Global section) — gracefully fades
@@ -932,7 +960,8 @@ class Engine:
                     self.synth.set_soundscape(scape, fade=self.audio_fade)
         self._enqueue(apply)
 
-    def configure_audio(self, *, device=None, blocksize=None, latency=None) -> threading.Event:
+    def configure_audio(self, *, device=None, blocksize=None, latency=None,
+                        channels=None) -> threading.Event:
         """Live-reconfigure the audio output (device/blocksize/latency).
         Requests a change; the actual applied config (which may differ, e.g.
         if the backend doesn't support the requested blocksize) is read back
@@ -954,13 +983,15 @@ class Engine:
         def apply():
             try:
                 if hasattr(self.synth, "reconfigure"):
-                    self.synth.reconfigure(device=device, blocksize=blocksize, latency=latency)
+                    self.synth.reconfigure(device=device, blocksize=blocksize,
+                                           latency=latency, channels=channels)
                 else:
                     # NullSynth (or a synth that never opened) — try to start one
                     self.synth, self.audio_error = make_synth(True, enable_diagnostics=self._diag_enabled, **{
                         "device": device if device is not None else self._audio_cfg["device"],
                         "blocksize": blocksize if blocksize is not None else self._audio_cfg["blocksize"],
                         "latency": latency if latency is not None else self._audio_cfg["latency"],
+                        "channels": channels if channels is not None else self._audio_cfg["channels"],
                     })
                     if hasattr(self.synth, "reconfigure"):
                         self.synth.reconfigure(use_ladder=True)   # fresh start — find anything that works

@@ -220,7 +220,10 @@
     "mirror_y": false,
     "glow": 0.77,
     "trail": 0.58,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.011,
+    "bloom_intensity": 2.9,
+    "line_curve": 0.0
   },
   "pps": null,
   "soundscape": {

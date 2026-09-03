@@ -125,19 +125,27 @@
      position. Two counter-phased waves at different speeds so the crossing
      pattern never visibly repeats.
 
-     Drawn as one 240-unit path (six full periods, period 40) inside a
-     120-unit viewBox, and translated by exactly one period. Because the path
-     is periodic, that loop is seamless and there is always drawn geometry to
-     scroll into view. `preserveAspectRatio="none"` lets it stretch to any
-     width the container happens to be. */
-  .wave{overflow:hidden;line-height:0}
-  .wave svg{display:block;width:100%;height:100%}
-  .wave path{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linecap:round;
-             transform-box:view-box;transform-origin:0 0;
-             animation:wave-flow 2.6s linear infinite}
-  .wave .w2{opacity:.32;stroke-width:1.5;animation-duration:4.3s}
-  @keyframes wave-flow{from{transform:translateX(0)}to{transform:translateX(-40px)}}
-  @media (prefers-reduced-motion: reduce){ .wave path{animation:none} }
+     Drawn as a ONE-PERIOD SVG tile repeated along x, not as a single wide
+     path scaled to the container. The scaled version stretched a 120-unit
+     viewBox across whatever width it was given: in the header strip that is
+     roughly 10x horizontally against 0.7x vertically, which flattens the
+     wave into near-straight diagonals and smears the stroke width with it.
+     A repeating tile has a FIXED period in px, so the wave reads the same in
+     a 60px progress bar and a 1400px header. Each layer scrolls by exactly
+     its own tile width, which is seamless because the tile's end tangent
+     matches its start tangent. Two layers at different periods and speeds so
+     the crossing pattern doesn't visibly repeat. */
+  .wave{position:relative;overflow:hidden;line-height:0}
+  .wave::before,.wave::after{content:"";position:absolute;inset:0;
+             background-repeat:repeat-x;background-position-y:center}
+  .wave::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2040%2024%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M0%2C12%20q10%2C-14%2020%2C0%20q10%2C14%2020%2C0%27%20fill%3D%27none%27%20stroke%3D%27%2333e0d0%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E");background-size:40px 100%;
+             animation:wave-flow-a 2.6s linear infinite}
+  .wave::after{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2040%2024%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M0%2C12%20q10%2C9%2020%2C0%20q10%2C-9%2020%2C0%27%20fill%3D%27none%27%20stroke%3D%27%2333e0d0%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E");background-size:66px 100%;opacity:.32;
+             animation:wave-flow-b 4.3s linear infinite}
+  /* Scrolled by exactly one tile width each, so both loops are seamless. */
+  @keyframes wave-flow-a{from{background-position-x:0}to{background-position-x:-40px}}
+  @keyframes wave-flow-b{from{background-position-x:0}to{background-position-x:-66px}}
+  @media (prefers-reduced-motion: reduce){ .wave::before,.wave::after{animation:none} }
 
   .gen-overlay .wave{width:210px;height:46px;filter:drop-shadow(0 0 6px rgba(51,224,208,.45))}
   .gen-overlay .msg{font-size:13px;color:var(--ink);letter-spacing:.02em}
@@ -162,6 +170,13 @@
      column's sliders were too narrow to drag. Parked in a fixed gutter at the
      right instead, so it costs the same space on every row and none of it
      comes out of the track. Only rows that actually have one pay for it. */
+  /* The Audio output pane lives in the ~20% left column, which is far
+     narrower than the side column these controls came from. A <select> is a
+     flex item with an implicit min-width:auto, so it refuses to shrink below
+     its widest option and spills past the panel edge. min-width:0 lets it
+     shrink; the labels give back another 20px. */
+  #acc-audio-out .field label{flex:0 0 64px}
+  #acc-audio-out .field select{flex:1 1 auto;min-width:0;max-width:100%}
   .field.has-midi{padding-right:30px}
   .field.has-midi .mlearn{position:absolute;right:0;top:50%;
                           transform:translateY(-50%);padding:0}
@@ -518,10 +533,7 @@
   <span class="dot" id="genstrip-dot"></span>
   <span class="msg" id="genstrip-msg">Composing scene…</span>
   <span class="elapsed" id="genstrip-elapsed"></span>
-  <div class="wave" id="genstrip-wave"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
-    <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
-    <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
-  </svg></div>
+  <div class="wave" id="genstrip-wave"></div>
   <button class="cancel-btn" id="genstrip-cancel" title="Stop this generation">Cancel</button>
   <button class="play-btn" id="genstrip-play" title="Start this scene">▶ Play</button>
 </div>
@@ -532,7 +544,7 @@
     <div class="readouts">
       <span>fps <b id="r-fps">—</b></span>
     </div>
-    <div id="scene-name" style="text-align:left;font-size:13px;font-weight:700;:var(--dim);margin-top:8px;font-family:var(--mono)"></div>
+    <div id="scene-name" style="text-align:left;font-size:13px;font-weight:700;margin-top:8px;font-family:var(--mono)"></div>
 
     <div class="group" id="g-camera" style="display:none;width:100%">
       <h2>Camera</h2>
@@ -585,7 +597,7 @@
         <label style="display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="mf-mirror-y"> mirror y</label>
       </div>
-      <div class="field"><label>kaleidoscope (beta)</label>
+      <div class="field"><label>kaleidoscope</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
       <div class="field"><label title="Reshapes the polylines the engine produces. 0 draws them exactly as authored; right interpolates a spline through the same points (smooth); left drops points (angular/faceted). Screen only — the laser always gets the authored path.">line curve<br><span style="font-size:10px;color:var(--dim)">angular ← → smooth</span></label>
@@ -619,6 +631,57 @@
         <span class="val" id="v-hueoverride">0.50</span></div>
       <div id="layer-params" style="width:100%"></div>
     </div>
+
+    <!-- Audio output — the rig's own settings, not the scene's. Lives here
+         rather than inside Audio diagnostics (where it used to) because that
+         panel is hidden by default behind the Settings diagnostics toggle,
+         and device/speakers/blocksize are everyday controls, not debugging
+         ones. Collapsed by default: you set these once for a rig. -->
+    <details class="accordion" id="acc-audio-out" style="width:100%">
+      <summary>Audio output</summary>
+      <div class="accordion-body">
+        <div class="field"><label>device</label>
+          <select id="a-device"><option value="">system default</option></select></div>
+        <!-- Output width. A rig setting, stored in settings.json and reapplied
+             on every scene load — the per-voice `depth` knobs that appear in
+             the Soundscape panel are the scene half of this. The device list
+             above reports each device's channel count, so a device that can't
+             do 4 is visible before Apply rather than after it. -->
+        <div class="field"><label>speakers</label>
+          <select id="a-channels" title="Quad is a front pair plus a rear pair. The 6-channel option carries that same quad image on a 5.1 stream, for devices that will not open a 4-channel one — centre and LFE stay silent either way.">
+            <option value="2">stereo · 2</option>
+            <option value="4">quad · 4</option>
+            <option value="6">quad on 5.1 · 6</option>
+          </select></div>
+        <div class="hint" id="a-chhint" style="margin:-4px 0 8px"></div>
+        <!-- What the `audio_level` modulation source follows. Engine output is
+             the default: every generated scene routes from audio_level, and
+             pointing that at the mic left them all inert. -->
+        <div class="field"><label>visuals react to</label>
+          <select id="a-react" title="What the audio_level modulation source follows.">
+            <option value="engine">this scene's sound</option>
+            <option value="mic">mic / line in</option>
+          </select></div>
+        <div class="hint" style="margin:-4px 0 8px">Sets what <i>audio_level</i> follows. <i>synth_level</i>, <i>synth_low·mid·high</i> and <i>mic_level</i> stay available to route from by name regardless.</div>
+        <div class="field"><label>blocksize</label>
+          <select id="a-blocksize">
+            <option value="512">512</option><option value="1024">1024</option>
+            <option value="2048">2048</option>
+            <option value="4096">4096</option><option value="8192" selected>8192</option>
+            <option value="16384">16384</option><option value="32768">32768</option>
+          </select></div>
+        <div class="field"><label>latency</label>
+          <select id="a-latency">
+            <option value="low">low</option><option value="high" selected>high</option>
+          </select></div>
+        <div class="row">
+          <button id="a-apply">Apply</button>
+          <button id="a-rescan">Rescan devices</button>
+        </div>
+        <div class="hint" id="a-applystatus"></div>
+        <div class="hint">bigger blocksize / high latency = fewer glitches, more delay before you hear a change</div>
+      </div>
+    </details>
 
   </section>
 
@@ -780,40 +843,19 @@
       </div>
     </details>
 
+    <!-- READOUTS ONLY. The controls that used to live in here are now the
+         "Audio output" pane in the left column: this panel is hidden unless
+         diagnostics are enabled in Settings, and choosing a device or a
+         speaker layout is not a diagnostic — gating it meant turning on a
+         debugging toggle to reach an everyday setting. -->
     <details class="accordion" id="acc-diag">
       <summary>Audio diagnostics</summary>
       <div class="accordion-body">
         <div class="hint" id="diag-status">audio: —</div>
         <div class="diagrid" id="diagstats"></div>
-        <div class="field"><label>device</label>
-          <select id="a-device"><option value="">system default</option></select></div>
-        <!-- What the `audio_level` modulation source follows. Engine output is
-             the default: every generated scene routes from audio_level, and
-             pointing that at the mic left them all inert. -->
-        <div class="field"><label>visuals react to</label>
-          <select id="a-react">
-            <option value="engine">this scene's own sound (default)</option>
-            <option value="mic">microphone / line in</option>
-          </select></div>
-        <div class="hint" style="margin:-4px 0 8px">Sets what <i>audio_level</i> follows. <i>synth_level</i>, <i>synth_low·mid·high</i> and <i>mic_level</i> stay available to route from by name regardless.</div>
-        <div class="field"><label>blocksize</label>
-          <select id="a-blocksize">
-            <option value="512">512</option><option value="1024">1024</option>
-            <option value="2048">2048</option>
-            <option value="4096">4096</option><option value="8192" selected>8192</option>
-            <option value="16384">16384</option><option value="32768">32768</option>
-          </select></div>
-        <div class="field"><label>latency</label>
-          <select id="a-latency">
-            <option value="low">low</option><option value="high" selected>high</option>
-          </select></div>
         <div class="row">
-          <button id="a-apply">Apply</button>
-          <button id="a-rescan">Rescan devices</button>
           <button id="a-copy">Copy diagnostics</button>
         </div>
-        <div class="hint" id="a-applystatus"></div>
-        <div class="hint">bigger blocksize / high latency = fewer glitches, more delay before you hear a change</div>
         <div class="underruns" id="diag-underruns"></div>
       </div>
     </details>
@@ -838,10 +880,7 @@
 <div class="modal-backdrop" id="modal-generate">
   <div class="modal" id="gen-modal" style="position:relative">
     <div class="gen-overlay" id="gen-overlay">
-      <div class="wave" id="gen-ring"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
-        <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
-        <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
-      </svg></div>
+      <div class="wave" id="gen-ring"></div>
       <div class="msg" id="gen-overlay-msg">Composing scene…</div>
       <div class="sub" id="gen-overlay-sub">Claude is authoring the geometry and soundscape.</div>
       <div class="sub" id="gen-overlay-elapsed" style="font-family:var(--mono);opacity:.75"></div>
@@ -931,10 +970,7 @@
       <button class="go" id="gen" style="width:100%">Generate new scene</button>
     </div>
 
-    <div class="progress wave" id="genprog" style="display:none"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
-      <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
-      <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
-    </svg></div>
+    <div class="progress wave" id="genprog" style="display:none"></div>
     <div class="hint" id="dirhint-modal" style="display:none"></div>
   </div>
 </div>
@@ -942,10 +978,7 @@
 <div class="modal-backdrop" id="modal-audio-regen">
   <div class="modal" id="audio-regen-modal" style="position:relative">
     <div class="gen-overlay" id="audio-regen-overlay">
-      <div class="wave"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
-        <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
-        <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
-      </svg></div>
+      <div class="wave"></div>
       <div class="msg">Composing soundscape…</div>
       <div class="sub">Claude is writing a new soundscape for this scene's existing visuals. Usually 10–30 seconds.</div>
     </div>
@@ -962,10 +995,7 @@
 
     <button class="go" id="apply-audio-regen" style="width:100%;margin-top:12px">Generate new audio</button>
 
-    <div class="progress wave" id="audio-regen-prog" style="display:none"><svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
-      <path class="w2" d="M0,12 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0 q10,9 20,0 q10,-9 20,0"/>
-      <path class="w1" d="M0,12 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0 q10,-14 20,0 q10,14 20,0"/>
-    </svg></div>
+    <div class="progress wave" id="audio-regen-prog" style="display:none"></div>
     <div class="hint" id="audio-regen-hint" style="display:none"></div>
   </div>
 </div>
@@ -1538,6 +1568,9 @@ function paintState(s){
   $("acc-diag").style.display = diagOn ? "" : "none";
   $("acc-perf").style.display = diagOn ? "" : "none";
   if (diagOn) renderDiagnostics(s);
+  // Unconditional: the Audio output pane is not gated by the diagnostics
+  // toggle, so its sync must not be either.
+  renderAudioOutput(s);
   renderPerf(s);
 }
 
@@ -1624,6 +1657,13 @@ function renderDiagnostics(s){
       u.innerHTML = extra + (d.callbacks ? "no hardware-reported xruns yet" : "");
     }
   }
+}
+
+// The Audio output pane. Split out of renderDiagnostics deliberately: that
+// one only runs when diagnostics are enabled, and these controls are always
+// on screen, so leaving the sync in there left the device list empty and the
+// selects showing their markup defaults until you turned diagnostics on.
+function renderAudioOutput(s){
   // device list, populated once and refreshed on rescan
   const devs = s.audio_devices;
   const sel = $("a-device");
@@ -1635,7 +1675,7 @@ function renderDiagnostics(s){
     if (devs && devs.ok) {
       devs.devices.forEach(dv => {
         const o = document.createElement("option");
-        o.value = dv.index; o.textContent = `${dv.name} (${dv.hostapi})`;
+        o.value = dv.index; o.textContent = `${dv.name} (${dv.hostapi}) \u00b7 ${dv.max_out}ch`;
         sel.appendChild(o);
       });
     }
@@ -1655,6 +1695,30 @@ function renderDiagnostics(s){
   }
   if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-latency")) {
     $("a-latency").value = s.audio_cfg.latency ?? "high";
+  }
+  if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-channels")) {
+    $("a-channels").value = String(s.audio_cfg.channels ?? 2);
+  }
+  // Say what the PICKED device can actually do, before Apply. A surround
+  // setting on a 2-channel device falls back to stereo at the stream, which
+  // is honest but only visible after the fact; this makes it visible before.
+  const chHint = $("a-chhint");
+  const want = parseInt($("a-channels").value, 10) || 2;
+  const picked = (devs && devs.ok ? devs.devices : [])
+    .find(dv => String(dv.index) === $("a-device").value);
+  const running = s.audio_cfg?.channels ?? 2;
+  if (want === 2) {
+    chHint.textContent = running === 2
+      ? "Per-voice depth is inactive in stereo — scenes keep any depth they were given."
+      : `Running ${running}-channel · click Apply to drop back to stereo.`;
+  } else if (picked && picked.max_out < want) {
+    chHint.textContent = `\u26a0 ${picked.name} reports only ${picked.max_out} channels — this will fall back to stereo.`;
+  } else if (want === running) {
+    chHint.textContent = `\u2714 running ${running}-channel \u00b7 depth active on every voice.`;
+  } else if (picked) {
+    chHint.textContent = `${picked.name} reports ${picked.max_out} channels \u00b7 click Apply to run ${want}-channel.`;
+  } else {
+    chHint.textContent = "System default may not offer more than 2 channels \u2014 pick the device explicitly, then Apply.";
   }
 }
 
@@ -1719,6 +1783,7 @@ function renderPerf(s){
 // can't be trusted for — see renderDiagnostics above.
 let audioCfgDirty = false;
 $("a-blocksize").addEventListener("input", () => { audioCfgDirty = true; });
+$("a-channels").addEventListener("input", () => { audioCfgDirty = true; });
 $("a-latency").addEventListener("input", () => { audioCfgDirty = true; });
 
 // audioApplyPending: set the moment Apply is clicked, cleared once the
@@ -1738,7 +1803,8 @@ $("a-apply").onclick = () => {
   send({type:"audio_config",
     device: device === "" ? null : parseInt(device,10),
     blocksize: parseInt($("a-blocksize").value,10),
-    latency: $("a-latency").value});
+    latency: $("a-latency").value,
+    channels: parseInt($("a-channels").value,10)});
 };
 $("a-react").onchange = () => send({type:"set", key:"audio_react", value:$("a-react").value});
 $("a-rescan").onclick = () => send({type:"rescan_audio_devices"});
@@ -2671,8 +2737,18 @@ function renderSoundscape(s){
     block.style.opacity = sc ? "1" : ".5";
   } else { block.style.opacity = "1"; }
   if (!sc) { $("synthglobals").innerHTML=""; $("voices").innerHTML=""; return; }
-  const sig = s.scene + "|" + (sc.voices||[]).map(v =>
-    [v.name, v.type, (v.lfo||{}).on ? 1 : 0, (v.lfo||{}).dest || ""].join(":")).join(",");
+  // The running channel count is part of the signature: the depth controls
+  // are built only when surround is actually open, so switching the speakers
+  // setting has to rebuild this panel. Without it the knobs wouldn't show up
+  // until the next scene load, which reads as the setting not having applied.
+  const surround = (s.audio_cfg?.channels ?? 2) >= 4;
+  // `waveform` is in the signature so the panel rebuilds when it changes:
+  // the tone knob's "no effect on a sine" tooltip is derived from it, and a
+  // stale one is worse than none. Same reasoning as lfo.on/lfo.dest, which
+  // are already here for the same kind of conditional markup.
+  const sig = s.scene + "|" + (surround ? "q" : "s") + "|" + (sc.voices||[]).map(v =>
+    [v.name, v.type, v.waveform || "", (v.lfo||{}).on ? 1 : 0,
+     (v.lfo||{}).dest || ""].join(":")).join(",");
   if (sig === _scapeSig) return;
   _scapeSig = sig;
 
@@ -2690,6 +2766,12 @@ function renderSoundscape(s){
   g.appendChild(knob("eq high","eq.high",-10,10,0.25, eq.high ?? 0, v=>v.toFixed(1)));
   g.appendChild(knob("swell","swell_amount",0,1,0.01, sc.swell_amount ?? 0, v=>v.toFixed(2)));
   g.appendChild(knob("swell period","swell_period",5,120,1, sc.swell_period ?? 24, v=>v.toFixed(0)));
+  // Same wave as the level swell, so a voice at the top of its cycle is both
+  // loudest and furthest forward. Surround only — hidden rather than greyed
+  // in stereo, where it would be a control with no audible effect.
+  if (surround)
+    g.appendChild(knob("swell depth","swell_depth_amount",0,1,0.01,
+                       sc.swell_depth_amount ?? 0, v=>v.toFixed(2)));
   g.appendChild(knob("filter sweep","filter_sweep_amount",0,1,0.01, sc.filter_sweep_amount ?? 0, v=>v.toFixed(2)));
   g.appendChild(knob("sweep period","filter_sweep_period",5,120,1, sc.filter_sweep_period ?? 30, v=>v.toFixed(0)));
 
@@ -2710,7 +2792,16 @@ function renderSoundscape(s){
     hrow.appendChild(head); hrow.appendChild(mb);
     el.appendChild(hrow);
     el.appendChild(knob("level",`voice.${v.name}.level`,0,1,0.01, v.level ?? 0.4, x=>x.toFixed(2), {midi: mk("level")}));
-    if (v.type==="pad" || v.type==="sub" || v.type==="pluck" || v.type==="osc"){
+    // WHICH KNOBS A VOICE GETS IS DECIDED BY WHAT ITS RENDERER ACTUALLY READS
+    // in dsp.py, not by what happened to get UI first. That drift had left
+    // real parameters reachable only by hand-editing scene JSON or binding a
+    // MIDI CC: `bell` read rate/decay/tone and showed NONE of them, `pluck`
+    // showed rate but not decay/tone, `osc` showed unison/detune but not
+    // tone, and pad/sub read detune with nothing to set it from. If you add a
+    // `v.get("x")` to a renderer, it belongs in one of the rows below — same
+    // discipline as INSTRUMENTS.md's registration points.
+    const isType = (...t) => t.includes(v.type);
+    if (isType("pad","sub","pluck","osc")){
       const sel = document.createElement("select");
       ["sine","saw","square","triangle"].forEach(w=>{
         const o=document.createElement("option"); o.value=w; o.textContent=w;
@@ -2719,11 +2810,40 @@ function renderSoundscape(s){
       const wl = document.createElement("label"); wl.className="flabel"; wl.textContent="wave";
       el.appendChild(wl); el.appendChild(sel);
     }
-    if (v.type==="pad" || v.type==="noise")
-      el.appendChild(knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")}));
-      el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
-    if (v.type==="pluck")
+    // `sub` is dispatched to _render_pad, so it takes pad's parameters too.
+    // `harp` reads tone as well but builds its own row block further down,
+    // where decay has a range of its own.
+    if (isType("pad","sub","osc","pluck","bell","noise")){
+      const toneKnob = knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")});
+      // tone rolls off a waveform's upper harmonics, so on a SINE it does
+      // nothing — _wavetable builds one partial for a sine and there is
+      // nothing above it to roll off. Measured: saw/square/triangle all
+      // brighten across the range, sine does not move at all. Said here so a
+      // knob that is working correctly doesn't read as a broken one. `bell`
+      // is exempt: it ignores `waveform` entirely and shapes its own
+      // five-partial inharmonic bank instead.
+      if (isType("pad","sub","osc","pluck") && (v.waveform || "sine") === "sine")
+        toneKnob.title = "No effect on a sine — it has no upper harmonics to roll off. "
+                       + "Pick saw, square or triangle above to hear this.";
+      el.appendChild(toneKnob);
+    }
+    // Applied to every voice in the mix loop, so it is not type-specific.
+    // It was already being appended to all of them — but by a missing pair of
+    // braces on the `tone` line above rather than on purpose. Same result,
+    // now on purpose.
+    el.appendChild(knob("distortion",`voice.${v.name}.distortion`,0,1,0.01, v.distortion ?? 0, x=>x.toFixed(2), {midi: mk("distortion")}));
+    if (isType("pad","sub","osc"))
+      el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
+    // The two struck voices. `rate` is strikes per beat (so it scales with
+    // the scene tempo, and the audible ceiling is the scheduler's own
+    // MIN_ONSET_INTERVAL_S); `decay` is how long each strike rings. Both are
+    // clamped to the same range _normalise uses, 6s being the non-harp
+    // ceiling — harp gets 20s and its own knob because the long ring is that
+    // voice's whole character.
+    if (isType("pluck","bell")){
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
+      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
+    }
     if (v.type==="harp"){
       // decay runs to 20s here, not the 6s every other voice is clamped to —
       // the long ring is the voice. See HARP_MAX_DECAY in dsp.py.
@@ -2736,10 +2856,19 @@ function renderSoundscape(s){
     }
     if (v.type==="osc"){
       el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
-      el.appendChild(knob("detune",`voice.${v.name}.detune`,0,0.05,0.001, v.detune ?? 0.01, x=>x.toFixed(3), {midi: mk("detune")}));
       el.appendChild(knob("sub",`voice.${v.name}.sub`,0,1,0.01, v.sub ?? 0, x=>x.toFixed(2), {midi: mk("sub")}));
     }
     el.appendChild(knob("pan",`voice.${v.name}.pan`,-1,1,0.05, v.pan ?? 0, x=>x.toFixed(2), {midi: mk("pan")}));
+    // Front/back. Unipolar, unlike pan: 0 is the front pair — exactly where
+    // stereo puts the voice — and 1 is the rears.
+    if (surround)
+      el.appendChild(knob("depth",`voice.${v.name}.depth`,0,1,0.01, v.depth ?? 0, x=>x.toFixed(2), {midi: mk("depth")}));
+    // This voice's share of the scene filter sweep, as a swing of its own
+    // brightness. Independent of the whole-mix "filter sweep" knob in the
+    // globals above — that one is one EQ curve over the summed mix and can't
+    // be scaled per instrument; this is the per-instrument half, on the same
+    // phase. Put both up and they move as one gesture.
+    el.appendChild(knob("sweep",`voice.${v.name}.sweep`,0,1,0.01, v.sweep ?? 0, x=>x.toFixed(2), {midi: mk("sweep")}));
 
     if (v.type==="pad" || v.type==="osc"){
       const env = v.env || {attack:3.0, decay:1.2, sustain:0.85, release:2.5};
@@ -2866,7 +2995,7 @@ function renderSoundscape(s){
         fields.appendChild(l); fields.appendChild(s);
         return s;
       };
-      mkSel("target", "dest", ["level", "pan", "distortion", "tone", "detune", "sub", "waveform", "rate"]);
+      mkSel("target", "dest", ["level", "pan", "depth", "distortion", "tone", "detune", "sub", "waveform", "rate"]);
       mkSel("shape", "shape", ["sine", "triangle", "saw", "square", "random"]);
 
       const mkKnob = (label, key, min, max, step, dflt, fmt) =>
@@ -2881,8 +3010,9 @@ function renderSoundscape(s){
       const note = document.createElement("div");
       note.style.cssText = "font-size:10px;color:var(--dim);line-height:1.4";
       note.textContent = "0.02-0.15 Hz is the ambient range (one cycle every "
-        + "7-50s). level, pan, and distortion stay smooth throughout; the others are set "
-        + "once per audio block, so they granulate near the top of the dial.";
+        + "7-50s). level, pan, depth, and distortion stay smooth throughout; the others are set "
+        + "once per audio block, so they granulate near the top of the dial."
+        + (surround ? "" : " depth needs a quad/5.1 output — see Settings > Audio.");
       fields.appendChild(note);
 
       w.appendChild(fields);
@@ -3095,19 +3225,31 @@ let generating = false, genTimer = null, genElapsedTimer = null, _genSeconds = 0
 // so there is no honest formula from the size slider either. Sonnet and Opus
 // are slower again. Showing the real number answers "is this stuck?" without
 // claiming a figure that only holds for one model at one effort.
-function startGen(kindLabel){
-  if (generating) return;
-  generating = true;
-  disableGenModal();
-  $("gen-overlay").classList.add("on");
-  $("gen-overlay-msg").textContent = kindLabel
-    ? `Composing ${kindLabel}…` : "Composing scene…";
-  // Reset the overlay out of any previous completion state.
+// Put the generation overlay back to its pre-generation state.
+//
+// Factored out of startGen because reopening the Generate panel needs exactly
+// the same reset. Note that `endGen` is NOT this: it only removes the `on`
+// class, which hides the overlay while leaving the completion panel inside it
+// still display:flex — so the next time the overlay was shown, the previous
+// run's "Generation complete" was underneath it. That is why the two are
+// separate, and why this has to clear `gen-done` explicitly.
+function resetGenOverlay(){
+  $("gen-overlay").classList.remove("on");
   $("gen-done").style.display = "none";
   $("gen-overlay-sub").style.display = "";
   $("gen-overlay-elapsed").style.display = "";
   $("gen-ring").style.display = "";
   $("gen-overlay").style.pointerEvents = "";
+  _genDoneAction = null;
+}
+function startGen(kindLabel){
+  if (generating) return;
+  generating = true;
+  disableGenModal();
+  resetGenOverlay();
+  $("gen-overlay").classList.add("on");
+  $("gen-overlay-msg").textContent = kindLabel
+    ? `Composing ${kindLabel}…` : "Composing scene…";
   const t0 = Date.now();
   const tick = () => {
     _genSeconds = Math.round((Date.now() - t0) / 1000);
@@ -3568,6 +3710,28 @@ function resetGenModal(){
 }
 $("gen-open").onclick = () => {
   openModal("modal-generate");
+  // Start from empty prompts, the same way the Regenerate audio modal does:
+  // this modal is reopened to describe a NEW scene, and the previous
+  // description sitting in the box reads as though it were about to be sent
+  // again. The character sliders, model and cost cap are deliberately left
+  // alone — those are settings you dial in once, not part of the request.
+  //
+  // Guarded on `generating` because clicking the strip during a run reopens
+  // this same modal to show live progress (see startGen): clearing there
+  // would wipe the description of the generation currently in flight.
+  if (!generating) {
+    // Dismiss a finished generation's completion panel. Without this, opening
+    // Generate after a run that was never started showed the previous result's
+    // "Generation complete / Start scene" — the button that means "compose
+    // something new" showed the last thing it composed, with no way to reach
+    // the fields underneath. The stale "✓ Scene ready" strip goes with it;
+    // you are about to replace that result, so it has nothing left to report.
+    resetGenOverlay();
+    genstripHide();
+    $("kw").value = "";
+    $("audiokw").value = "";
+    $("scenename").value = "";
+  }
   resetGenModal();
 };
 $("gen-close").onclick = () => {

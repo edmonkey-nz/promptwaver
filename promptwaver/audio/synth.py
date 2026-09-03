@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 
-from .dsp import SoundscapeMixer, default_soundscape, SR
+from .dsp import SoundscapeMixer, default_soundscape, SR, SUPPORTED_CHANNELS
 from .diagnostics import CallbackStats, list_devices
 
 #: Blocks rendered AHEAD of the audio callback, by a normal Python thread.
@@ -78,6 +78,8 @@ GIL_SWITCH_INTERVAL = 0.0005
 
 class NullSynth:
     online = False
+    channels = 2          # nothing is open, but callers may still ask
+    requested_channels = 2
 
     def start(self): pass
     def stop(self): pass
@@ -95,15 +97,21 @@ class NullSynth:
 
 class SoundscapeSynth:
     def __init__(self, sr: int = SR, blocksize: int = 8192, device=None,
-                 latency="high", enable_diagnostics=True):
+                 latency="high", enable_diagnostics=True, channels: int = 2):
         import sounddevice as sd
         self._sd = sd
         self.sr = sr
         self.blocksize = blocksize
         self.device = device
         self.latency = latency
+        # Output width — 2 (stereo), 4 (quad) or 6 (quad on a 5.1 stream).
+        # See dsp.SURROUND_LAYOUTS. A rig setting: it survives scene changes
+        # and is reapplied to whatever soundscape is loaded.
+        self.channels = channels if channels in SUPPORTED_CHANNELS else 2
+        self.requested_channels = self.channels
         self._lock = threading.Lock()
-        self._scape = SoundscapeMixer(default_soundscape(), sr=sr)
+        self._scape = SoundscapeMixer(default_soundscape(), sr=sr,
+                                      channels=self.channels)
         self._last_vu = {"peak": 0.0, "clipping": False}
         self._last_bands = {"level": 0.0, "low": 0.0, "mid": 0.0, "high": 0.0, "voices": {}}
         self._stream = None
@@ -147,7 +155,8 @@ class SoundscapeSynth:
                     # take the stream down with it — emit silence and carry on,
                     # so the app stays usable and the next scene can recover.
                     import numpy as np
-                    pending = (np.zeros((self.blocksize, 2), np.float32), False)
+                    pending = (np.zeros((self.blocksize, self._scape.channels),
+                                        np.float32), False)
             try:
                 self._q.put(pending, timeout=0.1)
                 pending = None
@@ -209,7 +218,7 @@ class SoundscapeSynth:
             time.sleep(0.002)
         try:
             self._stream = self._sd.OutputStream(
-                samplerate=self.sr, channels=2, dtype="float32",
+                samplerate=self.sr, channels=self.channels, dtype="float32",
                 blocksize=self.blocksize, latency=self.latency, device=self.device,
                 callback=self._callback)
             self._stream.start()
@@ -280,7 +289,7 @@ class SoundscapeSynth:
     _SIZE_LADDER = [32768, 16384, 8192, 4096, 2048, 1024, 512]
 
     def reconfigure(self, *, device=None, blocksize=None, latency=None, sr=None,
-                    use_ladder=False):
+                    use_ladder=False, channels=None):
         """Stop and restart the stream with new I/O parameters, live.
 
         `use_ladder=True` (startup autodetect only) steps down through
@@ -295,8 +304,18 @@ class SoundscapeSynth:
         8192 request would fall back to (say) 2048, persist 2048, and the
         *next* session would start from 2048 with no way back up without the
         user knowing that's what happened.
+
+        `channels` gets a fallback to stereo REGARDLESS of `use_ladder`, and
+        that asymmetry is deliberate. A blocksize that won't open is a tuning
+        annoyance; a channel count that won't open is silence, and the most
+        likely time to hit one is picking the wrong device for a surround
+        setting that worked on the last one. Falling back to 2 keeps audio
+        alive and says so in `last_error`, and `_sync_audio_cfg_from_synth`
+        then persists what actually opened — so the UI shows stereo, which is
+        the truth, rather than a surround setting that isn't running.
         """
-        last_good = (self.device, self.blocksize, self.latency, self.sr)
+        last_good = (self.device, self.blocksize, self.latency, self.sr,
+                     self.channels)
         was_online = self.online
         self.stop()
         if device is not None:
@@ -305,7 +324,8 @@ class SoundscapeSynth:
             self.latency = latency
         if sr is not None:
             self.sr = int(sr)
-            self._scape = SoundscapeMixer(self._scape.spec, sr=self.sr)
+            self._scape = SoundscapeMixer(self._scape.spec, sr=self.sr,
+                                          channels=self.channels)
 
         requested = int(blocksize) if blocksize is not None else self.blocksize
         self.requested_blocksize = requested
@@ -313,34 +333,64 @@ class SoundscapeSynth:
         if use_ladder:
             candidates += [b for b in self._SIZE_LADDER if b < requested]
 
+        want_ch = int(channels) if channels is not None else self.channels
+        if want_ch not in SUPPORTED_CHANNELS:
+            want_ch = 2
+        self.requested_channels = want_ch
+        # Stereo last, so it is only reached once the asked-for width has
+        # genuinely failed at every blocksize.
+        ch_candidates = [want_ch] + ([2] if want_ch != 2 else [])
+
         self.last_error = None
         last_exc = None
-        for size in candidates:
-            self.blocksize = size
-            try:
-                self.start()
-                if size != requested:
-                    self.last_error = (f"requested {requested} not supported by this "
-                                       f"device; running at {size} instead")
-                    print(f"[promptwaver] audio: {self.last_error}")
-                return
-            except Exception as e:
-                last_exc = e
-                self.online = False
-                continue
+        for ch in ch_candidates:
+            self._set_channels(ch)
+            for size in candidates:
+                self.blocksize = size
+                try:
+                    self.start()
+                    notes = []
+                    if size != requested:
+                        notes.append(f"requested blocksize {requested} not supported by "
+                                     f"this device; running at {size} instead")
+                    if ch != want_ch:
+                        notes.append(f"requested {want_ch} output channels; this device "
+                                     f"would only open {ch} — running in stereo")
+                    if notes:
+                        self.last_error = "; ".join(notes)
+                        print(f"[promptwaver] audio: {self.last_error}")
+                    return
+                except Exception as e:
+                    last_exc = e
+                    self.online = False
+                    continue
 
         # every candidate failed — report it plainly, and try to restore
         # whatever was actually working before rather than leaving audio dead
         detail = f"{type(last_exc).__name__}: {last_exc}" if last_exc else "unknown error"
         self.last_error = f"requested {requested} failed to open ({detail})"
         if was_online:
-            self.device, self.blocksize, self.latency, self.sr = last_good
+            (self.device, self.blocksize, self.latency, self.sr,
+             prev_ch) = last_good
+            self._set_channels(prev_ch)
             try:
                 self.start()
                 self.last_error += f"; restored previous working blocksize {self.blocksize}"
             except Exception as e2:
                 self.last_error += f"; could not restore previous config either: {e2}"
         print(f"[promptwaver] audio reconfigure failed: {self.last_error}")
+
+    def _set_channels(self, ch: int):
+        """Point the stream and the mixer at the same width, together.
+
+        These must never disagree: the callback copies a rendered block
+        straight into PortAudio's buffer, so a mixer one channel wider than
+        the stream is a shape mismatch raised on the realtime thread. Only
+        called with the stream stopped.
+        """
+        self.channels = ch if ch in SUPPORTED_CHANNELS else 2
+        with self._lock:
+            self._scape.set_channels(self.channels)
 
     def set_soundscape(self, spec, fade=0.0):
         if not spec:
@@ -419,6 +469,8 @@ class SoundscapeSynth:
         d["latency"] = self.latency
         d["error"] = self.last_error
         d["requested_blocksize"] = self.requested_blocksize
+        d["channels"] = self.channels
+        d["requested_channels"] = self.requested_channels
         return d
 
     # legacy interface kept so older engine calls don't break
