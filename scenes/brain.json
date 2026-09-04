@@ -1,0 +1,5731 @@
+{
+  "name": "brain",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "neuron_soma": [
+            {
+              "op": "circle",
+              "r": 0.4,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "circle",
+              "r": 0.4,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "circle",
+              "r": 0.4,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            }
+          ],
+          "axon_bundle": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                2,
+                0.3,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                2,
+                -0.2,
+                -0.6
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                2,
+                0.5,
+                0.2
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                2,
+                -0.4,
+                0.4
+              ]
+            }
+          ],
+          "dendrite_tree": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                1.2,
+                0.8,
+                0.3
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                1,
+                -0.6,
+                0.5
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0.8,
+                0.4,
+                -0.7
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.2,
+                0.8,
+                0.3
+              ],
+              "b": [
+                1.8,
+                1.4,
+                0.6
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.2,
+                0.8,
+                0.3
+              ],
+              "b": [
+                1.9,
+                0.9,
+                1.1
+              ]
+            }
+          ],
+          "synapse_arch": [
+            {
+              "op": "arc",
+              "r": 0.5,
+              "a0": 0,
+              "a1": 3.14159,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.5,
+                0,
+                0
+              ],
+              "b": [
+                -0.5,
+                0.3,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.5,
+                0,
+                0
+              ],
+              "b": [
+                0.5,
+                0.3,
+                0
+              ]
+            }
+          ],
+          "signal_wave": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.3,
+                  0.2,
+                  0
+                ],
+                [
+                  0.6,
+                  -0.2,
+                  0
+                ],
+                [
+                  0.9,
+                  0.15,
+                  0
+                ],
+                [
+                  1.2,
+                  -0.25,
+                  0
+                ],
+                [
+                  1.5,
+                  0.1,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "vesicle_cloud": [
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "xz",
+              "c": [
+                0.4,
+                0.3,
+                0.2
+              ],
+              "seg": 8
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "yz",
+              "c": [
+                -0.3,
+                0.5,
+                0.3
+              ],
+              "seg": 8
+            },
+            {
+              "op": "circle",
+              "r": 0.15,
+              "plane": "xy",
+              "c": [
+                0.5,
+                -0.4,
+                0.1
+              ],
+              "seg": 8
+            }
+          ],
+          "circuit_lattice": [
+            {
+              "op": "grid",
+              "w": 3,
+              "h": 3,
+              "nx": 4,
+              "ny": 4,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.5,
+                -1.5,
+                0
+              ],
+              "b": [
+                1.5,
+                1.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                1.5,
+                -1.5,
+                0
+              ],
+              "b": [
+                -1.5,
+                1.5,
+                0
+              ]
+            }
+          ],
+          "spiral_pathway": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.3,
+                  0,
+                  0.3
+                ],
+                [
+                  0.5,
+                  0.3,
+                  0.6
+                ],
+                [
+                  0.6,
+                  0.7,
+                  0.8
+                ],
+                [
+                  0.5,
+                  1.1,
+                  0.7
+                ],
+                [
+                  0.2,
+                  1.3,
+                  0.4
+                ],
+                [
+                  -0.1,
+                  1.2,
+                  0
+                ],
+                [
+                  -0.3,
+                  0.8,
+                  -0.3
+                ],
+                [
+                  -0.2,
+                  0.3,
+                  -0.4
+                ],
+                [
+                  0.1,
+                  0,
+                  -0.3
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "membrane_shell": [
+            {
+              "op": "circle",
+              "r": 1.8,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 1.8,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 1.6,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 18
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.8,
+              0.3,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1.2,
+            "color": [
+              0.6,
+              0.8,
+              1
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.9,
+              0.4,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              2,
+              0.5,
+              0.8
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              1.5,
+              0.3,
+              0.5
+            ],
+            "scale": 1,
+            "color": [
+              0.3,
+              1,
+              0.7
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              2.2,
+              0.7,
+              1
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.8,
+              0.4
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              4,
+              -1,
+              2
+            ],
+            "scale": 1.3,
+            "color": [
+              0.4,
+              0.9,
+              0.8
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              3.5,
+              0.5,
+              1.5
+            ],
+            "scale": 1.2,
+            "color": [
+              0.7,
+              0.3,
+              1
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.5,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -3,
+              1,
+              -2
+            ],
+            "scale": 1.1,
+            "color": [
+              0.5,
+              0.6,
+              1
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              5,
+              2,
+              3
+            ],
+            "scale": 0.7,
+            "color": [
+              0.9,
+              0.5,
+              0.6
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              5,
+              2,
+              3
+            ],
+            "scale": 0.8,
+            "color": [
+              0.5,
+              0.7,
+              1
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              4.5,
+              1.5,
+              2.5
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.3,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              6.5,
+              2.5,
+              4
+            ],
+            "scale": 0.6,
+            "color": [
+              1,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              6,
+              2,
+              3.5
+            ],
+            "scale": 0.9,
+            "color": [
+              0.4,
+              0.95,
+              0.6
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.7,
+              "amp": 0.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              7,
+              3,
+              4.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.95,
+              0.75,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.6,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              8,
+              1,
+              5
+            ],
+            "scale": 1,
+            "color": [
+              0.3,
+              0.85,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.25,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              7.5,
+              2,
+              4
+            ],
+            "scale": 1,
+            "color": [
+              0.8,
+              0.2,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              6,
+              -1,
+              3
+            ],
+            "scale": 0.9,
+            "color": [
+              0.4,
+              0.7,
+              0.95
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.2,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              10,
+              0,
+              6
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.4,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              10,
+              0,
+              6
+            ],
+            "scale": 1,
+            "color": [
+              0.6,
+              0.75,
+              0.95
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              9.5,
+              -0.5,
+              5
+            ],
+            "scale": 0.85,
+            "color": [
+              0.95,
+              0.35,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              11.5,
+              1,
+              7
+            ],
+            "scale": 0.7,
+            "color": [
+              0.98,
+              0.65,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              11,
+              0.5,
+              6.5
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.9,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.85,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              12,
+              1.5,
+              7.5
+            ],
+            "scale": 0.9,
+            "color": [
+              1,
+              0.8,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.4,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              13,
+              -1,
+              8
+            ],
+            "scale": 1.2,
+            "color": [
+              0.35,
+              0.88,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              12.5,
+              0.5,
+              7
+            ],
+            "scale": 1.1,
+            "color": [
+              0.75,
+              0.25,
+              0.95
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.55,
+              "amp": 0.32,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              11,
+              -2,
+              6
+            ],
+            "scale": 1,
+            "color": [
+              0.45,
+              0.65,
+              0.95
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.95,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              15,
+              2,
+              10
+            ],
+            "scale": 0.85,
+            "color": [
+              0.9,
+              0.6,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              15,
+              2,
+              10
+            ],
+            "scale": 0.9,
+            "color": [
+              0.55,
+              0.8,
+              0.9
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              14.5,
+              1.5,
+              9
+            ],
+            "scale": 0.8,
+            "color": [
+              0.85,
+              0.4,
+              0.75
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              16.5,
+              3,
+              11
+            ],
+            "scale": 0.65,
+            "color": [
+              0.99,
+              0.6,
+              0.28
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.1,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              16,
+              2.5,
+              10.5
+            ],
+            "scale": 0.95,
+            "color": [
+              0.3,
+              0.92,
+              0.68
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.36,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              17,
+              3.5,
+              11.5
+            ],
+            "scale": 0.85,
+            "color": [
+              0.98,
+              0.82,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              18,
+              1,
+              12
+            ],
+            "scale": 1.15,
+            "color": [
+              0.32,
+              0.87,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.32,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              17.5,
+              2.5,
+              11
+            ],
+            "scale": 1.05,
+            "color": [
+              0.72,
+              0.28,
+              0.92
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              16,
+              0,
+              10
+            ],
+            "scale": 0.95,
+            "color": [
+              0.42,
+              0.68,
+              0.92
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              20,
+              -1,
+              14
+            ],
+            "scale": 0.8,
+            "color": [
+              1,
+              0.5,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              20,
+              -1,
+              14
+            ],
+            "scale": 0.85,
+            "color": [
+              0.65,
+              0.7,
+              0.98
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              19.5,
+              -1.5,
+              13
+            ],
+            "scale": 0.75,
+            "color": [
+              0.92,
+              0.45,
+              0.68
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              21.5,
+              0,
+              15
+            ],
+            "scale": 0.6,
+            "color": [
+              0.97,
+              0.68,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.9,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              21,
+              -0.5,
+              14.5
+            ],
+            "scale": 0.9,
+            "color": [
+              0.38,
+              0.88,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.82,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              22,
+              0.5,
+              15.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.96,
+              0.78,
+              0.38
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              23,
+              -2,
+              16
+            ],
+            "scale": 1.1,
+            "color": [
+              0.38,
+              0.82,
+              0.92
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              22.5,
+              -0.5,
+              15
+            ],
+            "scale": 1,
+            "color": [
+              0.78,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.58,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              21,
+              -3,
+              14
+            ],
+            "scale": 0.9,
+            "color": [
+              0.48,
+              0.62,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              25,
+              1,
+              18
+            ],
+            "scale": 0.75,
+            "color": [
+              0.88,
+              0.55,
+              0.45
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.6,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              25,
+              1,
+              18
+            ],
+            "scale": 0.8,
+            "color": [
+              0.5,
+              0.85,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              24.5,
+              0.5,
+              17
+            ],
+            "scale": 0.7,
+            "color": [
+              0.95,
+              0.5,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              26.5,
+              2,
+              19
+            ],
+            "scale": 0.55,
+            "color": [
+              0.98,
+              0.72,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.3,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              26,
+              1.5,
+              18.5
+            ],
+            "scale": 0.85,
+            "color": [
+              0.28,
+              0.95,
+              0.7
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.78,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              27,
+              2.5,
+              19.5
+            ],
+            "scale": 0.75,
+            "color": [
+              0.94,
+              0.8,
+              0.4
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.65,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              28,
+              0,
+              20
+            ],
+            "scale": 1.05,
+            "color": [
+              0.3,
+              0.9,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              27.5,
+              1.5,
+              19
+            ],
+            "scale": 0.95,
+            "color": [
+              0.7,
+              0.35,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              26,
+              -1,
+              18
+            ],
+            "scale": 0.85,
+            "color": [
+              0.5,
+              0.6,
+              0.95
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              30,
+              -2,
+              22
+            ],
+            "scale": 0.7,
+            "color": [
+              1,
+              0.45,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.1,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              30,
+              -2,
+              22
+            ],
+            "scale": 0.75,
+            "color": [
+              0.7,
+              0.65,
+              0.95
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              29.5,
+              -2.5,
+              21
+            ],
+            "scale": 0.65,
+            "color": [
+              0.9,
+              0.35,
+              0.55
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              31.5,
+              -1,
+              23
+            ],
+            "scale": 0.5,
+            "color": [
+              0.99,
+              0.7,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              31,
+              -1.5,
+              22.5
+            ],
+            "scale": 0.8,
+            "color": [
+              0.25,
+              0.9,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.88,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              32,
+              -0.5,
+              23.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.92,
+              0.75,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.4,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              33,
+              -3,
+              24
+            ],
+            "scale": 1,
+            "color": [
+              0.35,
+              0.85,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.29,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              32.5,
+              -1.5,
+              23
+            ],
+            "scale": 0.9,
+            "color": [
+              0.75,
+              0.3,
+              0.85
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 0.31,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              31,
+              -4,
+              22
+            ],
+            "scale": 0.8,
+            "color": [
+              0.52,
+              0.55,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.9,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              35,
+              0,
+              26
+            ],
+            "scale": 0.65,
+            "color": [
+              0.85,
+              0.6,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              35,
+              0,
+              26
+            ],
+            "scale": 0.7,
+            "color": [
+              0.6,
+              0.8,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              34.5,
+              -0.5,
+              25
+            ],
+            "scale": 0.6,
+            "color": [
+              0.88,
+              0.55,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              36.5,
+              1,
+              27
+            ],
+            "scale": 0.45,
+            "color": [
+              0.97,
+              0.75,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              36,
+              0.5,
+              26.5
+            ],
+            "scale": 0.75,
+            "color": [
+              0.32,
+              0.92,
+              0.68
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.72,
+              "amp": 0.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              37,
+              1.5,
+              27.5
+            ],
+            "scale": 0.65,
+            "color": [
+              0.9,
+              0.78,
+              0.4
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              38,
+              -1,
+              28
+            ],
+            "scale": 0.95,
+            "color": [
+              0.3,
+              0.88,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.27,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              37.5,
+              0.5,
+              27
+            ],
+            "scale": 0.85,
+            "color": [
+              0.78,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              36,
+              -2,
+              26
+            ],
+            "scale": 0.75,
+            "color": [
+              0.45,
+              0.65,
+              0.92
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.2,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              40,
+              2,
+              30
+            ],
+            "scale": 0.6,
+            "color": [
+              0.9,
+              0.5,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              40,
+              2,
+              30
+            ],
+            "scale": 0.65,
+            "color": [
+              0.75,
+              0.7,
+              0.9
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              39.5,
+              1.5,
+              29
+            ],
+            "scale": 0.55,
+            "color": [
+              0.92,
+              0.48,
+              0.7
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              41.5,
+              3,
+              31
+            ],
+            "scale": 0.4,
+            "color": [
+              0.98,
+              0.68,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              41,
+              2.5,
+              30.5
+            ],
+            "scale": 0.7,
+            "color": [
+              0.3,
+              0.88,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              42,
+              3.5,
+              31.5
+            ],
+            "scale": 0.6,
+            "color": [
+              0.88,
+              0.8,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.6,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              43,
+              1,
+              32
+            ],
+            "scale": 0.9,
+            "color": [
+              0.32,
+              0.88,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              42.5,
+              2.5,
+              31
+            ],
+            "scale": 0.8,
+            "color": [
+              0.72,
+              0.35,
+              0.85
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              41,
+              0,
+              30
+            ],
+            "scale": 0.7,
+            "color": [
+              0.5,
+              0.58,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              45,
+              -1,
+              34
+            ],
+            "scale": 0.55,
+            "color": [
+              1,
+              0.55,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              45,
+              -1,
+              34
+            ],
+            "scale": 0.6,
+            "color": [
+              0.65,
+              0.75,
+              0.92
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              44.5,
+              -1.5,
+              33
+            ],
+            "scale": 0.5,
+            "color": [
+              0.95,
+              0.42,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              46.5,
+              0,
+              35
+            ],
+            "scale": 0.35,
+            "color": [
+              0.99,
+              0.72,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.1,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              46,
+              -0.5,
+              34.5
+            ],
+            "scale": 0.65,
+            "color": [
+              0.28,
+              0.9,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.36,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              47,
+              0.5,
+              35.5
+            ],
+            "scale": 0.55,
+            "color": [
+              0.92,
+              0.75,
+              0.38
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              48,
+              -2,
+              36
+            ],
+            "scale": 0.85,
+            "color": [
+              0.35,
+              0.86,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              47.5,
+              -0.5,
+              35
+            ],
+            "scale": 0.75,
+            "color": [
+              0.78,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.58,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              46,
+              -3,
+              34
+            ],
+            "scale": 0.65,
+            "color": [
+              0.48,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.07,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              38,
+              -3,
+              28
+            ],
+            "scale": 0.5,
+            "color": [
+              0.8,
+              0.65,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              38,
+              -3,
+              28
+            ],
+            "scale": 0.55,
+            "color": [
+              0.55,
+              0.8,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              37.5,
+              -3.5,
+              27
+            ],
+            "scale": 0.45,
+            "color": [
+              0.9,
+              0.52,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              39.5,
+              -2,
+              29
+            ],
+            "scale": 0.3,
+            "color": [
+              0.96,
+              0.68,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.6,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              39,
+              -2.5,
+              28.5
+            ],
+            "scale": 0.6,
+            "color": [
+              0.32,
+              0.92,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.82,
+              "amp": 0.39,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              40,
+              -2,
+              29.5
+            ],
+            "scale": 0.5,
+            "color": [
+              0.88,
+              0.78,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.45,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              41,
+              -4,
+              30
+            ],
+            "scale": 0.8,
+            "color": [
+              0.38,
+              0.84,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              40.5,
+              -2.5,
+              29
+            ],
+            "scale": 0.7,
+            "color": [
+              0.75,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.63,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              39,
+              -4,
+              28
+            ],
+            "scale": 0.6,
+            "color": [
+              0.52,
+              0.6,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.95,
+              "amp": 0.06,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              32,
+              3,
+              24
+            ],
+            "scale": 0.45,
+            "color": [
+              0.95,
+              0.45,
+              0.45
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              32,
+              3,
+              24
+            ],
+            "scale": 0.5,
+            "color": [
+              0.7,
+              0.72,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              31.5,
+              2.5,
+              23
+            ],
+            "scale": 0.4,
+            "color": [
+              0.88,
+              0.48,
+              0.68
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              33.5,
+              4,
+              25
+            ],
+            "scale": 0.25,
+            "color": [
+              0.98,
+              0.72,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              33,
+              3.5,
+              24.5
+            ],
+            "scale": 0.55,
+            "color": [
+              0.3,
+              0.88,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.7,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              34,
+              4.5,
+              25.5
+            ],
+            "scale": 0.45,
+            "color": [
+              0.92,
+              0.8,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              35,
+              2,
+              26
+            ],
+            "scale": 0.75,
+            "color": [
+              0.3,
+              0.9,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.25,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              34.5,
+              3.5,
+              25
+            ],
+            "scale": 0.65,
+            "color": [
+              0.7,
+              0.3,
+              0.9
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              33,
+              1,
+              24
+            ],
+            "scale": 0.55,
+            "color": [
+              0.45,
+              0.68,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.05,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              27,
+              -3,
+              20
+            ],
+            "scale": 0.4,
+            "color": [
+              0.75,
+              0.6,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.1,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              27,
+              -3,
+              20
+            ],
+            "scale": 0.45,
+            "color": [
+              0.65,
+              0.75,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              26.5,
+              -3.5,
+              19
+            ],
+            "scale": 0.35,
+            "color": [
+              0.85,
+              0.5,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              28.5,
+              -2,
+              21
+            ],
+            "scale": 0.2,
+            "color": [
+              0.95,
+              0.7,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              28,
+              -2.5,
+              20.5
+            ],
+            "scale": 0.5,
+            "color": [
+              0.28,
+              0.92,
+              0.68
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.88,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              29,
+              -2,
+              21.5
+            ],
+            "scale": 0.4,
+            "color": [
+              0.88,
+              0.78,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.6,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              30,
+              -4,
+              22
+            ],
+            "scale": 0.7,
+            "color": [
+              0.35,
+              0.88,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              29.5,
+              -2.5,
+              21
+            ],
+            "scale": 0.6,
+            "color": [
+              0.75,
+              0.28,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              28,
+              -4,
+              20
+            ],
+            "scale": 0.5,
+            "color": [
+              0.5,
+              0.6,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.04,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              22,
+              2,
+              16
+            ],
+            "scale": 0.35,
+            "color": [
+              0.9,
+              0.55,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              22,
+              2,
+              16
+            ],
+            "scale": 0.4,
+            "color": [
+              0.6,
+              0.8,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              21.5,
+              1.5,
+              15
+            ],
+            "scale": 0.3,
+            "color": [
+              0.92,
+              0.45,
+              0.55
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              23.5,
+              3,
+              17
+            ],
+            "scale": 0.15,
+            "color": [
+              0.98,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              23,
+              2.5,
+              16.5
+            ],
+            "scale": 0.45,
+            "color": [
+              0.3,
+              0.9,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.78,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              24,
+              3.5,
+              17.5
+            ],
+            "scale": 0.35,
+            "color": [
+              0.9,
+              0.75,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              25,
+              1,
+              18
+            ],
+            "scale": 0.65,
+            "color": [
+              0.32,
+              0.86,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              24.5,
+              2.5,
+              17
+            ],
+            "scale": 0.55,
+            "color": [
+              0.7,
+              0.32,
+              0.92
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              23,
+              0,
+              16
+            ],
+            "scale": 0.45,
+            "color": [
+              0.48,
+              0.65,
+              0.9
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.03,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              17,
+              -2,
+              12
+            ],
+            "scale": 0.3,
+            "color": [
+              1,
+              0.5,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              17,
+              -2,
+              12
+            ],
+            "scale": 0.35,
+            "color": [
+              0.7,
+              0.68,
+              0.9
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              16.5,
+              -2.5,
+              11
+            ],
+            "scale": 0.25,
+            "color": [
+              0.88,
+              0.52,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              18.5,
+              -1,
+              13
+            ],
+            "scale": 0.1,
+            "color": [
+              0.95,
+              0.72,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              18,
+              -1.5,
+              12.5
+            ],
+            "scale": 0.4,
+            "color": [
+              0.32,
+              0.88,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              19,
+              -1,
+              13.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.88,
+              0.8,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              20,
+              -3,
+              14
+            ],
+            "scale": 0.6,
+            "color": [
+              0.38,
+              0.84,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              19.5,
+              -1.5,
+              13
+            ],
+            "scale": 0.5,
+            "color": [
+              0.72,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              18,
+              -3,
+              12
+            ],
+            "scale": 0.4,
+            "color": [
+              0.52,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1,
+              "amp": 0.02,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              12,
+              1,
+              8
+            ],
+            "scale": 0.25,
+            "color": [
+              0.85,
+              0.6,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              12,
+              1,
+              8
+            ],
+            "scale": 0.3,
+            "color": [
+              0.65,
+              0.75,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              11.5,
+              0.5,
+              7
+            ],
+            "scale": 0.2,
+            "color": [
+              0.9,
+              0.48,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              13.5,
+              2,
+              9
+            ],
+            "scale": 0.05,
+            "color": [
+              0.92,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              13,
+              1.5,
+              8.5
+            ],
+            "scale": 0.35,
+            "color": [
+              0.3,
+              0.92,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.33,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              14,
+              2.5,
+              9.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.88,
+              0.78,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              15,
+              0,
+              10
+            ],
+            "scale": 0.55,
+            "color": [
+              0.35,
+              0.9,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.27,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              14.5,
+              1.5,
+              9
+            ],
+            "scale": 0.45,
+            "color": [
+              0.75,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              13,
+              -1,
+              8
+            ],
+            "scale": 0.35,
+            "color": [
+              0.48,
+              0.68,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.01,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              7,
+              -1,
+              4
+            ],
+            "scale": 0.2,
+            "color": [
+              0.9,
+              0.55,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              7,
+              -1,
+              4
+            ],
+            "scale": 0.25,
+            "color": [
+              0.75,
+              0.7,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              6.5,
+              -1.5,
+              3
+            ],
+            "scale": 0.15,
+            "color": [
+              0.88,
+              0.52,
+              0.55
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              8.5,
+              0,
+              5
+            ],
+            "scale": 0,
+            "color": [
+              0.95,
+              0.7,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              8,
+              -0.5,
+              4.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.32,
+              0.9,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.85,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              9,
+              0.5,
+              5.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.9,
+              0.78,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.6,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              10,
+              -2,
+              6
+            ],
+            "scale": 0.5,
+            "color": [
+              0.3,
+              0.88,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              9.5,
+              -0.5,
+              5
+            ],
+            "scale": 0.4,
+            "color": [
+              0.7,
+              0.35,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              8,
+              -2,
+              4
+            ],
+            "scale": 0.3,
+            "color": [
+              0.5,
+              0.6,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              2,
+              2,
+              0
+            ],
+            "scale": 0.15,
+            "color": [
+              1,
+              0.45,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.6,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              2,
+              2,
+              0
+            ],
+            "scale": 0.2,
+            "color": [
+              0.6,
+              0.85,
+              0.8
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              1.5,
+              1.5,
+              -1
+            ],
+            "scale": 0.1,
+            "color": [
+              0.92,
+              0.48,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              3.5,
+              3,
+              1
+            ],
+            "scale": 0,
+            "color": [
+              0.98,
+              0.68,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.1,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              3,
+              2.5,
+              0.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.3,
+              0.88,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.72,
+              "amp": 0.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              4,
+              3.5,
+              1.5
+            ],
+            "scale": 0.15,
+            "color": [
+              0.88,
+              0.8,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              5,
+              1,
+              2
+            ],
+            "scale": 0.45,
+            "color": [
+              0.32,
+              0.88,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              4.5,
+              2.5,
+              1
+            ],
+            "scale": 0.35,
+            "color": [
+              0.75,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              3,
+              0,
+              0
+            ],
+            "scale": 0.25,
+            "color": [
+              0.45,
+              0.7,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -5,
+              0,
+              -4
+            ],
+            "scale": 0.1,
+            "color": [
+              0.8,
+              0.6,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.1,
+              "amp": 0.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -5,
+              0,
+              -4
+            ],
+            "scale": 0.15,
+            "color": [
+              0.7,
+              0.75,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -5.5,
+              -0.5,
+              -5
+            ],
+            "scale": 0.05,
+            "color": [
+              0.9,
+              0.5,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -3.5,
+              1,
+              -3
+            ],
+            "scale": 0,
+            "color": [
+              0.92,
+              0.7,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -4,
+              0.5,
+              -3.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.32,
+              0.92,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -3,
+              1.5,
+              -2.5
+            ],
+            "scale": 0.1,
+            "color": [
+              0.88,
+              0.78,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -2,
+              -1,
+              -2
+            ],
+            "scale": 0.4,
+            "color": [
+              0.35,
+              0.86,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -3.5,
+              0.5,
+              -3
+            ],
+            "scale": 0.3,
+            "color": [
+              0.7,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -4,
+              -2,
+              -4
+            ],
+            "scale": 0.2,
+            "color": [
+              0.5,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -10,
+              1,
+              -8
+            ],
+            "scale": 0.2,
+            "color": [
+              0.85,
+              0.55,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -10,
+              1,
+              -8
+            ],
+            "scale": 0.25,
+            "color": [
+              0.65,
+              0.8,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -10.5,
+              0.5,
+              -9
+            ],
+            "scale": 0.15,
+            "color": [
+              0.92,
+              0.45,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -8.5,
+              2,
+              -7
+            ],
+            "scale": 0.05,
+            "color": [
+              0.95,
+              0.68,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -9,
+              1.5,
+              -7.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.3,
+              0.9,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.36,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -8,
+              2.5,
+              -6.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.9,
+              0.75,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -7,
+              0,
+              -6
+            ],
+            "scale": 0.55,
+            "color": [
+              0.32,
+              0.88,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.27,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -8.5,
+              1.5,
+              -7
+            ],
+            "scale": 0.45,
+            "color": [
+              0.75,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -9,
+              -1,
+              -8
+            ],
+            "scale": 0.35,
+            "color": [
+              0.48,
+              0.65,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.01,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -15,
+              -2,
+              -12
+            ],
+            "scale": 0.3,
+            "color": [
+              1,
+              0.5,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -15,
+              -2,
+              -12
+            ],
+            "scale": 0.35,
+            "color": [
+              0.7,
+              0.7,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -15.5,
+              -2.5,
+              -13
+            ],
+            "scale": 0.25,
+            "color": [
+              0.88,
+              0.5,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -13.5,
+              -1,
+              -11
+            ],
+            "scale": 0.1,
+            "color": [
+              0.98,
+              0.72,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -14,
+              -1.5,
+              -11.5
+            ],
+            "scale": 0.4,
+            "color": [
+              0.32,
+              0.88,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -13,
+              -1,
+              -10.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.88,
+              0.8,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -12,
+              -3,
+              -10
+            ],
+            "scale": 0.6,
+            "color": [
+              0.38,
+              0.84,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -13.5,
+              -1.5,
+              -11
+            ],
+            "scale": 0.5,
+            "color": [
+              0.7,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -14,
+              -3,
+              -12
+            ],
+            "scale": 0.4,
+            "color": [
+              0.52,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.02,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -20,
+              0,
+              -16
+            ],
+            "scale": 0.25,
+            "color": [
+              0.9,
+              0.55,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -20,
+              0,
+              -16
+            ],
+            "scale": 0.3,
+            "color": [
+              0.6,
+              0.8,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -20.5,
+              -0.5,
+              -17
+            ],
+            "scale": 0.2,
+            "color": [
+              0.92,
+              0.48,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -18.5,
+              1,
+              -15
+            ],
+            "scale": 0.05,
+            "color": [
+              0.95,
+              0.7,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -19,
+              0.5,
+              -15.5
+            ],
+            "scale": 0.35,
+            "color": [
+              0.3,
+              0.92,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.78,
+              "amp": 0.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -18,
+              1.5,
+              -14.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.88,
+              0.78,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -17,
+              -1,
+              -14
+            ],
+            "scale": 0.55,
+            "color": [
+              0.35,
+              0.9,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -18.5,
+              0.5,
+              -15
+            ],
+            "scale": 0.45,
+            "color": [
+              0.75,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -19,
+              -2,
+              -16
+            ],
+            "scale": 0.35,
+            "color": [
+              0.48,
+              0.68,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.03,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -25,
+              2,
+              -20
+            ],
+            "scale": 0.2,
+            "color": [
+              1,
+              0.45,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -25,
+              2,
+              -20
+            ],
+            "scale": 0.25,
+            "color": [
+              0.75,
+              0.7,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -25.5,
+              1.5,
+              -21
+            ],
+            "scale": 0.15,
+            "color": [
+              0.88,
+              0.5,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -23.5,
+              3,
+              -19
+            ],
+            "scale": 0,
+            "color": [
+              0.92,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -24,
+              2.5,
+              -19.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.32,
+              0.9,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.82,
+              "amp": 0.39,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -23,
+              3.5,
+              -18.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.9,
+              0.75,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.6,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -22,
+              1,
+              -18
+            ],
+            "scale": 0.5,
+            "color": [
+              0.3,
+              0.88,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.28,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -23.5,
+              2.5,
+              -19
+            ],
+            "scale": 0.4,
+            "color": [
+              0.7,
+              0.35,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.6,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -24,
+              0,
+              -20
+            ],
+            "scale": 0.3,
+            "color": [
+              0.5,
+              0.6,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -30,
+              -1,
+              -24
+            ],
+            "scale": 0.15,
+            "color": [
+              0.85,
+              0.6,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.6,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -30,
+              -1,
+              -24
+            ],
+            "scale": 0.2,
+            "color": [
+              0.65,
+              0.75,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -30.5,
+              -1.5,
+              -25
+            ],
+            "scale": 0.1,
+            "color": [
+              0.9,
+              0.52,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -28.5,
+              0,
+              -23
+            ],
+            "scale": 0,
+            "color": [
+              0.98,
+              0.72,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -29,
+              -0.5,
+              -23.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.3,
+              0.88,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -28,
+              0.5,
+              -22.5
+            ],
+            "scale": 0.15,
+            "color": [
+              0.88,
+              0.78,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -27,
+              -2,
+              -22
+            ],
+            "scale": 0.45,
+            "color": [
+              0.32,
+              0.86,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.27,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -28.5,
+              -0.5,
+              -23
+            ],
+            "scale": 0.35,
+            "color": [
+              0.7,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -29,
+              -3,
+              -24
+            ],
+            "scale": 0.25,
+            "color": [
+              0.48,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.01,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -35,
+              1,
+              -28
+            ],
+            "scale": 0.1,
+            "color": [
+              0.9,
+              0.55,
+              0.3
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -35,
+              1,
+              -28
+            ],
+            "scale": 0.15,
+            "color": [
+              0.7,
+              0.68,
+              0.9
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -35.5,
+              0.5,
+              -29
+            ],
+            "scale": 0.05,
+            "color": [
+              0.88,
+              0.48,
+              0.68
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -33.5,
+              2,
+              -27
+            ],
+            "scale": 0,
+            "color": [
+              0.95,
+              0.7,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.8,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -34,
+              1.5,
+              -27.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.32,
+              0.92,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -33,
+              2.5,
+              -26.5
+            ],
+            "scale": 0.1,
+            "color": [
+              0.88,
+              0.8,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -32,
+              0,
+              -26
+            ],
+            "scale": 0.4,
+            "color": [
+              0.35,
+              0.88,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -33.5,
+              1.5,
+              -27
+            ],
+            "scale": 0.3,
+            "color": [
+              0.75,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -34,
+              -1,
+              -28
+            ],
+            "scale": 0.2,
+            "color": [
+              0.45,
+              0.7,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -40,
+              -2,
+              -32
+            ],
+            "scale": 0.25,
+            "color": [
+              1,
+              0.5,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.5,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -40,
+              -2,
+              -32
+            ],
+            "scale": 0.3,
+            "color": [
+              0.6,
+              0.8,
+              0.85
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -40.5,
+              -2.5,
+              -33
+            ],
+            "scale": 0.2,
+            "color": [
+              0.92,
+              0.5,
+              0.6
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -38.5,
+              -1,
+              -31
+            ],
+            "scale": 0.05,
+            "color": [
+              0.98,
+              0.68,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.1,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -39,
+              -1.5,
+              -31.5
+            ],
+            "scale": 0.35,
+            "color": [
+              0.3,
+              0.9,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.78,
+              "amp": 0.36,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -38,
+              -1,
+              -30.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.9,
+              0.75,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -37,
+              -3,
+              -30
+            ],
+            "scale": 0.55,
+            "color": [
+              0.38,
+              0.84,
+              0.88
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.3,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -38.5,
+              -1.5,
+              -31
+            ],
+            "scale": 0.45,
+            "color": [
+              0.72,
+              0.3,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.62,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -39,
+              -3,
+              -32
+            ],
+            "scale": 0.35,
+            "color": [
+              0.52,
+              0.62,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.05,
+              "amp": 0.02,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -45,
+              0,
+              -36
+            ],
+            "scale": 0.2,
+            "color": [
+              0.85,
+              0.6,
+              0.35
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -45,
+              0,
+              -36
+            ],
+            "scale": 0.25,
+            "color": [
+              0.7,
+              0.75,
+              0.88
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -45.5,
+              -0.5,
+              -37
+            ],
+            "scale": 0.15,
+            "color": [
+              0.9,
+              0.52,
+              0.65
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -43.5,
+              1,
+              -35
+            ],
+            "scale": 0,
+            "color": [
+              0.95,
+              0.72,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.7,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -44,
+              0.5,
+              -35.5
+            ],
+            "scale": 0.3,
+            "color": [
+              0.32,
+              0.88,
+              0.65
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.8,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -43,
+              1.5,
+              -34.5
+            ],
+            "scale": 0.2,
+            "color": [
+              0.88,
+              0.8,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.5,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -42,
+              -1,
+              -34
+            ],
+            "scale": 0.5,
+            "color": [
+              0.35,
+              0.9,
+              0.85
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.27,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -43.5,
+              0.5,
+              -35
+            ],
+            "scale": 0.4,
+            "color": [
+              0.7,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.65,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -44,
+              -2,
+              -36
+            ],
+            "scale": 0.3,
+            "color": [
+              0.48,
+              0.68,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.01,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "neuron_soma",
+            "pos": [
+              -50,
+              2,
+              -40
+            ],
+            "scale": 0.15,
+            "color": [
+              1,
+              0.45,
+              0.4
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.6,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "axon_bundle",
+            "pos": [
+              -50,
+              2,
+              -40
+            ],
+            "scale": 0.2,
+            "color": [
+              0.65,
+              0.8,
+              0.82
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -50.5,
+              1.5,
+              -41
+            ],
+            "scale": 0.1,
+            "color": [
+              0.92,
+              0.48,
+              0.62
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              -48.5,
+              3,
+              -39
+            ],
+            "scale": 0,
+            "color": [
+              0.98,
+              0.68,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "signal_wave",
+            "pos": [
+              -49,
+              2.5,
+              -39.5
+            ],
+            "scale": 0.25,
+            "color": [
+              0.3,
+              0.92,
+              0.62
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.75,
+              "amp": 0.34,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -48,
+              3.5,
+              -38.5
+            ],
+            "scale": 0.15,
+            "color": [
+              0.9,
+              0.75,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.55,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              -47,
+              1,
+              -38
+            ],
+            "scale": 0.45,
+            "color": [
+              0.32,
+              0.86,
+              0.9
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.26,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -48.5,
+              2.5,
+              -39
+            ],
+            "scale": 0.35,
+            "color": [
+              0.75,
+              0.32,
+              0.88
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.68,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -49,
+              0,
+              -40
+            ],
+            "scale": 0.25,
+            "color": [
+              0.45,
+              0.7,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "synapse_arch",
+            "pos": [
+              13.534,
+              0.394,
+              6.949
+            ],
+            "scale": 0.101,
+            "color": [
+              0.944,
+              0.698,
+              0.242
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.967,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              33.807,
+              1.216,
+              23.182
+            ],
+            "scale": 0.36,
+            "color": [
+              0.732,
+              0.287,
+              0.926
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.834,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "circuit_lattice",
+            "pos": [
+              41.121,
+              -3.53,
+              27.509
+            ],
+            "scale": 0.933,
+            "color": [
+              0.305,
+              0.843,
+              0.849
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.301,
+              "amp": 0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              18.547,
+              0.322,
+              11.305
+            ],
+            "scale": 0.29,
+            "color": [
+              0.524,
+              0.691,
+              0.867
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.936,
+              "amp": 0.01,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dendrite_tree",
+            "pos": [
+              -12.553,
+              -0.594,
+              -9.223
+            ],
+            "scale": 0.901,
+            "color": [
+              0.882,
+              0.37,
+              0.764
+            ],
+            "motion": {
+              "type": "none"
+            }
+          },
+          {
+            "shape": "membrane_shell",
+            "pos": [
+              -25.548,
+              -2.925,
+              -19.308
+            ],
+            "scale": 0.796,
+            "color": [
+              0.534,
+              0.593,
+              0.864
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.812,
+              "amp": 0.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vesicle_cloud",
+            "pos": [
+              -35.896,
+              2.237,
+              -27.526
+            ],
+            "scale": 0.226,
+            "color": [
+              0.856,
+              0.784,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 1.405,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spiral_pathway",
+            "pos": [
+              -15.833,
+              -2.263,
+              -14.18
+            ],
+            "scale": 0.39,
+            "color": [
+              0.745,
+              0.34,
+              0.838
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.53,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          }
+        ],
+        "shape_speed": 0.11
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a14",
+    "#c85ae8",
+    "#4d96ff",
+    "#6dffb0",
+    "#ffc85a",
+    "#ff6b9d",
+    "#88d0e8"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "path",
+    "waypoints": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        12,
+        1,
+        8
+      ],
+      [
+        25,
+        0,
+        16
+      ],
+      [
+        38,
+        -1,
+        24
+      ],
+      [
+        45,
+        2,
+        30
+      ],
+      [
+        35,
+        -2,
+        20
+      ],
+      [
+        20,
+        1,
+        10
+      ],
+      [
+        -15,
+        -1,
+        -10
+      ],
+      [
+        -40,
+        1,
+        -30
+      ],
+      [
+        -25,
+        -2,
+        -20
+      ]
+    ],
+    "speed": 0.0,
+    "fov": 62,
+    "near": 0.4,
+    "far": 6.0,
+    "max_strokes": 120,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "laser_max_strokes": null,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.95,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 50.0,
+    "master": 0.97,
+    "distortion": 0.1,
+    "delay": {
+      "time": 0.6,
+      "feedback": 0.4,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "sub_drone",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 24,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "unison": 6.0,
+        "detune": 0.008,
+        "sub": 0.73,
+        "tone": 0.18,
+        "level": 0.93,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.9,
+          "release": 3.0
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "main_pad",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 48,
+        "chord": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "tone": 0.35,
+        "detune": 0.012,
+        "level": 0.45,
+        "pan": 0.0,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.2,
+          "sustain": 0.8,
+          "release": 2.5
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "noise_pulse",
+        "type": "noise",
+        "level": 0.2,
+        "tone": 0.25,
+        "pan": 0.0,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.06,
+          "depth": 0.7
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "bell_hits",
+        "type": "bell",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          4,
+          7,
+          12
+        ],
+        "level": 0.25,
+        "rate": 0.3,
+        "decay": 2.2,
+        "tone": 0.65,
+        "pan": 0.15,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      }
+    ],
+    "swell_amount": 0.3,
+    "eq": {
+      "low": 3.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "deep network inside your brian",
+  "audio_prompt": "staic formations white noise puklsing",
+  "generation_settings": {
+    "size": 260,
+    "warmth": 0.5,
+    "energy": 0.5,
+    "evolution": 0.5,
+    "kind": "3d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 4750,
+      "output_tokens": 21873,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.1141
+    },
+    "expansion": {
+      "authored": 252,
+      "total": 260
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

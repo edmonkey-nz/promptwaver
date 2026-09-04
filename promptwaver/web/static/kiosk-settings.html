@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptWaver — Kiosk Settings</title>
+<link rel="icon" type="image/svg+xml" href="/static/promptwaver.svg">
+<style>
+  :root{--bg:#0b0d10;--panel:#12161b;--panel2:#0d1116;--line:#232a33;
+        --ink:#e7eaf0;--dim:#8b93a3;--cyan:#33e0d0;--amber:#f2a623;
+        --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:13px var(--mono)}
+  .wrap{max-width:1360px;margin:0 auto;padding:28px 20px 80px}
+  /* Two columns: settings left, the archive right. minmax(0,1fr) rather than
+     1fr so the table can scroll inside its column instead of widening it. */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;
+        align-items:start}
+  @media (max-width:980px){.cols{grid-template-columns:minmax(0,1fr)}}
+  .col-right{position:sticky;top:28px}
+  h1{font-size:16px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 4px}
+  .sub{color:var(--dim);margin-bottom:24px;line-height:1.6}
+  .sub a{color:var(--cyan)}
+  .group{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+         padding:18px 20px;margin-bottom:18px}
+  h2{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cyan);
+     margin:0 0 6px}
+  .note{color:var(--dim);line-height:1.6;margin-bottom:16px}
+  .field{display:flex;align-items:center;gap:12px;margin:14px 0 2px}
+  .field label{flex:0 0 150px;color:var(--dim)}
+  input[type=range]{flex:1;accent-color:var(--cyan)}
+  .num{flex:0 0 52px;text-align:right;color:var(--cyan)}
+  .ends{display:flex;justify-content:space-between;margin:0 0 6px 162px;
+        color:#5a6270;font-size:11px}
+  .check{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--dim)}
+  .check input{accent-color:var(--cyan);width:16px;height:16px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel2);
+       border-top:1px solid var(--line);padding:12px 20px;display:flex;
+       align-items:center;gap:14px;justify-content:center}
+  button{font:inherit;background:var(--panel);color:var(--ink);
+         border:1px solid var(--line);border-radius:8px;padding:9px 16px;cursor:pointer}
+  button.primary{border-color:var(--cyan);color:var(--cyan)}
+  button:hover{background:#1a2029}
+  #status{color:var(--dim)}
+  select,textarea{font:inherit;background:var(--panel2);color:var(--ink);
+                  border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  select{flex:1}
+  textarea{width:100%;resize:vertical;line-height:1.6}
+  #preview{white-space:pre-wrap;color:#9aa3b2;background:var(--panel2);
+           border:1px solid var(--line);border-radius:8px;padding:12px;
+           line-height:1.6;min-height:20px}
+
+  /* --- archive table --- */
+  .tablewrap{border:1px solid var(--line);border-radius:8px;overflow:auto;
+             max-height:56vh;background:var(--panel2)}
+  table{border-collapse:collapse;width:100%}
+  thead th{position:sticky;top:0;background:#161b22;text-align:left;
+           font-weight:normal;color:var(--dim);font-size:11px;letter-spacing:0.06em;
+           text-transform:uppercase;padding:9px 10px;border-bottom:1px solid var(--line);
+           z-index:1}
+  tbody td{padding:8px 10px;border-bottom:1px solid #1a1f27;vertical-align:top}
+  tbody tr:hover{background:#161b22}
+  tbody tr.sel{background:#15242a}
+  td.prompt{color:var(--ink);word-break:break-word}
+  td.when{color:var(--dim);white-space:nowrap;font-size:12px}
+  td.pick{width:28px}
+  input[type=checkbox]{accent-color:var(--cyan);width:15px;height:15px;cursor:pointer}
+  .tools{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .tools .grow{flex:1}
+  button.danger{border-color:#6b2b2b;color:#e08a8a}
+  button.danger:hover{background:#241618}
+  button:disabled{opacity:0.4;cursor:default}
+  button:disabled:hover{background:var(--panel)}
+  .empty{padding:26px 12px;text-align:center;color:#5a6270}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kiosk scene settings</h1>
+  <div class="sub">
+    How a visitor's spoken prompt is turned into a world. Applies only to scenes made from
+    the <a href="/kiosk">kiosk screen</a> — the Generate panel on the
+    <a href="/">control page</a> is unaffected.<br>
+    The single spoken prompt produces <b>both</b> the visuals and the soundscape, in one request.
+  </div>
+
+  <div class="cols">
+  <div class="col-left">
+
+  <div class="group">
+    <h2>What Claude is asked for</h2>
+    <div class="note">
+      These change the request itself, so they only affect <b>newly generated</b> scenes —
+      a repeated prompt with different settings is a different scene, not a cache hit.
+    </div>
+
+    <div class="field"><label>scene size</label>
+      <input type="range" id="nodes" min="40" max="600" step="10">
+      <span class="num" id="v-nodes">120</span></div>
+    <div class="ends"><span>40 nodes · fast, sparse</span><span>600 · slow, dense</span></div>
+
+    <div class="field"><label>effort</label>
+      <select id="effort">
+        <option value="low">low — about 5-6 objects, fastest</option>
+        <option value="med">med — 8-10 objects with detail</option>
+        <option value="high">high — 11-14 objects, layered</option>
+      </select></div>
+    <div class="note" style="margin:6px 0 14px">
+      Size sets how far the world spreads, effort how much is in it. Both cost time
+      and money. The kiosk deliberately asks for <b>no camera route</b> — that doubled
+      generation time — so scenes drift rather than fly a path.
+    </div>
+
+    <div class="field"><label>interpretation</label>
+      <input type="range" id="interpretation" min="0" max="1" step="0.01">
+      <span class="num" id="v-interpretation">0.50</span></div>
+    <div class="ends"><span>literal</span><span>abstract</span></div>
+
+    <div class="check">
+      <input type="checkbox" id="confirm_prompt">
+      <label for="confirm_prompt">show the visitor what was heard before building
+        <span style="color:#5a6270">— a mishearing caught here costs nothing</span></label>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="exclude_figures">
+      <label for="exclude_figures">exclude human &amp; animal figures
+        <span style="color:#5a6270">— wireframe people read as stick men</span></label>
+    </div>
+
+    <div class="field"><label>warmth</label>
+      <input type="range" id="warmth" min="0" max="1" step="0.01">
+      <span class="num" id="v-warmth">0.50</span></div>
+    <div class="ends"><span>bright, crisp</span><span>warm, mellow</span></div>
+
+    <div class="field"><label>energy</label>
+      <input type="range" id="energy" min="0" max="1" step="0.01">
+      <span class="num" id="v-energy">0.50</span></div>
+    <div class="ends"><span>calm, spacious</span><span>lively, busy</span></div>
+
+    <div class="field"><label>evolution</label>
+      <input type="range" id="evolution" min="0" max="1" step="0.01">
+      <span class="num" id="v-evolution">0.50</span></div>
+    <div class="ends"><span>steady</span><span>swelling</span></div>
+  </div>
+
+  <div class="group">
+    <h2>How it looks when it plays</h2>
+    <div class="note">
+      Applied after the scene comes back, so these take effect <b>immediately</b> — including
+      on a repeated prompt that comes from cache. Glow and trails re-roll per visitor, so the
+      same words don't produce an identical-looking scene twice.
+    </div>
+
+    <div class="field"><label>shape speed</label>
+      <input type="range" id="shape_speed" min="0" max="3" step="0.01">
+      <span class="num" id="v-shape_speed">1.00</span></div>
+    <div class="ends"><span>still</span><span>fast</span></div>
+
+    <div class="field"><label>glow</label>
+      <input type="range" id="glow" min="0" max="1" step="0.01">
+      <span class="num" id="v-glow">0.35</span></div>
+    <div class="ends"><span>none</span><span>heavy bloom</span></div>
+
+    <div class="field"><label>glow variation</label>
+      <input type="range" id="glow_random" min="0" max="1" step="0.01">
+      <span class="num" id="v-glow_random">0.25</span></div>
+    <div class="ends"><span>same every time</span><span>wildly varied</span></div>
+
+    <div class="field"><label>trails</label>
+      <input type="range" id="trail_chance" min="0" max="1" step="0.01">
+      <span class="num" id="v-trail_chance">0.25</span></div>
+    <div class="ends"><span>never</span><span>every scene</span></div>
+  </div>
+
+  <div class="group">
+    <h2>Direction sent to Claude</h2>
+    <div class="note">The exact extra text appended to each visitor's prompt.</div>
+    <div id="preview">—</div>
+
+    <div class="note" style="margin:16px 0 6px">
+      Your own direction, added to every visitor's prompt — a house style, a theme
+      for the night. Plain instructions to Claude; it rides in every request, so keep
+      it short.
+    </div>
+    <textarea id="prompt_suffix" maxlength="400" rows="3"
+      placeholder="e.g. Favour cold blues and whites. Keep the geometry angular."></textarea>
+    <div class="ends" style="margin-left:0"><span></span><span id="suffix-count">0/400</span></div>
+  </div>
+
+  </div><!-- /col-left -->
+
+  <div class="col-right">
+    <div class="group">
+      <h2>Saved visitor scenes</h2>
+      <div class="note">
+        Every world a visitor made, newest first, archived to
+        <code>scenes/kiosk/</code>. Deleting is permanent and immediate.
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th class="pick"><input type="checkbox" id="pick-all" title="select all"></th>
+            <th>prompt</th>
+            <th style="width:150px">saved</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="tools">
+        <span id="count" class="grow">—</span>
+        <button id="refresh">Refresh</button>
+        <button class="danger" id="del-sel" disabled>Delete selected</button>
+        <button class="danger" id="del-all">Delete all</button>
+      </div>
+    </div>
+  </div><!-- /col-right -->
+
+  </div><!-- /cols -->
+</div>
+
+<div class="bar">
+  <button class="primary" id="save">Save</button>
+  <button id="reset">Reset to defaults</button>
+  <span id="status">loading…</span>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SLIDERS = ["nodes","interpretation","warmth","energy","evolution",
+                 "shape_speed","glow","glow_random","trail_chance"];
+const DEFAULTS = {nodes:120, effort:"low", prompt_suffix:"", interpretation:0.5, exclude_figures:true, confirm_prompt:true, warmth:0.5, energy:0.5,
+                  evolution:0.5, shape_speed:1.0, glow:0.35, glow_random:0.25,
+                  trail_chance:0.25};
+
+// Mirror of kiosk.py's _style(). Shown so the operator can see what a slider
+// position actually SAYS — "abstract 0.7" means nothing without the sentence.
+// Thresholds must match KioskSession._style.
+function directionText(g){
+  const out = [];
+  if (g.interpretation >= 0.65)
+    out.push("Interpretation: LOOSE AND ABSTRACT. Evoke the feeling, rhythm and forms of the subject rather than depicting it literally…");
+  else if (g.interpretation <= 0.35)
+    out.push("Interpretation: LITERAL. Build the actual objects and place the words name, clearly readable as what they are…");
+  if (g.exclude_figures)
+    out.push("IMPORTANT: include NO human or animal figures — no people, no bodies, no faces, no limbs, no creatures…");
+  if (g.prompt_suffix && g.prompt_suffix.trim()) out.push(g.prompt_suffix.trim());
+  return out.length ? out.join("\n\n") : "(nothing extra — neutral interpretation, figures allowed)";
+}
+
+function readUI(){
+  const g = {exclude_figures: $("exclude_figures").checked,
+             confirm_prompt: $("confirm_prompt").checked,
+             effort: $("effort").value,
+             prompt_suffix: $("prompt_suffix").value};
+  for (const k of SLIDERS) g[k] = parseFloat($(k).value);
+  return g;
+}
+function paint(g){
+  for (const k of SLIDERS){
+    if (document.activeElement !== $(k)) $(k).value = g[k];
+    $("v-"+k).textContent = k === "nodes"
+      ? String(Math.round(parseFloat($(k).value)))
+      : parseFloat($(k).value).toFixed(2);
+  }
+  $("exclude_figures").checked = !!g.exclude_figures;
+  $("confirm_prompt").checked = !!g.confirm_prompt;
+  if (document.activeElement !== $("effort")) $("effort").value = g.effort || "low";
+  if (document.activeElement !== $("prompt_suffix"))
+    $("prompt_suffix").value = g.prompt_suffix || "";
+  $("suffix-count").textContent = `${$("prompt_suffix").value.length}/400`;
+  $("preview").textContent = directionText(readUI());
+}
+for (const k of SLIDERS) $(k).addEventListener("input", () => paint(readUI()));
+$("exclude_figures").addEventListener("change", () => paint(readUI()));
+$("confirm_prompt").addEventListener("change", () => paint(readUI()));
+$("effort").addEventListener("change", () => paint(readUI()));
+$("prompt_suffix").addEventListener("input", () => paint(readUI()));
+
+let ws = null, loaded = false;
+function send(o){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+// --- saved visitor scenes ---------------------------------------------------
+let scenes = [];
+const picked = new Set();     // survives a refresh, by scene name
+
+function fmtWhen(ts){
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  // Today's scenes are the ones an operator is usually looking at, so they get
+  // the short form and everything older carries its date.
+  return sameDay ? `today ${time}`
+                 : `${d.toLocaleDateString([], {day:"2-digit", month:"short"})} ${time}`;
+}
+
+function paintScenes(){
+  const tb = $("rows");
+  tb.innerHTML = "";
+  for (const sc of scenes){
+    const tr = document.createElement("tr");
+    const on = picked.has(sc.name);
+    tr.className = on ? "sel" : "";
+
+    const tdPick = document.createElement("td");
+    tdPick.className = "pick";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = on;
+    cb.onchange = () => {
+      cb.checked ? picked.add(sc.name) : picked.delete(sc.name);
+      paintScenes();
+    };
+    tdPick.appendChild(cb);
+
+    const tdP = document.createElement("td");
+    tdP.className = "prompt";
+    tdP.textContent = sc.prompt;          // textContent: a visitor wrote this
+    tdP.title = sc.name;
+
+    const tdW = document.createElement("td");
+    tdW.className = "when";
+    tdW.textContent = fmtWhen(sc.ts);
+
+    // Clicking the row toggles it too — the checkbox alone is a small target.
+    tr.onclick = e => { if (e.target !== cb) { cb.checked = !cb.checked; cb.onchange(); } };
+    tr.append(tdPick, tdP, tdW);
+    tb.appendChild(tr);
+  }
+  if (!scenes.length)
+    tb.innerHTML = '<tr><td colspan="3" class="empty">no visitor scenes yet</td></tr>';
+
+  $("count").textContent = scenes.length
+    ? `${scenes.length} scene${scenes.length === 1 ? "" : "s"}`
+      + (picked.size ? ` · ${picked.size} selected` : "")
+    : "";
+  $("del-sel").disabled = picked.size === 0;
+  $("del-all").disabled = scenes.length === 0;
+  $("pick-all").checked = scenes.length > 0 && picked.size === scenes.length;
+}
+
+$("pick-all").onchange = () => {
+  picked.clear();
+  if ($("pick-all").checked) for (const sc of scenes) picked.add(sc.name);
+  paintScenes();
+};
+$("refresh").onclick = () => send({type:"kiosk_scenes"});
+$("del-sel").onclick = () => {
+  const n = picked.size;
+  if (!n) return;
+  if (!confirm(`Delete ${n} visitor scene${n === 1 ? "" : "s"}? This cannot be undone.`)) return;
+  send({type:"kiosk_scenes_delete", names:[...picked]});
+};
+$("del-all").onclick = () => {
+  if (!scenes.length) return;
+  if (!confirm(`Delete ALL ${scenes.length} visitor scenes? This cannot be undone.`)) return;
+  send({type:"kiosk_scenes_delete", all:true});
+};
+
+$("save").onclick = () => {
+  $("status").textContent = "saving…";
+  send({type:"set_kiosk_gen", gen: readUI()});
+};
+$("reset").onclick = () => { paint(DEFAULTS); $("status").textContent = "not saved yet"; };
+
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onclose = () => { $("status").textContent = "disconnected — retrying…"; setTimeout(connect, 1000); };
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === "state") {
+      // Paint once from the server, then leave the controls alone — a 20Hz
+      // broadcast would otherwise fight the operator's own dragging.
+      if (!loaded && m.state && m.state.kiosk && m.state.kiosk.gen) {
+        loaded = true;
+        paint(m.state.kiosk.gen);
+        $("status").textContent = m.state.kiosk.enabled ? "kiosk armed" : "kiosk is off";
+        send({type:"kiosk_scenes"});
+      }
+    } else if (m.type === "kiosk_scenes") {
+      scenes = m.scenes || [];
+      // Drop selections for scenes that are gone, so the count can't outlive them.
+      for (const n of [...picked]) if (!scenes.some(s => s.name === n)) picked.delete(n);
+      paintScenes();
+      if (m.deleted != null) $("status").textContent = `✔ deleted ${m.deleted}`;
+    } else if (m.type === "kiosk_result" && m.action === "gen") {
+      $("status").textContent = m.ok ? "✔ saved" : "✖ " + (m.detail || "failed");
+    } else if (m.type === "kiosk_result" && m.ok === false && m.detail) {
+      $("status").textContent = "✖ " + m.detail;
+    }
+  };
+}
+connect();
+</script>
+</body>
+</html>

@@ -13,6 +13,10 @@ dependencies = [
 [project.optional-dependencies]
 audio = ["sounddevice"]
 ai = ["anthropic"]
+# Local speech-to-text for kiosk mode. Deliberately local: a public
+# installation's visitor audio never leaves the machine — only the transcribed
+# text is sent to the API.
+kiosk = ["faster-whisper"]
 
 # --- dev tooling -------------------------------------------------------
 # Not a distributable package (there's no setup step — see README "Run"),

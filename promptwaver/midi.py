@@ -80,6 +80,8 @@ ENGINE_RANGES = {
     "audio_fade": (0.0, 16.0),
     "glow": (0.0, 1.0),
     "trail": (0.0, 0.95),
+    # Matches the Monitor filters slider. Monitor-only, like glow/trail.
+    "line_width": (1.0, 8.0),
     "hue_value": (0.0, 1.0),
     "audio_link": (0.0, 2.0),
     "lfo_slow.rate": (0.01, 0.4),

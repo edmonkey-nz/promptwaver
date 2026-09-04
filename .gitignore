@@ -16,6 +16,7 @@ env/
 # PromptWaver local/runtime state — never commit secrets or machine-specific data
 settings.json
 scenes/generated/*.json
+scenes/kiosk/*.json
 
 # OS / editor cruft
 .DS_Store

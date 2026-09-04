@@ -603,6 +603,15 @@
       <div class="field"><label title="Reshapes the polylines the engine produces. 0 draws them exactly as authored; right interpolates a spline through the same points (smooth); left drops points (angular/faceted). Screen only — the laser always gets the authored path.">line curve<br><span style="font-size:10px;color:var(--dim)">angular ← → smooth</span></label>
         <input type="range" id="mf-curve" min="-1" max="1" step="0.01" value="0">
         <span class="val" id="v-mfcurve">0.00</span></div>
+      <!-- A multiplier on each surface's own stroke width, not an absolute
+           pixel count — the preview's hairline and the output window's
+           viewport-scaled stroke are deliberately different, and this widens
+           both from where they already are. Only goes up: below ~1px the
+           renderer's fixed half-pixel AA feather is wider than the line
+           itself. See renderer.js _getLineWidth. -->
+      <div class="field"><label title="Thickens the drawn strokes on screen. A multiplier on each surface's own width, so the preview and the output window both widen from where they already are. Screen only — a laser's beam width is set by its optics, and the DAC is sent a constant intensity regardless.">line width</label>
+        <input type="range" id="mf-width" min="1" max="8" step="0.1" value="1">
+        <span class="val" id="v-mfwidth">1.0</span></div>
       <details class="accordion nested" id="acc-bloom" closed>
         <summary>Bloom shape</summary>
         <div class="accordion-body">
@@ -1041,6 +1050,22 @@
     </div>
 
     <div class="group">
+      <h2 style="font-size:11px">Kiosk</h2>
+      <div class="hint" style="margin-bottom:12px">Public installation mode: one button on <a href="/kiosk" target="_blank" style="color:var(--cyan)">/kiosk</a>, a visitor speaks a prompt, and their world fades in. No library, no parameters. While armed, control from other machines on the network is blocked.</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
+        <input type="checkbox" id="kiosk-toggle"> arm kiosk mode
+      </label>
+      <div class="field" style="margin-top:8px"><label>attract scene</label>
+        <input type="text" id="kiosk-attract" placeholder="scene name (blank = built-in)" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
+      <div class="hint">plays while idle and while a scene is being built; the visitor's world crossfades in from it.</div>
+      <div class="row" id="kiosk-openrow" style="display:none">
+        <button id="kiosk-open">🖵 Open kiosk screen</button>
+        <button id="kiosk-settings-open" title="Tune what a visitor's spoken prompt asks Claude for">⚙ Scene settings</button>
+      </div>
+      <div class="hint" id="kioskstatus">kiosk: off</div>
+    </div>
+
+    <div class="group">
       <h2 style="font-size:11px">Output</h2>
       <div class="field"><label>max PPS</label>
         <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
@@ -1346,6 +1371,17 @@ ws.onmessage = e => {
     s.textContent = (m.ok ? "\u2714 " : "\u2716 ") + m.detail;
     s.style.color = m.ok ? "var(--cyan)" : "var(--amber)";
   }
+  else if (m.type === "kiosk_result") {
+    // Arming loads a speech model and can genuinely fail; say so rather than
+    // leaving a checkbox that looks on and isn't.
+    if (m.action === "toggle") {
+      kioskPending = false;
+      const el = $("kioskstatus");
+      el.textContent = (m.ok ? "\u2714 " : "\u2716 ") + (m.detail || "");
+      el.style.color = m.ok ? "var(--cyan)" : "var(--amber)";
+      if (!m.ok) $("kiosk-toggle").checked = false;
+    }
+  }
   else if (m.type === "audio_config_result") {
     audioApplyPending = false;
     audioCfgDirty = false;
@@ -1410,6 +1446,23 @@ function paintState(s){
   const as = $("apistatus");
   if (!as.dataset.touched)
     as.textContent = s.director_online ? `director: ${s.director_model}` : "director: local (no key)";
+  // Kiosk: the server owns the truth, so a reload (or a second tab, or a
+  // --kiosk launch) shows the real state. Skipped while a toggle is in flight
+  // so the broadcast doesn't snap the checkbox back mid-arm.
+  const kk = s.kiosk || {};
+  if (!kioskPending) {
+    const kt = $("kiosk-toggle");
+    if (kt.checked !== !!kk.enabled) kt.checked = !!kk.enabled;
+    const ka = $("kiosk-attract");
+    if (document.activeElement !== ka && ka.value !== (kk.attract || ""))
+      ka.value = kk.attract || "";
+    // Only offered while armed — the page exists either way, but it says
+    // "kiosk mode is off" and does nothing, so pointing at it would mislead.
+    $("kiosk-openrow").style.display = kk.enabled ? "" : "none";
+    const ks = $("kioskstatus");
+    if (!kk.enabled) { ks.textContent = "kiosk: off"; ks.style.color = ""; }
+    else if (kk.phase) { ks.textContent = `kiosk: armed — ${kk.phase}`; ks.style.color = "var(--cyan)"; }
+  }
   const lib = $("lib");
   const kinds = s.library_kinds || {};
   // The kind is part of the signature: a scene re-saved as a different type
@@ -3073,6 +3126,11 @@ function syncMonitorFilters(s){
     $("mf-curve").value = monitorFilters.lineCurve;
     $("v-mfcurve").textContent = monitorFilters.lineCurve.toFixed(2);
   }
+  monitorFilters.lineWidth = s.line_width ?? 1;
+  if (document.activeElement !== $("mf-width")) {
+    $("mf-width").value = monitorFilters.lineWidth;
+    $("v-mfwidth").textContent = monitorFilters.lineWidth.toFixed(1);
+  }
   monitorFilters.bloomSpread = s.bloom_spread ?? 0.005;
   monitorFilters.bloomIntensity = s.bloom_intensity ?? 2.5;
   if (document.activeElement !== $("mf-bloomspread")) {
@@ -3194,6 +3252,7 @@ slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0
 // once while authoring, rather than being reached for mid-performance. The
 // glow slider above is the MIDI-bindable one, and it drives the same bloom.
 slider("mf-curve", "line_curve", "mfcurve");
+slider("mf-width", "line_width", "mfwidth", v => (+v).toFixed(1));
 slider("mf-bloomspread", "bloom_spread", "mfbloomspread", (v)=>(+v).toFixed(3), null);
 slider("mf-bloomint", "bloom_intensity", "mfbloomint", (v)=>(+v).toFixed(1), null);
 // The three layer0.* sliders that stood here are gone — they hardcoded
@@ -3650,6 +3709,35 @@ $("apitest").onclick = () => {
   $("apistatus").textContent = "testing…";
   $("apistatus").style.color = "var(--dim)";
   send({type:"test_api_key"});
+};
+
+// --- kiosk mode -----------------------------------------------------------
+//
+// The toggle is a request, not a fact: arming loads a speech model and arms
+// the mic, either of which can fail. `kioskPending` holds the checkbox at what
+// the operator asked for until the server's ack says what actually happened,
+// so paintState doesn't fight the click.
+let kioskPending = false;
+$("kiosk-toggle").onchange = () => {
+  const on = $("kiosk-toggle").checked;
+  kioskPending = true;
+  $("kioskstatus").textContent = on ? "arming… (loading the speech model)" : "disarming…";
+  $("kioskstatus").style.color = "var(--dim)";
+  send({type:"set_kiosk", value:on, attract:$("kiosk-attract").value.trim()});
+};
+// Its own window, like the output screens — a kiosk is a second display you
+// drag somewhere and leave, not a tab you drive.
+$("kiosk-open").onclick = () => {
+  window.open("/kiosk", "promptwaver-kiosk",
+              "width=1280,height=800,menubar=no,toolbar=no,location=no,status=no");
+};
+$("kiosk-settings-open").onclick = () => window.open("/kiosk-settings", "promptwaver-kiosk-settings");
+$("kiosk-attract").onchange = () => {
+  // Only meaningful while armed; re-arming is how it takes effect.
+  if ($("kiosk-toggle").checked) {
+    kioskPending = true;
+    send({type:"set_kiosk", value:true, attract:$("kiosk-attract").value.trim()});
+  }
 };
 
 // modals: open/close by class toggle, backdrop click (not bubbled from

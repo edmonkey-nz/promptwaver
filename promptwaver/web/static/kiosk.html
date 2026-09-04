@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>PromptWaver — Kiosk</title>
+<link rel="icon" type="image/svg+xml" href="/static/promptwaver.svg">
+<style>
+  /* Public touchscreen: nothing selectable, nothing draggable, no cursor, no
+     long-press magnifier, no pinch zoom. */
+  html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden;
+            cursor:none;user-select:none;-webkit-user-select:none;touch-action:none;
+            -webkit-tap-highlight-color:transparent;
+            font:16px ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#e7eaf0}
+  canvas{display:block;width:100vw;height:100vh;position:fixed;inset:0}
+
+  /* Overlay layer. Sits above the live canvas; only one panel is shown at a
+     time, chosen by the server's phase. */
+  #ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+      flex-direction:column;text-align:center;pointer-events:none}
+  /* Scrim. The attract loop is deliberately a busy generative pattern, and
+     white-on-pattern is unreadable — measured on the Mandala scene, the
+     instruction line all but disappeared. A stranger gets one glance to work
+     out what to do, so the words win over the visuals whenever words are on
+     screen. Removed entirely while the visitor's world is playing, which is
+     the one moment nothing should be over it. */
+  #ui::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+              transition:opacity 0.6s ease;
+              background:radial-gradient(ellipse at center,
+                         rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.66) 45%, rgba(0,0,0,0.42) 100%)}
+  #ui.dim::before{opacity:1}
+  .panel{position:relative}   /* above the scrim */
+  .panel{display:none;flex-direction:column;align-items:center;gap:28px;
+         padding:0 8vw;max-width:100%}
+  .panel.on{display:flex}
+
+  /* The one control. pointer-events re-enabled only here. */
+  #btn{pointer-events:auto;width:min(42vmin,320px);height:min(42vmin,320px);
+       border-radius:50%;border:3px solid #33e0d0;background:rgba(4,10,12,0.82);
+       color:#33e0d0;font:inherit;font-size:clamp(16px,2.4vmin,22px);letter-spacing:0.06em;
+       text-transform:uppercase;display:flex;align-items:center;justify-content:center;
+       transition:transform 0.15s ease-out,background 0.15s ease-out;
+       animation:breathe 4s ease-in-out infinite}
+  #btn:active,#btn.held{transform:scale(0.94);background:rgba(10,28,30,0.9);
+                        animation:none}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(51,224,208,0.28)}
+                     50%{box-shadow:0 0 0 26px rgba(51,224,208,0)}}
+
+  .lead{font-size:clamp(20px,3.4vmin,34px);letter-spacing:0.02em;line-height:1.4;
+        text-shadow:0 2px 14px #000,0 0 4px #000}
+  .sub{font-size:clamp(13px,1.8vmin,17px);color:#aab2c2;letter-spacing:0.04em;
+       text-shadow:0 2px 10px #000,0 0 3px #000}
+  .said{font-size:clamp(22px,4.2vmin,46px);line-height:1.35;color:#fff;
+        max-width:22ch;text-wrap:balance;text-shadow:0 2px 16px #000,0 0 5px #000}
+
+  /* Recording: a ring that grows with the live mic level, plus the hold timer
+     draining as a bar. Both come straight off the state broadcast. */
+  #ring{width:min(42vmin,320px);height:min(42vmin,320px);border-radius:50%;
+        border:3px solid #f2a623;background:rgba(242,166,35,0.10);
+        display:flex;align-items:center;justify-content:center;
+        font-size:clamp(16px,2.4vmin,22px);color:#f2a623;letter-spacing:0.06em;
+        text-transform:uppercase;transition:box-shadow 0.08s linear}
+
+  #bar{width:min(52vmin,420px);height:4px;background:rgba(255,255,255,0.12);
+       border-radius:2px;overflow:hidden}
+  #bar i{display:block;height:100%;width:0;background:#33e0d0;
+         transition:width 0.3s linear}
+
+  .err{color:#f2a623}
+
+  .choices{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+  .choices button{pointer-events:auto;font:inherit;font-size:clamp(14px,2vmin,19px);
+                  letter-spacing:0.06em;text-transform:uppercase;border-radius:999px;
+                  padding:18px 34px;transition:transform 0.15s ease-out}
+  .choices button:active{transform:scale(0.95)}
+  /* Light green rather than the app's cyan: cyan is the interface's ordinary
+     accent and reads as "a control", green reads as "go". Dark text on it for
+     contrast, and it is the only filled button on screen. */
+  #btn-yes{color:#0b2010;background:#8ce99a;border:2px solid #8ce99a;font-weight:bold}
+  #btn-yes:active{background:#69db7c;border-color:#69db7c}
+  #btn-no{color:#8b93a3;background:rgba(4,10,12,0.72);border:2px solid #39414d}
+
+  /* The playing-state prompt sits at the bottom and never dims the scene. */
+  #p-playing{position:absolute;left:0;right:0;bottom:6vh;padding:0}
+  #p-playing.on{animation:rise 1.2s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #btn2{pointer-events:auto;font:inherit;font-size:clamp(13px,1.9vmin,18px);
+        letter-spacing:0.06em;text-transform:uppercase;color:#33e0d0;
+        background:rgba(4,10,12,0.72);border:2px solid rgba(51,224,208,0.65);
+        border-radius:999px;padding:14px 28px;
+        text-shadow:0 1px 8px #000;transition:transform 0.15s ease-out}
+  #btn2:active,#btn2.held{transform:scale(0.95);background:rgba(10,28,30,0.9)}
+  #status{position:fixed;left:0;right:0;top:24px;text-align:center;
+          font-size:13px;color:#a04040;display:none}
+  #status.show{display:block}
+</style>
+<script src="/static/renderer.js"></script>
+</head>
+<body>
+<canvas id="out"></canvas>
+<div id="status">disconnected — retrying…</div>
+
+<div id="ui">
+  <div class="panel" id="p-off">
+    <div class="lead">Kiosk mode is off</div>
+    <div class="sub">Enable it in Settings on the control screen</div>
+  </div>
+
+  <div class="panel" id="p-idle">
+    <button id="btn">Hold&nbsp;&amp;&nbsp;speak</button>
+    <div class="lead">Describe a world</div>
+    <div class="sub">Hold the button, say what you want to see, then let go</div>
+  </div>
+
+  <div class="panel" id="p-recording">
+    <div id="ring">Listening</div>
+    <div class="lead">Keep holding…</div>
+    <div class="sub" id="rec-time"></div>
+  </div>
+
+  <div class="panel" id="p-transcribing">
+    <div class="lead">One moment…</div>
+  </div>
+
+  <!-- Read-back before anything is generated. A mishearing caught here costs
+       nothing; caught after generation it has already been paid for. -->
+  <div class="panel" id="p-confirm">
+    <div class="sub">You said</div>
+    <div class="said" id="heard"></div>
+    <div class="choices">
+      <button id="btn-no">Say&nbsp;it&nbsp;again</button>
+      <button id="btn-yes">Build&nbsp;this</button>
+    </div>
+  </div>
+
+  <div class="panel" id="p-generating">
+    <div class="said" id="gen-said"></div>
+    <div class="sub">Building your world…</div>
+    <div id="bar"><i></i></div>
+  </div>
+
+  <div class="panel" id="p-error">
+    <div class="lead err" id="err-msg"></div>
+  </div>
+
+  <!-- Shown OVER a playing world once it has had its moment. Deliberately
+       small and bottom-anchored rather than the big centre button: the scene
+       is the thing, this is just the hint that the next person can have one
+       too. It is a real trigger, so nobody has to wait out the timeout. -->
+  <div class="panel" id="p-playing">
+    <button id="btn2">Hold &amp; speak to make your own</button>
+  </div>
+</div>
+
+<script>
+// --- canvas, identical to output.html --------------------------------------
+const cv = document.getElementById("out");
+const statusEl = document.getElementById("status");
+let renderer = null;
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(window.innerWidth * dpr);
+  cv.height = Math.round(window.innerHeight * dpr);
+}
+window.addEventListener("resize", resize);
+resize();
+renderer = new PromptWaverRenderer(cv, { lineWidthMode: "viewport" });
+
+// Monitor filters come off the state broadcast exactly as they do for the
+// output window — the engine is the source of truth. No localStorage here:
+// a kiosk screen has no operator to have configured it.
+const filters = {
+  glow: 0, trail: 0, mirrorX: false, mirrorY: false,
+  kaleidoscopeSegments: 0, contentAspect: 1, fit: "fit",
+  flipX: false, flipY: false, keystoneH: 0, keystoneV: 0,
+};
+
+// --- overlay ---------------------------------------------------------------
+const panels = {
+  off:          document.getElementById("p-off"),
+  idle:         document.getElementById("p-idle"),
+  recording:    document.getElementById("p-recording"),
+  transcribing: document.getElementById("p-transcribing"),
+  generating:   document.getElementById("p-generating"),
+  error:        document.getElementById("p-error"),
+  confirm:      document.getElementById("p-confirm"),
+  playing:      document.getElementById("p-playing"),
+};
+const btn = document.getElementById("btn");
+const btn2 = document.getElementById("btn2");
+const heard = document.getElementById("heard");
+document.getElementById("btn-yes").onclick = () => send({type:"kiosk_confirm"});
+document.getElementById("btn-no").onclick  = () => send({type:"kiosk_retry"});
+const ring = document.getElementById("ring");
+const recTime = document.getElementById("rec-time");
+const genSaid = document.getElementById("gen-said");
+const barFill = document.querySelector("#bar i");
+const errMsg = document.getElementById("err-msg");
+
+function showPanel(which){
+  let any = false;
+  for (const k in panels) {
+    const on = k === which;
+    panels[k].classList.toggle("on", on);
+    if (on) any = true;
+  }
+  // Never scrim a playing world — the prompt carries its own background.
+  document.getElementById("ui").classList.toggle("dim", any && which !== "playing");
+}
+
+// While a world is playing the screen gets out of its way — the visitor's
+// scene is the whole point. Only once it has run for `hint_after` seconds does
+// a small prompt appear, so the NEXT person can see the installation is theirs
+// to use without waiting out the server's timeout.
+function panelFor(k){
+  if (!k || !k.enabled) return "off";
+  if (k.phase === "playing")
+    return (k.elapsed || 0) > (k.hint_after ?? 25) ? "playing" : null;
+  if (panels[k.phase]) return k.phase;
+  return "idle";
+}
+
+// --- the one control -------------------------------------------------------
+//
+// Press-and-hold. pointerdown/pointerup rather than click so the recording
+// starts the instant a finger lands, and a pointercancel (finger dragged off
+// the button, browser stealing the gesture) is treated as a release rather
+// than leaving the server recording forever.
+let holding = false;
+
+function press(e){
+  if (e) e.preventDefault();
+  if (holding) return;
+  holding = true;
+  btn.classList.add("held"); btn2.classList.add("held");
+  send({type:"kiosk_press"});
+}
+function release(e){
+  if (e) e.preventDefault();
+  if (!holding) return;
+  holding = false;
+  btn.classList.remove("held"); btn2.classList.remove("held");
+  send({type:"kiosk_release"});
+}
+btn.addEventListener("pointerdown", press);
+btn2.addEventListener("pointerdown", press);
+window.addEventListener("pointerup", release);
+window.addEventListener("pointercancel", release);
+// A public screen shouldn't offer a context menu on long-press.
+window.addEventListener("contextmenu", e => e.preventDefault());
+
+// --- websocket -------------------------------------------------------------
+let ws = null;
+function send(o){
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
+}
+
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws?hq=1`);
+  ws.onopen = () => statusEl.classList.remove("show");
+  ws.onclose = () => {
+    statusEl.classList.add("show");
+    // A reconnect must not leave a stale local hold: the server has no idea
+    // this page went away mid-press.
+    holding = false;
+    btn.classList.remove("held"); btn2.classList.remove("held");
+    setTimeout(connect, 1000);
+  };
+  ws.onerror = () => ws.close();
+  // The overlay is updated straight away, but DRAWING is deferred to the next
+  // animation frame and only ever draws the newest state.
+  //
+  // Painting synchronously inside onmessage (as output.html does) makes the
+  // page fall behind whenever a frame costs more than the ~20Hz broadcast
+  // interval: messages queue up and every one is rendered, so the backlog
+  // never clears. Measured here as ~2s between pressing the button and
+  // "Listening" appearing — on a monitor that's invisible, on a kiosk it
+  // reads as a dead button. Coalescing to the latest frame collapses any
+  // backlog instead of replaying it.
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type !== "state") return;
+    pending = m;
+    paintUI(m.state || {});
+    if (!rafPending) { rafPending = true; requestAnimationFrame(drawLatest); }
+  };
+}
+
+let pending = null, rafPending = false;
+
+function drawLatest(){
+  rafPending = false;
+  const m = pending;
+  if (!m) return;
+  pending = null;
+  const s = m.state || {};
+
+  filters.glow = s.glow ?? 0;
+  filters.trail = s.trail ?? 0;
+  filters.mirrorX = !!s.mirror_x;
+  filters.mirrorY = !!s.mirror_y;
+  filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
+  filters.bloomSpread = s.bloom_spread;
+  filters.bloomIntensity = s.bloom_intensity;
+  filters.lineCurve = s.line_curve;
+  filters.lineWidth = s.line_width ?? 1;
+  filters.contentAspect = s.content_aspect || 1;
+  filters.fit = s.output_fit || "fit";
+  renderer.render(m.preview, filters, { width: cv.width, height: cv.height });
+}
+
+// Phase is entirely the server's. This page never decides what it is — which
+// is what lets a refresh mid-generation land back in the right place, and
+// stops two tabs disagreeing.
+function paintUI(s){
+  const k = s.kiosk || {};
+  const want = panelFor(k);
+  showPanel(want === null ? "" : want);
+
+  if (k.phase === "recording") {
+    // Ring responds to the live mic level; the readout counts down the hold
+    // cap so nobody is surprised when it stops.
+    const lvl = Math.max(0, Math.min(1, s.audio_level ?? 0));
+    ring.style.boxShadow = `0 0 0 ${Math.round(6 + lvl * 60)}px rgba(242,166,35,0.12)`;
+    const left = Math.max(0, (k.max_hold || 15) - (k.elapsed || 0));
+    recTime.textContent = left > 0 ? `${left.toFixed(0)}s left` : "";
+  } else if (k.phase === "confirm") {
+    heard.textContent = k.transcript ? `“${k.transcript}”` : "";
+  } else if (k.phase === "generating") {
+    genSaid.textContent = k.transcript ? `“${k.transcript}”` : "";
+    // director_progress is approximate (characters against the token budget)
+    // but it moves, which is the point at a minute-long wait.
+    const p = Math.max(0, Math.min(1, s.director_progress ?? 0));
+    barFill.style.width = `${(p * 100).toFixed(1)}%`;
+  } else if (k.phase === "error") {
+    errMsg.textContent = k.error || "Something went wrong";
+  }
+}
+connect();
+</script>
+</body>
+</html>

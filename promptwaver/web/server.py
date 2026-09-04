@@ -34,14 +34,16 @@ def make_app(engine) -> web.Application:
     app["engine"] = engine
     app["clients"] = {}   # ws -> {"hq": bool}
 
+    _NO_CACHE = {"Cache-Control": "no-store, no-cache, must-revalidate",
+                 "Pragma": "no-cache"}
+
     def _no_cache(resp):
-        # The whole UI lives in one HTML file and changes across sessions
-        # during development; without this, a browser tab left open (or even
-        # just reopened) can silently keep serving an old cached copy —
-        # looking exactly like "features went missing" even though the server
-        # is fully up to date. Force a fresh fetch every load.
-        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-        resp.headers["Pragma"] = "no-cache"
+        # The UI changes across sessions during development; without this, a
+        # browser tab left open (or even just reopened) can silently keep
+        # serving an old cached copy — looking exactly like "features went
+        # missing" even though the server is fully up to date. Force a fresh
+        # fetch every load.
+        resp.headers.update(_NO_CACHE)
         return resp
 
     async def index(request):
@@ -54,6 +56,20 @@ def make_app(engine) -> web.Application:
         # client watching the same state/preview broadcast the control UI
         # does, so it works identically whether or not --laser is enabled.
         return _no_cache(web.FileResponse(os.path.join(_STATIC, "output.html")))
+
+    async def kiosk_page(request):
+        # The public-installation surface: one button, a microphone, and the
+        # visitor's world. Always served — when the kiosk toggle is off the
+        # page renders a "kiosk mode is off" state over a live canvas, so it
+        # doubles as a second output window rather than 404ing.
+        return _no_cache(web.FileResponse(os.path.join(_STATIC, "kiosk.html")))
+
+    async def kiosk_settings_page(request):
+        # OPERATOR page, not a visitor one — it tunes what the kiosk asks
+        # Claude for. Kept off the main control UI because it is a separate
+        # job done once at install time, and off /kiosk because a visitor must
+        # never reach it.
+        return _no_cache(web.FileResponse(os.path.join(_STATIC, "kiosk-settings.html")))
 
     async def about(request):
         """Serve about.md as text for the About modal to render.
@@ -92,11 +108,20 @@ def make_app(engine) -> web.Application:
         # ?hq=1 (the standalone output window) asks for a much less thinned
         # preview than the small in-page control-UI canvas needs — it's the
         # actual thing being watched, not just a status glance.
-        request.app["clients"][ws] = {"hq": request.query.get("hq") == "1"}
+        # `local` decides whether this socket may send operator commands while
+        # kiosk mode is armed — see _handle. Recorded at connect time because
+        # the request (and so the peer address) isn't available later.
+        peer = request.transport.get_extra_info("peername") if request.transport else None
+        host = peer[0] if peer else ""
+        request.app["clients"][ws] = {
+            "hq": request.query.get("hq") == "1",
+            "local": host in ("127.0.0.1", "::1", "::ffff:127.0.0.1"),
+        }
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    reply = await _handle(engine, json.loads(msg.data), request.app, ws)
+                    reply = await _handle(engine, json.loads(msg.data), request.app, ws,
+                                          request.app["clients"].get(ws))
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
         except (asyncio.CancelledError, ConnectionResetError):
@@ -168,18 +193,51 @@ def make_app(engine) -> web.Application:
 
     app.router.add_get("/", index)
     app.router.add_get("/output", output_page)
+    app.router.add_get("/kiosk", kiosk_page)
+    app.router.add_get("/kiosk-settings", kiosk_settings_page)
     app.router.add_get("/about", about)
     app.router.add_get("/welcome", welcome)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static/", _STATIC)
+
+    # /static/ needs the same treatment, and used to miss it. The UI stopped
+    # being "one HTML file" when the WebGL renderer moved out to
+    # static/renderer.js: the page itself was always re-fetched while the
+    # renderer beside it could come from cache. That combination is worse than
+    # either alone — you get a NEW page driving an OLD renderer, so a freshly
+    # added control appears, moves, updates its readout and sends its value,
+    # and nothing is drawn differently. It reads as a broken feature rather
+    # than a stale file, which is exactly the wrong place to go looking.
+    async def _no_cache_static(request, response):
+        if request.path.startswith("/static/"):
+            response.headers.update(_NO_CACHE)
+    app.on_response_prepare.append(_no_cache_static)
     app.on_startup.append(on_start)
     app.on_cleanup.append(on_cleanup)
     return app
 
 
-async def _handle(engine, m: dict, app=None, ws=None):
+# Commands the kiosk page itself sends. Everything else is an operator command
+# and is restricted to loopback while kiosk mode is armed.
+_KIOSK_COMMANDS = {"kiosk_press", "kiosk_release", "kiosk_cancel",
+                   "kiosk_confirm", "kiosk_retry"}
+
+
+async def _handle(engine, m: dict, app=None, ws=None, meta=None):
     t = m.get("type")
     loop = asyncio.get_event_loop()
+
+    # While the installation is live the server is often on a venue network,
+    # and this websocket has no authentication of any kind — it accepts
+    # set_api_key, scene_delete and every parameter in the instrument. Armed,
+    # it only listens to strangers about the kiosk itself. The operator can
+    # still drive everything from a browser on the kiosk machine.
+    if engine.kiosk.enabled and meta is not None and not meta.get("local"):
+        if t not in _KIOSK_COMMANDS:
+            return {"type": "kiosk_result", "ok": False,
+                    "detail": "kiosk mode is armed — operator controls are "
+                              "restricted to this machine"}
+
     if t == "set":
         engine.set_param(m["key"], m["value"])
     elif t == "set_active":
@@ -331,6 +389,73 @@ async def _handle(engine, m: dict, app=None, ws=None):
                     await ws.send_str(json.dumps({"type": "show_title", "title": title}))
                 except Exception:
                     pass
+    elif t == "set_kiosk":
+        # Must stay reachable from loopback, or arming the mode from a remote
+        # browser would lock you out of disarming it. The gate above already
+        # refuses this command from anywhere else.
+        #
+        # Backgrounded for the same reason "generate" is, and it bites harder
+        # here: arming loads a speech model, which on a cold cache means a
+        # ~150MB download. Awaiting that inline stops this connection's own
+        # `async for msg in ws` loop, and aiohttp only answers websocket pings
+        # while that loop is iterating — so the browser's keepalive times out
+        # and the socket dies mid-arm, looking exactly like a crash.
+        async def _run_set_kiosk():
+            try:
+                ok, detail = await loop.run_in_executor(
+                    None, engine.set_kiosk, bool(m.get("value")), m.get("attract"))
+                await ws.send_str(json.dumps({"type": "kiosk_result", "action": "toggle",
+                                              "ok": ok, "detail": detail}))
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass
+        asyncio.create_task(_run_set_kiosk())
+        return None
+    elif t == "set_kiosk_gen":
+        # Deliberately NOT in _KIOSK_COMMANDS: this is an operator control, so
+        # while armed it is loopback-only like every other one.
+        return {"type": "kiosk_result", "action": "gen", "ok": True,
+                "gen": engine.kiosk.set_gen(m.get("gen") or {})}
+    elif t == "kiosk_scenes":
+        # Answered on request rather than ridden along in `state()`: listing
+        # reads every archived file, and state() runs 20x a second.
+        return {"type": "kiosk_scenes", "scenes": engine.kiosk.archive_list()}
+    elif t == "kiosk_scenes_delete":
+        gone = engine.kiosk.archive_delete(m.get("names"), bool(m.get("all")))
+        return {"type": "kiosk_scenes", "deleted": gone,
+                "scenes": engine.kiosk.archive_list()}
+    elif t == "kiosk_press":
+        return {"type": "kiosk_result", "action": "press",
+                "ok": engine.kiosk.press()}
+    elif t == "kiosk_release":
+        pcm = engine.kiosk.release()
+        if pcm is None:
+            return {"type": "kiosk_result", "action": "release", "ok": False}
+        # Transcription + generation together run for the better part of a
+        # minute. Backgrounded for the same reason "generate" is (see above):
+        # so this connection keeps reading. No ack is sent when it finishes —
+        # the phase rides in the 20Hz state broadcast, which every client sees
+        # and which a page refreshed mid-generation picks straight back up.
+        async def _run_kiosk():
+            try:
+                await loop.run_in_executor(None, engine.kiosk.run, pcm)
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass
+        asyncio.create_task(_run_kiosk())
+        return {"type": "kiosk_result", "action": "release", "ok": True}
+    elif t == "kiosk_confirm":
+        # Generation is a minute-ish of network, so background it exactly like
+        # kiosk_release does; phase rides the state broadcast either way.
+        async def _run_confirm():
+            try:
+                await loop.run_in_executor(None, engine.kiosk.confirm)
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass
+        asyncio.create_task(_run_confirm())
+        return None
+    elif t == "kiosk_retry":
+        return {"type": "kiosk_result", "action": "retry", "ok": engine.kiosk.retry()}
+    elif t == "kiosk_cancel":
+        engine.director.cancel()
     elif t == "set_api_key":
         engine.director.set_api_key(m.get("key", ""))
         return {"type": "api_result", "action": "save", "ok": engine.director.online,

@@ -897,7 +897,8 @@
               "amp": 0.28
             }
           }
-        ]
+        ],
+        "shape_speed": 0.11
       }
     }
   ],
@@ -938,7 +939,7 @@
     ],
     "orbit_radius": 9.5,
     "far": 32,
-    "speed": 0.6,
+    "speed": 0.0,
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
@@ -949,9 +950,14 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.85,
+    "glow": 0.19,
     "trail": 0.4,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "laser_max_strokes": null,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -1010,13 +1016,13 @@
           10
         ],
         "level": 0.06,
-        "unison": 5.0,
+        "unison": 5,
         "detune": 0.005,
         "pan": 0.25,
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 1,
+          "rate": 1.0,
           "decay": 1.05
         },
         "env": {
@@ -1108,7 +1114,9 @@
       "high": 0.0
     },
     "swell_amount": 0.0,
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

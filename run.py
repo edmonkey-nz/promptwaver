@@ -56,6 +56,13 @@ def parse_args():
     ap.add_argument("--list-midi", action="store_true", help="list MIDI input ports and exit")
     ap.add_argument("--model", default=None, help="override director model id")
     ap.add_argument("--scene", default="water flowing", help="initial keyword")
+    # Kiosk mode is a runtime toggle (Settings > Kiosk) persisted in
+    # settings.json; these only override it at startup, for an installation
+    # that should boot straight into it.
+    ap.add_argument("--kiosk", dest="kiosk", action="store_true", default=None,
+                    help="arm public kiosk mode at startup (overrides the saved setting)")
+    ap.add_argument("--no-kiosk", dest="kiosk", action="store_false",
+                    help="start with kiosk mode off (overrides the saved setting)")
     return ap.parse_args()
 
 
@@ -85,8 +92,22 @@ def main():
     engine.start()
     print(f"[promptwaver] engine running — output={engine.output.name} "
           f"director={'claude' if engine.director.online else 'local'}")
+
+    # Kiosk: the CLI flag wins if given, otherwise whatever was last saved. Done
+    # after start() because arming needs the mic stream already open — that's
+    # where AudioAnalysis learns its samplerate and so how big a buffer to take.
+    from promptwaver import settings as pw_settings
+    want_kiosk = args.kiosk if args.kiosk is not None else bool(
+        pw_settings.get("kiosk_enabled", False))
+    if want_kiosk:
+        ok, detail = engine.set_kiosk(True)
+        print(f"[promptwaver] kiosk: {detail}")
+        if not ok:
+            print("[promptwaver] kiosk NOT armed — running as a normal instrument")
     if not args.headless:
         print(f"[promptwaver] open http://localhost:{args.web_port}")
+        if engine.kiosk.enabled:
+            print(f"[promptwaver] kiosk screen: http://localhost:{args.web_port}/kiosk")
         try:
             run_web(engine, host=args.host, port=args.web_port)
         except (KeyboardInterrupt, SystemExit):

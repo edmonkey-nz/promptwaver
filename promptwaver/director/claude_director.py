@@ -724,7 +724,7 @@ SCENE_SIZE = {
 SIZE_MIN_TOKENS = {"massive": 32000}
 
 
-def _size_hint(nodes: int) -> str:
+def _size_hint(nodes: int, path: bool = True) -> str:
     """The `massive` directive above, parameterised by an explicit node count.
 
     The tiers in SCENE_SIZE are four fixed points; this is the same shape of
@@ -750,6 +750,29 @@ def _size_hint(nodes: int) -> str:
     ndefs = max(6, min(14, 6 + nodes // 130))
     each = max(4, round(nodes / ndefs))
     waypoints = max(8, min(24, 8 + nodes // 90))
+    # `path=False` is the kiosk's case: it wants the node-count control without
+    # the route. Composing "along a route" and then not walking it leaves the
+    # geometry in a corridor an orbiting camera only sees the outside of, so the
+    # COMPOSITION instruction has to change too — not just the camera block.
+    if not path:
+        return (
+            f"Scale: author {lo}-{hi} nodes. That count is deliberate and it is "
+            f"the point of this scene — do not stop early or trail off.\n\n"
+            f"Compose it as a PLACE TO BE INSIDE: spread the geometry through a "
+            f"volume of roughly -{extent}..{extent} on each axis, with something "
+            f"worth looking at in every direction including above and below. The "
+            f"camera stays near the middle and drifts, so nothing may depend on "
+            f"being approached from one particular side.\n\n"
+            f"Reach that node count by INSTANCING, never by authoring more shapes: "
+            f"author {ndefs} named shapes in \"defs\" and place each of them about "
+            f"{each} times at varied positions, scales, rotations and colours. "
+            f"{ndefs} shapes placed {each} times each — never {nodes} distinct "
+            f"shapes.\n\n"
+            f"Set the camera to stay inside and move gently:\n"
+            f"  \"camera\": {{\"mode\":\"drift\", \"speed\":0.4, \"fov\":62, "
+            f"\"near\":0.4, \"far\":{max(20, extent)},\n"
+            f"              \"max_strokes\":120, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
+            f"Do NOT author \"waypoints\" — this scene is not walked along a route.")
     return (
         f"Scale: MASSIVE — a place to travel through for minutes, not a tableau.\n"
         f"This OVERRIDES the object-count guidance above: author {lo}-{hi} nodes, "
@@ -775,7 +798,7 @@ def _size_hint(nodes: int) -> str:
         f"moves. A stretch of route with nothing beside it is a dark laser.")
 
 
-def _resolve_size(size) -> tuple[int | None, str | None]:
+def _resolve_size(size, path: bool = True) -> tuple[int | None, str | None]:
     """`size` -> (node target, prompt directive).
 
     Accepts either a node count (what the UI slider sends) or one of the
@@ -788,11 +811,11 @@ def _resolve_size(size) -> tuple[int | None, str | None]:
         return None, None
     if isinstance(size, (int, float)):
         n = int(size)
-        return (n, _size_hint(n)) if n > 0 else (None, None)
+        return (n, _size_hint(n, path)) if n > 0 else (None, None)
     s = str(size).strip()
     if s.isdigit():
         n = int(s)
-        return (n, _size_hint(n)) if n > 0 else (None, None)
+        return (n, _size_hint(n, path)) if n > 0 else (None, None)
     return None, SCENE_SIZE.get(s)
 
 # "Character" sliders (Generate modal), 0..1 centered at 0.5. warmth/energy
@@ -983,7 +1006,8 @@ class SceneDirector:
     def generate(self, keyword: str, use_cache: bool = True, audio: str | None = None,
                  size: str | int = "small", warmth: float | None = None,
                  energy: float | None = None,
-                 evolution: float | None = None, kind: str = "3d") -> SceneSpec:
+                 evolution: float | None = None, kind: str = "3d",
+                 style: str = "", want_path: bool = True) -> SceneSpec:
         # `size` is either a node count (the UI slider) or a legacy tier name
         # carried by scenes generated before the slider existed. Anything else
         # falls back to the historical default rather than erroring.
@@ -993,8 +1017,13 @@ class SceneDirector:
         kind = kind if kind in SYSTEM_PROMPTS else "3d"
         # `kind` is part of the cache key: the same keyword legitimately has a
         # 3D and a 2D answer, and they must not collide.
+        # `style` is part of the key for the same reason `kind` is: the same
+        # keyword asked for literally and asked for abstractly are two
+        # different scenes, and a cache hit must not serve one as the other.
         cache = self._cache_path(keyword + "|" + (audio or "") + "|" + str(size) +
-                                 f"|w{warmth}|e{energy}|v{evolution}|k{kind}")
+                                 f"|w{warmth}|e{energy}|v{evolution}|k{kind}"
+                                 + (f"|y{style}" if style else "")
+                                 + ("" if want_path else "|nopath"))
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
                 spec = _ensure_soundscape(SceneSpec.from_dict(json.load(f)))
@@ -1024,7 +1053,8 @@ class SceneDirector:
         self.last_expansion = None
         try:
             if self.online:
-                spec, ok = self._from_claude(keyword, audio, size, warmth, energy, kind)
+                spec, ok = self._from_claude(keyword, audio, size, warmth, energy, kind,
+                                             style=style, want_path=want_path)
                 if ok:
                     self.last_source = "claude"
                     self.last_error = None
@@ -1166,7 +1196,7 @@ class SceneDirector:
 
     def _from_claude(self, keyword: str, audio: str | None = None, size: str | int = "small",
                      warmth: float | None = None, energy: float | None = None,
-                     kind: str = "3d"):
+                     kind: str = "3d", style: str = "", want_path: bool = True):
         """Return (spec, ok). ok=False means fall back (reason in last_error)."""
         system = SYSTEM_PROMPTS.get(kind, _SYSTEM)
         tier = EFFORT.get(self.effort, EFFORT["med"])
@@ -1177,10 +1207,14 @@ class SceneDirector:
         else:
             audio_line = ("\n\nAudio: also compose a calm ambient soundscape that fits the "
                           "scene, in the \"soundscape\" field.")
-        nodes, size_hint = _resolve_size(size)
+        nodes, size_hint = _resolve_size(size, want_path)
         size_line = f"\n\n{size_hint}" if size_hint else ""
         character_hint = _character_hints(warmth, energy)
         character_line = f"\n\n{character_hint}" if character_hint else ""
+        # Free-form extra direction from the caller. Last in the prompt so it
+        # reads as the final word on anything above it — kiosk mode uses it to
+        # push interpretation abstract and to keep figures out.
+        style_line = f"\n\n{style.strip()}" if style and style.strip() else ""
         # The 3D hint counts OBJECTS; for a flat pattern the equivalent budget
         # is total strokes after repeat/symmetry expansion, which is a
         # different quantity, so the effort hint is dropped rather than
@@ -1201,7 +1235,8 @@ class SceneDirector:
                            f"cleaner strokes over dense detail.")
             effort_line = f"Effort: {self.effort}. {tier['hint']}\n\n"
         content = (f"Design a scene for the keyword: {keyword}\n\n"
-                   + effort_line + budget_line + size_line + character_line + audio_line)
+                   + effort_line + budget_line + size_line + character_line + audio_line
+                   + style_line)
         # Rough proxy for "percent complete": the API has no notion of overall
         # completion (it doesn't know the final length in advance), but a
         # streaming call reports tokens as they're generated, which we compare

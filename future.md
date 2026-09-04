@@ -219,6 +219,46 @@ upper partials can pass Nyquist and alias — no scene in the library gets near
 that today (highest bell root is 72, top partial 1570Hz) and the base ratios
 have the same latent issue, but stretching widens it.
 
+### j) Kiosk on a separate tablet — the mic is the blocker
+
+Wanted: main computer runs everything and drives the output screen; an iPad on
+the LAN browses only `/kiosk` as the visitor's control surface.
+
+**Most of it already works, measured 2026-09-04 against `192.168.1.31:8097`:**
+the server already binds `0.0.0.0`, a non-loopback client's `kiosk_press`
+returns `ok: True`, and the armed loopback gate correctly refuses that same
+client's operator commands ("operator controls are restricted to this
+machine") — which is exactly the right split for this topology, by accident
+rather than design.
+
+**The blocker is the microphone.** `KioskSession.release` records from
+`engine.analysis`, the `sd.InputStream` opened by whichever machine runs the
+engine — so a visitor holding the iPad has their prompt captured by the mic in
+whatever room the *computer* is in. Recording on the iPad instead is not a
+small change: `getUserMedia` requires a secure context and `http://192.168.x.x`
+is not one (only `localhost` is exempt), so iOS Safari refuses outright. Doing
+it properly means HTTPS with a cert the iPad trusts (a self-signed cert needs a
+profile installed and trusted on the device) *plus* a whole browser-recording
+path — `MediaRecorder` upload, a binary/base64 transport (the ws handler is
+`WSMsgType.TEXT` only), and server-side decode.
+
+**The cheap answer is a long USB mic cable** to wherever the iPad lives. No code
+changes, and the visitor's audio still never leaves the machine — which was the
+whole point of choosing local Whisper over a cloud STT.
+
+Two things to fix if this is ever built:
+
+- **Bandwidth is ~11.3 Mbps** (measured: 73KB per state frame, ~20/s, because
+  `/kiosk` connects with `?hq=1`). Fine on clean wifi, will stutter on a busy
+  network. If the main computer already has the output screen the tablet does
+  not need a high-fidelity render at all — a `?lite=1` mode that skips the
+  canvas entirely would cut this to near nothing. That is the small,
+  self-contained piece of this item and could be done on its own.
+- **iOS housekeeping**: Add to Home Screen for fullscreen, Guided Access so
+  visitors can't leave the page, and auto-lock off (or the Screen Wake Lock
+  API, Safari 16.4+). `pointerdown`/`pointerup`/`pointercancel` all work on iOS
+  Safari; WebGL2 needs iOS 15+.
+
 ### Smaller open items
 
 - **The 2D director prompt still lets polar motifs dominate.** Generated

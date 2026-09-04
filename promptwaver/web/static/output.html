@@ -170,6 +170,7 @@ function connect(){
       filters.bloomSpread = s.bloom_spread;
       filters.bloomIntensity = s.bloom_intensity;
       filters.lineCurve = s.line_curve;
+      filters.lineWidth = s.line_width ?? 1;
       filters.contentAspect = s.content_aspect || 1;
       filters.fit = s.output_fit || "fit";
       if (showFps) {

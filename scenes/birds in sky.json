@@ -525,7 +525,7 @@
     ],
     "orbit_radius": 9,
     "far": 37.0,
-    "speed": 0.25,
+    "speed": 0.1,
     "max_strokes": 175,
     "depth": {
       "mode": "cull"
@@ -537,7 +537,13 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.61,
-    "trail": 0.75
+    "trail": 0.75,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -545,7 +551,7 @@
     "master": 0.75,
     "distortion": 0.05,
     "delay": {
-      "time": 0.6,
+      "time": 0.05,
       "feedback": 0.45,
       "mix": 0.35
     },
@@ -559,7 +565,7 @@
           0,
           7
         ],
-        "level": 0.5,
+        "level": 0.87,
         "tone": 0.3,
         "detune": 0.005,
         "pan": 0.0,
@@ -580,7 +586,8 @@
           "shape": "sine",
           "depth": 0.5,
           "dest": "level"
-        }
+        },
+        "distortion": 0.0
       },
       {
         "name": "pad",
@@ -592,9 +599,9 @@
           7,
           12
         ],
-        "level": 0.3,
-        "tone": 0.4,
-        "detune": 0.02,
+        "level": 0.52,
+        "tone": 0.48,
+        "detune": 0.025,
         "pan": -0.1,
         "mute": false,
         "rate": 0.5,
@@ -613,6 +620,13 @@
           "shape": "sine",
           "depth": 0.5,
           "dest": "level"
+        },
+        "distortion": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.5
         }
       },
       {
@@ -629,9 +643,9 @@
         ],
         "level": 0.22,
         "rate": 0.15,
-        "decay": 1.8,
+        "decay": 2.35,
         "pan": 0.05,
-        "mute": false,
+        "mute": true,
         "tone": 0.4,
         "detune": 0.01,
         "unison": 1,
@@ -644,14 +658,15 @@
           "rate": 0.005,
           "shape": "random",
           "depth": 0.82,
-          "dest": "pan"
-        }
+          "dest": "depth"
+        },
+        "distortion": 0.08
       },
       {
         "name": "waves",
         "type": "noise",
         "level": 0.28,
-        "tone": 0.35,
+        "tone": 0.39,
         "pan": -0.15,
         "mute": false,
         "detune": 0.01,
@@ -667,7 +682,9 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0,
+        "sweep": 0.28
       }
     ],
     "eq": {
@@ -676,8 +693,18 @@
       "high": 0.0
     },
     "swell_amount": 0.59,
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 0.2,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

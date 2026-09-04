@@ -531,7 +531,7 @@ void main() {
       gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'projection'), false,
                           this._buildProjectionMatrix(w, h, sx, sy));
 
-      const pixelWidth = this._getLineWidth(scale);
+      const pixelWidth = this._getLineWidth(scale, filters);
       gl.uniform1f(gl.getUniformLocation(prog, 'lineHalfWidth'), (pixelWidth / 2) / scale);
       // Half-pixel feather, so the AA transition spans ~1px total. This must
       // stay well under the line's half-width: a feather wider than the line
@@ -885,11 +885,19 @@ void main() {
     return proj;
   }
 
-  _getLineWidth(scale) {
+  _getLineWidth(scale, filters) {
     // Preserves the two surfaces' original Canvas2D widths exactly: the
     // projector window scaled its stroke to the viewport, while the small
     // in-page preview used a fixed hairline.
-    return this.lineWidthMode === "viewport" ? Math.max(1, scale / 260) : 1.4;
+    //
+    // `lineWidth` is a MULTIPLIER on that base rather than an absolute pixel
+    // count, so the two surfaces keep their (deliberate) difference and the
+    // preview goes on predicting what the projector will do. Clamped at 1
+    // from below: the aaEdge feather above is a fixed half pixel, and a
+    // stroke thinner than that never reaches full alpha at its own centre.
+    const base = this.lineWidthMode === "viewport" ? Math.max(1, scale / 260) : 1.4;
+    const mult = Math.max(1, Math.min(8, (filters && filters.lineWidth) || 1));
+    return base * mult;
   }
 
   // Utility: compile a shader

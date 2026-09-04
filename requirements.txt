@@ -20,3 +20,6 @@ aiohttp>=3.9
 #   anthropic>=0.34.0
 #   mido>=1.3.0
 #   python-rtmidi>=1.5.0
+#
+# Kiosk mode (public installation) additionally needs local speech-to-text:
+#   faster-whisper>=1.0.0

@@ -26,7 +26,7 @@ Lint/format (config in `pyproject.toml`, line length 100, `E501` deliberately ig
 
 Two things that bite regardless of how you verify:
 
-- **The user is usually running their own instance on :8080.** Use a different port and scope any `pkill` to it — a bare `pkill -f run.py` kills their session.
+- **The user is usually running their own instance on :8080.** Use a different port and scope any `pkill` to it — a bare `pkill -f run.py` kills their session. **A second port is NOT an isolated instance**: both processes share `settings.json` and the whole `scenes/` tree, so a test that saves a setting overwrites theirs, and the kiosk settings page's "Delete all" wipes `scenes/kiosk/` for both. Read a value before assuming a surprising one came from your own test.
 - **`body.hide-values` collapses any `.val` element to zero width.** That's correct for slider readouts, and wrong for anything else — text you want read must not carry that class, or it renders blank with no error.
 
 Local settings including the Anthropic API key live in `settings.json` at the repo root (gitignored, untracked). `scenes/*.json` **is** tracked — saving a scene from the UI dirties the working tree.
@@ -162,7 +162,9 @@ Cross-cutting render inputs are passed as underscore-prefixed keys on the resolv
 
 ### Laser vs display are deliberately different
 
-Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve — are **browser-only** and never touch the vector data sent to the DAC. They're implemented in `web/static/renderer.js` and stored per-scene in `spec.camera`.
+Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve, line width — are **browser-only** and never touch the vector data sent to the DAC. They're implemented in `web/static/renderer.js` and stored per-scene in `spec.camera`.
+
+**`line_width` only widens** (1..8, a multiplier on each surface's own base stroke) because the renderer's AA feather is a fixed half pixel: a stroke thinner than that never reaches full alpha at its centre, and every line goes semi-transparent with brighter dots at the joints. It is a multiplier rather than a pixel count so the two browser surfaces keep their deliberate difference — see `renderer.js _getLineWidth`.
 
 **`line_curve` is bipolar** (-1..1) where every other filter is unipolar: 0 means "draw the polyline exactly as authored", positive resamples it through a spline, negative drops points. It is centred rather than based at 0 specifically so the default leaves saved geometry untouched — don't "normalise" it to 0..1.
 
@@ -191,6 +193,158 @@ Both browser surfaces read `content_aspect` + `output_fit` straight off engine s
 For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing and inserts blanking and dwell points **between every stroke** (~8 fixed points per stroke transition). So the PPS budget is dominated by *stroke count*, not geometry complexity: at 28000 PPS and 45fps you have roughly 620 points per frame, and a full-width stroke alone costs ~67. Chaining strokes into continuous polylines is the highest-leverage optimisation for dense flat content.
 
 The browser side is no longer the bottleneck it was: rendering is WebGL2 and a full-HD frame with bloom costs ~0.5ms, against a 50ms budget. **Assume the monitor's frame rate is limited by the ~20Hz broadcast, not by drawing** — if it reads low, profile `engine.preview()`/`state()` and the broadcaster before touching the renderer.
+
+### Kiosk mode is a runtime toggle, and diverges from `generate_scene` on purpose
+
+`promptwaver/kiosk.py` is the public-installation surface: one button on
+`/kiosk`, a visitor speaks, faster-whisper transcribes **locally** (voice audio
+never leaves the box; only the text goes to the API), and their world crossfades
+in. It is a **toggle**, not a launch mode — `KioskSession` is constructed always
+and costs nothing while off; `enable()` is what loads the model, arms the mic and
+installs the attract scene. `--kiosk`/`--no-kiosk` only override the saved
+`kiosk_enabled` at startup.
+
+Four things here will look like bugs if you "fix" them:
+
+- **`KioskSession._generate` must NOT stop the engine before installing.**
+  `Engine.generate_scene` deliberately calls `_set_active_now(False)` first, so
+  the dev UI's "Start scene" button sits on a scene that hasn't started — and
+  `_install_spec` then sees `active == False` and uses a **zero** crossfade. The
+  kiosk needs the opposite: staying active is the only reason the attract scene
+  dissolves into the visitor's world instead of snapping. That is the whole
+  reason kiosk has its own generate path rather than a flag on the existing one.
+- **`enable()` sets `director.effort` in memory and `disable()` restores it.**
+  `director.set_effort` persists to the shared `settings.json`; using it here
+  would silently rewrite the operator's own config on the same checkout.
+- **`AudioAnalysis._callback` is a PortAudio realtime callback.** Recording
+  writes into a buffer preallocated by `arm()` — no append, no resize, no
+  allocation. A list of blocks would put per-callback allocation on the realtime
+  thread *and* make it unbounded. Overrunning the buffer just stops recording
+  (that's the hold cap); it deliberately does not wrap.
+- **The loopback gate can lock you out.** While armed, `server._handle` refuses
+  every non-kiosk command from a non-loopback socket, because the websocket has
+  no auth of any kind and an installation is usually on a venue network.
+  `set_kiosk` is subject to that same gate, so *disarming must be done from the
+  kiosk machine itself*.
+
+Three more that were found by measuring, not by reading:
+
+- **Whisper invents confident sentences out of silence.** 2.5s of an empty room
+  transcribed as *"My turn. I'll tell you that. . . ."*, which passed a
+  non-empty check and bought a real scene generation. In a public space that
+  fires on every stray touch. Three guards now stand in front of it, in
+  `kiosk.py`: a peak-level gate before the model runs at all (the cheap one
+  that catches this case), faster-whisper's own `no_speech_prob` /
+  `avg_logprob` per segment, and a word/letter floor on the cleaned text. Don't
+  remove the level gate as redundant — it's the one that costs nothing.
+- **The speech model is fetched over plain HTTPS, deliberately.**
+  huggingface_hub's `hf_xet` backend was measured stalling *indefinitely at 0
+  bytes* on the weights file while curl pulled the same URL at 16MB/s. Worse,
+  this machine's IPv6 route advertises but doesn't carry traffic, and Python's
+  HTTP stack takes the first address and blocks where curl races both families
+  — so `_ensure_model` probes IPv6 once and hides AAAA records for the
+  download if it's dead. A hang inside `enable()` looks exactly like a freeze.
+- **The kiosk page coalesces frames; `output.html` does not.** Painting
+  synchronously inside `ws.onmessage` means a backlog is replayed rather than
+  skipped, and the overlay ends up behind the engine — measured at ~2s between
+  the press and "Listening". The kiosk page updates the overlay immediately and
+  defers drawing to a `requestAnimationFrame` that only ever draws the newest
+  state (~0.5s after the fix). Worth copying to `output.html` if it ever reads
+  laggy there.
+
+**The kiosk deliberately does not read the director cache** (`use_cache=False`
+in `_generate` — the only place in the app that opts out). The prompts likely to
+collide are the short common ones, which are also the ones most likely to have
+produced a weak scene; a poor result would then stick to that phrase for every
+future visitor, silently and permanently. It still *writes* the entry, which is
+harmless. The Generate panel keeps its cache, where re-running a prompt while
+iterating saves real money.
+
+**The camera PATH lives in the size hint, not the system prompt.** `"mode":"path"`
+and the waypoint list are requested only by `_size_hint(nodes)` /
+`SCENE_SIZE["massive"]` — and `_resolve_size("small")` returns `(None, None)`,
+i.e. **no size directive at all**. So a string `size` silently produces
+orbit/drift-only scenes while any int always asks for a closed route. That is
+why the slider-driven Generate panel always gets a path and the kiosk does not.
+
+**The size control and the route are separable, via `want_path`.** The kiosk
+wants a node count (to scale the world) but NOT the camera path (which measured
+58.4s / $0.040 against 27.2s / $0.018 on the same prompt). `_size_hint(nodes,
+path=False)` is that variant, threaded through `_resolve_size` and
+`generate(..., want_path=)` and folded into the cache key. It changes the
+COMPOSITION instruction too, not just the camera block — asking for geometry
+"along a route" and then not walking it leaves a corridor an orbiting camera
+only sees the outside of — and explicitly forbids `waypoints`.
+
+Note `Scene.camera_modes()` is derived from the SETTLED scene, so reading it
+during a crossfade reports the OUTGOING scene's modes — that looks exactly like
+the waypoints having been dropped. Check the saved file, or wait out the fade.
+
+**Kiosk scene settings are two mechanisms behind one panel** (`/kiosk-settings`,
+operator-only, stored as `kiosk_gen`). `DEFAULT_GEN` in `kiosk.py` is the closed
+set — `set_gen` drops anything else, because these values go straight into
+prompt text and scene params.
+
+- **Prompt-side** — `interpretation`, `exclude_figures`, plus warmth/energy/
+  evolution. `_style()` turns them into a directive appended LAST in the
+  director's prompt, via `generate(..., style=)`. **It is part of the cache
+  key**, for the same reason `kind` is: "a forest" asked for literally and asked
+  for abstractly are two different scenes and must not collide. Only the ends of
+  the interpretation slider say anything; the middle is silence, so neutral
+  costs no tokens and biases nothing.
+- **Post-generation** — `shape_speed` (the `world` generator's own param),
+  `glow` + `glow_random`, `trail_chance`. `_apply_look()` writes these onto the
+  returned spec, so they apply to **cache hits too** and re-roll per visitor.
+  That's deliberate: two people saying the same words get the same world, and it
+  should not look identical.
+
+`prompt_suffix` is free operator text appended after both directives, capped at
+`MAX_SUFFIX` (400) because it rides in every single request. `effort` and
+`nodes` are the two richness dials; `enable()` and `_generate` both set
+`director.effort` from the setting, and `disable()` restores whatever it was.
+
+`kiosk-settings.html` mirrors `_style()`'s thresholds in JS to show the operator
+the sentence a slider position actually produces — if you change the wording or
+the 0.35/0.65 thresholds in `kiosk.py`, change `directionText()` too.
+
+**`spec.layers` is `list[Layer|dict]`, and the director path always gives you
+`Layer`.** `SceneSpec.from_dict` converts layer dicts into the dataclass
+(`scenes.py:66`), so anything from the director or off disk holds `Layer`
+objects while a hand-built spec may hold dicts. Calling `.get()` on a layer
+therefore works in a test fixture and raises `AttributeError: 'Layer' object has
+no attribute 'get'` on every real generation — which is exactly how it shipped
+broken once. **Build test specs with `SceneSpec.from_dict`, never the
+constructor**, or you are testing a shape the app never produces.
+
+Related, same method, same day: a generated `world` layer's params contain only
+`defs` and `nodes` — **`shape_speed` is a class DEFAULT, not something the model
+writes**. Any "only overwrite the key if it's already there" guard silently does
+nothing on real scenes. `_apply_look` asks the registry which generators declare
+the param instead of testing for its presence or hardcoding `"world"`.
+
+**The archive panel is answered on demand, never in `state()`.** Listing
+`scenes/kiosk/` reads every file to pull each scene's `image_prompt`, so it
+rides its own `kiosk_scenes` websocket command rather than the 20Hz broadcast.
+A file that won't parse still lists (under its filename) so it can be deleted,
+and deletion goes through `SceneManager.delete`, whose `path_for()` strips names
+to alnum/space/_/- — a crafted name can't escape the archive directory.
+
+**The visitor loop closes itself.** After a world starts playing the screen is
+left clean for `PLAY_HINT_AFTER` (25s) — that is the visitor's moment — then a
+small bottom pill fades in so the *next* person can see the installation is
+theirs to use, and it triggers a new session immediately rather than making
+them wait. With nobody pressing, `tick()` returns to the attract loop after
+`PLAY_TIMEOUT` (300s). `press()` accepts `IDLE`, `PLAYING` and `ERROR`, so the
+pill is a real trigger, not decoration; every other phase is refused, and that
+refusal is the only thing serialising visitors — `SceneDirector` has no
+concurrency guard of its own.
+
+Generations are archived to `scenes/kiosk/` (gitignored), never the tracked
+`scenes/` library, so an unattended run doesn't churn the working tree. The page
+(`web/static/kiosk.html`) is modelled on `output.html`, not `index.html`: it
+shares `renderer.js`, holds no phase of its own, and renders entirely from
+`state.kiosk` in the 20Hz broadcast — which is what lets a browser refreshed
+mid-generation land back in the right place.
 
 ### Scene JSON round-trip
 

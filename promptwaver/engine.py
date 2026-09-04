@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import colorsys
 import json
+import os
 import threading
 import time
 
@@ -319,6 +320,11 @@ class Engine:
         self._device_list = None
         self.rescan_audio_devices()
         self.analysis = AudioAnalysis()
+        # Kiosk mode — a runtime toggle, not a launch flag. Constructed always
+        # and costs nothing while disabled; `enable()` is what loads the speech
+        # model and arms the mic. See promptwaver/kiosk.py.
+        from .kiosk import KioskSession
+        self.kiosk = KioskSession(self, archive_dir=os.path.join(library_dir, "kiosk"))
         self.output = make_output(
             enable_laser, max_step=max_step, invert_x=invert_x,
             keystone_h=keystone_h, keystone_v=keystone_v)
@@ -427,6 +433,24 @@ class Engine:
         # screen looks curved.
         self.line_curve = 0.0
         self._mod_line_curve = 0.0
+        # Stroke thickness, as a MULTIPLIER on whatever each surface already
+        # draws — not an absolute pixel width. The two browser surfaces
+        # deliberately differ (the output window scales its stroke with the
+        # viewport, the in-page preview uses a fixed hairline; see
+        # renderer.js _getLineWidth), and an absolute width would flatten that
+        # distinction and make the preview stop predicting the projector.
+        #
+        # Starts at 1.0 and only widens. Thinner isn't offered because the
+        # renderer's antialiasing feather is a fixed half-pixel: below about
+        # one pixel of stroke the feather is wider than the line itself, alpha
+        # never reaches 1.0 even at the centre, and every stroke goes
+        # semi-transparent with brighter dots at the joints.
+        #
+        # MONITOR ONLY, like the filters above — the DAC's per-point intensity
+        # is written as a constant and a laser's beam width is a property of
+        # the optics, so there is nothing for this to mean on the hardware.
+        self.line_width = 1.0
+        self._mod_line_width = 1.0
         # Modulated versions (live values, updated every tick)
         self._mod_glow = 0.0
         self._mod_trail = 0.0
@@ -539,6 +563,8 @@ class Engine:
             self.bloom_intensity = max(0.0, min(5.0, float(value)))
         elif key == "line_curve":
             self.line_curve = max(-1.0, min(1.0, float(value)))
+        elif key == "line_width":
+            self.line_width = max(1.0, min(8.0, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "pps":
@@ -929,6 +955,19 @@ class Engine:
     def set_effort(self, effort: str):
         self._enqueue(lambda: self.director.set_effort(effort))
 
+    def set_kiosk(self, value: bool, attract: str | None = None) -> tuple[bool, str]:
+        """Toggle kiosk mode. Returns (ok, detail) so the UI can report why an
+        enable failed — loading the speech model is a real operation that can
+        fail, and failing silently would only show up at the first visitor.
+
+        NOT enqueued, unlike every other mutation: enabling has to return its
+        result to the caller, and the work it does (loading a model, allocating
+        a buffer) must not sit on the render thread. What it changes in the
+        engine, it changes through _enqueue itself."""
+        if value:
+            return self.kiosk.enable(attract)
+        return self.kiosk.disable()
+
     def apply_audio_to_scene(self, scene_name: str, audio_prompt: str, warmth: float | None = None,
                              energy: float | None = None, evolution: float | None = None):
         """Regenerate just the soundscape for an existing library scene, leaving
@@ -1089,6 +1128,7 @@ class Engine:
                     "bloom_spread": self.bloom_spread,
                     "bloom_intensity": self.bloom_intensity,
                     "line_curve": self.line_curve,
+                    "line_width": self.line_width,
                 })
                 # LFO rates travel with the scene like the rest of the
                 # modulation setup. Captured from the live sources rather than
@@ -1161,6 +1201,8 @@ class Engine:
         # Defaults to 0 so every existing scene keeps the exact geometry it
         # was authored against.
         self.line_curve = float(cam_cfg.get("line_curve", 0.0))
+        # 1.0 (unchanged) for every scene authored before this existed.
+        self.line_width = float(cam_cfg.get("line_width", 1.0))
 
     #: Every sound-driven source. The "audio <-> visual" slider scales all of
     #: them together — it means "how much does sound move the picture", and a
@@ -1287,6 +1329,7 @@ class Engine:
         "trail": "trails",
         "kaleidoscope_segments": "kaleidoscope",
         "line_curve": "line curve",
+        "line_width": "line width",
     }
 
     #: Generator names are registry identifiers, not UI copy. Groups not listed
@@ -1338,7 +1381,7 @@ class Engine:
         # difference, not a caveat: monitor filters are drawn in the browser
         # and never touch the vector data sent to the DAC, so a route here
         # does nothing at all on a laser.
-        for k in ("glow", "trail", "kaleidoscope_segments", "line_curve"):
+        for k in ("glow", "trail", "kaleidoscope_segments", "line_curve", "line_width"):
             out.append(entry(k, "Monitor · screen only"))
         return out
 
@@ -1469,6 +1512,10 @@ class Engine:
                 except Exception as e:
                     print(f"[promptwaver] action error: {e}")
 
+            # Retires the kiosk's error message back to idle. A no-op while
+            # the toggle is off.
+            self.kiosk.tick()
+
             if not self.active:
                 # The scene clock simply doesn't advance while paused — it's
                 # an accumulator now, so it holds its value on its own. (It
@@ -1523,6 +1570,7 @@ class Engine:
             self._mod_trail = self.matrix.value("trail", self.trail)
             self._mod_kaleidoscope_segments = self.matrix.value("kaleidoscope_segments", self.kaleidoscope_segments)
             self._mod_line_curve = self.matrix.value("line_curve", self.line_curve)
+            self._mod_line_width = self.matrix.value("line_width", self.line_width)
 
             # crossfades render two full scenes for the transition's duration
             # (see SceneManager.render) — captured before render() below,
@@ -1687,6 +1735,7 @@ class Engine:
             "bloom_spread": self.bloom_spread,
             "bloom_intensity": self.bloom_intensity,
             "line_curve": max(-1.0, min(1.0, self._mod_line_curve)),
+            "line_width": max(1.0, min(8.0, self._mod_line_width)),
             "hue_value": self.hue_value,
             "scene_transition": self.scenes.transition_state(),
             "audio_level": round(self.analysis.level, 3),
@@ -1710,6 +1759,9 @@ class Engine:
             "lfo_slow.rate": round(getattr(self.matrix.sources.get("lfo_slow"), "rate", 0.05), 4),
             "lfo_mid.rate": round(getattr(self.matrix.sources.get("lfo_mid"), "rate", 0.2), 4),
             "midi": self.midi.state(),
+            # A single {"enabled": False} while the toggle is off — this runs
+            # 20x/second forever, so it stays primitives-only either way.
+            "kiosk": self.kiosk.state(),
         }
 
     def preview(self, max_points: int = 1800, stroke_thin: int = 60):
