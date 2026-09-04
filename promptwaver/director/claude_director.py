@@ -109,15 +109,59 @@ Schema:
 # 2D scenes quietly stop getting the voice-ordering or LFO limits that 3D
 # scenes get. Verified byte-identical to the pre-extraction prompt.
 _SOUNDSCAPE_GUIDE = """
-Soundscape guidance: ambient and calm. Voice types:
+Soundscape guidance: ambient and calm, but MOVING rather than static. A drone
+is a scene that never changes; aim for one that is always slowly becoming
+something else. Three things do that, and a good soundscape uses all three:
+
+  * Long envelopes. "env" takes attack and release up to 15 SECONDS. A 10-15s
+    attack on a pad means the voice arrives rather than switches on.
+  * Slow whole-scene movement. "swell_period" and "filter_sweep_period" run
+    5-120s; 30-90 is the useful ambient range. Combine a slow filter sweep
+    with per-voice "resonance" (see "osc"/"pluck") — that pairing is what
+    makes a patch sound like an evolving synth instead of a held chord.
+  * Several modulators per voice at UNRELATED rates. A voice may carry "lfo"
+    (one) and also "lfos" (a LIST of up to 3 more, same fields). Give them
+    different destinations and deliberately incommensurate rates — e.g. pan at
+    0.017, tone at 0.031, level at 0.044 — so the combination never repeats.
+    Two LFOs at the same rate are one LFO; two on the same destination is a
+    mistake (only one takes effect).
+
+Voice types:
   "pad"   sustained drone chord, warmth from harmonic partials (params: chord, tone, detune)
   "osc"   unison multi-oscillator — thicker/simpler than pad, good for a lead or bass
-          texture (params: chord, unison 1-7, detune, tone, sub 0-1 for an octave-down layer)
-  "pluck" sparse notes stepping through a scale (params: scale, rate, decay, tone)
+          texture (params: chord, unison 1-7, detune, tone, resonance,
+          sub 0-1 for an octave-down layer). "resonance" 0-1 — see under
+          "pluck"; on a sustained "osc" with a slow filter sweep it is the
+          single most effective way to make a patch EVOLVE rather than drone.
+  "pluck" sparse notes stepping through a scale (params: scale, rate, decay, tone,
+          resonance, drift)
+          "resonance" 0-1 puts a RESONANT PEAK at the tone cutoff instead of a
+                    plain rolloff — the difference between a brightness fade
+                    and an actual synth filter. 0.5-0.9 with a moving
+                    "filter_sweep_amount" is the classic slow evolving-synth
+                    sound. Only "osc" and "pluck" have it (pad and bell build
+                    their partials from sines and have no cutoff to peak at).
   "bell"  struck notes with inharmonic (bell/chime, not string) partials —
           reach for this over "pluck" when the brief actually wants a bell,
           chime, or mallet-struck sound rather than a plucked string
           (params: scale, rate, decay, tone)
+          "character" picks the struck voicing, and is the difference between
+                    one bell and a family of them. "bell" (default) is a
+                    church/chime clang; "celesta" is sweet and near-harmonic;
+                    "glockenspiel" is bright struck metal; "music_box" is
+                    small, sweet and short; "gamelan" is hollow and shimmering;
+                    "tine" is a soft electric-piano strike. Reach past the
+                    default whenever the brief wants something SWEET or BRIGHT
+                    rather than a heavy chime — celesta and music_box in
+                    particular suit gentle, melodic, childlike or nostalgic
+                    briefs far better than the default bell does.
+          "drift" 0-1, slow random detune applied as each note is struck, so
+                    the instrument wanders very slightly out of tune with
+                    itself. 0 is exact; 0.2-0.4 is the tape-ish instability
+                    that makes an ambient patch sound played rather than
+                    computed; 0.8+ is audibly seasick. Also available on
+                    "pluck" and "harp". Use it — a little is almost always
+                    sweeter than none.
   "harp"  long-ringing plucked STRING. Harmonic partials that each decay at
           their own rate, so the note darkens as it rings — the sound keeps
           blooming and overlapping into itself long after it was played.

@@ -2800,8 +2800,9 @@ function renderSoundscape(s){
   // stale one is worse than none. Same reasoning as lfo.on/lfo.dest, which
   // are already here for the same kind of conditional markup.
   const sig = s.scene + "|" + (surround ? "q" : "s") + "|" + (sc.voices||[]).map(v =>
-    [v.name, v.type, v.waveform || "", (v.lfo||{}).on ? 1 : 0,
-     (v.lfo||{}).dest || ""].join(":")).join(",");
+    [v.name, v.type, v.waveform || "", v.character || "", (v.lfo||{}).on ? 1 : 0,
+     (v.lfo||{}).dest || "",
+     (v.lfos||[]).map(l => (l.on?1:0) + (l.dest||"")).join("/")].join(":")).join(",");
   if (sig === _scapeSig) return;
   _scapeSig = sig;
 
@@ -2897,6 +2898,25 @@ function renderSoundscape(s){
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
       el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
     }
+    if (v.type==="bell"){
+      // Which struck voicing the partial bank uses. A discrete choice like
+      // `waveform`, not a knob — see BELL_CHARACTERS in dsp.py. Measured
+      // spectral centroid runs 1.0x (bell) to 1.65x (gamelan).
+      const cs = document.createElement("select");
+      ["bell","celesta","glockenspiel","music_box","gamelan","tine"].forEach(c=>{
+        const o=document.createElement("option"); o.value=c;
+        o.textContent=c.replace("_"," ");
+        if ((v.character||"bell")===c) o.selected=true; cs.appendChild(o); });
+      cs.onchange = () => sendAudio(`voice.${v.name}.character`, cs.value);
+      const cl = document.createElement("label"); cl.className="flabel"; cl.textContent="character";
+      el.appendChild(cl); el.appendChild(cs);
+    }
+    // Onset detune. Only the note-scheduling voices have it: a continuous
+    // voice derives phase from the absolute sample clock, so it cannot be
+    // detuned mid-stream without a phase jump (see _drift_factor in dsp.py).
+    if (isType("pluck","bell","harp")){
+      el.appendChild(knob("drift",`voice.${v.name}.drift`,0,1,0.01, v.drift ?? 0, x=>x.toFixed(2), {midi: mk("drift")}));
+    }
     if (v.type==="harp"){
       // decay runs to 20s here, not the 6s every other voice is clamped to —
       // the long ring is the voice. See HARP_MAX_DECAY in dsp.py.
@@ -2906,6 +2926,11 @@ function renderSoundscape(s){
       el.appendChild(knob("damp",`voice.${v.name}.damp`,0,1.5,0.01, v.damp ?? 0.7, x=>x.toFixed(2), {midi: mk("damp")}));
       el.appendChild(knob("roll",`voice.${v.name}.roll`,1,12,1, v.roll ?? 6, x=>x.toFixed(0), {midi: mk("roll")}));
       el.appendChild(knob("roll spread",`voice.${v.name}.roll_spread`,0.03,0.4,0.005, v.roll_spread ?? 0.07, x=>x.toFixed(3), {midi: mk("roll_spread")}));
+    }
+    // Resonance only exists where a wavetable does — pad and bell build their
+    // partials from sines and have no cutoff to peak at. See RES_PEAK_GAIN.
+    if (isType("osc","pluck")){
+      el.appendChild(knob("resonance",`voice.${v.name}.resonance`,0,1,0.01, v.resonance ?? 0, x=>x.toFixed(2), {midi: mk("resonance")}));
     }
     if (v.type==="osc"){
       el.appendChild(knob("unison",`voice.${v.name}.unison`,1,7,1, v.unison ?? 1, x=>x.toFixed(0), {midi: mk("unison")}));
@@ -3069,6 +3094,74 @@ function renderSoundscape(s){
       fields.appendChild(note);
 
       w.appendChild(fields);
+
+      // --- extra modulators -------------------------------------------------
+      //
+      // The block above edits `v.lfo`, the single modulator every saved scene
+      // has. `v.lfos` is a LIST alongside it, so a voice can move several
+      // things at unrelated rates — which is what stops a sustained voice
+      // sounding static. One LFO per destination (dsp.py `_lfos` keys by it),
+      // capped at MAX_VOICE_LFOS.
+      const extras = Array.isArray(v.lfos) ? v.lfos : [];
+      const pushList = (list) => sendAudio(`voice.${v.name}.lfos`, list);
+      const DESTS = ["level","pan","depth","distortion","tone","detune","sub","waveform","rate"];
+
+      extras.forEach((cfg, i) => {
+        const row = document.createElement("div");
+        row.style.cssText = "border-top:1px dashed var(--line);padding-top:6px;display:flex;flex-direction:column;gap:6px";
+        const h = document.createElement("label");
+        h.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)";
+        const cb = document.createElement("input"); cb.type="checkbox"; cb.checked = cfg.on !== false;
+        cb.onchange = () => { const l = extras.slice(); l[i] = {...l[i], on: cb.checked}; pushList(l); };
+        const rm = document.createElement("button");
+        rm.textContent = "\u00d7"; rm.title = "remove this modulator";
+        rm.style.cssText = "margin-left:auto;padding:0 6px;line-height:1.4";
+        rm.onclick = () => pushList(extras.filter((_, j) => j !== i));
+        h.appendChild(cb); h.appendChild(document.createTextNode(`LFO ${i + 2}`)); h.appendChild(rm);
+        row.appendChild(h);
+
+        const patch = (o) => { const l = extras.slice(); l[i] = {...l[i], ...o}; pushList(l); };
+        const sel = document.createElement("select");
+        DESTS.forEach(d => { const e=document.createElement("option"); e.value=d; e.textContent=d;
+          if ((cfg.dest||"level")===d) e.selected=true; sel.appendChild(e); });
+        sel.onchange = () => patch({dest: sel.value});
+        const sl = document.createElement("label"); sl.className="flabel"; sl.textContent="target";
+        row.appendChild(sl); row.appendChild(sel);
+
+        const shp = document.createElement("select");
+        ["sine","triangle","saw","square","random"].forEach(d => {
+          const e=document.createElement("option"); e.value=d; e.textContent=d;
+          if ((cfg.shape||"sine")===d) e.selected=true; shp.appendChild(e); });
+        shp.onchange = () => patch({shape: shp.value});
+        const hl = document.createElement("label"); hl.className="flabel"; hl.textContent="shape";
+        row.appendChild(hl); row.appendChild(shp);
+
+        // No `read`/`midi` on these: both address a param by a dotted state
+        // path, and a list entry has none. The legacy LFO keeps both.
+        // midi:null suppresses the learn button (learnBtn(null) would throw);
+        // read:null keeps registerCtl out, which bails on a falsy path anyway.
+        const xo = (fn) => ({midi: null, read: null, onInput: fn});
+        row.appendChild(knob("rate Hz", null, 0, 0.5, 0.005, cfg.rate ?? 0.04,
+                             x=>x.toFixed(3), xo(n => patch({rate: n}))));
+        row.appendChild(knob("amount", null, 0, 1, 0.01, cfg.depth ?? 0.5,
+                             x=>x.toFixed(2), xo(n => patch({depth: n}))));
+        w.appendChild(row);
+      });
+
+      if (extras.length < 3) {
+        const add = document.createElement("button");
+        add.textContent = "+ modulator";
+        add.style.cssText = "font-size:11px;padding:3px 8px;align-self:flex-start";
+        add.onclick = () => {
+          // Default to a destination not already driven, and a rate unrelated
+          // to the others — two modulators at the same rate is one modulator.
+          const used = new Set([ (v.lfo||{}).dest, ...extras.map(e=>e.dest) ]);
+          const dest = DESTS.find(d => !used.has(d)) || "pan";
+          pushList([...extras, {on:true, dest, shape:"sine",
+                                rate: +(0.017 + extras.length * 0.019).toFixed(3), depth:0.6}]);
+        };
+        w.appendChild(add);
+      }
       el.appendChild(w);
     }
     vc.appendChild(el);

@@ -5569,11 +5569,11 @@
           7,
           12
         ],
-        "unison": 6.0,
+        "unison": 6,
         "detune": 0.008,
         "sub": 0.73,
         "tone": 0.18,
-        "level": 0.93,
+        "level": 0.74,
         "pan": 0.0,
         "env": {
           "attack": 4.0,
@@ -5620,7 +5620,7 @@
           "rate": 0.04,
           "depth": 0.4
         },
-        "mute": false,
+        "mute": true,
         "rate": 0.5,
         "decay": 1.2,
         "unison": 1,
@@ -5646,7 +5646,7 @@
           "rate": 0.06,
           "depth": 0.7
         },
-        "mute": false,
+        "mute": true,
         "detune": 0.01,
         "rate": 0.5,
         "decay": 1.2,
@@ -5686,7 +5686,9 @@
         "distortion": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "character": "bell",
+        "drift": 0.0
       }
     ],
     "swell_amount": 0.3,

@@ -1,0 +1,6796 @@
+{
+  "name": "space dust",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "dust_cloud": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.3,
+                  0.2,
+                  0.1
+                ],
+                [
+                  -0.2,
+                  0.15,
+                  -0.15
+                ],
+                [
+                  0.15,
+                  -0.1,
+                  0.2
+                ],
+                [
+                  -0.1,
+                  -0.2,
+                  -0.1
+                ],
+                [
+                  0.2,
+                  0.05,
+                  0.25
+                ],
+                [
+                  -0.25,
+                  0.1,
+                  0.05
+                ],
+                [
+                  0,
+                  0,
+                  0
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0.1,
+                  0.1,
+                  0
+                ],
+                [
+                  0.25,
+                  0.3,
+                  0.15
+                ],
+                [
+                  -0.15,
+                  0.25,
+                  -0.2
+                ],
+                [
+                  0.2,
+                  -0.15,
+                  0.1
+                ],
+                [
+                  -0.2,
+                  -0.1,
+                  -0.2
+                ],
+                [
+                  0.1,
+                  0,
+                  0.3
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "solar_flare": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.5,
+                  0
+                ],
+                [
+                  0.4,
+                  -0.2,
+                  0.3
+                ],
+                [
+                  0.6,
+                  0.3,
+                  0.2
+                ],
+                [
+                  0.3,
+                  0.6,
+                  0.5
+                ],
+                [
+                  0,
+                  0.8,
+                  0.1
+                ],
+                [
+                  -0.3,
+                  0.5,
+                  -0.3
+                ],
+                [
+                  -0.5,
+                  0.1,
+                  -0.2
+                ],
+                [
+                  -0.4,
+                  -0.3,
+                  0
+                ],
+                [
+                  0,
+                  -0.5,
+                  0
+                ]
+              ],
+              "closed": true
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  -0.3,
+                  0
+                ],
+                [
+                  0.25,
+                  0.4,
+                  0.25
+                ],
+                [
+                  -0.25,
+                  0.35,
+                  -0.25
+                ],
+                [
+                  0,
+                  0.5,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0.5,
+                0.7,
+                0.4
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                -0.5,
+                0.6,
+                -0.4
+              ]
+            }
+          ],
+          "radiation_stream": [
+            {
+              "op": "arc",
+              "r": 0.8,
+              "a0": 0,
+              "a1": 6.28,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "arc",
+              "r": 0.5,
+              "a0": 0,
+              "a1": 6.28,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                -1.2,
+                0
+              ],
+              "b": [
+                0,
+                1.2,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1.2,
+                0,
+                0
+              ],
+              "b": [
+                1.2,
+                0,
+                0
+              ]
+            }
+          ],
+          "particle_stream": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.15,
+                  0.4,
+                  0.1
+                ],
+                [
+                  0.1,
+                  0.8,
+                  -0.15
+                ],
+                [
+                  0,
+                  1.2,
+                  0.2
+                ],
+                [
+                  -0.1,
+                  1.5,
+                  -0.1
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  -0.12,
+                  0.35,
+                  0.12
+                ],
+                [
+                  -0.08,
+                  0.75,
+                  0.25
+                ],
+                [
+                  -0.05,
+                  1.1,
+                  0.15
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.1,
+                  0.3,
+                  -0.2
+                ],
+                [
+                  0.08,
+                  0.7,
+                  -0.35
+                ],
+                [
+                  0.05,
+                  1.0,
+                  -0.5
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "corona_ring": [
+            {
+              "op": "circle",
+              "r": 1.2,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 0.9,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            },
+            {
+              "op": "circle",
+              "r": 1.0,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 20
+            }
+          ],
+          "gamma_burst": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.6,
+                  0.4,
+                  0.5
+                ],
+                [
+                  0.3,
+                  0.8,
+                  0.2
+                ],
+                [
+                  0.1,
+                  1.2,
+                  0.8
+                ],
+                [
+                  0,
+                  1.4,
+                  0.3
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  -0.5,
+                  0.5,
+                  0.3
+                ],
+                [
+                  -0.3,
+                  0.9,
+                  0.6
+                ],
+                [
+                  -0.2,
+                  1.3,
+                  0.1
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.4,
+                  0.3,
+                  -0.6
+                ],
+                [
+                  0.2,
+                  0.7,
+                  -0.3
+                ],
+                [
+                  0,
+                  1.1,
+                  -0.9
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "heat_wave": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.5,
+                  0,
+                  0
+                ],
+                [
+                  -1.0,
+                  0.3,
+                  0.2
+                ],
+                [
+                  -0.5,
+                  0.1,
+                  -0.3
+                ],
+                [
+                  0,
+                  0.4,
+                  0.1
+                ],
+                [
+                  0.5,
+                  0.15,
+                  -0.25
+                ],
+                [
+                  1.0,
+                  0.3,
+                  0.15
+                ],
+                [
+                  1.5,
+                  0,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  -1.4,
+                  -0.3,
+                  0
+                ],
+                [
+                  -0.9,
+                  0,
+                  0.25
+                ],
+                [
+                  -0.4,
+                  -0.2,
+                  -0.2
+                ],
+                [
+                  0.1,
+                  0.2,
+                  0.1
+                ],
+                [
+                  0.6,
+                  -0.1,
+                  -0.3
+                ],
+                [
+                  1.1,
+                  0.1,
+                  0.2
+                ],
+                [
+                  1.4,
+                  -0.3,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "nebula_wisp": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.5,
+                  0.3,
+                  0.2
+                ],
+                [
+                  1.0,
+                  0.1,
+                  0.4
+                ],
+                [
+                  1.3,
+                  -0.2,
+                  0.1
+                ],
+                [
+                  1.5,
+                  0.2,
+                  0.5
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.4,
+                  0.5,
+                  -0.1
+                ],
+                [
+                  0.9,
+                  0.3,
+                  -0.4
+                ],
+                [
+                  1.2,
+                  0.6,
+                  -0.2
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  -0.3,
+                  0.2,
+                  0.3
+                ],
+                [
+                  -0.8,
+                  0.4,
+                  0.1
+                ],
+                [
+                  -1.1,
+                  0.1,
+                  0.6
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "stellar_core": [
+            {
+              "op": "circle",
+              "r": 0.6,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "circle",
+              "r": 0.6,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "circle",
+              "r": 0.5,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 16
+            },
+            {
+              "op": "arc",
+              "r": 0.4,
+              "a0": 0,
+              "a1": 6.28,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            }
+          ]
+        },
+        "nodes": [
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -48,
+              -8,
+              0
+            ],
+            "scale": 2.2,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 1.2,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -44,
+              5,
+              -8
+            ],
+            "scale": 1.8,
+            "color": [
+              0.7,
+              0.5,
+              0.2
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 0.9,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -40,
+              -3,
+              6
+            ],
+            "scale": 2.0,
+            "color": [
+              0.85,
+              0.65,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.08,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -36,
+              2,
+              -4
+            ],
+            "scale": 1.7,
+            "color": [
+              0.75,
+              0.55,
+              0.25
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 1.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -32,
+              -6,
+              8
+            ],
+            "scale": 2.1,
+            "color": [
+              0.82,
+              0.62,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.09,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -28,
+              4,
+              -2
+            ],
+            "scale": 1.9,
+            "color": [
+              0.78,
+              0.58,
+              0.28
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 1.1,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -24,
+              -1,
+              5
+            ],
+            "scale": 1.6,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.1,
+              "amp": 0.6,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -20,
+              3,
+              -6
+            ],
+            "scale": 2.0,
+            "color": [
+              0.76,
+              0.56,
+              0.26
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -16,
+              -4,
+              2
+            ],
+            "scale": 1.8,
+            "color": [
+              0.84,
+              0.64,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.11,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -12,
+              6,
+              -7
+            ],
+            "scale": 2.2,
+            "color": [
+              0.79,
+              0.59,
+              0.29
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.05,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -8,
+              -2,
+              4
+            ],
+            "scale": 1.7,
+            "color": [
+              0.81,
+              0.61,
+              0.31
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.09,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -4,
+              5,
+              -3
+            ],
+            "scale": 1.9,
+            "color": [
+              0.77,
+              0.57,
+              0.27
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 0.9,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              0,
+              -5,
+              7
+            ],
+            "scale": 2.0,
+            "color": [
+              0.83,
+              0.63,
+              0.33
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.1,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              4,
+              2,
+              -5
+            ],
+            "scale": 1.8,
+            "color": [
+              0.78,
+              0.58,
+              0.28
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 1.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              8,
+              -3,
+              3
+            ],
+            "scale": 2.1,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.08,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              12,
+              4,
+              -6
+            ],
+            "scale": 1.7,
+            "color": [
+              0.76,
+              0.56,
+              0.26
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              16,
+              -1,
+              5
+            ],
+            "scale": 1.9,
+            "color": [
+              0.82,
+              0.62,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.11,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              20,
+              6,
+              -2
+            ],
+            "scale": 2.0,
+            "color": [
+              0.79,
+              0.59,
+              0.29
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.05,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              24,
+              -4,
+              6
+            ],
+            "scale": 1.8,
+            "color": [
+              0.81,
+              0.61,
+              0.31
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.09,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              28,
+              3,
+              -4
+            ],
+            "scale": 2.2,
+            "color": [
+              0.77,
+              0.57,
+              0.27
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 0.9,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              32,
+              -6,
+              3
+            ],
+            "scale": 1.7,
+            "color": [
+              0.84,
+              0.64,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.1,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              36,
+              5,
+              -7
+            ],
+            "scale": 1.9,
+            "color": [
+              0.78,
+              0.58,
+              0.28
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 1.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              40,
+              -2,
+              4
+            ],
+            "scale": 2.0,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.08,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              44,
+              4,
+              -5
+            ],
+            "scale": 1.8,
+            "color": [
+              0.76,
+              0.56,
+              0.26
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              48,
+              -3,
+              2
+            ],
+            "scale": 2.1,
+            "color": [
+              0.83,
+              0.63,
+              0.33
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.11,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -50,
+              8,
+              12
+            ],
+            "scale": 3.5,
+            "color": [
+              1.0,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -35,
+              -10,
+              -15
+            ],
+            "scale": 2.8,
+            "color": [
+              0.95,
+              0.65,
+              0.15
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.5,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -18,
+              12,
+              10
+            ],
+            "scale": 3.2,
+            "color": [
+              1.0,
+              0.75,
+              0.25
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.55,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              2,
+              -8,
+              -12
+            ],
+            "scale": 2.9,
+            "color": [
+              0.98,
+              0.68,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.58,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              22,
+              10,
+              14
+            ],
+            "scale": 3.1,
+            "color": [
+              1.0,
+              0.72,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.52,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              38,
+              -9,
+              -11
+            ],
+            "scale": 2.7,
+            "color": [
+              0.96,
+              0.66,
+              0.16
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.61,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -42,
+              15,
+              -8
+            ],
+            "scale": 3.3,
+            "color": [
+              0.99,
+              0.69,
+              0.19
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.54,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              28,
+              -12,
+              13
+            ],
+            "scale": 2.6,
+            "color": [
+              1.0,
+              0.73,
+              0.23
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.57,
+              "amp": 0.34,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -8,
+              14,
+              -10
+            ],
+            "scale": 3.0,
+            "color": [
+              0.97,
+              0.67,
+              0.17
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.53,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              45,
+              9,
+              11
+            ],
+            "scale": 2.9,
+            "color": [
+              1.0,
+              0.71,
+              0.21
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.59,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -25,
+              -11,
+              14
+            ],
+            "scale": 3.2,
+            "color": [
+              0.98,
+              0.68,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.56,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              12,
+              11,
+              -13
+            ],
+            "scale": 2.8,
+            "color": [
+              1.0,
+              0.74,
+              0.24
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.51,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -52,
+              0,
+              -10
+            ],
+            "scale": 1.6,
+            "color": [
+              0.9,
+              0.4,
+              0.1
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.0,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -38,
+              8,
+              8
+            ],
+            "scale": 1.4,
+            "color": [
+              0.85,
+              0.35,
+              0.05
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -22,
+              -6,
+              -12
+            ],
+            "scale": 1.5,
+            "color": [
+              0.92,
+              0.45,
+              0.15
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.1,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -6,
+              10,
+              6
+            ],
+            "scale": 1.7,
+            "color": [
+              0.88,
+              0.38,
+              0.08
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.9,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              14,
+              -8,
+              -10
+            ],
+            "scale": 1.4,
+            "color": [
+              0.91,
+              0.42,
+              0.12
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.0,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              32,
+              6,
+              9
+            ],
+            "scale": 1.6,
+            "color": [
+              0.86,
+              0.36,
+              0.06
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.7,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              50,
+              -10,
+              -8
+            ],
+            "scale": 1.5,
+            "color": [
+              0.89,
+              0.4,
+              0.1
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.2,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -30,
+              12,
+              -6
+            ],
+            "scale": 1.7,
+            "color": [
+              0.93,
+              0.46,
+              0.16
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -48,
+              10,
+              -5
+            ],
+            "scale": 2.0,
+            "color": [
+              1.0,
+              0.6,
+              0.1
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -32,
+              -8,
+              10
+            ],
+            "scale": 1.8,
+            "color": [
+              0.95,
+              0.55,
+              0.05
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.18,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -16,
+              12,
+              -8
+            ],
+            "scale": 2.1,
+            "color": [
+              1.0,
+              0.65,
+              0.15
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.22,
+              "amp": 1.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              0,
+              -10,
+              12
+            ],
+            "scale": 1.9,
+            "color": [
+              0.98,
+              0.58,
+              0.08
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.19,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              20,
+              9,
+              -6
+            ],
+            "scale": 2.0,
+            "color": [
+              1.0,
+              0.62,
+              0.12
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              36,
+              -11,
+              11
+            ],
+            "scale": 1.7,
+            "color": [
+              0.96,
+              0.56,
+              0.06
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.17,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              50,
+              11,
+              -7
+            ],
+            "scale": 2.2,
+            "color": [
+              1.0,
+              0.64,
+              0.14
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.21,
+              "amp": 1.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -44,
+              -9,
+              9
+            ],
+            "scale": 1.8,
+            "color": [
+              0.97,
+              0.59,
+              0.09
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.18,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -12,
+              8,
+              -11
+            ],
+            "scale": 1.9,
+            "color": [
+              1.0,
+              0.61,
+              0.11
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.19,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              8,
+              -7,
+              10
+            ],
+            "scale": 2.0,
+            "color": [
+              0.99,
+              0.63,
+              0.13
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.2,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -46,
+              6,
+              -6
+            ],
+            "scale": 2.5,
+            "color": [
+              1.0,
+              0.5,
+              0.05
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.8,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -28,
+              -7,
+              9
+            ],
+            "scale": 2.2,
+            "color": [
+              0.95,
+              0.45,
+              0.0
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.9,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -14,
+              10,
+              -7
+            ],
+            "scale": 2.4,
+            "color": [
+              1.0,
+              0.52,
+              0.08
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.85,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              6,
+              -9,
+              11
+            ],
+            "scale": 2.3,
+            "color": [
+              0.98,
+              0.48,
+              0.03
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.87,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              26,
+              7,
+              -8
+            ],
+            "scale": 2.1,
+            "color": [
+              1.0,
+              0.51,
+              0.07
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.82,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              42,
+              -8,
+              10
+            ],
+            "scale": 2.4,
+            "color": [
+              0.96,
+              0.46,
+              0.01
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.88,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -36,
+              9,
+              -5
+            ],
+            "scale": 2.2,
+            "color": [
+              1.0,
+              0.53,
+              0.09
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.84,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              16,
+              8,
+              -9
+            ],
+            "scale": 2.3,
+            "color": [
+              0.97,
+              0.49,
+              0.04
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.86,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -50,
+              2,
+              14
+            ],
+            "scale": 2.8,
+            "color": [
+              1.0,
+              0.4,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.7,
+              "amp": 0.45,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -34,
+              -12,
+              -14
+            ],
+            "scale": 2.5,
+            "color": [
+              0.92,
+              0.35,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.65,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -20,
+              14,
+              12
+            ],
+            "scale": 2.9,
+            "color": [
+              1.0,
+              0.42,
+              0.02
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.68,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              4,
+              -11,
+              -13
+            ],
+            "scale": 2.6,
+            "color": [
+              0.95,
+              0.38,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.66,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              24,
+              13,
+              15
+            ],
+            "scale": 2.7,
+            "color": [
+              1.0,
+              0.41,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.69,
+              "amp": 0.43,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              40,
+              -10,
+              -12
+            ],
+            "scale": 2.4,
+            "color": [
+              0.93,
+              0.36,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.64,
+              "amp": 0.39,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -40,
+              11,
+              -9
+            ],
+            "scale": 2.8,
+            "color": [
+              1.0,
+              0.43,
+              0.03
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.67,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              30,
+              -13,
+              14
+            ],
+            "scale": 2.5,
+            "color": [
+              0.94,
+              0.37,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.63,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -10,
+              12,
+              -11
+            ],
+            "scale": 2.6,
+            "color": [
+              1.0,
+              0.44,
+              0.04
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.7,
+              "amp": 0.44,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              48,
+              3,
+              13
+            ],
+            "scale": 2.7,
+            "color": [
+              0.91,
+              0.33,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.62,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -45,
+              -4,
+              0
+            ],
+            "scale": 2.2,
+            "color": [
+              1.0,
+              0.55,
+              0.2
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.22,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -25,
+              6,
+              -3
+            ],
+            "scale": 2.0,
+            "color": [
+              0.98,
+              0.53,
+              0.18
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.2,
+              "amp": 1.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -5,
+              -5,
+              2
+            ],
+            "scale": 2.3,
+            "color": [
+              1.0,
+              0.57,
+              0.22
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.23,
+              "amp": 1.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              15,
+              5,
+              -2
+            ],
+            "scale": 2.1,
+            "color": [
+              0.99,
+              0.54,
+              0.19
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.21,
+              "amp": 1.05,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              35,
+              -6,
+              1
+            ],
+            "scale": 2.2,
+            "color": [
+              1.0,
+              0.56,
+              0.21
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.22,
+              "amp": 1.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              52,
+              4,
+              -1
+            ],
+            "scale": 2.0,
+            "color": [
+              0.97,
+              0.52,
+              0.17
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.19,
+              "amp": 0.95,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -30,
+              -3,
+              3
+            ],
+            "scale": 2.1,
+            "color": [
+              1.0,
+              0.58,
+              0.23
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.24,
+              "amp": 1.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              20,
+              -4,
+              -1
+            ],
+            "scale": 2.2,
+            "color": [
+              0.96,
+              0.51,
+              0.16
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.2,
+              "amp": 1.02,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -47,
+              3,
+              7
+            ],
+            "scale": 3.0,
+            "color": [
+              0.8,
+              0.4,
+              0.2
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 1.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -31,
+              -5,
+              -9
+            ],
+            "scale": 2.7,
+            "color": [
+              0.75,
+              0.35,
+              0.15
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.1,
+              "amp": 1.2,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -17,
+              7,
+              8
+            ],
+            "scale": 2.9,
+            "color": [
+              0.82,
+              0.42,
+              0.22
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.3,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              3,
+              -6,
+              -10
+            ],
+            "scale": 2.8,
+            "color": [
+              0.78,
+              0.38,
+              0.18
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 1.25,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              21,
+              5,
+              9
+            ],
+            "scale": 3.0,
+            "color": [
+              0.8,
+              0.4,
+              0.2
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 1.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              37,
+              -7,
+              -8
+            ],
+            "scale": 2.6,
+            "color": [
+              0.76,
+              0.36,
+              0.16
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.1,
+              "amp": 1.15,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              51,
+              6,
+              7
+            ],
+            "scale": 2.8,
+            "color": [
+              0.81,
+              0.41,
+              0.21
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -37,
+              4,
+              -8
+            ],
+            "scale": 2.9,
+            "color": [
+              0.77,
+              0.37,
+              0.17
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 1.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              11,
+              8,
+              -9
+            ],
+            "scale": 2.7,
+            "color": [
+              0.79,
+              0.39,
+              0.19
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.22,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -43,
+              0,
+              4
+            ],
+            "scale": 1.8,
+            "color": [
+              1.0,
+              0.3,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.2,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -27,
+              3,
+              -7
+            ],
+            "scale": 1.6,
+            "color": [
+              0.95,
+              0.25,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -13,
+              -4,
+              5
+            ],
+            "scale": 1.9,
+            "color": [
+              1.0,
+              0.32,
+              0.02
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              7,
+              5,
+              -6
+            ],
+            "scale": 1.7,
+            "color": [
+              0.97,
+              0.27,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.08,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              27,
+              -3,
+              6
+            ],
+            "scale": 1.8,
+            "color": [
+              1.0,
+              0.31,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.13,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              43,
+              4,
+              -5
+            ],
+            "scale": 1.6,
+            "color": [
+              0.96,
+              0.26,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.09,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -35,
+              2,
+              -4
+            ],
+            "scale": 1.9,
+            "color": [
+              1.0,
+              0.33,
+              0.03
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.14,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              19,
+              6,
+              4
+            ],
+            "scale": 1.7,
+            "color": [
+              0.94,
+              0.24,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.1,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -54,
+              -3,
+              -8
+            ],
+            "scale": 1.9,
+            "color": [
+              0.73,
+              0.53,
+              0.23
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.14,
+              "amp": 0.88,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              54,
+              1,
+              5
+            ],
+            "scale": 2.0,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.09,
+              "amp": 0.72,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -52,
+              -5,
+              16
+            ],
+            "scale": 3.0,
+            "color": [
+              0.99,
+              0.7,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.55,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              54,
+              7,
+              -15
+            ],
+            "scale": 3.1,
+            "color": [
+              1.0,
+              0.73,
+              0.23
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.52,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              54,
+              -5,
+              6
+            ],
+            "scale": 1.6,
+            "color": [
+              0.87,
+              0.37,
+              0.07
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.95,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              54,
+              4,
+              -10
+            ],
+            "scale": 1.8,
+            "color": [
+              0.96,
+              0.57,
+              0.07
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.18,
+              "amp": 1.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              52,
+              -6,
+              16
+            ],
+            "scale": 2.8,
+            "color": [
+              1.0,
+              0.41,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.68,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              51,
+              2,
+              2
+            ],
+            "scale": 2.3,
+            "color": [
+              1.0,
+              0.59,
+              0.24
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.25,
+              "amp": 1.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              53,
+              -4,
+              8
+            ],
+            "scale": 2.2,
+            "color": [
+              0.98,
+              0.49,
+              0.05
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.86,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              52,
+              3,
+              -3
+            ],
+            "scale": 1.8,
+            "color": [
+              1.0,
+              0.32,
+              0.02
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.15,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              53,
+              1,
+              10
+            ],
+            "scale": 2.8,
+            "color": [
+              0.81,
+              0.41,
+              0.21
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -52,
+              4,
+              3
+            ],
+            "scale": 2.1,
+            "color": [
+              0.82,
+              0.62,
+              0.32
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.08,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -54,
+              -6,
+              -4
+            ],
+            "scale": 1.8,
+            "color": [
+              0.75,
+              0.55,
+              0.25
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.15,
+              "amp": 1.05,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -54,
+              11,
+              12
+            ],
+            "scale": 3.0,
+            "color": [
+              1.0,
+              0.72,
+              0.22
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.53,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -54,
+              -2,
+              -12
+            ],
+            "scale": 1.5,
+            "color": [
+              0.9,
+              0.41,
+              0.11
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.05,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -54,
+              13,
+              6
+            ],
+            "scale": 2.0,
+            "color": [
+              1.0,
+              0.65,
+              0.15
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.21,
+              "amp": 1.45,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -54,
+              0,
+              10
+            ],
+            "scale": 2.4,
+            "color": [
+              1.0,
+              0.53,
+              0.09
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.85,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -52,
+              8,
+              -16
+            ],
+            "scale": 2.6,
+            "color": [
+              0.95,
+              0.38,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.66,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -53,
+              -2,
+              -2
+            ],
+            "scale": 2.0,
+            "color": [
+              0.98,
+              0.54,
+              0.19
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.2,
+              "amp": 1.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -54,
+              5,
+              0
+            ],
+            "scale": 1.7,
+            "color": [
+              0.97,
+              0.28,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.11,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -53,
+              2,
+              -10
+            ],
+            "scale": 2.9,
+            "color": [
+              0.82,
+              0.42,
+              0.22
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.12,
+              "amp": 1.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -10,
+              2,
+              1
+            ],
+            "scale": 1.95,
+            "color": [
+              0.8,
+              0.6,
+              0.3
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.13,
+              "amp": 0.92,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              10,
+              -1,
+              -2
+            ],
+            "scale": 1.85,
+            "color": [
+              0.77,
+              0.57,
+              0.27
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.1,
+              "amp": 0.76,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -8,
+              9,
+              10
+            ],
+            "scale": 2.95,
+            "color": [
+              0.98,
+              0.68,
+              0.18
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.54,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              8,
+              -7,
+              -10
+            ],
+            "scale": 3.0,
+            "color": [
+              1.0,
+              0.71,
+              0.21
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.56,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -10,
+              3,
+              5
+            ],
+            "scale": 1.45,
+            "color": [
+              0.88,
+              0.39,
+              0.09
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.92,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              10,
+              -2,
+              -4
+            ],
+            "scale": 1.65,
+            "color": [
+              0.91,
+              0.43,
+              0.13
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.02,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -10,
+              -3,
+              8
+            ],
+            "scale": 1.9,
+            "color": [
+              0.99,
+              0.63,
+              0.13
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.195,
+              "amp": 1.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              10,
+              4,
+              -8
+            ],
+            "scale": 2.05,
+            "color": [
+              0.97,
+              0.59,
+              0.09
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.185,
+              "amp": 1.32,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -10,
+              -2,
+              -5
+            ],
+            "scale": 2.35,
+            "color": [
+              0.99,
+              0.5,
+              0.06
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.84,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              10,
+              3,
+              6
+            ],
+            "scale": 2.15,
+            "color": [
+              0.96,
+              0.47,
+              0.02
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.88,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -10,
+              10,
+              -12
+            ],
+            "scale": 2.7,
+            "color": [
+              0.93,
+              0.36,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.65,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              10,
+              -9,
+              11
+            ],
+            "scale": 2.65,
+            "color": [
+              1.0,
+              0.42,
+              0.02
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.67,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -10,
+              1,
+              0
+            ],
+            "scale": 2.15,
+            "color": [
+              0.99,
+              0.55,
+              0.2
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.215,
+              "amp": 1.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              10,
+              0,
+              -1
+            ],
+            "scale": 2.05,
+            "color": [
+              0.96,
+              0.52,
+              0.17
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.205,
+              "amp": 1.04,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -10,
+              2,
+              3
+            ],
+            "scale": 1.75,
+            "color": [
+              0.98,
+              0.29,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.12,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              10,
+              -1,
+              -2
+            ],
+            "scale": 1.85,
+            "color": [
+              1.0,
+              0.31,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.14,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -10,
+              4,
+              7
+            ],
+            "scale": 2.95,
+            "color": [
+              0.81,
+              0.41,
+              0.21
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.115,
+              "amp": 1.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              10,
+              -3,
+              -9
+            ],
+            "scale": 2.75,
+            "color": [
+              0.78,
+              0.38,
+              0.18
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.105,
+              "amp": 1.2,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -46.951,
+              -1.397,
+              1.615
+            ],
+            "scale": 1.72,
+            "color": [
+              0.743,
+              0.524,
+              0.276
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.147,
+              "amp": 1.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -43.37,
+              1.845,
+              3.913
+            ],
+            "scale": 2.295,
+            "color": [
+              0.734,
+              0.562,
+              0.247
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.106,
+              "amp": 1.1,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -50.707,
+              1.126,
+              -14.308
+            ],
+            "scale": 3.458,
+            "color": [
+              0.96,
+              0.723,
+              0.215
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.6,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -44.754,
+              3.072,
+              -6.614
+            ],
+            "scale": 2.09,
+            "color": [
+              0.901,
+              0.195,
+              0.04
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.021,
+              "amp": 0.24,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -40.968,
+              1.593,
+              -3.611
+            ],
+            "scale": 1.724,
+            "color": [
+              0.845,
+              0.624,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.076,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -39.992,
+              10.847,
+              -7.63
+            ],
+            "scale": 3.17,
+            "color": [
+              0.955,
+              0.441,
+              0.072
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.582,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -32.187,
+              11.322,
+              1.911
+            ],
+            "scale": 3.404,
+            "color": [
+              0.781,
+              0.377,
+              0.162
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.149,
+              "amp": 1.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -38.324,
+              6.443,
+              -3.986
+            ],
+            "scale": 2.244,
+            "color": [
+              0.852,
+              0.643,
+              0.35
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.095,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -31.725,
+              11.304,
+              -3.981
+            ],
+            "scale": 1.748,
+            "color": [
+              0.978,
+              0.559,
+              0.213
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.17,
+              "amp": 0.95,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -35.237,
+              10.604,
+              -13.423
+            ],
+            "scale": 1.835,
+            "color": [
+              0.87,
+              0.356,
+              0.068
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.921,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -26.783,
+              17.331,
+              -3.292
+            ],
+            "scale": 1.812,
+            "color": [
+              1.0,
+              0.672,
+              0.159
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.257,
+              "amp": 1.45,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -22.781,
+              11.084,
+              -0.141
+            ],
+            "scale": 1.618,
+            "color": [
+              0.939,
+              0.577,
+              0.07
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.219,
+              "amp": 1.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -26.625,
+              5.688,
+              -10.951
+            ],
+            "scale": 1.414,
+            "color": [
+              0.76,
+              0.558,
+              0.254
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.113,
+              "amp": 0.6,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -24.186,
+              7.646,
+              -10.601
+            ],
+            "scale": 2.228,
+            "color": [
+              0.949,
+              0.618,
+              0.174
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.202,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -30.886,
+              17.276,
+              1.904
+            ],
+            "scale": 2.882,
+            "color": [
+              1.0,
+              0.69,
+              0.228
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.42,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -17.196,
+              4.227,
+              -21.808
+            ],
+            "scale": 3.222,
+            "color": [
+              1.0,
+              0.659,
+              0.138
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.493,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -15.773,
+              5.247,
+              -17.751
+            ],
+            "scale": 3.451,
+            "color": [
+              0.806,
+              0.338,
+              0.201
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.114,
+              "amp": 1.25,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -14.21,
+              -0.434,
+              -18.773
+            ],
+            "scale": 3.158,
+            "color": [
+              1.0,
+              0.736,
+              0.182
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.469,
+              "amp": 0.34,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -18.94,
+              0.218,
+              -4.961
+            ],
+            "scale": 2.873,
+            "color": [
+              0.833,
+              0.386,
+              0.232
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.111,
+              "amp": 1.32,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -21.514,
+              7.17,
+              4.453
+            ],
+            "scale": 3.759,
+            "color": [
+              1.0,
+              0.765,
+              0.227
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.547,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -13.236,
+              -1.174,
+              -8.363
+            ],
+            "scale": 2.236,
+            "color": [
+              0.915,
+              0.415,
+              0.0
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.111,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -12.424,
+              -1.756,
+              -5.158
+            ],
+            "scale": 2.053,
+            "color": [
+              0.905,
+              0.547,
+              0.095
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.145,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -11.312,
+              -2.368,
+              -3.328
+            ],
+            "scale": 1.894,
+            "color": [
+              1.0,
+              0.362,
+              0.009
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.248,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -4.595,
+              8.465,
+              -13.623
+            ],
+            "scale": 4.05,
+            "color": [
+              1.0,
+              0.739,
+              0.2
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.61,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -5.182,
+              -1.917,
+              -8.614
+            ],
+            "scale": 1.896,
+            "color": [
+              0.779,
+              0.546,
+              0.22
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.085,
+              "amp": 0.76,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -6.716,
+              -6.081,
+              -1.985
+            ],
+            "scale": 2.033,
+            "color": [
+              0.972,
+              0.582,
+              0.144
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.224,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -1.154,
+              -3.777,
+              -8.699
+            ],
+            "scale": 2.143,
+            "color": [
+              0.978,
+              0.32,
+              0.005
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.042,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -3.189,
+              3.844,
+              4.648
+            ],
+            "scale": 2.793,
+            "color": [
+              1.0,
+              0.667,
+              0.222
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.523,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -3.026,
+              -4.051,
+              4.139
+            ],
+            "scale": 2.019,
+            "color": [
+              0.942,
+              0.504,
+              0.217
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.183,
+              "amp": 1.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -6.942,
+              -8.229,
+              0.283
+            ],
+            "scale": 3.194,
+            "color": [
+              0.934,
+              0.331,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.668,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              1.19,
+              -0.365,
+              3.371
+            ],
+            "scale": 1.722,
+            "color": [
+              0.783,
+              0.587,
+              0.299
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.126,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              6.184,
+              -3.137,
+              -2.022
+            ],
+            "scale": 1.909,
+            "color": [
+              0.779,
+              0.632,
+              0.312
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.085,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              5.859,
+              -4.4,
+              1.498
+            ],
+            "scale": 3.366,
+            "color": [
+              0.789,
+              0.43,
+              0.245
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.141,
+              "amp": 1.35,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              6.769,
+              2.949,
+              2.952
+            ],
+            "scale": 2.341,
+            "color": [
+              1.0,
+              0.553,
+              0.096
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.017,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              7.126,
+              -1.375,
+              6.989
+            ],
+            "scale": 3.155,
+            "color": [
+              0.89,
+              0.384,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.585,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              12.313,
+              -3.992,
+              1.173
+            ],
+            "scale": 2.1,
+            "color": [
+              0.955,
+              0.605,
+              0.107
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.204,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              8.425,
+              3.597,
+              7.038
+            ],
+            "scale": 3.039,
+            "color": [
+              0.998,
+              0.399,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.636,
+              "amp": 0.43,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              7.076,
+              -3.761,
+              17.041
+            ],
+            "scale": 1.47,
+            "color": [
+              0.893,
+              0.393,
+              0.157
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.635,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              12.231,
+              8.911,
+              12.582
+            ],
+            "scale": 2.051,
+            "color": [
+              0.808,
+              0.601,
+              0.299
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.091,
+              "amp": 0.72,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              15.556,
+              5.053,
+              8.191
+            ],
+            "scale": 2.045,
+            "color": [
+              1.0,
+              0.5,
+              0.124
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.061,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              13.051,
+              2.96,
+              17.1
+            ],
+            "scale": 1.895,
+            "color": [
+              1.0,
+              0.353,
+              0.019
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.413,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              22.614,
+              5.919,
+              1.671
+            ],
+            "scale": 2.037,
+            "color": [
+              0.87,
+              0.401,
+              0.086
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.218,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              23.149,
+              10.693,
+              5.655
+            ],
+            "scale": 3.018,
+            "color": [
+              0.811,
+              0.375,
+              0.218
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.117,
+              "amp": 1.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              16.444,
+              16.111,
+              22.392
+            ],
+            "scale": 2.704,
+            "color": [
+              0.92,
+              0.472,
+              0.082
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.911,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              19.392,
+              12.209,
+              20.123
+            ],
+            "scale": 1.659,
+            "color": [
+              0.956,
+              0.27,
+              0.045
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.23,
+              "amp": 0.26,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              29.157,
+              9.77,
+              18.783
+            ],
+            "scale": 1.851,
+            "color": [
+              1.0,
+              0.47,
+              0.032
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.951,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              20.618,
+              13.838,
+              -0.669
+            ],
+            "scale": 2.699,
+            "color": [
+              1.0,
+              0.445,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.721,
+              "amp": 0.45,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              21.229,
+              4.631,
+              6.689
+            ],
+            "scale": 1.822,
+            "color": [
+              0.711,
+              0.564,
+              0.212
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.126,
+              "amp": 1.05,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              24.828,
+              11.324,
+              -0.342
+            ],
+            "scale": 2.146,
+            "color": [
+              0.971,
+              0.626,
+              0.093
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.221,
+              "amp": 1.32,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              31.477,
+              3.385,
+              7.455
+            ],
+            "scale": 2.509,
+            "color": [
+              1.0,
+              0.452,
+              0.077
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.732,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              32.972,
+              5.887,
+              8.133
+            ],
+            "scale": 3.223,
+            "color": [
+              1.0,
+              0.416,
+              0.054
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.56,
+              "amp": 0.44,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              31.334,
+              7.162,
+              0.195
+            ],
+            "scale": 3.153,
+            "color": [
+              0.848,
+              0.439,
+              0.189
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.11,
+              "amp": 1.3,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              35.294,
+              6.685,
+              5.323
+            ],
+            "scale": 1.9,
+            "color": [
+              0.778,
+              0.553,
+              0.333
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.116,
+              "amp": 1.05,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              33.31,
+              13.015,
+              -3.205
+            ],
+            "scale": 3.355,
+            "color": [
+              1.0,
+              0.399,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.772,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              47.026,
+              -2.045,
+              19.289
+            ],
+            "scale": 2.648,
+            "color": [
+              0.988,
+              0.399,
+              0.058
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.846,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              46.219,
+              0.518,
+              13.775
+            ],
+            "scale": 2.034,
+            "color": [
+              1.0,
+              0.643,
+              0.082
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.214,
+              "amp": 1.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              41.224,
+              -0.708,
+              1.036
+            ],
+            "scale": 3.016,
+            "color": [
+              0.817,
+              0.4,
+              0.133
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.112,
+              "amp": 1.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              40.273,
+              -2.844,
+              -8.178
+            ],
+            "scale": 1.289,
+            "color": [
+              0.885,
+              0.359,
+              0.118
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.251,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              47.074,
+              6.273,
+              3.386
+            ],
+            "scale": 1.72,
+            "color": [
+              0.867,
+              0.354,
+              0.046
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.227,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              49.324,
+              -6.225,
+              2.857
+            ],
+            "scale": 2.24,
+            "color": [
+              1.0,
+              0.616,
+              0.237
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.209,
+              "amp": 1.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              50.901,
+              -15.715,
+              -3.627
+            ],
+            "scale": 2.058,
+            "color": [
+              1.0,
+              0.599,
+              0.031
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.181,
+              "amp": 1.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              49.913,
+              7.039,
+              -5.433
+            ],
+            "scale": 1.929,
+            "color": [
+              1.0,
+              0.633,
+              0.119
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.247,
+              "amp": 1.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              36.745,
+              2.549,
+              3.242
+            ],
+            "scale": 1.515,
+            "color": [
+              0.716,
+              0.544,
+              0.222
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.153,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              31.998,
+              -4.117,
+              3.091
+            ],
+            "scale": 2.895,
+            "color": [
+              0.934,
+              0.41,
+              0.012
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.609,
+              "amp": 0.41,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              40.501,
+              -6.309,
+              -3.931
+            ],
+            "scale": 2.318,
+            "color": [
+              0.955,
+              0.553,
+              0.163
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.233,
+              "amp": 1.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              38.782,
+              -6.305,
+              -4.515
+            ],
+            "scale": 2.186,
+            "color": [
+              0.8,
+              0.319,
+              0.112
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.081,
+              "amp": 1.15,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              42.035,
+              0.925,
+              -10.232
+            ],
+            "scale": 2.34,
+            "color": [
+              0.776,
+              0.573,
+              0.251
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.09,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              42.465,
+              3.349,
+              -12.23
+            ],
+            "scale": 2.057,
+            "color": [
+              1.0,
+              0.597,
+              0.192
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.251,
+              "amp": 1.1,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              39.968,
+              4.941,
+              -13.392
+            ],
+            "scale": 2.272,
+            "color": [
+              1.0,
+              0.378,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.551,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              41.128,
+              8.245,
+              -15.559
+            ],
+            "scale": 1.727,
+            "color": [
+              0.839,
+              0.572,
+              0.302
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.149,
+              "amp": 0.92,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              35.889,
+              -2.789,
+              -14.995
+            ],
+            "scale": 3.293,
+            "color": [
+              0.955,
+              0.649,
+              0.144
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.724,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              38.095,
+              14.026,
+              -17.222
+            ],
+            "scale": 1.916,
+            "color": [
+              0.889,
+              0.42,
+              0.192
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.695,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              33.936,
+              7.222,
+              -14.92
+            ],
+            "scale": 1.471,
+            "color": [
+              0.813,
+              0.395,
+              0.027
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.457,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              34.771,
+              5.544,
+              -12.418
+            ],
+            "scale": 2.257,
+            "color": [
+              0.947,
+              0.527,
+              0.096
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.765,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              29.412,
+              5.437,
+              -13.541
+            ],
+            "scale": 2.57,
+            "color": [
+              1.0,
+              0.751,
+              0.239
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.58,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              38.149,
+              6.68,
+              -4.476
+            ],
+            "scale": 2.128,
+            "color": [
+              0.97,
+              0.588,
+              0.209
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.201,
+              "amp": 1.05,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              24.713,
+              6.356,
+              -13.205
+            ],
+            "scale": 2.055,
+            "color": [
+              1.0,
+              0.261,
+              0.006
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.986,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              29.23,
+              3.448,
+              -8.196
+            ],
+            "scale": 2.492,
+            "color": [
+              0.829,
+              0.581,
+              0.372
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.089,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              23.43,
+              3.574,
+              -9.347
+            ],
+            "scale": 2.289,
+            "color": [
+              0.957,
+              0.562,
+              0.189
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.238,
+              "amp": 1.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              22.655,
+              -4.735,
+              -8.561
+            ],
+            "scale": 2.046,
+            "color": [
+              0.756,
+              0.524,
+              0.224
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.161,
+              "amp": 0.88,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              36.207,
+              -2.23,
+              5.269
+            ],
+            "scale": 3.623,
+            "color": [
+              0.963,
+              0.741,
+              0.172
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.595,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              18.338,
+              0.737,
+              -6.498
+            ],
+            "scale": 1.762,
+            "color": [
+              0.852,
+              0.624,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.107,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              33.136,
+              7.177,
+              6.248
+            ],
+            "scale": 2.953,
+            "color": [
+              0.783,
+              0.376,
+              0.167
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.106,
+              "amp": 1.22,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              25.96,
+              -5.043,
+              4.172
+            ],
+            "scale": 2.163,
+            "color": [
+              0.838,
+              0.62,
+              0.34
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.121,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              21.331,
+              -1.721,
+              3.447
+            ],
+            "scale": 3.063,
+            "color": [
+              1.0,
+              0.523,
+              0.038
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.773,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              30.163,
+              -4.361,
+              11.581
+            ],
+            "scale": 2.532,
+            "color": [
+              0.823,
+              0.362,
+              0.139
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.127,
+              "amp": 1.2,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              17.547,
+              9.187,
+              -3.325
+            ],
+            "scale": 3.32,
+            "color": [
+              0.954,
+              0.732,
+              0.225
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.533,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              8.767,
+              -7.96,
+              3.5
+            ],
+            "scale": 1.446,
+            "color": [
+              0.849,
+              0.396,
+              0.103
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.751,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              11.859,
+              -13.517,
+              3.861
+            ],
+            "scale": 1.669,
+            "color": [
+              0.913,
+              0.428,
+              0.136
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.766,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              9.482,
+              -6.882,
+              3.773
+            ],
+            "scale": 1.847,
+            "color": [
+              0.817,
+              0.537,
+              0.265
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.127,
+              "amp": 1.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              14.57,
+              -6.241,
+              10.584
+            ],
+            "scale": 1.926,
+            "color": [
+              0.764,
+              0.606,
+              0.266
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.112,
+              "amp": 0.9,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              13.979,
+              -16.499,
+              10.089
+            ],
+            "scale": 2.453,
+            "color": [
+              0.83,
+              0.645,
+              0.287
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.139,
+              "amp": 1.2,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              15.787,
+              -16.558,
+              16.394
+            ],
+            "scale": 2.113,
+            "color": [
+              0.819,
+              0.675,
+              0.332
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.092,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              12.066,
+              -11.205,
+              11.882
+            ],
+            "scale": 1.784,
+            "color": [
+              0.818,
+              0.614,
+              0.305
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.104,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              13.456,
+              -9.56,
+              7.976
+            ],
+            "scale": 2.397,
+            "color": [
+              0.936,
+              0.544,
+              0.213
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.17,
+              "amp": 1.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              7.695,
+              -16.663,
+              11.924
+            ],
+            "scale": 3.157,
+            "color": [
+              0.74,
+              0.375,
+              0.106
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.089,
+              "amp": 1.2,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              10.969,
+              -13.109,
+              5.355
+            ],
+            "scale": 2.586,
+            "color": [
+              0.965,
+              0.496,
+              0.0
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.886,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -2.318,
+              0.254,
+              16.735
+            ],
+            "scale": 3.346,
+            "color": [
+              0.931,
+              0.722,
+              0.229
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.639,
+              "amp": 0.37,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              6.596,
+              -4.397,
+              5.636
+            ],
+            "scale": 1.815,
+            "color": [
+              0.74,
+              0.528,
+              0.217
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.118,
+              "amp": 0.9,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -4.816,
+              -2.012,
+              14.335
+            ],
+            "scale": 2.627,
+            "color": [
+              0.764,
+              0.413,
+              0.242
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.133,
+              "amp": 1.3,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              5.073,
+              -3.229,
+              2.139
+            ],
+            "scale": 2.543,
+            "color": [
+              0.91,
+              0.547,
+              0.16
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.162,
+              "amp": 1.02,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              3.246,
+              5.65,
+              0.892
+            ],
+            "scale": 2.426,
+            "color": [
+              0.969,
+              0.588,
+              0.279
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.288,
+              "amp": 1.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              3.569,
+              -3.189,
+              -1.583
+            ],
+            "scale": 1.795,
+            "color": [
+              0.948,
+              0.36,
+              0.138
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.179,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              1.012,
+              0.472,
+              -0.011
+            ],
+            "scale": 2.164,
+            "color": [
+              0.797,
+              0.548,
+              0.299
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.169,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              1.078,
+              9.212,
+              -3.899
+            ],
+            "scale": 1.821,
+            "color": [
+              0.777,
+              0.569,
+              0.329
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.141,
+              "amp": 1.05,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              1.45,
+              11.471,
+              -6.102
+            ],
+            "scale": 2.07,
+            "color": [
+              1.0,
+              0.663,
+              0.112
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.198,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -7.069,
+              -2.499,
+              -0.788
+            ],
+            "scale": 1.831,
+            "color": [
+              0.809,
+              0.593,
+              0.371
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.124,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -11.834,
+              14.301,
+              3.098
+            ],
+            "scale": 3.451,
+            "color": [
+              1.0,
+              0.726,
+              0.236
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.584,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -4.069,
+              1.039,
+              -8.54
+            ],
+            "scale": 1.328,
+            "color": [
+              0.927,
+              0.378,
+              0.127
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.645,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -12.241,
+              -7.853,
+              -1.675
+            ],
+            "scale": 2.727,
+            "color": [
+              0.88,
+              0.383,
+              0.007
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.744,
+              "amp": 0.4,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -7.954,
+              -1.075,
+              -9.1
+            ],
+            "scale": 2.356,
+            "color": [
+              0.957,
+              0.375,
+              0.048
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.611,
+              "amp": 0.39,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -19.798,
+              3.839,
+              1.535
+            ],
+            "scale": 2.936,
+            "color": [
+              0.904,
+              0.349,
+              0.01
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.783,
+              "amp": 0.38,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -2.82,
+              15.718,
+              -18.081
+            ],
+            "scale": 3.357,
+            "color": [
+              0.832,
+              0.443,
+              0.187
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.103,
+              "amp": 1.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -12.447,
+              15.83,
+              -20.171
+            ],
+            "scale": 2.821,
+            "color": [
+              1.0,
+              0.512,
+              0.122
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.78,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -14.839,
+              12.668,
+              -7.766
+            ],
+            "scale": 1.61,
+            "color": [
+              0.975,
+              0.258,
+              0.013
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.017,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -16.149,
+              -1.727,
+              -6.469
+            ],
+            "scale": 1.624,
+            "color": [
+              0.95,
+              0.427,
+              0.135
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.428,
+              "amp": 0.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -18.753,
+              11.258,
+              -6.891
+            ],
+            "scale": 3.231,
+            "color": [
+              0.988,
+              0.718,
+              0.152
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.623,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -12.437,
+              -6.275,
+              0.083
+            ],
+            "scale": 2.906,
+            "color": [
+              0.961,
+              0.643,
+              0.166
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.419,
+              "amp": 0.35,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -14.738,
+              1.78,
+              1.214
+            ],
+            "scale": 2.227,
+            "color": [
+              0.983,
+              0.609,
+              0.086
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.154,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -19.534,
+              8.491,
+              -1.426
+            ],
+            "scale": 1.491,
+            "color": [
+              0.787,
+              0.52,
+              0.229
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.178,
+              "amp": 0.95,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -23.504,
+              5.527,
+              -1.261
+            ],
+            "scale": 1.979,
+            "color": [
+              0.953,
+              0.62,
+              0.118
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.198,
+              "amp": 1.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -22.272,
+              3.383,
+              2.238
+            ],
+            "scale": 1.706,
+            "color": [
+              0.793,
+              0.57,
+              0.241
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.167,
+              "amp": 0.9,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -24.853,
+              -2.513,
+              0.882
+            ],
+            "scale": 2.14,
+            "color": [
+              1.0,
+              0.555,
+              0.224
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.267,
+              "amp": 1.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -25.318,
+              4.911,
+              4.256
+            ],
+            "scale": 1.691,
+            "color": [
+              1.0,
+              0.585,
+              0.141
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.172,
+              "amp": 1.5,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -28.106,
+              -3.594,
+              3.276
+            ],
+            "scale": 1.976,
+            "color": [
+              0.909,
+              0.242,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.168,
+              "amp": 0.25,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -23.725,
+              -0.001,
+              9.757
+            ],
+            "scale": 2.288,
+            "color": [
+              0.776,
+              0.581,
+              0.241
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.139,
+              "amp": 1.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -28.364,
+              -2.941,
+              7.327
+            ],
+            "scale": 1.822,
+            "color": [
+              0.818,
+              0.631,
+              0.324
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.072,
+              "amp": 0.75,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -34.146,
+              1.979,
+              4.302
+            ],
+            "scale": 1.823,
+            "color": [
+              0.96,
+              0.316,
+              0.041
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.952,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -30.237,
+              -1.737,
+              10.752
+            ],
+            "scale": 2.174,
+            "color": [
+              0.997,
+              0.421,
+              0.06
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.709,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -40.441,
+              -0.882,
+              2.67
+            ],
+            "scale": 3.091,
+            "color": [
+              0.876,
+              0.37,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.523,
+              "amp": 0.37,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "corona_ring",
+            "pos": [
+              -34.599,
+              -1.292,
+              10.65
+            ],
+            "scale": 1.978,
+            "color": [
+              1.0,
+              0.532,
+              0.102
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 0.698,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -39.145,
+              -3.449,
+              9.188
+            ],
+            "scale": 1.695,
+            "color": [
+              0.932,
+              0.244,
+              0.048
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.169,
+              "amp": 0.27,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -31.265,
+              -6.645,
+              19.007
+            ],
+            "scale": 2.314,
+            "color": [
+              0.934,
+              0.548,
+              0.144
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.188,
+              "amp": 1.04,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -42.658,
+              -7.51,
+              17.863
+            ],
+            "scale": 1.806,
+            "color": [
+              1.0,
+              0.3,
+              0.004
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.398,
+              "amp": 0.29,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -29.148,
+              -0.296,
+              9.935
+            ],
+            "scale": 2.65,
+            "color": [
+              1.0,
+              0.753,
+              0.244
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.702,
+              "amp": 0.36,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -39.478,
+              -4.485,
+              12.377
+            ],
+            "scale": 2.058,
+            "color": [
+              0.959,
+              0.31,
+              0.016
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.969,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -45.358,
+              -10.614,
+              14.335
+            ],
+            "scale": 3.786,
+            "color": [
+              1.0,
+              0.636,
+              0.169
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.652,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "heat_wave",
+            "pos": [
+              -34.691,
+              -5.264,
+              5.899
+            ],
+            "scale": 2.426,
+            "color": [
+              1.0,
+              0.561,
+              0.193
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.183,
+              "amp": 1.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -41.038,
+              -5.328,
+              8.17
+            ],
+            "scale": 1.938,
+            "color": [
+              0.803,
+              0.567,
+              0.306
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.065,
+              "amp": 0.7,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -40.153,
+              -3.781,
+              4.513
+            ],
+            "scale": 1.418,
+            "color": [
+              0.766,
+              0.52,
+              0.232
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.16,
+              "amp": 1.0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "particle_stream",
+            "pos": [
+              -35.814,
+              9.516,
+              1.345
+            ],
+            "scale": 1.944,
+            "color": [
+              0.992,
+              0.647,
+              0.184
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.191,
+              "amp": 1.45,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -46.89,
+              7.001,
+              4.509
+            ],
+            "scale": 3.3,
+            "color": [
+              1.0,
+              0.466,
+              0.037
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.536,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -42.998,
+              -1.207,
+              0.541
+            ],
+            "scale": 2.125,
+            "color": [
+              0.993,
+              0.3,
+              0.031
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.341,
+              "amp": 0.3,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -41.282,
+              1.38,
+              -2.241
+            ],
+            "scale": 3.601,
+            "color": [
+              0.999,
+              0.68,
+              0.186
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.631,
+              "amp": 0.39,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "nebula_wisp",
+            "pos": [
+              -44.964,
+              -7.13,
+              -2.017
+            ],
+            "scale": 3.156,
+            "color": [
+              0.718,
+              0.301,
+              0.122
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.121,
+              "amp": 1.2,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -53.727,
+              10.901,
+              0.708
+            ],
+            "scale": 2.809,
+            "color": [
+              0.983,
+              0.765,
+              0.226
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.464,
+              "amp": 0.38,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -41.049,
+              3.946,
+              -8.757
+            ],
+            "scale": 2.156,
+            "color": [
+              0.817,
+              0.539,
+              0.302
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.121,
+              "amp": 1.0,
+              "axis": "z"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -56.907,
+              4.471,
+              -1.972
+            ],
+            "scale": 1.765,
+            "color": [
+              0.839,
+              0.379,
+              0.053
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.005,
+              "amp": 0.0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "dust_cloud",
+            "pos": [
+              -44.684,
+              4.843,
+              -7.209
+            ],
+            "scale": 1.783,
+            "color": [
+              0.838,
+              0.648,
+              0.333
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 0.097,
+              "amp": 0.8,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "stellar_core",
+            "pos": [
+              -55.134,
+              7.479,
+              -6.044
+            ],
+            "scale": 1.968,
+            "color": [
+              0.941,
+              0.247,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.918,
+              "amp": 0.28,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "solar_flare",
+            "pos": [
+              -38.302,
+              11.686,
+              -4.075
+            ],
+            "scale": 3.523,
+            "color": [
+              0.994,
+              0.701,
+              0.215
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.664,
+              "amp": 0.4,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "gamma_burst",
+            "pos": [
+              -39.107,
+              11.743,
+              -2.224
+            ],
+            "scale": 2.628,
+            "color": [
+              0.967,
+              0.424,
+              0.0
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 0.769,
+              "amp": 0.42,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "radiation_stream",
+            "pos": [
+              -51.049,
+              6.487,
+              -0.353
+            ],
+            "scale": 1.852,
+            "color": [
+              0.951,
+              0.5,
+              0.174
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.945,
+              "amp": 0.0,
+              "axis": "x"
+            }
+          }
+        ],
+        "shape_speed": 0.18
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a1a",
+    "#ff6600",
+    "#ff9944",
+    "#ffaa55",
+    "#ff4400",
+    "#cc3300"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "path",
+    "waypoints": [
+      [
+        -48,
+        0,
+        0
+      ],
+      [
+        -24,
+        8,
+        -12
+      ],
+      [
+        0,
+        -6,
+        0
+      ],
+      [
+        24,
+        10,
+        12
+      ],
+      [
+        48,
+        -4,
+        0
+      ],
+      [
+        36,
+        8,
+        -16
+      ],
+      [
+        12,
+        -10,
+        14
+      ],
+      [
+        -12,
+        12,
+        -10
+      ],
+      [
+        -36,
+        -8,
+        16
+      ],
+      [
+        -48,
+        6,
+        -8
+      ]
+    ],
+    "speed": 0.05,
+    "fov": 46.0,
+    "near": 0.4,
+    "far": 17.0,
+    "max_strokes": 70,
+    "depth": {
+      "mode": "cull"
+    },
+    "orbit_radius": 9.0,
+    "orbit_height": 1.5,
+    "laser_max_strokes": null,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.07,
+    "trail": 0.76,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 48.0,
+    "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.55,
+      "feedback": 0.38,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "deep_bass_drone",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 30,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "unison": 3,
+        "detune": 0.008,
+        "sub": 0.6,
+        "tone": 0.25,
+        "level": 0.38,
+        "pan": 0.0,
+        "env": {
+          "attack": 8.0,
+          "decay": 1.5,
+          "sustain": 0.9,
+          "release": 6.0
+        },
+        "lfo": {
+          "on": false,
+          "dest": "sub",
+          "shape": "sine",
+          "rate": 0.028,
+          "depth": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "resonance": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "warm_pad",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 48,
+        "chord": [
+          0,
+          7,
+          12,
+          19
+        ],
+        "tone": 0.35,
+        "detune": 0.012,
+        "level": 0.71,
+        "pan": -0.15,
+        "env": {
+          "attack": 10.0,
+          "decay": 2.0,
+          "sustain": 0.88,
+          "release": 8.0
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "triangle",
+          "rate": 0.019,
+          "depth": 0.38
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "lfos": [
+          {
+            "on": true,
+            "dest": "level",
+            "shape": "sine",
+            "rate": 0.017,
+            "depth": 0.6
+          }
+        ]
+      },
+      {
+        "name": "ambient_harp",
+        "type": "harp",
+        "note": 60,
+        "scale": [
+          0,
+          3,
+          7,
+          10,
+          14
+        ],
+        "rate": 0.1,
+        "decay": 16.0,
+        "tone": 0.32,
+        "damp": 0.65,
+        "roll": 4.0,
+        "roll_spread": 0.22,
+        "level": 0.33,
+        "pan": 0.2,
+        "drift": 0.25,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "sine",
+          "rate": 0.017,
+          "depth": 0.5
+        },
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "lfos": [
+          {
+            "on": true,
+            "dest": "tone",
+            "shape": "sine",
+            "rate": 0.017,
+            "depth": 0.6
+          },
+          {
+            "on": true,
+            "dest": "pan",
+            "shape": "sine",
+            "rate": 0.036,
+            "depth": 0.6
+          }
+        ]
+      },
+      {
+        "name": "ethereal_air",
+        "type": "noise",
+        "tone": 0.28,
+        "level": 0.19,
+        "pan": -0.25,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.033,
+          "depth": 0.45
+        },
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.432,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 45.0,
+    "filter_sweep_amount": 0.39,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "space dust and solar flares and gamma rays from the sun",
+  "audio_prompt": "5000 degree waves of hot radiation, low bass and warm slow fades",
+  "generation_settings": {
+    "size": 290,
+    "warmth": 1,
+    "energy": 0.15,
+    "evolution": 0.72,
+    "kind": "3d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 5770,
+      "output_tokens": 13910,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0753
+    },
+    "expansion": {
+      "authored": 137,
+      "total": 290
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

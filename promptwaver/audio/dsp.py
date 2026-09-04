@@ -65,6 +65,52 @@ BELL_PARTIAL_RATIOS = np.array([1.0, 1.41, 2.0, 2.37, 3.0])
 BELL_PARTIAL_AMPS = np.array([1.0, 0.55, 0.4, 0.32, 0.22])
 BELL_PARTIAL_AMP_SUM = float(BELL_PARTIAL_AMPS.sum())
 
+#: Struck-instrument voicings for `bell`, as (ratios, amps).
+#:
+#: This is a PARAM, not a new voice type, on INSTRUMENTS.md §0's test: the
+#: rendering shape is unchanged, only the numbers in the partial table move.
+#: §2 is the reason it's free — once `_render_bell_notes` is at (N*P, frames)
+#: resolution, what those P rows contain costs nothing extra. Every entry is
+#: capped at 5 partials because partial count is a linear cost multiplier
+#: (§3), so no character can be more expensive than the original bell.
+#:
+#: The ratios are chosen for musical character, not as physical models: a
+#: struck bar's real mode series runs far above Nyquist for high notes and
+#: would alias. What IS measurable, and what these are tuned against, is
+#: spectral centroid — "brighter" here means a centroid that actually rises.
+#: "bell" is bit-identical to the original table, so every existing scene
+#: sounds exactly as it did.
+BELL_CHARACTERS = {
+    "bell":        (BELL_PARTIAL_RATIOS, BELL_PARTIAL_AMPS),
+    # Near-harmonic and sweet: a struck bar with a resonator under it. The
+    # 2nd/3rd being close to whole multiples is what makes it read as a
+    # definite pitch rather than a clang.
+    "celesta":     (np.array([1.0, 2.01, 3.02, 4.16, 5.42]),
+                    np.array([1.0, 0.62, 0.34, 0.18, 0.10])),
+    # Free-free bar modes, the classic bright metallic spread. Strongly
+    # inharmonic and deliberately top-heavy.
+    "glockenspiel": (np.array([1.0, 2.76, 5.40, 8.93, 11.8]),
+                     np.array([1.0, 0.70, 0.42, 0.22, 0.12])),
+    # Glockenspiel's shape with the top two pulled down and in — the small,
+    # sweet, short sound of a comb tine.
+    "music_box":   (np.array([1.0, 2.76, 5.40, 7.10, 9.20]),
+                    np.array([1.0, 0.48, 0.22, 0.10, 0.05])),
+    # Hollow and slightly detuned-metal: the partials sit between harmonics,
+    # which is the beating that makes a gong or gamelan shimmer.
+    "gamelan":     (np.array([1.0, 2.34, 3.76, 5.10, 7.22]),
+                    np.array([1.0, 0.78, 0.55, 0.36, 0.20])),
+    # A tine with a soft strike: strong fundamental, one bright partial well
+    # above it, very little in between.
+    "tine":        (np.array([1.0, 2.00, 4.02, 6.05, 9.10]),
+                    np.array([1.0, 0.34, 0.46, 0.14, 0.07])),
+}
+BELL_CHARACTER_NAMES = tuple(BELL_CHARACTERS)
+
+#: Full-scale pitch drift, in cents either side of true. 35 is roughly a
+#: third of a semitone at the extreme — clearly audible as instability without
+#: ever sounding like a wrong note.
+MAX_DRIFT_CENTS = 35.0
+
 # --- harp ------------------------------------------------------------------
 # `harp` is `bell`'s renderer with both of bell's defining choices inverted.
 # The partials are HARMONIC (integer multiples of the fundamental, so it reads
@@ -299,11 +345,31 @@ def _partial_count(waveform: str, f0: float, sr: int) -> int:
     return int(max(1, min(fits, _MAX_PARTIALS)))
 
 
-def _wavetable(waveform: str, tone_q: int, n: int) -> np.ndarray:
+#: Resonant peak height at `resonance` 1.0, as a linear gain on the harmonic
+#: sitting at the cutoff.
+#:
+#: 24 is ~+28dB, which sounds like a lot and is not: the gain fights the
+#: SOURCE's own slope. A saw falls as 1/k, so at cutoff harmonic 20 a boost
+#: starts 20x down before the 4-pole rolloff halves it again.
+#:
+#: Measured, an interior local maximum near the cutoff exists at every gain
+#: (that IS the resonance), and it tracks the cutoff correctly — cutoff h14 →
+#: peak h12, h20 → h17, h29 → h25, always slightly below, exactly as a real
+#: resonant lowpass behaves against a falling source spectrum. What the gain
+#: buys is how PRONOUNCED that peak is: at 24 it reaches -1.5dB relative to
+#: the fundamental, which sings. It never exceeds the fundamental on a saw,
+#: and it does not need to.
+RES_PEAK_GAIN = 24.0
+#: Width of the peak, in octaves either side of the cutoff harmonic. Narrow
+#: enough to read as resonance rather than a tilt.
+RES_WIDTH_OCT = 0.45
+
+
+def _wavetable(waveform: str, tone_q: int, n: int, res_q: int = 0) -> np.ndarray:
     """One normalised cycle. Cached: the key space is small in practice (a
     handful of waveforms x quantised tone x partial count), and a scene's
     voices ask for the same table on every block for as long as it plays."""
-    key = (waveform, tone_q, n)
+    key = (waveform, tone_q, n, res_q)
     tbl = _TABLE_CACHE.get(key)
     if tbl is not None:
         return tbl
@@ -318,6 +384,21 @@ def _wavetable(waveform: str, tone_q: int, n: int) -> np.ndarray:
     # a filter knob is expected to.
     kc = 1.0 + tone * (_MAX_PARTIALS - 1)        # cutoff, in harmonic number
     rolloff = 1.0 / (1.0 + (ks / kc) ** 4)
+    # Resonance as a peak in the HARMONIC domain rather than a filter.
+    #
+    # A real resonant filter is a per-sample recursion, which this module
+    # forbids (INSTRUMENTS.md: pure numpy, block-granular, no per-sample Python
+    # loop). But the rolloff above is already an explicit lowpass expressed as
+    # per-harmonic gain, so resonance is just one more term multiplying the
+    # same vector — and because tables are cached by (waveform, tone, n, res),
+    # it costs nothing per block. Gaussian in LOG harmonic number so the peak
+    # keeps its shape in octaves wherever the cutoff sits, which is how a
+    # filter's resonance actually behaves.
+    res = res_q / 100.0
+    if res > 0.0:
+        bump = np.exp(-(np.log2(np.maximum(ks, 1e-9) / kc) ** 2)
+                      / (2.0 * RES_WIDTH_OCT ** 2))
+        rolloff = rolloff * (1.0 + res * (RES_PEAK_GAIN - 1.0) * bump)
     amps = _harmonic_amps(waveform, n) * rolloff
     x = np.arange(_TABLE_N, dtype=np.float64) / _TABLE_N
     tbl = (amps[:, None] * np.sin(2.0 * np.pi * ks[:, None] * x[None, :])).sum(axis=0)
@@ -334,7 +415,7 @@ def _wavetable(waveform: str, tone_q: int, n: int) -> np.ndarray:
 
 
 def _osc(phase: np.ndarray, waveform: str, tone: float = 1.0,
-         f0: float = 0.0, sr: int = SR) -> np.ndarray:
+         f0: float = 0.0, sr: int = SR, resonance: float = 0.0) -> np.ndarray:
     """Bandlimited oscillator from phase in cycles, with a brightness control.
 
     `tone` 1.0 is the full waveform (every harmonic that fits under Nyquist);
@@ -348,7 +429,8 @@ def _osc(phase: np.ndarray, waveform: str, tone: float = 1.0,
     n = _partial_count(waveform, f0, sr)
     if n <= 1:
         return np.sin(2.0 * np.pi * phase)
-    tbl = _wavetable(waveform, int(round(np.clip(tone, 0.0, 1.0) * 100)), n)
+    tbl = _wavetable(waveform, int(round(np.clip(tone, 0.0, 1.0) * 100)), n,
+                     int(round(np.clip(resonance, 0.0, 1.0) * 100)))
     # Linear interpolation between table entries — nearest-neighbour would
     # add its own broadband quantisation hiss, which is the sort of grit this
     # is meant to be removing.
@@ -481,6 +563,11 @@ class Soundscape:
         self._clock = 0                          # absolute sample index
         self._delay = Delay(sr, channels=self.channels)
         self._active_notes: list[dict] = []      # for pluck/arp voices
+        # Pitch-drift walk position per voice, and its generator. Seeded rather
+        # than global so two Soundscapes rendering side by side (the mixer
+        # crossfades two) don't share a stream and correlate their wobble.
+        self._drift_pos: dict[str, float] = {}
+        self._rng = np.random.default_rng()
         self._voice_env: dict[str, Envelope] = {}     # ADSR per enveloped voice
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
         self.spec = {}
@@ -644,6 +731,39 @@ class Soundscape:
             return 2.0 * (h - np.floor(h)) - 1.0
         return np.sin(2.0 * np.pi * x)              # sine (default)
 
+    #: Most modulators one voice may carry. A cap because each is an
+    #: array evaluated per block for the smooth destinations, and because a
+    #: voice with more than this is unreadable in the panel anyway.
+    MAX_VOICE_LFOS = 4
+
+    def _lfos(self, v: dict, n0: int, frames: int) -> dict:
+        """`{destination: (wave, mid, dest, depth)}` for every LFO on a voice.
+
+        A voice may carry `lfo` (one dict, the original shape — every scene
+        ever saved has this) and/or `lfos` (a list). Both are read, so old
+        scenes keep working untouched and new ones can stack modulators.
+
+        Keyed by DESTINATION deliberately: at most one LFO per destination, so
+        every consumption site downstream keeps the exact `lfo[0..3]` tuple it
+        already expects and none of their maths changes. Several destinations
+        at unrelated rates is the point — a slow pan under a slower tone under
+        a slower level is what stops a sustained voice sounding static. Two
+        LFOs fighting over ONE destination is not a musical idea, it is a
+        bug, so the later one simply wins.
+        """
+        out = {}
+        entries = []
+        if isinstance(v.get("lfo"), dict):
+            entries.append(v["lfo"])
+        extra = v.get("lfos")
+        if isinstance(extra, list):
+            entries.extend(e for e in extra if isinstance(e, dict))
+        for cfg in entries[:self.MAX_VOICE_LFOS]:
+            got = self._lfo({"lfo": cfg}, n0, frames)
+            if got is not None:
+                out[got[2]] = got
+        return out
+
     def _lfo(self, v: dict, n0: int, frames: int):
         """(per-sample array, mid-block scalar, config) for this voice's LFO,
         or None when it has none.
@@ -792,10 +912,14 @@ class Soundscape:
             # the voice renders (they pick a wavetable / frequencies / a note
             # schedule); the smooth ones are applied to the finished signal
             # further down.
-            lfo = self._lfo(v, n0, frames)
+            lfos = self._lfos(v, n0, frames)
             rv = v
-            if lfo is not None and lfo[2] in self.LFO_DESTS_STEPPED:
-                rv = self._lfo_apply_stepped(v, lfo[1], lfo[2], lfo[3])
+            for _d in self.LFO_DESTS_STEPPED:
+                _l = lfos.get(_d)
+                if _l is not None:
+                    # Chained: each returns a copy, so several stepped
+                    # destinations stack instead of the last one winning.
+                    rv = self._lfo_apply_stepped(rv, _l[1], _l[2], _l[3])
 
             # Per-voice filter sweep: this voice's share of the scene's sweep,
             # as a swing of its own brightness. Stacks on top of a stepped
@@ -829,7 +953,8 @@ class Soundscape:
                 continue
             mono = mono * gain
             level = float(v.get("level", 0.4))
-            if lfo is not None and lfo[2] == "level":
+            lfo = lfos.get("level")
+            if lfo is not None:
                 # Tremolo, applied per-sample so it stays smooth at any rate.
                 # Unipolar and downward-only: the authored level stays the
                 # ceiling, so turning the LFO on never makes a voice louder
@@ -842,7 +967,8 @@ class Soundscape:
 
             # Per-voice effects (applied after level, before pan/sum)
             distortion = float(v.get("distortion", 0.0))
-            if lfo is not None and lfo[2] == "distortion":
+            lfo = lfos.get("distortion")
+            if lfo is not None:
                 # LFO-modulated distortion: apply per-sample with varying amount
                 _, _, _, depth = lfo
                 dist_amt = np.clip(distortion + depth * lfo[0], 0.0, 1.0)
@@ -869,7 +995,8 @@ class Soundscape:
                 voice_peaks[name] = float(np.max(np.abs(mono)))
 
             pan = float(v.get("pan", 0.0))
-            if lfo is not None and lfo[2] == "pan":
+            lfo = lfos.get("pan")
+            if lfo is not None:
                 # Auto-pan around the authored position, per-sample. Clipped
                 # at the extremes rather than wrapped, so a deep sweep parks
                 # at hard left/right instead of jumping to the other side.
@@ -879,7 +1006,8 @@ class Soundscape:
             # lands here unclamped.
             depth = min(1.0, max(0.0, float(v.get("depth", 0.0))))
             depth = depth + self._swell_depth(name, block_t)
-            if lfo is not None and lfo[2] == "depth":
+            lfo = lfos.get("depth")
+            if lfo is not None:
                 depth = depth + lfo[3] * lfo[0]
             # One clip covers the authored value, the swell and the LFO
             # together — the same "park at the wall rather than wrap" rule
@@ -1049,7 +1177,8 @@ class Soundscape:
         # chord so nothing in it can alias. A chord spanning more than an
         # octave costs its lowest note some upper harmonics; erring that way
         # is right, since the alternative is folded inharmonic tones.
-        out = _osc(ph, wf, tone, float(fu.max()), self.sr).sum(axis=0) / unison
+        out = _osc(ph, wf, tone, float(fu.max()), self.sr,
+                   float(v.get("resonance", 0.0))).sum(axis=0) / unison
         if sub > 0:
             sub_ph = (freqs / 2.0)[:, None] * t[None, :]
             out = out + sub * _osc(sub_ph, "sine").sum(axis=0)
@@ -1090,8 +1219,35 @@ class Soundscape:
     # of it.
     MAX_ACTIVE_BELL_NOTES = 24
 
+    def _drift_factor(self, voice_name: str, drift: float) -> float:
+        """A slow random walk in cents, one step per scheduled note.
+
+        Applied when the note is CREATED and never after — `_osc` derives phase
+        from the absolute sample clock (`ph = fk * t`), so changing a ringing
+        note's frequency jumps its phase and clicks. Detuning at onset instead
+        gives the tape-ish quality (each strike very slightly out of tune with
+        the last, the whole instrument sagging and recovering) with no phase
+        hazard and no extra oscillator rows — every note keeps sharing the
+        deduplicated table, since the multiplier is baked into its stored freq.
+        """
+        if drift <= 0.0:
+            return 1.0
+        pos = self._drift_pos.get(voice_name, 0.0)
+        # Bounded walk: step, then pull back toward centre so it wanders
+        # without ever marching away into a semitone of detune.
+        pos += self._rng.uniform(-1.0, 1.0) * 0.35
+        pos *= 0.82
+        # Clamped so MAX_DRIFT_CENTS is a real bound rather than a typical
+        # value: the walk's steady state can exceed +/-1 on its own (measured
+        # +/-1.003, i.e. 10.53 cents against a stated 10.5 cap), and a
+        # constant that is only usually true is worse than no constant.
+        pos = max(-1.0, min(1.0, pos))
+        self._drift_pos[voice_name] = pos
+        cents = max(0.0, min(1.0, drift)) * MAX_DRIFT_CENTS * pos
+        return float(2.0 ** (cents / 1200.0))
+
     def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay,
-                        tone=1.0):
+                        tone=1.0, drift=0.0, resonance=0.0):
         """Append onsets landing in this block for `voice_name`, then enforce
         the shared MAX_ACTIVE_NOTES cap. `freq_fn(step)` returns the Hz for
         onset index `step`. Shared by both `pluck` (indexes a scale) and `arp`
@@ -1105,8 +1261,9 @@ class Soundscape:
         for onset in range(first, end, interval):
             step = onset // interval
             self._active_notes.append(dict(
-                start=onset, freq=freq_fn(step), wf=wf, decay=decay,
-                voice=voice_name, tone=tone))
+                start=onset, freq=freq_fn(step) * self._drift_factor(voice_name, drift),
+                wf=wf, decay=decay, voice=voice_name, tone=tone,
+                resonance=resonance))
         if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
             # evict oldest first — inaudible in an ambient context, and far
             # cheaper than letting render cost keep climbing
@@ -1133,7 +1290,8 @@ class Soundscape:
             # so each gets partials sized to its own pitch — a low pluck keeps
             # its harmonics instead of being capped by the highest note.
             out += (env * _osc(ph, note["wf"], note.get("tone", 1.0),
-                               note["freq"], self.sr)).astype(np.float32)
+                               note["freq"], self.sr,
+                               note.get("resonance", 0.0))).astype(np.float32)
         self._active_notes = alive
         return out * 0.6
 
@@ -1155,7 +1313,12 @@ class Soundscape:
             semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
             return midi_to_hz(root + semi)
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
+        # `.get` with defaults, because this line is shared by _render_pluck
+        # and _render_arp — and an arp runs on a pad/osc voice, which carries
+        # neither key unless _normalise gated it in.
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone,
+                             drift=float(v.get("drift", 0.0)),
+                             resonance=float(v.get("resonance", 0.0)))
         return self._render_note_events(v["name"], n0, frames)
 
     def _render_bell(self, v, n0, frames):
@@ -1180,10 +1343,12 @@ class Soundscape:
             semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
             return midi_to_hz(root + semi)
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay, tone)
-        return self._render_bell_notes(v["name"], n0, frames, tone)
+        character = str(v.get("character", "bell"))
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay, tone,
+                             drift=float(v.get("drift", 0.0)))   # bell: sine, no table
+        return self._render_bell_notes(v["name"], n0, frames, tone, character)
 
-    def _render_bell_notes(self, voice_name, n0, frames, tone):
+    def _render_bell_notes(self, voice_name, n0, frames, tone, character="bell"):
         """Batched partial-bank renderer for `bell`. Same technique as
         `_render_pad` — flatten (note x partial) into one 1D combo array,
         build a 2D phase matrix, one `_osc()` call, weighted sum — extended
@@ -1216,8 +1381,8 @@ class Soundscape:
         # tone brightens/dulls the fixed partial table, same spirit as pad's
         # tone-driven rolloff — it doesn't change WHICH partials ring, only
         # how loud the upper ones are relative to the fundamental.
-        ratios = BELL_PARTIAL_RATIOS
-        amps = BELL_PARTIAL_AMPS * (max(tone, 0.05) ** np.arange(len(BELL_PARTIAL_RATIOS)))
+        ratios, base_amps = BELL_CHARACTERS.get(character, BELL_CHARACTERS["bell"])
+        amps = base_amps * (max(tone, 0.05) ** np.arange(len(ratios)))
         n_partials = len(ratios)
 
         fk = (freqs[:, None] * ratios[None, :]).ravel()            # (N*P,)
@@ -1228,7 +1393,7 @@ class Soundscape:
 
         env_rep = np.repeat(env, n_partials, axis=0)                # (N*P, frames)
         out = (ak[:, None] * env_rep * osc_out).sum(axis=0)
-        out = (out / BELL_PARTIAL_AMP_SUM).astype(np.float32)
+        out = (out / max(float(base_amps.sum()), 1e-9)).astype(np.float32)
 
         # Prune: same eviction rule as _render_note_events (age at the end of
         # this block vs. the note's own un-floored decay*6), vectorised.
@@ -1507,7 +1672,12 @@ class Soundscape:
         def freq_fn(step):
             return midi_to_hz(root + self._arp_note(chord, mode, step))
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone)
+        # `.get` with defaults, because this line is shared by _render_pluck
+        # and _render_arp — and an arp runs on a pad/osc voice, which carries
+        # neither key unless _normalise gated it in.
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone,
+                             drift=float(v.get("drift", 0.0)),
+                             resonance=float(v.get("resonance", 0.0)))
         return self._render_note_events(v["name"], n0, frames)
 
     def _render_noise(self, v, frames):
@@ -1666,9 +1836,15 @@ def _coerce(field, value):
         return bool(value)
     if field == "waveform":
         return str(value)
+    if field == "character":
+        # Validated here as well as in `_normalise`, because `set_param`
+        # bypasses normalisation entirely (INSTRUMENTS.md §6) — a live UI or
+        # MIDI write lands straight in the spec and then gets SAVED there.
+        c = str(value)
+        return c if c in BELL_CHARACTERS else "bell"
     if field == "tempo":
         return float(value)
-    if field in ("arp", "chord", "scale", "env", "lfo", "compress"):
+    if field in ("arp", "chord", "scale", "env", "lfo", "lfos", "compress"):
         return value            # dict / list — passed through, clamped by _normalise
     return float(value)
 
@@ -1771,6 +1947,34 @@ def _normalise(spec: dict) -> dict:
             v["roll_spread"] = _clamp(v.get("roll_spread"), 0.03, 0.4, 0.07)
         else:
             v["decay"] = _clamp(v.get("decay"), 0.05, 6.0, 1.2)
+        # Bell-only, and gated for the same library-churn reason as harp's
+        # fields above. An unknown name falls back to the original bell rather
+        # than erroring, so a scene from a future/edited spec still plays.
+        # `lfos` (the multi-modulator list) is bounded here rather than
+        # validated field-by-field, matching how single `lfo` is handled: its
+        # rate/depth/dest are clamped on READ in `_lfo`. What _normalise must
+        # do is stop an unbounded list reaching the saved file — this output
+        # is what gets written to scenes/<name>.json. Absent stays absent, so
+        # no existing scene gains the key.
+        if isinstance(v.get("lfos"), list):
+            kept = [e for e in v["lfos"] if isinstance(e, dict)][:Soundscape.MAX_VOICE_LFOS]
+            if kept:
+                v["lfos"] = kept
+            else:
+                v.pop("lfos", None)
+        if v["type"] == "bell":
+            ch = str(v.get("character", "bell"))
+            v["character"] = ch if ch in BELL_CHARACTERS else "bell"
+        # Drift is only read by the note-scheduling voices — the continuous
+        # ones derive phase from the absolute clock and cannot be detuned
+        # mid-stream without a click (see _drift_factor).
+        if v["type"] in ("pluck", "bell", "harp"):
+            v["drift"] = _clamp(v.get("drift"), 0.0, 1.0, 0.0)
+        # Resonance only means something where a wavetable is involved: `pad`
+        # and `bell` build their own partials from sines, so they have no
+        # cutoff to resonate at. Gated so those voices gain no key on save.
+        if v["type"] in ("osc", "pluck", "arp"):
+            v["resonance"] = _clamp(v.get("resonance"), 0.0, 1.0, 0.0)
         v["unison"] = int(_clamp(v.get("unison"), 1, 7, 1))
         v["sub"] = _clamp(v.get("sub"), 0.0, 1.0, 0.0)
         v["distortion"] = _clamp(v.get("distortion"), 0.0, 1.0, 0.0)

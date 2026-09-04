@@ -28,6 +28,50 @@ the same method has nowhere to put.
 Adding a param costs one line in `_normalise` and one in the UI. Adding a type
 costs everything below. Be sure.
 
+**Worked example — `character` and `drift` (2026-09).** A brief for "brighter,
+sweeter instruments" sounds like several new voice types and is none. Both
+shipped as params:
+
+- `character` swaps `bell`'s partial table for one of six voicings (celesta,
+  glockenspiel, music box, gamelan, tine). The rendering shape is untouched —
+  §2's "once you are at `(N*P, frames)` resolution, per-partial behaviour is
+  free" is exactly this case. Measured spectral centroid 1547 Hz (bell) to
+  2556 Hz (gamelan), a 1.0–1.65x spread, at **no cost change**: 5.01ms vs
+  4.82ms a block at default density, against a 5–8ms library baseline. One
+  param turned one instrument into six.
+- `drift` detunes each note by a slow bounded random walk. Note the constraint
+  that decided its shape: `_osc` derives phase from the absolute sample clock
+  (`ph = fk * t`), so retuning a *ringing* note jumps its phase and clicks.
+  Applying it at **schedule** time instead is free, click-free, and keeps every
+  note in the deduplicated `(frequency, tau)` table.
+
+**Worked example 2 — `resonance` and multiple LFOs (2026-09).** A brief for
+"less drone, more evolving synth" also turned out to need no new voice type.
+
+- `resonance` adds a peak at the cutoff the rolloff in `_wavetable` already
+  defines. A real resonant filter is a per-sample recursion, which this module
+  forbids — but that rolloff is already per-harmonic gain, so resonance is one
+  more term on the same vector, and tables are cached by
+  `(waveform, tone, n, res)` so it costs nothing per block (1.41ms → 1.31ms,
+  i.e. noise). **Measure the peak, not the centroid**: resonance *narrows*
+  centroid swing (3.87x → 2.70x under a filter sweep) because it keeps high
+  energy present at the dark end. The right measure is an interior local
+  maximum that tracks the cutoff — cutoff h14 → peak h12, h20 → h17, h29 →
+  h25, always slightly below, as a real filter behaves against a falling
+  source. Note the gain has to fight the source's own slope: a saw falls as
+  1/k, so +12dB read as a tilt and +28dB was needed to sing.
+- Multiple LFOs per voice: `lfos` is a LIST beside the original single `lfo`,
+  and `_lfos` returns them **keyed by destination**. Keying by destination is
+  what kept the change small — every one of the six consumption sites still
+  gets the same `lfo[0..3]` tuple and none of their maths changed. Cost 1.16ms
+  → 3.40ms at the cap of four, still inside the library band.
+
+Two lessons worth carrying: the cheap lever is usually the partial table or the
+onset, not a new renderer; and if you state a bound in a constant, test it —
+`MAX_DRIFT_CENTS` was initially only *typically* true (the walk's steady state
+reached ±1.003, i.e. 10.53 cents against a stated 10.5) until the walk position
+was clamped.
+
 ## 1. The two rendering shapes
 
 Every voice is one of these. Pick deliberately — this is the decision the rest
@@ -241,8 +285,14 @@ inaudible, unselectable, or invisible.
 | `dsp.py` `VOICE_TYPES` | add the name |
 | `dsp.py` `Soundscape.render` | the `elif vt == "..."` dispatch branch |
 | `dsp.py` `_normalise` | clamp every new param, with defaults |
+| `dsp.py` `_coerce` | **any non-float param** — it `float()`s everything it doesn't know |
 | `claude_director.py` `_SOUNDSCAPE_GUIDE` | so the director can select it |
 | `web/static/index.html` (`#voices` panel) | knobs for the new params |
+
+`_coerce` is the one that bites, because it only fails on a LIVE edit — the
+voice renders fine from a saved scene and then throws `could not convert string
+to float` the moment someone touches the control. It was missing from this
+table until `character` (a string param, like `waveform`) hit it.
 
 `_SOUNDSCAPE_GUIDE` is shared by the 3D and 2D system prompts, so it is one
 edit, not two. Without it the voice exists but no generated scene will ever
