@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import threading
 import time
 
 from aiohttp import web, WSMsgType
@@ -473,3 +474,82 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
 
 def run(engine, host="0.0.0.0", port=8080):
     web.run_app(make_app(engine), host=host, port=port, print=None)
+
+
+class ServerHandle:
+    """A server running on its own thread, so something else can own the main one.
+
+    `web.run_app` is blocking and installs signal handlers, both of which
+    assume it IS the program. A desktop window can't live with that — Tk must
+    be on the main thread on every platform and is outright unsafe off it on
+    macOS — so the GUI build drives the lower-level runner/site API here
+    instead, on a private event loop.
+
+    Nothing else changes: the app object, the routes and the broadcaster are
+    exactly the ones `run()` uses, so the windowed and headless builds cannot
+    drift apart.
+    """
+
+    def __init__(self, engine, host: str, port: int):
+        self.engine = engine
+        self.host = host
+        self.port = port
+        self.error: BaseException | None = None
+        self._app = None
+        self._loop = None
+        self._runner = None
+        self._ready = threading.Event()
+        self._thread = threading.Thread(target=self._serve, daemon=True,
+                                        name="promptwaver-web")
+
+    def start(self, timeout: float = 15.0) -> bool:
+        """Begin serving; True once it is actually listening.
+
+        Waits for the bind rather than returning optimistically — a window
+        that says "running" over a server that failed to start is worse than
+        no window.
+        """
+        self._thread.start()
+        self._ready.wait(timeout)
+        return self.error is None and self._runner is not None
+
+    def _serve(self):
+        try:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+            self._app = make_app(self.engine)
+            self._runner = web.AppRunner(self._app)
+            self._loop.run_until_complete(self._runner.setup())
+            site = web.TCPSite(self._runner, self.host, self.port)
+            self._loop.run_until_complete(site.start())
+        except BaseException as e:            # noqa: BLE001 — reported, not swallowed
+            self.error = e
+            self._ready.set()
+            return
+        self._ready.set()
+        try:
+            self._loop.run_forever()
+        finally:
+            try:
+                self._loop.run_until_complete(self._runner.cleanup())
+            except Exception:
+                pass
+            self._loop.close()
+
+    def clients(self) -> int:
+        """How many browser tabs/windows are attached right now."""
+        try:
+            return len(self._app["clients"]) if self._app is not None else 0
+        except Exception:
+            return 0
+
+    def stop(self, timeout: float = 5.0):
+        if self._loop is not None and self._loop.is_running():
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join(timeout)
+
+
+def serve_in_thread(engine, host="0.0.0.0", port=8080) -> ServerHandle:
+    handle = ServerHandle(engine, host, port)
+    handle.start()
+    return handle

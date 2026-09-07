@@ -40,7 +40,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y portaudio19-dev libsndfile1-dev
+          # python3-tk so PyInstaller can bundle tkinter for the desktop
+          # window (promptwaver/gui.py). Windows and macOS ship Tk with
+          # Python; only Linux splits it into a separate package, and without
+          # it the Linux binary silently falls back to console-only.
+          sudo apt-get install -y portaudio19-dev libsndfile1-dev python3-tk
 
       - name: Install dependencies
         run: |
@@ -65,6 +69,7 @@ jobs:
         run: |
           pyinstaller --onefile --name promptwaver \
             --collect-all aiohttp --collect-all numpy --hidden-import=anthropic \
+            --hidden-import=tkinter --hidden-import=tkinter.ttk \
             --add-data "promptwaver/web/static:promptwaver/web/static" \
             --add-data "scenes:scenes" \
             --add-data "about.md:." \
@@ -76,6 +81,7 @@ jobs:
         run: >
           pyinstaller --onefile --name promptwaver
           --collect-all aiohttp --collect-all numpy --hidden-import=anthropic
+          --hidden-import=tkinter --hidden-import=tkinter.ttk
           --add-data "promptwaver/web/static;promptwaver/web/static"
           --add-data "scenes;scenes"
           --add-data "about.md;."

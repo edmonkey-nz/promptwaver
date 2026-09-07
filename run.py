@@ -127,10 +127,73 @@ logging.getLogger("aiohttp").setLevel(logging.ERROR)
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+DEFAULT_WEB_PORT = 8080
+PORT_SCAN = 12          # how far past the default to look for a free one
+
+
+def _port_free(host: str, port: int) -> bool:
+    """Can we actually bind here? Asked before the engine is built.
+
+    aiohttp only discovers this at `site.start()`, by which point the render
+    thread, the synth and the MIDI port are already running — so the failure
+    arrived as a traceback after a successful-looking startup.
+    """
+    import socket
+    fam = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(fam, socket.SOCK_STREAM) as sk:
+        sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sk.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def _resolve_port(host: str, requested: int | None) -> int:
+    """The port to actually serve on, or exit with something readable.
+
+    The overwhelmingly likely cause of a busy default port is another copy of
+    PromptWaver already running — which is exactly what happened to the first
+    packaged build anyone ran: the app was up and serving, the second launch
+    failed, and the only evidence was `[Errno 98]` at the bottom of a
+    fourteen-frame traceback.
+    """
+    if requested is not None:
+        if _port_free(host, requested):
+            return requested
+        msg = (f"Port {requested} is already in use, so PromptWaver cannot start "
+               f"there.\nIf that is another copy of PromptWaver, open "
+               f"http://localhost:{requested} to use it, or close it first.\n"
+               f"Otherwise pick a different port:  --web-port {requested + 1}")
+        _note(f"port {requested} busy and explicitly requested — stopping")
+        _note(msg)
+        print(f"\n{msg}\n", file=sys.stderr)
+        raise SystemExit(2)
+
+    for port in range(DEFAULT_WEB_PORT, DEFAULT_WEB_PORT + PORT_SCAN):
+        if _port_free(host, port):
+            if port != DEFAULT_WEB_PORT:
+                note = (f"port {DEFAULT_WEB_PORT} is in use (probably another "
+                        f"copy of PromptWaver) — using {port} instead")
+                _note(note)
+                print(f"[promptwaver] {note}")
+            return port
+    msg = (f"Ports {DEFAULT_WEB_PORT}-{DEFAULT_WEB_PORT + PORT_SCAN - 1} are all in "
+           f"use. Close whatever is using them, or pass --web-port <n>.")
+    _note(msg)
+    print(f"\n{msg}\n", file=sys.stderr)
+    raise SystemExit(2)
+
+
 def parse_args():
     ap = argparse.ArgumentParser(description="PromptWaver — immersive laser + synth instrument")
     ap.add_argument("--headless", action="store_true", help="run without the browser control surface")
-    ap.add_argument("--web-port", type=int, default=8080)
+    # default=None, not 8080, so `main` can tell "the user asked for this port"
+    # from "nobody said" — see _resolve_port. Asking for a busy port is an
+    # error; not asking and finding the default busy is not.
+    ap.add_argument("--web-port", type=int, default=None,
+                    help=f"web UI port (default {DEFAULT_WEB_PORT}; if that is "
+                         f"taken and you did not ask for it, the next free one is used)")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--laser", action="store_true", help="enable Helios DAC output")
     ap.add_argument("--no-audio", action="store_true", help="disable the synth")
@@ -153,6 +216,12 @@ def parse_args():
     # Kiosk mode is a runtime toggle (Settings > Kiosk) persisted in
     # settings.json; these only override it at startup, for an installation
     # that should boot straight into it.
+    # A packaged build has no terminal, so it gets a window by default; a
+    # checkout has one, so it does not. Either can be forced.
+    ap.add_argument("--gui", dest="gui", action="store_true", default=None,
+                    help="show the desktop window (default in packaged builds)")
+    ap.add_argument("--no-gui", dest="gui", action="store_false",
+                    help="never show the desktop window; run in the terminal only")
     ap.add_argument("--kiosk", dest="kiosk", action="store_true", default=None,
                     help="arm public kiosk mode at startup (overrides the saved setting)")
     ap.add_argument("--no-kiosk", dest="kiosk", action="store_false",
@@ -172,6 +241,13 @@ def main():
         for n in names:
             print(n)
         return
+    # Before the engine: building it starts the render thread, the synth and
+    # the MIDI port, and none of that should happen only to die on a bind.
+    web_port = args.web_port
+    if not args.headless:
+        web_port = _resolve_port(args.host, args.web_port)
+        _note(f"port {web_port} is free")
+
     # Writable data lives beside the executable, never in the bundle — see
     # promptwaver/paths.py. On a packaged build's first run the shipped scene
     # library is copied out so there is something to play.
@@ -212,16 +288,57 @@ def main():
         if not ok:
             print("[promptwaver] kiosk NOT armed — running as a normal instrument")
     if not args.headless:
-        print(f"[promptwaver] open http://localhost:{args.web_port}")
+        print(f"[promptwaver] open http://localhost:{web_port}")
         if engine.kiosk.enabled:
-            print(f"[promptwaver] kiosk screen: http://localhost:{args.web_port}/kiosk")
-        _note(f"starting web server on {args.host}:{args.web_port}")
-        try:
-            run_web(engine, host=args.host, port=args.web_port)
-        except (KeyboardInterrupt, SystemExit):
-            pass
-        finally:
-            engine.stop()
+            print(f"[promptwaver] kiosk screen: http://localhost:{web_port}/kiosk")
+        want_gui = args.gui if args.gui is not None else bool(getattr(sys, "frozen", False))
+        url = f"http://localhost:{web_port}"
+
+        if want_gui:
+            from promptwaver import gui
+            if not gui.available():
+                _note("tkinter unavailable — falling back to the console")
+                print("[promptwaver] no desktop window available (tkinter missing); "
+                      "press Ctrl-C to stop")
+                want_gui = False
+
+        if want_gui:
+            # Server on a worker thread, Tk on the main one — Tk requires the
+            # main thread and macOS enforces it. See promptwaver/gui.py.
+            from promptwaver.web import serve_in_thread
+            _note(f"starting threaded web server on {args.host}:{web_port}")
+            handle = serve_in_thread(engine, host=args.host, port=web_port)
+            if handle.error is not None:
+                raise handle.error
+            _note("web server listening; opening the window")
+            import promptwaver as _pw
+            shown = gui.run(engine, handle, url, _pw.__version__,
+                            on_quit=lambda: (_note("quit from the window"),
+                                             handle.stop(), engine.stop()))
+            if not shown:
+                # Tk imported but could not open a display — keep serving
+                # rather than exiting, and say how to stop.
+                _note("no display; serving headless until Ctrl-C")
+                print(f"[promptwaver] no display for the window — serving at {url}; "
+                      f"press Ctrl-C to stop")
+                try:
+                    while True:
+                        import time
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    pass
+                finally:
+                    handle.stop()
+                    engine.stop()
+            _note("window closed")
+        else:
+            _note(f"starting web server on {args.host}:{web_port}")
+            try:
+                run_web(engine, host=args.host, port=web_port)
+            except (KeyboardInterrupt, SystemExit):
+                pass
+            finally:
+                engine.stop()
     else:
         print("[promptwaver] running headless; Ctrl-C to stop")
         try:

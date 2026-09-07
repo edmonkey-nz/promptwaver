@@ -7,6 +7,53 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
+
+## [0.79.1]
+
+### A window, so the app can be quit without a terminal
+
+0.79.0 made the executables run; it did not make them usable. A double-clicked
+binary opens no window, so there is nothing to look at, nothing to click, and
+no way to stop it short of Task Manager or `pkill` — the first packaged build
+was serving happily while looking, to the person who launched it, exactly like
+nothing had happened.
+
+`promptwaver/gui.py` is a small **tkinter** window: the URL as a clickable
+link, an Open in browser button, a live status line (scene, fps, how many
+browser windows are connected, whether Claude is reachable) and Quit. tkinter
+because it is standard library on all three platforms and needs no PyInstaller
+hook — pywebview or Qt would each be another wheel per platform for four
+labels. Shown by default in packaged builds only; `--gui`/`--no-gui` override.
+
+**macOS decided the threading.** Tk must own the main thread there and Cocoa
+enforces it, but `web.run_app` is blocking and installs signal handlers, so it
+assumes it is the program. `web.ServerHandle` / `serve_in_thread` runs the
+server on a worker thread via AppRunner + TCPSite on its own event loop, and
+the window keeps the main thread. Both paths build the same app object.
+
+Failures degrade rather than stop: no tkinter (a Linux Python without
+`python3-tk`, now installed in CI) falls back to the console; tkinter with no
+display keeps serving headless.
+
+### Ports are resolved before the engine starts
+
+aiohttp only discovers a busy port at `site.start()`, by which point the render
+thread, the synth and the MIDI port are all running — so a second launch
+reported `[Errno 98]` under a fourteen-frame traceback, after a startup that
+had looked successful. `--web-port` now defaults to `None`, so an explicitly
+requested port that is busy is an error with a readable message, while a busy
+default simply scans on to the next free port and says which it took.
+
+### Known limitation: no speech recognition in the downloads
+
+Kiosk mode's transcription needs `faster-whisper`, which is **not** in the
+released binaries: it pulls in `av`, `onnxruntime` and `ctranslate2` and took a
+test bundle past 500MB against the ~160MB release, for a feature most people
+never arm. Everything else in kiosk mode works in a packaged build; only
+microphone-to-text is missing, and it now says so in words that suit whoever
+is reading — a checkout is told the pip install, a binary is told to run from
+source, since pip cannot reach inside a frozen app.
+
 ## [0.79.0]
 
 ### The packaged executables never worked, and now do

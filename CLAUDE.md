@@ -74,6 +74,48 @@ development — which is exactly why it shipped broken twice over:
 against `--specpath` (default: the working directory), so they work in CI but
 need absolute paths if you pass an explicit `--specpath`.
 
+**A packaged build shows a desktop window; a checkout does not.** `run.py`
+defaults `--gui` to `sys.frozen`, because a checkout already has a terminal and
+a double-clicked binary has nothing at all — no window, no way to quit short of
+Task Manager or `pkill`, and a console that closes before an error is readable.
+`promptwaver/gui.py` is four labels and two buttons in **tkinter**, chosen
+because it is stdlib on all three platforms and needs no PyInstaller hook; only
+Linux splits it out, hence `python3-tk` in the workflow's apt step.
+
+**The window owns the main thread and the server does not.** Tk requires the
+main thread and macOS enforces it, so the GUI path uses
+`web.ServerHandle`/`serve_in_thread` (AppRunner + TCPSite on a private loop)
+instead of `web.run_app`, which is blocking and installs signal handlers.
+Both paths build the same app object, so windowed and headless cannot drift.
+The status line polls cheap attributes from Tk's own `after()` timer rather
+than calling `engine.state()` — that assembles the whole broadcast payload and
+is already being built 20x a second.
+
+Every failure degrades rather than stops: no tkinter → console with a message;
+tkinter but no display → keeps serving headless. A missing window must never be
+why the instrument won't start.
+
+**Resolve the port BEFORE building the engine.** aiohttp only discovers a busy
+port at `site.start()`, by which point the render thread, synth and MIDI port
+are running — so a port clash arrived as a traceback after a successful-looking
+startup. `--web-port` now defaults to `None` so `_resolve_port` can tell "the
+user asked for this port" (busy is an error, with a readable message) from
+"nobody said" (busy scans on to the next free one). The first packaged build
+anyone ran hit exactly this: it was up and serving, the second launch failed,
+and the only evidence was `[Errno 98]` under a fourteen-frame traceback.
+
+**The released binaries deliberately omit speech recognition.** CI installs
+no `faster-whisper`, so kiosk mode's transcription is unavailable in a
+downloaded build — `KioskSession.enable()` refuses and says so, with a message
+that changes by audience (`paths.frozen()`): from a checkout it names the pip
+install, from a binary it says to run from source, because pip cannot reach
+inside a frozen app. The reason is size: faster-whisper drags in `av`,
+`onnxruntime` and `ctranslate2`, which took a local test bundle past 500MB
+against the ~160MB release, for a feature most people never arm. Everything
+else in kiosk mode works in a packaged build — only the microphone-to-text step
+is missing. Revisit by adding `pip install faster-whisper` to the workflow's
+install step and accepting the download size.
+
 **`error.txt` is the field diagnostic.** `run.py` writes a breadcrumb per
 startup step beside the executable, the full traceback on any unhandled
 exception, and holds the console open on a frozen build. Written per-line and

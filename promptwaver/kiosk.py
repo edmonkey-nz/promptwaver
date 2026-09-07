@@ -360,6 +360,18 @@ class KioskSession:
         try:
             from faster_whisper import WhisperModel
         except Exception:
+            # Two different audiences. From a checkout the fix is a pip
+            # install; inside a packaged binary it is not installable at all —
+            # the release builds deliberately leave faster-whisper out, because
+            # it drags in av, onnxruntime and ctranslate2 and multiplies the
+            # download size for a feature most people never arm. Telling a
+            # packaged user to "pip install" would send them somewhere that
+            # cannot work.
+            from .paths import frozen
+            if frozen():
+                return False, ("speech recognition is not included in the "
+                               "downloadable build — run PromptWaver from "
+                               "source to use kiosk mode")
             return False, ("faster-whisper is not installed — "
                            "pip install 'faster-whisper'")
         try:
