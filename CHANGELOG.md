@@ -7,6 +7,96 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
+## [0.79.0]
+
+### The packaged executables never worked, and now do
+
+The binary died on startup before printing anything, so the console closed too
+fast to read the error. Two bugs, both invisible from a checkout because every
+path resolves to the repo root there:
+
+- **No data was bundled.** The PyInstaller command carried no `--add-data`, so
+  the web UI, `about.md`/`welcome.md` and the scene library were simply absent
+  from the binary. `_STATIC` did not exist, and aiohttp's `add_static` raises
+  `ValueError: does not exist` inside `make_app()` — before the server starts.
+- **Writable paths pointed into the bundle.** `settings.json`, the scene
+  library and the director cache resolved to `sys._MEIPASS`, PyInstaller's
+  temp directory, which is **deleted when the process exits**. Even once it
+  started, every saved scene and the API key went with it.
+
+`promptwaver/paths.py` now separates the two roots — `bundle_dir()` for shipped
+assets, `data_dir()` beside the executable for anything written, falling back
+to `~/.promptwaver` where the app is installed somewhere unwritable. A packaged
+build seeds the scene library beside itself on first run. Verified with a real
+one-file build: all four routes serve and 52 scenes install themselves.
+
+**`error.txt`** is written beside the executable: a breadcrumb per startup
+step, then the full traceback on any unhandled exception, and the console is
+held open on a frozen build. Flushed per line, because a crash inside a native
+audio or MIDI library leaves no Python traceback and the last breadcrumb is
+then the only evidence. Installed above the `promptwaver` imports, since an
+import failure is one of the things it exists to diagnose.
+
+### Kiosk mode
+
+A runtime toggle (Settings > Kiosk) turning the app into a public installation:
+one button on `/kiosk`, the visitor speaks a prompt, and their world crossfades
+in over an attract scene. Speech-to-text is **local** (faster-whisper) — the
+visitor's audio never leaves the machine, only the transcribed text is sent.
+
+- Recording taps the microphone stream `AudioAnalysis` already opened and was
+  discarding, so there is no browser permission prompt and no HTTPS constraint.
+- A transcript confirmation step (*"You said…"* / Build this / Say it again)
+  before anything is generated, because Whisper invents confident sentences out
+  of silence — measured: 2.5s of an empty room produced *"My turn. I'll tell
+  you that…"* and bought a real scene. Three guards now sit in front of that.
+- `/kiosk-settings` tunes what a visitor's prompt asks for: interpretation
+  (literal↔abstract), exclude human figures, scene size, effort, warmth/energy/
+  evolution, plus free operator text appended to every prompt — and how it
+  looks: shape speed, glow, glow variation, trails. Visitor scenes are archived
+  to a gitignored `scenes/kiosk/` with a review-and-delete panel.
+- The kiosk deliberately does **not** read the director cache: the prompts most
+  likely to collide are short common ones, which are also the likeliest to have
+  produced a weak scene, and a poor result would stick to that phrase forever.
+- While armed, operator commands are restricted to loopback — the websocket has
+  no authentication and an installation is usually on a venue network.
+
+### Instruments: brighter and less static
+
+- **`bell` gains a `character`** — `celesta`, `glockenspiel`, `music_box`,
+  `gamelan`, `tine` alongside the original. A param, not a new voice type: the
+  partial table already renders at `(note × partial)` resolution, so measured
+  spectral centroid spans 1547–2556 Hz at no cost change (5.01ms vs 4.82ms a
+  block).
+- **`resonance`** on `osc`/`pluck` puts a real peak at the tone cutoff instead
+  of a plain rolloff. Free — the rolloff was already per-harmonic gain and the
+  tables are cached.
+- **Several LFOs per voice** via a `lfos` list beside the original `lfo`, keyed
+  by destination, so a voice can move pan, tone and level at unrelated rates.
+- **`drift`** detunes each note as it is struck, for tape-ish instability.
+- The director is now told a drone is a scene that never changes, and pointed
+  at the 15s envelope ceiling and 30–120s swell periods it always had.
+
+### Performance
+
+`bikes` (330 nodes) rendered at 59.2ms against a 22.2ms budget — 70% dropped
+ticks and audible audio dropout, since an overrunning render thread starves the
+audio producer through the GIL. Now **14.0ms**, 0% dropped:
+
+- **Lateral frustum reject** in the projection. 57% of clip calls returned
+  nothing: strokes in front of the camera and inside `far` but off to one side,
+  where the depth-only early-out could not see them. Bit-identical output.
+- **Batched look-at projection** — transform, distances and bounds done once
+  over the concatenated frame. ~1.8x on every 3D scene. Not bit-identical:
+  `reduceat` sums sequentially where `.sum` is pairwise, which reorders
+  near-ties; the *set* of strokes drawn is identical on 6 of 7 scenes and draw
+  order is invisible under additive blending.
+- **Adaptive frame rate** — full `fps` only when a beam is live, `idle_fps`
+  (24) otherwise, since the browser receives a fixed ~20Hz broadcast and over
+  half of every frame was being computed and discarded.
+- Generated scenes are re-paced deterministically: camera speed clamped to
+  0.03–0.15, `far` capped at 28, swell stretched 1.3x, and `max_strokes` capped
+  by node count (ceiling 90) — strokes are what cost, not nodes.
 
 ## [0.78.4]
 

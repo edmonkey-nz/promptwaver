@@ -31,3 +31,6 @@ Thumbs.db
 
 # Node (only present if jsdom or similar dev tooling was installed locally)
 node_modules/
+
+# Startup/crash log written beside the executable (see run.py)
+error.txt

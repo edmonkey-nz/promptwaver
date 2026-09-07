@@ -10,8 +10,12 @@ from __future__ import annotations
 import json
 import os
 
-_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                     "settings.json")
+# data_dir(), not this file's directory: in a packaged build that directory is
+# PyInstaller's temp bundle, which is deleted on exit — the API key and every
+# rig setting would be gone every time the app closed.
+from .paths import data_dir
+
+_PATH = os.path.join(data_dir(), "settings.json")
 
 
 def load() -> dict:

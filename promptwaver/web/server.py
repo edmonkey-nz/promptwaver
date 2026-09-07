@@ -25,8 +25,12 @@ import time
 from aiohttp import web, WSMsgType
 
 _STATIC = os.path.join(os.path.dirname(__file__), "static")
-# promptwaver/web/server.py -> the repo root, where about.md and settings.json live
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Read-only docs shipped with the app. bundle_dir() is the repo root from a
+# checkout and PyInstaller's unpack directory in a packaged build, which is
+# where --add-data puts them.
+from ..paths import bundle_dir
+
+_PROJECT_ROOT = bundle_dir()
 
 
 def make_app(engine) -> web.Application:

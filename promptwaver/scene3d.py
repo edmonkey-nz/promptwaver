@@ -439,6 +439,28 @@ class Camera:
             if z.max() <= self.near or (cull and z.min() >= self.far):
                 continue
 
+            # LATERAL reject — the other half of the depth skip above.
+            #
+            # Measured on `bikes` (330 nodes, max_strokes 120): 277 clip calls
+            # a frame of which 157 (57%) returned NOTHING. Those strokes are in
+            # front of the camera and inside `far`, so the depth test passes,
+            # but they sit entirely off to one side — and each cost a full clip
+            # pipeline to discover it. That was ~40% of the frame.
+            #
+            # Sound because a perspective projection maps lines to lines: if
+            # every vertex of a polyline lands beyond one edge of the [-1,1]
+            # box, so does every point between them. Only applied when the
+            # whole stroke is in front of the near plane, since one crossing it
+            # has no single meaningful projection. Written `x*k > z` rather
+            # than `x/z*k > 1` to keep a divide out of the hot path — `zc` is
+            # positive here, so the inequality direction is preserved.
+            if z.min() > self.near:
+                zc = np.maximum(z, 1e-3)
+                kx = f / self.aspect
+                if ((x * kx > zc).all() or (x * kx < -zc).all()
+                        or (y * f > zc).all() or (y * f < -zc).all()):
+                    continue
+
             seg = _clip_and_project(x, y, z, f, self.near, self.far,
                                     self.aspect, self.depth, cull=cull)
             for xy, depth in seg:
@@ -473,36 +495,89 @@ class Camera:
         # in the whole render (profiled). A plain `.sum(axis=0)` plus a
         # 3-term Euclidean distance in pure Python is exactly the same math,
         # far cheaper per call for arrays this small.
-        px, py, pz = float(self.pos[0]), float(self.pos[1]), float(self.pos[2])
-        scored = []
-        for p3 in paths3d:
-            pts = p3.points
-            s = pts.sum(axis=0)
-            n_pts = len(pts)
-            cx = s[0] / n_pts - px
-            cy = s[1] / n_pts - py
-            cz = s[2] / n_pts - pz
-            scored.append(((cx * cx + cy * cy + cz * cz) ** 0.5, p3))
-        scored.sort(key=lambda s: s[0])
+        # --- ONE transform, ONE set of reductions, for the whole frame -------
+        #
+        # All of this used to be per-stroke inside the loop below: a
+        # `pts.sum(axis=0)` to score, three `rel @ vec` products, and two
+        # `z.min()/max()` reductions. A stroke is ~24 points, so numpy's
+        # per-call dispatch cost dwarfed the arithmetic — benchmarked at
+        # 2.302ms a frame for the transform alone against 0.050ms for the same
+        # maths done once over the concatenated array. Same lesson as the audio
+        # module's batched note renderers (INSTRUMENTS.md §2): the win is
+        # making FEWER numpy calls, not cheaper ones.
+        #
+        # `reduceat` supplies every per-stroke reduction in one pass, and each
+        # stroke's rows are then a VIEW into `xyz` rather than a fresh array.
+        if not paths3d:
+            return []
+        counts = np.fromiter((len(p3.points) for p3 in paths3d), np.intp, len(paths3d))
+        starts = np.zeros(len(paths3d), np.intp)
+        np.cumsum(counts[:-1], out=starts[1:])
+        allpts = np.concatenate([p3.points for p3 in paths3d])
+        rel_all = allpts - self.pos
+        # Columns, not three separate matvecs — the products are identical, but
+        # this is one BLAS call instead of 3N.
+        xyz = rel_all @ np.stack((right, up, fwd)).T
+        xs, ys, zs = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+
+        # Centroid distance, computed in the ORDER the per-stroke version used:
+        # sum the raw points, divide, subtract the camera, then the 3-term
+        # distance in float64. Doing the arithmetically-identical
+        # `mean(pts - pos)` in float32 instead shifts distances by ~1e-5 —
+        # invisible in itself, but enough to reorder near-ties, and the loop
+        # below CUTS at max_strokes, so a reorder silently changes which
+        # strokes get drawn. Measured: it moved the very first ranks on two
+        # library scenes.
+        cen = (np.add.reduceat(allpts, starts, axis=0)
+               / counts[:, None]).astype(np.float64) - self.pos.astype(np.float64)
+        dists = np.sqrt((cen * cen).sum(axis=1))
+        zmin = np.minimum.reduceat(zs, starts)
+        zmax = np.maximum.reduceat(zs, starts)
+
+        # LATERAL reject bounds — the other half of the depth skip below.
+        #
+        # Measured on `bikes` (330 nodes): 277 clip calls a frame of which 157
+        # (57%) returned NOTHING. Those strokes are in front of the camera and
+        # inside `far`, so the depth test passes, but they sit entirely off to
+        # one side — each cost a full clip pipeline to discover it.
+        #
+        # Sound because a perspective projection maps lines to lines: if every
+        # vertex of a polyline lands beyond one edge of the [-1,1] box, so does
+        # every point between them. Only trusted where the whole stroke is in
+        # front of the near plane (`zmin > near`), since one crossing it has no
+        # single meaningful projection. Phrased `x*k - zc > 0` rather than
+        # `x/zc*k > 1` to keep a divide out of the hot path; `zc` is positive,
+        # so the inequality direction is preserved.
+        zc_all = np.maximum(zs, 1e-3)
+        kx = f / self.aspect
+        off_r = np.minimum.reduceat(xs * kx - zc_all, starts) > 0.0
+        off_l = np.maximum.reduceat(xs * kx + zc_all, starts) < 0.0
+        off_t = np.minimum.reduceat(ys * f - zc_all, starts) > 0.0
+        off_b = np.maximum.reduceat(ys * f + zc_all, starts) < 0.0
+        offscreen = (zmin > self.near) & (off_r | off_l | off_t | off_b)
+
+        # Stable so equidistant strokes keep their authored order, as the
+        # previous `list.sort` (also stable) did.
+        order = np.argsort(dists, kind="stable")
 
         cull = self.depth.mode in ("cull", "both")
         out: Frame = []
-        for d, p3 in scored:
+        for i in order:
             if len(out) >= self.max_strokes:
                 break
-            rel = p3.points - self.pos
-            x = rel @ right
-            y = rel @ up
-            z = rel @ fwd                      # +Z in front of the camera
-
-            # Exact skip — see the matching comment in `project()` (fly mode)
-            # above: if nothing in this stroke can pass the visibility test,
-            # skip the clip pipeline entirely instead of running it to
-            # discover that. This is the branch scenes with `max_strokes`
-            # set above their own raw geometry count hit hardest, since the
-            # strokes-found early-exit above never triggers for them either.
-            if z.max() <= self.near or (cull and z.min() >= self.far):
+            # Exact skip: if nothing in this stroke can pass the visibility
+            # test, skip the clip pipeline entirely rather than running it to
+            # find out. Scenes whose `max_strokes` exceeds their own geometry
+            # count hit this hardest, since the budget break never fires.
+            if zmax[i] <= self.near or (cull and zmin[i] >= self.far):
                 continue
+            if offscreen[i]:
+                continue
+
+            p3 = paths3d[i]
+            s0 = starts[i]
+            s1 = s0 + counts[i]
+            x, y, z = xs[s0:s1], ys[s0:s1], zs[s0:s1]
 
             seg = _clip_and_project(x, y, z, f, self.near, self.far,
                                     self.aspect, self.depth, cull=cull)

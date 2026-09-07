@@ -80,7 +80,7 @@ Schema:
   "audio_patch": {"engine":"pad","waveform":"sine|triangle","voices":int,
                   "attack":float,"release":float,"base_note":int,"chord":[int,...]},
   "camera": {"mode":"orbit|drift|fly","target":[x,y,z],"orbit_radius":float,
-             "far":float,"speed":float,"max_strokes":110,"depth":{"mode":"cull"}},
+             "far":float,"speed":float,"max_strokes":90,"depth":{"mode":"cull"}},
   "soundscape": {
      "tempo": 60, "master": 0.8, "distortion": 0.0,
      "delay": {"time":0.4, "feedback":0.35, "mix":0.3},
@@ -288,7 +288,7 @@ WORKED EXAMPLE (format only — for the keyword "a campfire at night"):
    ]}}],
  "palette":["#0a0a14","#ff8830","#88b0d0"],
  "audio_patch":{"engine":"pad","waveform":"triangle","voices":4,"attack":3,"release":7,"base_note":43,"chord":[0,7,12,15]},
- "camera":{"mode":"orbit","target":[0,-0.5,0],"orbit_radius":7,"far":26,"speed":0.5,"max_strokes":120,"depth":{"mode":"cull"}},
+ "camera":{"mode":"orbit","target":[0,-0.5,0],"orbit_radius":7,"far":26,"speed":0.08,"max_strokes":90,"depth":{"mode":"cull"}},
  "modulation":[{"source":"audio_level","dest":"camera.speed","depth":0.6}]}
 
 You MAY also drop in a ready-made primitive with {"primitive":name,"params":{..}}
@@ -753,8 +753,8 @@ SCENE_SIZE = {
         "that comes back around to where it started, so it can be walked "
         "indefinitely. Do NOT repeat the first point at the end — the loop is "
         "closed automatically],\n"
-        "              \"speed\":0.5, \"fov\":62, \"near\":0.4, \"far\":40,\n"
-        "              \"max_strokes\":120, \"depth\":{\"mode\":\"cull\"}}\n\n"
+        "              \"speed\":0.08, \"fov\":62, \"near\":0.4, \"far\":26,\n"
+        "              \"max_strokes\":90, \"depth\":{\"mode\":\"cull\"}}\n\n"
         "Keep objects within about 3-8 units either side of the route, on both "
         "sides and overhead, so something is always in frame as the camera "
         "moves. A stretch of route with nothing beside it is a dark laser."),
@@ -813,9 +813,9 @@ def _size_hint(nodes: int, path: bool = True) -> str:
             f"{ndefs} shapes placed {each} times each — never {nodes} distinct "
             f"shapes.\n\n"
             f"Set the camera to stay inside and move gently:\n"
-            f"  \"camera\": {{\"mode\":\"drift\", \"speed\":0.4, \"fov\":62, "
-            f"\"near\":0.4, \"far\":{max(20, extent)},\n"
-            f"              \"max_strokes\":120, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
+            f"  \"camera\": {{\"mode\":\"drift\", \"speed\":0.08, \"fov\":62, "
+            f"\"near\":0.4, \"far\":{min(26, max(20, extent))},\n"
+            f"              \"max_strokes\":90, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
             f"Do NOT author \"waypoints\" — this scene is not walked along a route.")
     return (
         f"Scale: MASSIVE — a place to travel through for minutes, not a tableau.\n"
@@ -835,8 +835,8 @@ def _size_hint(nodes: int, path: bool = True) -> str:
         f"that comes back around to where it started, so it can be walked "
         f"indefinitely. Do NOT repeat the first point at the end — the loop is "
         f"closed automatically],\n"
-        f"              \"speed\":0.5, \"fov\":62, \"near\":0.4, \"far\":40,\n"
-        f"              \"max_strokes\":120, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
+        f"              \"speed\":0.08, \"fov\":62, \"near\":0.4, \"far\":26,\n"
+        f"              \"max_strokes\":90, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
         f"Keep objects within about 3-8 units either side of the route, on both "
         f"sides and overhead, so something is always in frame as the camera "
         f"moves. A stretch of route with nothing beside it is a dark laser.")
@@ -915,6 +915,91 @@ def _apply_evolution(spec: SceneSpec, evolution: float | None) -> SceneSpec:
         return spec
     amount = max(0.0, min(1.0, float(evolution))) * 0.6   # capped so it's never overwhelming
     spec.soundscape["swell_amount"] = round(amount, 3)
+    return spec
+
+
+#: Camera speed a generated scene is allowed to travel at, and the ceiling on
+#: its draw distance. Both were authored far too fast/deep: Claude was asked
+#: for speed 0.4-0.5 (the UI default is 0.6 and its slider ran to 2.0) and
+#: far 40, which reads as rushing through a scene you can see the far wall of.
+GEN_SPEED_MIN, GEN_SPEED_MAX = 0.03, 0.15
+GEN_FAR_MAX = 28.0
+
+
+def _max_strokes_for(nodes: int) -> int:
+    """Stroke ceiling for a scene of this size.
+
+    STROKES are what the render costs, not nodes — measured across the
+    library: `cutlery drawer` draws 10 strokes from 690 nodes at 11ms, while
+    `bikes` draws 120 from 330 nodes at 33ms. The prompt asked for 120
+    regardless of size, which is harmless on a sparse scene (it never reaches
+    the ceiling) and 50% over budget on a dense one.
+    Node-aware because a bigger world puts more geometry in front of the
+    camera at once, so the same ceiling buys a denser, costlier frame.
+    `bikes` at 330 nodes lands on 73, measured at 21.0ms against a 22.2ms
+    budget. Floors at 55 so a huge scene stays watchable rather than sparse,
+    and ceilings at 90 — a sparse scene never reaches its ceiling anyway, so
+    the only scenes this binds are ones dense enough to want binding.
+    """
+    n = max(1, int(nodes or 0))
+    return int(max(55, min(90, round(24000 / n))))
+#: Slow the authored swell down. Applied as a MULTIPLIER, not a fixed value,
+#: so the variation Claude wrote between scenes survives.
+GEN_SWELL_STRETCH = 1.3
+
+
+def _apply_pacing(spec: SceneSpec) -> SceneSpec:
+    """Slow a generated scene to the pace the instrument actually wants.
+
+    Deterministic and post-hoc for the same reason `_apply_evolution` is: the
+    prompt asks for these ranges too, but asking is not a guarantee, and every
+    scene has to land inside them. Clamped rather than rescaled so the spread
+    Claude authored between scenes is kept wherever it is already legal.
+    """
+    cam = spec.camera
+    if isinstance(cam, dict):
+        # Node count comes from the built scene, not generation_settings —
+        # expansion has already run by this point, so this is the geometry
+        # that will actually be in front of the camera.
+        nodes = 0
+        for layer in spec.layers or []:
+            params = getattr(layer, "params", None)
+            if params is None and isinstance(layer, dict):
+                params = layer.get("params")
+            if isinstance(params, dict):
+                nodes += len(params.get("nodes") or ())
+        if nodes:
+            cap = _max_strokes_for(nodes)
+            try:
+                cam["max_strokes"] = min(int(cam.get("max_strokes", cap)), cap)
+            except (TypeError, ValueError):
+                cam["max_strokes"] = cap
+        if "speed" in cam:
+            try:
+                sp = float(cam["speed"])
+            except (TypeError, ValueError):
+                sp = GEN_SPEED_MAX
+            # 0 is left alone on purpose: a stationary camera is a real
+            # authored choice (two library scenes use it), and floor-ing it to
+            # the minimum would silently start every still scene moving.
+            if sp > 0.0:
+                sp = max(GEN_SPEED_MIN, min(GEN_SPEED_MAX, sp))
+            cam["speed"] = round(max(0.0, sp), 3)
+        if "far" in cam:
+            try:
+                # Floored as well as capped — a negative far is nonsense and
+                # would otherwise pass straight through.
+                cam["far"] = round(max(1.0, min(GEN_FAR_MAX, float(cam["far"]))), 2)
+            except (TypeError, ValueError):
+                cam["far"] = GEN_FAR_MAX
+    scape = spec.soundscape
+    if isinstance(scape, dict) and scape.get("swell_period"):
+        try:
+            # 5-120 is _normalise's own range for this field.
+            scape["swell_period"] = round(
+                max(5.0, min(120.0, float(scape["swell_period"]) * GEN_SWELL_STRETCH)), 2)
+        except (TypeError, ValueError):
+            pass
     return spec
 
 
@@ -1102,7 +1187,7 @@ class SceneDirector:
                 if ok:
                     self.last_source = "claude"
                     self.last_error = None
-                    spec = _apply_evolution(_ensure_soundscape(spec), evolution)
+                    spec = _apply_pacing(_apply_evolution(_ensure_soundscape(spec), evolution))
                     # Grow the world to the size that was actually asked for.
                     # Models write ~200 nodes however many they are told to
                     # (measured across three runs), and the shortfall is pure

@@ -21,12 +21,106 @@ Then open http://localhost:8080 and type a keyword (e.g. "water flowing").
 from __future__ import annotations
 
 import argparse
+import datetime
 import logging
 import os
+import platform
+import sys
+import traceback
 
-from promptwaver.engine import Engine
-from promptwaver.web import run as run_web
-from promptwaver.director import local_scene
+
+# --- crash log ---------------------------------------------------------------
+#
+# A packaged build that dies on startup closes its console faster than anyone
+# can read the traceback, so the traceback has to go somewhere it survives.
+# Everything below runs BEFORE the promptwaver imports, because an import
+# failure (a missing bundled module, a broken native dependency) is exactly
+# one of the failures being diagnosed and would otherwise never reach a
+# handler defined later.
+
+def _log_dir() -> str:
+    """Where error.txt goes: beside the executable for a packaged build.
+
+    NOT `sys._MEIPASS` — that is a temp directory PyInstaller deletes on exit,
+    which is the one place a crash report must not be written. Falls back to
+    the home directory if the app lives somewhere unwritable (Program Files, a
+    read-only mount, /Applications).
+    """
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    if os.access(base, os.W_OK):
+        return base
+    return os.path.expanduser("~")
+
+
+ERROR_LOG = os.path.join(_log_dir(), "error.txt")
+
+
+def _note(line: str) -> None:
+    """Append a breadcrumb. Opened and closed per line, and flushed, so the
+    file is complete even if the process is killed rather than raising —
+    a segfault in a native audio/MIDI library leaves no Python traceback at
+    all, and then the LAST breadcrumb is the only evidence of how far it got.
+    """
+    try:
+        with open(ERROR_LOG, "a", encoding="utf-8") as fh:
+            fh.write(f"{datetime.datetime.now():%H:%M:%S}  {line}\n")
+            fh.flush()
+    except Exception:
+        pass            # logging must never be the thing that breaks startup
+
+
+def _start_log() -> None:
+    try:
+        with open(ERROR_LOG, "w", encoding="utf-8") as fh:
+            fh.write(
+                f"PromptWaver startup log — {datetime.datetime.now():%Y-%m-%d %H:%M:%S}\n"
+                f"python   {sys.version.split()[0]} on {platform.platform()}\n"
+                f"frozen   {bool(getattr(sys, 'frozen', False))}\n"
+                f"exe      {sys.executable}\n"
+                f"bundle   {getattr(sys, '_MEIPASS', '(not packaged)')}\n"
+                f"cwd      {os.getcwd()}\n"
+                f"argv     {sys.argv}\n\n"
+                "If PromptWaver closed unexpectedly, send this whole file.\n\n")
+    except Exception:
+        pass
+
+
+def _fatal(exc: BaseException) -> None:
+    _note("FATAL — PromptWaver could not continue:")
+    try:
+        with open(ERROR_LOG, "a", encoding="utf-8") as fh:
+            traceback.print_exception(type(exc), exc, exc.__traceback__, file=fh)
+            fh.flush()
+    except Exception:
+        pass
+    print(f"\nPromptWaver failed to start. Details written to:\n  {ERROR_LOG}\n",
+          file=sys.stderr)
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    # A packaged build launched from a file manager has no console left to read,
+    # so hold the window open. Skipped when nothing is attached to stdin
+    # (piped, service, CI) or it would hang forever.
+    if getattr(sys, "frozen", False) and sys.stdin is not None and sys.stdin.isatty():
+        try:
+            input("\nPress Enter to close…")
+        except Exception:
+            pass
+
+
+_start_log()
+_note("starting imports")
+
+try:
+    from promptwaver.engine import Engine
+    from promptwaver.web import run as run_web
+    from promptwaver.director import local_scene
+except BaseException as _e:        # noqa: BLE001 — the whole point is to catch everything
+    _fatal(_e)
+    raise SystemExit(1)
+
+_note("imports ok")
 
 logging.getLogger("aiohttp").setLevel(logging.ERROR)
 
@@ -78,18 +172,31 @@ def main():
         for n in names:
             print(n)
         return
+    # Writable data lives beside the executable, never in the bundle — see
+    # promptwaver/paths.py. On a packaged build's first run the shipped scene
+    # library is copied out so there is something to play.
+    from promptwaver.paths import data_dir, seed_scenes
+    library_dir = os.path.join(data_dir(), "scenes")
+    seeded = seed_scenes(library_dir)
+    if seeded:
+        print(f"[promptwaver] installed {seeded} scenes into {library_dir}")
+    _note(f"building engine (laser={args.laser} audio={not args.no_audio}) "
+          f"library={library_dir} seeded={seeded}")
     engine = Engine(
-        library_dir=os.path.join(HERE, "scenes"),
-        cache_dir=os.path.join(HERE, "scenes", "generated"),
+        library_dir=library_dir,
+        cache_dir=os.path.join(library_dir, "generated"),
         fps=args.fps, pps=args.pps, max_step=args.max_step,
         invert_x=args.invert_x, keystone_h=args.keystone_h,
         keystone_v=args.keystone_v, enable_laser=args.laser,
         enable_audio=not args.no_audio, model=args.model,
         enable_diagnostics=args.diag, midi_port=args.midi,
     )
-    # start with something on screen immediately
+    _note("engine built; installing the initial scene")
     engine._install_spec(local_scene(args.scene))
+    _note("starting render thread")
     engine.start()
+    _note(f"engine running — output={engine.output.name} "
+          f"director={'claude' if engine.director.online else 'local'}")
     print(f"[promptwaver] engine running — output={engine.output.name} "
           f"director={'claude' if engine.director.online else 'local'}")
 
@@ -108,6 +215,7 @@ def main():
         print(f"[promptwaver] open http://localhost:{args.web_port}")
         if engine.kiosk.enabled:
             print(f"[promptwaver] kiosk screen: http://localhost:{args.web_port}/kiosk")
+        _note(f"starting web server on {args.host}:{args.web_port}")
         try:
             run_web(engine, host=args.host, port=args.web_port)
         except (KeyboardInterrupt, SystemExit):
@@ -125,4 +233,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise                       # argparse --help/errors are not crashes
+    except BaseException as _e:     # noqa: BLE001
+        _fatal(_e)
+        raise SystemExit(1)
+    else:
+        _note("exited normally")

@@ -53,8 +53,34 @@ jobs:
       - name: Verify PyInstaller
         run: pyinstaller --version
 
-      - name: Build executable with PyInstaller
-        run: pyinstaller --onefile --name promptwaver --collect-all aiohttp --collect-all numpy --hidden-import=anthropic run.py
+      # --add-data is NOT optional. Without it the binary ships no web UI, no
+      # docs and no scene library, and aiohttp's `add_static` raises
+      # "does not exist" inside make_app() — so the app died on startup, before
+      # printing anything, and the console closed too fast to read. `:` is the
+      # separator on Linux/macOS and `;` on Windows, hence the two steps.
+      # Paths mirror the source tree because the code finds them relative to
+      # its own package (see promptwaver/paths.py).
+      - name: Build executable with PyInstaller (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          pyinstaller --onefile --name promptwaver \
+            --collect-all aiohttp --collect-all numpy --hidden-import=anthropic \
+            --add-data "promptwaver/web/static:promptwaver/web/static" \
+            --add-data "scenes:scenes" \
+            --add-data "about.md:." \
+            --add-data "welcome.md:." \
+            run.py
+
+      - name: Build executable with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          pyinstaller --onefile --name promptwaver
+          --collect-all aiohttp --collect-all numpy --hidden-import=anthropic
+          --add-data "promptwaver/web/static;promptwaver/web/static"
+          --add-data "scenes;scenes"
+          --add-data "about.md;."
+          --add-data "welcome.md;."
+          run.py
 
       # PyInstaller names every platform's binary `promptwaver` (or
       # `promptwaver.exe`), and only the ARTIFACT was platform-specific.

@@ -47,6 +47,41 @@ Everything else derives and needs no edit: `engine.state()` reads `__version__` 
 
 Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .venv` and check the old number survives only in CHANGELOG history.
 
+## The packaged build has TWO roots, and using the wrong one is silent data loss
+
+`promptwaver/paths.py` is the only thing that knows the difference:
+
+- `bundle_dir()` — `sys._MEIPASS`, PyInstaller's unpack directory. Read-only,
+  and **deleted when the process exits**. The web UI, `about.md`/`welcome.md`
+  and the starter scene library ship here.
+- `data_dir()` — beside the executable, the only place that survives a restart.
+  `settings.json`, the scene library and the director cache go here, falling
+  back to `~/.promptwaver` when the app sits somewhere unwritable.
+
+Both resolve to the repo root from a checkout, so none of this is visible in
+development — which is exactly why it shipped broken twice over:
+
+1. **The build bundled no data at all.** No `--add-data`, so `_STATIC` did not
+   exist and aiohttp's `add_static` raised `ValueError: does not exist` inside
+   `make_app()`. The binary died before printing anything and the console
+   closed too fast to read. Verified with a local one-file build: with the data
+   bundled all four routes serve and 52 scenes seed beside the exe on first run.
+2. **Writable paths pointed into the bundle**, so every saved scene and the API
+   key were discarded on exit.
+
+**`--add-data` uses `:` on Linux/macOS and `;` on Windows**, which is why
+`build.yml` has two build steps rather than one. Relative source paths resolve
+against `--specpath` (default: the working directory), so they work in CI but
+need absolute paths if you pass an explicit `--specpath`.
+
+**`error.txt` is the field diagnostic.** `run.py` writes a breadcrumb per
+startup step beside the executable, the full traceback on any unhandled
+exception, and holds the console open on a frozen build. Written per-line and
+flushed, because a segfault in a native audio/MIDI library leaves no Python
+traceback at all and the last breadcrumb is then the only evidence. The handler
+is installed **above the promptwaver imports** — an import failure is one of
+the things being diagnosed.
+
 ## Releasing, and how to tell whether it worked
 
 **You cannot push.** The agent environment has no GitHub credentials — HTTPS has no helper and the SSH keys in the agent are rejected. Commit and tag locally, then hand Eddie `git push origin master && git push origin vx.y.z`. Don't burn a turn discovering this again.
@@ -112,6 +147,48 @@ One call reliably writes ~200 nodes; the renderer handles ~3200. `director/expan
 
 **`_motion` must stay after the cull in `World._render_budgeted`.** Evaluating it per-node before the visibility test was ~20% of frame time on a big world and ~94% of that was discarded. Culling deliberately tests the node's *resting* position with the bounding sphere inflated by `amp` to cover where motion could carry it; that bound is conservative, and the reordering was verified bit-identical over 40 frames.
 
+**The projection loop rejects laterally as well as by depth.** `Camera`'s two
+projection loops sort strokes near-first and stop at `max_strokes`, but that
+counts strokes *emitted* — a stroke that clips to nothing costs a full clip
+pipeline and advances nothing. Measured on `bikes` (330 nodes, max_strokes
+120): 277 `_clip_and_project` calls a frame of which **157 (57%) returned
+empty**, all of them in front of the camera and inside `far` but off to one
+side, where the depth-only early-out could not see them. Adding a lateral
+frustum reject took that to 139 calls / 19 empty, and whole scenes with it —
+`cutlery drawer` 21.5→11.1ms, `alien algebra` 17.1→10.0ms, `brain` 9.8→5.7ms.
+Verified **bit-identical over 40 frames across 7 scenes**, the same bar the
+`_motion` reordering was held to.
+
+It is only applied when `z.min() > near`: a perspective projection maps lines
+to lines, so if every vertex is beyond one edge of the `[-1,1]` box so is
+everything between them — but a stroke crossing the near plane has no single
+meaningful projection to test.
+
+**The look-at projection is BATCHED; the fly branch is not.** Everything before
+the clip pipeline — the transform, the centroid distances, the z range, the
+lateral bounds — is done once over the concatenated frame with `reduceat`,
+and each stroke is then a view into that array. Same lesson as the audio
+module's batched note renderers (INSTRUMENTS.md §2): the win is making FEWER
+numpy calls, not cheaper ones. A stroke is ~24 points, so dispatch cost
+dominated the arithmetic — 2.302ms a frame for the transform alone against
+0.050ms batched.
+
+**It is NOT bit-identical, and the reason is worth knowing.** `.sum(axis=0)`
+uses pairwise summation, `np.add.reduceat` sequential, so per-stroke centroids
+shift by ~1e-5 — enough to reorder near-ties, and the loop CUTS at
+`max_strokes`, so a reorder can change which stroke wins the last slot.
+Measured over 40 frames on 7 scenes: the SET of strokes drawn is identical on
+six, and `Topo map` differs by 0.9 strokes a frame (2%); what changes
+everywhere is draw ORDER, which is invisible under additive blending. The
+transform itself is exact to 1e-15. Don't "fix" the ordering by restoring a
+per-stroke `.sum(axis=0)` — that loop is most of what was removed.
+
+**Stroke count is what costs, not node count.** From the same measurements:
+`cutlery drawer` draws 10 strokes from 690 nodes at 11ms, while `bikes` draws
+120 from 330 nodes at 30ms. `max_strokes` is therefore the lever when a scene
+overruns — bikes measures 30.1ms at 120, 21.0 at 70, 16.0 at 55, against a
+22.2ms budget at 45fps that a loaded app roughly halves again.
+
 **A scalar layer-param change must not rebuild the Scene.** `Scene.set_layer_param` writes to the live params dict that `render` already resolves from. A rebuild throws away geometry caches and resets generator runtime state — which is what `world`'s accumulated shape clock (`_shape_time`) depends on. Rebuild only for keys absent from `schema()`.
 
 ### The registry is the source of truth for generator metadata
@@ -149,6 +226,26 @@ Two things from it that bite outside the audio module: `_normalise`'s output is 
 ### The scene clock is an accumulator, not wall time
 
 `Engine._scene_t` advances by `dt * motion_rate`, and `t` is what every time-driven thing reads. That's what makes **Freeze** work: ramping one number decelerates LFO phase, node motion and camera travel together. Note the deliberate asymmetry — `matrix.update()` gets **real** `dt` while `t` is frozen, so audio-driven sources keep slewing and a frozen pattern still reacts to sound. Don't "fix" that by passing the scaled dt to both.
+
+### The render loop paces itself to whoever is consuming it
+
+`Engine._target_fps` runs the full `fps` only when a beam is live
+(`output.name == "helios" and laser_on`), and `idle_fps` (24, a persisted rig
+setting) otherwise. A laser redraws the whole frame every tick and flickers
+below ~40fps; the browser is a different consumer entirely, receiving the
+preview over a **fixed ~20Hz broadcast** — so with no beam armed, more than
+half of every frame computed at 45fps was thrown away before anything could
+see it.
+
+`LoopStats.set_fps` retargets the budget with it, or the panel keeps quoting
+the old one and a loop deliberately running at 24fps reads as permanently ~47%
+dropped. The cost is that modulation sources tick at `idle_fps` while the beam
+is off, so audio-reactive movement is sampled a little more coarsely.
+
+Measured on `bikes` (330 nodes) — the scene that prompted all of this —
+render went 59.2ms to 20.6ms across the lateral reject and the batched
+projection, and 70.3% dropped ticks became 0.5% screen-only / 26.3% with the
+laser armed.
 
 ### Threading: one render thread, one queue
 
@@ -345,6 +442,25 @@ Generations are archived to `scenes/kiosk/` (gitignored), never the tracked
 shares `renderer.js`, holds no phase of its own, and renders entirely from
 `state.kiosk` in the 20Hz broadcast — which is what lets a browser refreshed
 mid-generation land back in the right place.
+
+### Generated scenes are re-paced after the fact, not just asked nicely
+
+`director._apply_pacing` runs on every fresh generation, next to
+`_apply_evolution` and for the same reason: the system prompt asks for these
+ranges, but asking is not a guarantee and every scene has to land inside them.
+It clamps camera `speed` into 0.03–0.15, caps `far` at 28, and stretches the
+soundscape's `swell_period` by 1.3x. The prompt's own example values were
+lowered to match (speed 0.5 → 0.08, far 40 → 26), so the clamp rarely has to
+bite and the variation Claude authors between scenes survives.
+
+Two deliberate exceptions: **`speed: 0` is left alone** — a stationary camera
+is a real authored choice (two library scenes use it) and flooring it would
+silently start every still scene moving — and `far` is floored at 1 as well as
+capped, because a negative far otherwise passes straight through.
+
+It runs before the cache write, so cache entries written from now on are paced
+and are not re-paced on read. Entries cached earlier keep their old pacing;
+regenerating the prompt is what refreshes them.
 
 ### Scene JSON round-trip
 

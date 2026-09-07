@@ -273,6 +273,9 @@ class Engine:
         # visualising an external source.
         from . import settings as _settings0
         self.audio_react = _settings0.get("audio_react", "engine")
+        # Pace used when no beam is armed — see _target_fps. A rig setting like
+        # output_ratio: it describes this machine, not any scene.
+        self.idle_fps = int(_settings0.get("idle_fps", 24))
         self._audio_src = self.matrix.add_source("audio_level", Value(smooth=0.1))
         self._mic_src = self.matrix.add_source("mic_level", Value(smooth=0.1))
         self._synth_srcs = {
@@ -838,6 +841,27 @@ class Engine:
             self.output.blank()
             self._last_frame = []
         self._enqueue(apply)
+
+    def _target_fps(self) -> int:
+        """Frames a second to actually compute right now.
+
+        The full `fps` is only needed when a BEAM is being fed: a laser
+        re-draws the whole frame every tick and anything under ~40fps flickers.
+        The browser is a different consumer entirely — it receives the preview
+        over a websocket broadcast at a fixed ~20Hz (`web/server.py`), so with
+        no beam armed, more than half of every frame computed at 45fps is
+        thrown away before anything can see it.
+
+        Measured on `bikes`: 45fps against a 22.2ms budget gave 70% dropped
+        ticks; the same scene has 41.7ms at 24fps. This costs nothing visible
+        on screen — the browser could not show those frames — but it does mean
+        modulation sources tick at `idle_fps` rather than `fps`, so
+        audio-reactive movement is sampled a little more coarsely while the
+        beam is off. Snaps straight back the moment the laser is armed.
+        """
+        if self.output.name == "helios" and self.laser_on:
+            return self.fps
+        return max(1, min(self.fps, self.idle_fps))
 
     def set_laser(self, value: bool):
         """Independent gate for the real DAC only (see `laser_on` in
@@ -1497,9 +1521,12 @@ class Engine:
 
     # loop ------------------------------------------------------------------
     def _loop(self):
-        period = 1.0 / self.fps
         prev = time.monotonic()
         while self._running:
+            # Re-evaluated every tick: the pace depends on whether the beam is
+            # live, and that can change at any moment from the UI.
+            period = 1.0 / max(1, self._target_fps())
+            self.perf.set_fps(round(1.0 / period))
             now = time.monotonic()
             dt = now - prev
             prev = now

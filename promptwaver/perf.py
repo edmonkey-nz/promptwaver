@@ -49,6 +49,19 @@ class LoopStats:
         self._last_start = None
 
     def set_fps(self, fps: int):
+        """Retarget the budget when the loop changes pace (see Engine._target_fps).
+
+        Without this the panel keeps quoting the old budget, so a loop
+        deliberately running at 24fps would read as permanently ~47% dropped —
+        the counter would be measuring against a target nothing is aiming for.
+        """
+        fps = max(1, int(fps))
+        if fps == self.fps:
+            return
+        self.fps = fps
+        self.period = 1.0 / fps
+
+    def set_fps(self, fps: int):
         self.fps = fps
         self.period = 1.0 / fps if fps else self.period
 
