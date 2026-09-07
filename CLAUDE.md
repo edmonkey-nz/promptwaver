@@ -49,6 +49,12 @@ Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .v
 
 ## The packaged build has TWO roots, and using the wrong one is silent data loss
 
+> **`PACKAGING.md` is the portable version of this section** — the whole
+> "ship a Python server app as a double-clickable binary" recipe, written to be
+> copied to the other server-shaped tools rather than re-derived. Read that for
+> the pattern; what follows is what it means *here*.
+
+
 `promptwaver/paths.py` is the only thing that knows the difference:
 
 - `bundle_dir()` — `sys._MEIPASS`, PyInstaller's unpack directory. Read-only,
