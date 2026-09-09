@@ -8,6 +8,36 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.79.2]
+
+### The Helios library is found where it actually lives
+
+`--laser` reported `libHeliosDacAPI.so: cannot open shared object file` on a
+machine with a working, enumerating Helios DAC and a good copy of the library
+inside the package. `HeliosOutput` passed the bare filename to `dlopen`, which
+searches `LD_LIBRARY_PATH` and the `ld.so` cache and nothing else — not the
+working directory and not the package — so the library was two directories
+from the code and invisible to it. The SDK is hand-built rather than pip- or
+distro-packaged, so sitting beside the code is the normal case.
+
+`HeliosOutput` now searches `output/`, the package directory, the bundle root
+and the data dir beside a frozen executable before falling back to the bare
+name, so an ldconfig'd system install still wins if nothing local is found.
+`$HELIOS_LIB` and an explicit `lib_path` still override everything. Library
+names are platform-aware, and a total failure names every path tried instead
+of reporting only the last `dlopen` error.
+
+This also makes a packaged build work by dropping the library beside the
+executable, which was previously impossible. CI still bundles no SDK.
+
+### The Start Laser button no longer appears without a laser
+
+The header's beam control was gated on `output !== "dummy"` — a name no output
+class has ever had (`NullOutput.name` is `"null"`) — so it showed on every
+machine, laser mode or not. It is now gated positively on a live DAC, and is
+disabled with an explanatory tooltip rather than hidden, so the control keeps
+its place and can say why it is unavailable.
+
 ## [0.79.1]
 
 ### A window, so the app can be quit without a terminal

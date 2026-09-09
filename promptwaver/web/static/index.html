@@ -1419,10 +1419,22 @@ function paintState(s){
       : `${Math.round(now * 100)}%`;
     fz.className = s.motion === 0 ? "amber" : "";
   }
-  // Hide laser button if no DAC is connected (only show for helios/actual DAC outputs)
+  // Enable the laser button only when a real DAC is actually being driven.
+  // This used to test `s.output !== "dummy"` — a name no output class has ever
+  // had (`NullOutput.name` is "null"), so the condition was true for every
+  // output and the button was offered on machines running with no laser mode
+  // at all. Test POSITIVELY for the DAC, so a future output type has to opt in
+  // rather than accidentally arming a beam control. Disabled rather than
+  // hidden: the control keeps its place in the header and can say why it is
+  // unavailable, which a vanishing button cannot. Set as a property, not a
+  // class — updateLaserBtn() rewrites className on every toggle.
   const laserBtn = $("laser-toggle");
-  const isDacConnected = s.output && s.output !== "dummy";
-  laserBtn.style.display = isDacConnected ? "block" : "none";
+  if (laserBtn.dataset.title === undefined) laserBtn.dataset.title = laserBtn.title;
+  const dacLive = s.output === "helios";
+  laserBtn.disabled = !dacLive;
+  laserBtn.title = dacLive
+    ? laserBtn.dataset.title
+    : "No laser output \u2014 start with --laser and a connected Helios DAC to arm the beam.";
   $("claude-dot").classList.toggle("on", !!s.director_online);
   if (!$("d-model").dataset.init && s.director_choice) {
     $("d-model").dataset.init = "1";

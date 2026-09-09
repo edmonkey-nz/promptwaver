@@ -18,10 +18,12 @@ from __future__ import annotations
 
 import ctypes
 import os
+import sys
 import time
 
 import numpy as np
 
+from .. import paths
 from ..geometry import Frame
 
 _MAX = 4095
@@ -30,6 +32,58 @@ _MAX = 4095
 def _hex_to_rgb(h: str):
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+
+# The Helios SDK is a hand-built shared library, not a pip package and not
+# something most distros ship — so in practice it ends up sitting beside the
+# code rather than installed system-wide. ctypes hands a bare name straight to
+# the system loader, which searches LD_LIBRARY_PATH and the ld.so cache and
+# NOTHING ELSE: not the working directory, not the package. That is how
+# `--laser` came to report "libHeliosDacAPI.so: cannot open shared object
+# file" with a perfectly good copy of the library two directories away and the
+# DAC enumerating fine on USB. Look where it actually lives.
+_LIB_NAMES = {
+    "win32": ("HeliosLaserDAC.dll", "libHeliosDacAPI.dll"),
+    "darwin": ("libHeliosDacAPI.dylib",),
+}
+
+
+def _lib_candidates(lib_path: str | None) -> list[str]:
+    """Paths to try, most specific first.
+
+    An explicit `lib_path` or `$HELIOS_LIB` wins outright — that's the escape
+    hatch for a library somewhere unusual. Otherwise search this module's
+    directory, the package, the bundle root (a packaged build's --add-binary
+    lands there) and the data dir beside a frozen executable, then fall back
+    to the bare name so an ldconfig'd system install is still found.
+    """
+    if lib_path:
+        return [lib_path]
+    env = os.environ.get("HELIOS_LIB")
+    if env:
+        return [env]
+    names = _LIB_NAMES.get(sys.platform, ("libHeliosDacAPI.so",))
+    here = os.path.dirname(os.path.abspath(__file__))
+    dirs = [here, os.path.dirname(here), paths.bundle_dir(), paths.data_dir()]
+    out: list[str] = []
+    for d in dirs:
+        for n in names:
+            c = os.path.join(d, n)
+            if c not in out and os.path.isfile(c):
+                out.append(c)
+    out.extend(names)          # let the system loader have the last word
+    return out
+
+
+def _load_lib(lib_path: str | None):
+    """Load the first candidate that opens, or raise naming everything tried."""
+    tried = []
+    for cand in _lib_candidates(lib_path):
+        try:
+            return ctypes.cdll.LoadLibrary(cand)
+        except OSError as e:
+            tried.append(f"{cand}: {e}")
+    raise OSError("Helios SDK not found; tried " + "; ".join(tried))
 
 
 class HeliosPoint(ctypes.Structure):
@@ -263,8 +317,7 @@ class HeliosOutput:
         self.planner = PathPlanner(**planner_kw)
         self.device = device
         self.last_points = 0
-        path = lib_path or os.environ.get("HELIOS_LIB", "libHeliosDacAPI.so")
-        self.lib = ctypes.cdll.LoadLibrary(path)
+        self.lib = _load_lib(lib_path)
         n = self.lib.OpenDevices()
         if n <= 0:
             raise RuntimeError("no Helios DAC found")
