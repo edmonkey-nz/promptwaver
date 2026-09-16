@@ -159,8 +159,25 @@ class Value(Source):
 class Route:
     source: str          # source name
     dest: str            # destination key, e.g. "visual.speed"
-    depth: float = 1.0   # how much of the source to add
+    depth: float = 1.0   # how much of the source to add ("add" mode)
     bias: float = 0.0    # constant offset added to the source before scaling
+    # "add": the source is ADDED to the destination's own slider (the original,
+    #        and still the default, behaviour).
+    # "range": the route OWNS the destination and sweeps it between two
+    #        absolute values, `lo` at a silent source and `hi` at full — the
+    #        slider is ignored. lo > hi is allowed and simply inverts it.
+    mode: str = "add"
+    lo: float = 0.0
+    hi: float = 1.0
+    # The source value that counts as "full" in range mode. Audio sources sit
+    # around 0-0.4 on real material, so without this `hi` is almost never
+    # reached and the mapping feels broken.
+    in_max: float = 1.0
+    # Seconds for this route's view of its source to catch up (~95%) with a
+    # change. 0 = follow the source exactly. Lets a jumpy audio source drift
+    # a parameter rather than snap it; applies in both modes.
+    glide: float = 0.0
+    _smooth: float | None = field(default=None, repr=False, compare=False)
 
 
 class ModMatrix:
@@ -172,6 +189,7 @@ class ModMatrix:
         # influence up or down (e.g. all audio_level-driven routes at once)
         # without touching each route's individually-authored depth.
         self.source_scale: dict[str, float] = {}
+        self._glide_stash: dict = {}
 
     def set_source_scale(self, source: str, scale: float):
         self.source_scale[source] = scale
@@ -181,24 +199,89 @@ class ModMatrix:
         self.sources[name] = source
         return source
 
-    def add_route(self, source: str, dest: str, depth: float = 1.0, bias: float = 0.0):
-        self.routes.append(Route(source, dest, depth, bias))
+    def add_route(self, source: str, dest: str, depth: float = 1.0, bias: float = 0.0,
+                  mode: str = "add", lo: float = 0.0, hi: float = 1.0, in_max: float = 1.0,
+                  glide: float = 0.0):
+        r = Route(source, dest, depth, bias, "range" if mode == "range" else "add",
+                  lo, hi, max(1e-3, in_max), max(0.0, glide))
+        # Routes are rebuilt from the spec on EVERY edit (clear + re-add), so a
+        # gliding route would otherwise snap back to its raw source each time
+        # any handle on the page moved. Carry the smoothed value across.
+        if r.glide > 0:
+            r._smooth = self._glide_stash.get((len(self.routes), source, dest))
+        self.routes.append(r)
 
     def clear_routes(self):
+        self._glide_stash = {(i, r.source, r.dest): r._smooth
+                             for i, r in enumerate(self.routes) if r._smooth is not None}
         self.routes.clear()
 
     # per-tick
     def update(self, t: float, dt: float):
         self._values = {name: s.sample(t, dt) for name, s in self.sources.items()}
+        # Glide: a first-order lag per route, on the REAL dt the engine passes
+        # here (so a frozen scene still glides toward audio). The time constant
+        # is glide/3, which makes `glide` the time to cover ~95% of a change.
+        for r in self.routes:
+            if r.glide > 0:
+                raw = self._values.get(r.source, 0.0)
+                if r._smooth is None:
+                    r._smooth = raw
+                else:
+                    r._smooth += (raw - r._smooth) * (1.0 - math.exp(-dt * 3.0 / r.glide))
+            else:
+                r._smooth = None
+
+    def _src(self, r: Route) -> float:
+        """A route's source value — smoothed if the route glides."""
+        return r._smooth if r._smooth is not None else self._values.get(r.source, 0.0)
 
     def source_value(self, name: str, default: float = 0.0) -> float:
         return self._values.get(name, default)
 
+    def route_position(self, r: Route) -> float:
+        """Where a range-mode route sits between its lo (0) and hi (1) right now.
+
+        The per-source scale (audio depth / audio link) scales how far the
+        source can push, so turning it to zero parks every range route at lo.
+        """
+        scale = self.source_scale.get(r.source, 1.0)
+        x = (self._src(r) + r.bias) * scale / r.in_max
+        return 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+
     def value(self, dest: str, base: float = 0.0) -> float:
-        """Base parameter plus the sum of all routes targeting `dest`."""
+        """The destination's value after every route targeting it.
+
+        Range routes REPLACE `base` (averaged, if more than one targets the
+        same destination); add routes then stack on top of whatever that
+        leaves.
+
+        With no range route this is EXACTLY the original loop — `base` returned
+        untouched when nothing targets `dest`, and add terms accumulated in the
+        same order. That matters: `Scene._resolve` pushes every layer param
+        through here, including non-numbers like `defs` and `nodes`, so an
+        unconditional `base + 0.0` raises TypeError and kills the render thread.
+        """
         v = base
+        has_range = False
         for r in self.routes:
-            if r.dest == dest:
+            if r.dest != dest:
+                continue
+            if r.mode == "range":
+                has_range = True
+                continue
+            scale = self.source_scale.get(r.source, 1.0)
+            v += (self._src(r) + r.bias) * r.depth * scale
+        if not has_range:
+            return v
+        ranged, n = 0.0, 0
+        for r in self.routes:
+            if r.dest == dest and r.mode == "range":
+                ranged += r.lo + self.route_position(r) * (r.hi - r.lo)
+                n += 1
+        v = ranged / n
+        for r in self.routes:
+            if r.dest == dest and r.mode != "range":
                 scale = self.source_scale.get(r.source, 1.0)
-                v += (self._values.get(r.source, 0.0) + r.bias) * r.depth * scale
+                v += (self._src(r) + r.bias) * r.depth * scale
         return v

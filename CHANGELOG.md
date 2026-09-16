@@ -8,6 +8,95 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.80.0]
+
+### Modulation mappings can own a range, and glide
+
+A mapping used to be purely additive: `slider + source × depth`, unclamped, so
+there was no way to say "sweep 2D scale between 2.0 and 4.3". Each mapping now
+has an **add | range** switch. `add` is unchanged and remains the default. In
+`range` the mapping takes the parameter over and sweeps it between a low and a
+high value across the destination's own full extent — drag high below low to
+invert it. A live marker shows where the value sits. **full at** sets which
+source value counts as full, because audio levels mostly sit around 0–0.4 and
+would otherwise never reach the high end. Audio depth still applies, parking
+the parameter at low when turned down. Range mode is offered for generator
+params, camera params and monitor filters.
+
+Every mapping also gets a **glide** time (0–5s): how long the mapping takes to
+catch up with a change in its source, so a jumpy audio source drifts a
+parameter instead of snapping it. It keeps running while the scene is frozen.
+
+`LFO · mid` now has its own rate slider beside `LFO · slow`; the engine
+supported it already but nothing could set it.
+
+Add-mode mappings are bit-identical to 0.79.2, and a mapping that is never
+switched to range or given a glide saves exactly as before.
+
+### The arpeggiator plays as its voice
+
+With the arp on, a pad or osc voice's tone, resonance, detune, unison and sub
+had no effect at all — measured at a 0.000 spectral difference. The arp
+defaulted its waveform to sine where the voice defaults to saw (so an unset
+voice turned into sine blips, with no harmonics for tone or resonance to shape),
+and it rendered each note as a single bare oscillator, never reading unison,
+detune or sub.
+
+Arp notes now render as the voice — its waveform, tone, resonance, unison
+stack, detune and sub, read live so a knob also changes notes already ringing.
+**This changes the sound of 23 arp voices across 21 library scenes**, which
+become thicker; their loudness is recentred (median −0.2dB, range −2.6 to
++4.4dB against 0.79.2) and no full mix peaks higher. An arp now costs what its
+voice costs with the arp off. Dense arps are bounded by sharing oscillator rows
+between notes at the same pitch and one envelope row per decay: the worst case
+measured 12.6–16ms a block. Pluck voices are bit-identical.
+
+### 2D generation no longer asks for a 3D world
+
+Every 2D request from the Generate panel carried the 3D size directive — "a
+place to travel through", a camera route with `[x,y,z]` waypoints, "−50..50 on
+each axis", "author 225–275 nodes" — because the hidden size slider's value was
+still sent. That one leak explains the 2D failures since 0.7x: 3D `pattern3d`
+scenes, `camera` keys inside layers, nodes placed ~10–57× outside the frame,
+and blown stroke budgets, often billed twice through the retry. 2D requests now
+carry no size at all, enforced in the director as well as the UI, and get their
+own output-token floor. The 2D cache key changed deliberately, since every
+earlier 2D entry was generated under the 3D directive.
+
+Alongside it:
+
+- **Generated scenes are validated by rendering them.** A response is rejected
+  if its generator doesn't exist, if its kind doesn't match the request, or if
+  one trial frame fails to render — a 2D layer with 3-number points passed
+  every name check and only crashed on playback.
+- **The retry is corrective.** A rejected first attempt is retried with a short
+  note saying what was wrong, instead of an identical request that repeats a
+  systematic mistake at double the cost.
+- **2D stroke guidance agrees with itself:** 80–200 strokes, 250 at most, with
+  `max_strokes` about 1.2× the real count. It previously said 60–300, ~680 and
+  420 in three places.
+- **2D voices are named.** The 2D prompt never showed the voice format, so voices
+  came back unnamed and appeared as `voice1…voice4`.
+- **2D placements in the wrong units are fixed in the saved scene**, with
+  identical output, rather than rescued and warned about on every load.
+
+### 2D patterns no longer draw lines around the frame edge
+
+The final render step clamps every point into the frame. For 3D that does
+nothing, since the camera has already clipped; for a 2D pattern reaching past
+the frame it pushed the outside points onto the border, where they drew as
+lines along it (263,040 such segments in 40 frames of one scene). 2D strokes are
+now cut cleanly where they cross the edge. Strokes wholly inside are untouched,
+3D output is identical, and the added cost is about 1ms a frame on most scenes.
+
+### Literal ↔ abstract in the Generate panel
+
+The kiosk's interpretation slider is now in the Generate modal too, with a
+readout of what the current position adds to the prompt; only the outer thirds
+add anything. Its 2D literal wording asks for flat line art, because the 3D
+wording pulled flat-pattern requests toward 3D scenes. The kiosk's prompt text
+is byte-identical, so its cached scenes still match.
+
 ## [0.79.2]
 
 ### The Helios library is found where it actually lives

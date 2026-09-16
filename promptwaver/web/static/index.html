@@ -306,8 +306,40 @@
   .modrow .del:hover{color:var(--amber)}
   .modrow .btm{display:flex;align-items:center;gap:8px}
   .modrow .btm label{flex:0 0 34px;font-size:10px;color:var(--dim)}
+  /* Same sizing the .field rows get: these rows aren't .field, so without it a
+     range input keeps its intrinsic ~130px and pushes the readout past the
+     edge of the sidebar (visible only with values shown). */
+  .modrow .btm input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:3px}
+  .modrow .btm .val{flex:0 0 40px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  body.hide-values .modrow .btm .val{flex-basis:0;overflow:hidden}
   .modrow .live{flex:0 0 46px;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden}
   .modrow .live i{display:block;height:100%;width:0%;background:var(--cyan)}
+  /* `hidden` must win over the display:flex rows above */
+  .modrow [hidden]{display:none}
+  /* add | range toggle, and the range-mode controls */
+  .modrow .mode{display:flex;gap:4px}
+  .modrow .mode button{flex:1;font-size:10px;padding:2px 0;border-radius:6px;cursor:pointer;
+          background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+  .modrow .mode button.on{border-color:var(--cyan);color:var(--cyan)}
+  .modrow .mode button:disabled{opacity:.35;cursor:default}
+  /* Two range inputs stacked on one track. Only the thumbs take the pointer,
+     so either handle can be grabbed wherever it is — including past the
+     other one, which is how an inverted (high below low) range is made. */
+  .modrow .dual{position:relative;height:18px}
+  .modrow .dual .trk{position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;background:var(--line)}
+  .modrow .dual .fill{position:absolute;top:8px;height:3px;background:var(--cyan);opacity:.55}
+  .modrow .dual .mark{position:absolute;top:3px;width:2px;height:13px;margin-left:-1px;
+          background:var(--ink);border-radius:1px;pointer-events:none}
+  .modrow .dual input{position:absolute;left:0;top:0;width:100%;height:18px;margin:0;
+          background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+  .modrow .dual input::-webkit-slider-runnable-track{background:none}
+  .modrow .dual input::-moz-range-track{background:none}
+  .modrow .dual input::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;
+          width:11px;height:11px;border-radius:50%;background:var(--cyan);cursor:pointer;margin-top:4px}
+  .modrow .dual input::-moz-range-thumb{pointer-events:auto;width:11px;height:11px;border:none;
+          border-radius:50%;background:var(--cyan);cursor:pointer}
+  .modrow .rngread{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
+          font-family:var(--mono)}
   /* Save row in the Scene panel — one button per slice, so saving the
      soundscape doesn't also overwrite camera settings you were part-way
      through adjusting. */
@@ -807,9 +839,12 @@
             <div class="field"><label title="Master trim on every audio-derived source — audio level, the synth bands, and instrument levels. LFOs are not affected.">audio depth</label>
               <input type="range" id="m-link" min="0" max="2" step="0.05" value="1">
               <span class="val" id="v-mlink">1.00</span></div>
-            <div class="field"><label>LFO rate</label>
+            <div class="field"><label title="Cycles per second of LFO · slow — 0.05 is one full sweep every 20s">LFO slow rate</label>
               <input type="range" id="s-lfo" min="0.01" max="0.4" step="0.01" value="0.05">
               <span class="val" id="v-lfo">0.05</span></div>
+            <div class="field"><label title="Cycles per second of LFO · mid (a triangle) — 0.2 is one full sweep every 5s">LFO mid rate</label>
+              <input type="range" id="s-lfo-mid" min="0.05" max="2" step="0.01" value="0.2">
+              <span class="val" id="v-lfomid">0.20</span></div>
             <div class="field"><label title="Holds engine-driven modulation back so it lands with the sound rather than ahead of it.">audio sync</label>
               <input type="range" id="m-delay" min="0" max="400" step="5" value="0">
               <span class="val" id="v-mdelay">0</span></div>
@@ -1946,7 +1981,7 @@ function renderRoutes(s){
   const dests = s.mod_destinations || [];
   // Rebuild when the mapping SHAPE changes or when the pick-lists do (loading
   // a scene changes both its routes and which params exist to route at).
-  const sig = s.scene + "|" + mods.map(r=>r.source+">"+r.dest).join(",")
+  const sig = s.scene + "|" + mods.map(r=>r.source+">"+r.dest+":"+(r.mode||"add")).join(",")
             + "|" + sources.join(",") + "|" + dests.map(d=>d.key).join(",");
   if (sig === _routesSig) return;
   _routesSig = sig;
@@ -1992,13 +2027,32 @@ function renderRoutes(s){
          <span class="arrow">→</span>
          <select class="dst">${destOpts()}</select>
        </div>
+       <div class="mode">
+         <button data-m="add" title="Add the source on top of the control's own slider">add</button>
+         <button data-m="range" title="Sweep the control between a low and a high value — its own slider is ignored">range</button>
+       </div>
        <div class="btm">
-         <label>depth</label>
-         <input type="range" min="0" max="1" step="0.005">
+         <label title="Seconds for this mapping to catch up with a change in its source. 0 follows the source exactly; raise it to make a jumpy audio source drift instead of snap.">glide</label>
+         <input type="range" class="glide" min="0" max="5" step="0.05">
          <span class="val"></span>
+       </div>
+       <div class="btm addui">
+         <label>depth</label>
+         <input type="range" class="depth" min="0" max="1" step="0.005">
+         <span class="val"></span>
+       </div>
+       <div class="rangeui">
+         <div class="dual"><div class="trk"></div><div class="fill"></div>
+           <input type="range" class="lo"><input type="range" class="hi"><i class="mark"></i></div>
+         <div class="rngread"><span class="rlo"></span><span class="rhi"></span></div>
+         <div class="btm">
+           <label title="The source value that counts as full. Audio levels mostly sit around 0-0.4, so lower this until loud passages reach the high end.">full at</label>
+           <input type="range" class="inmax" min="0.05" max="1" step="0.01">
+           <span class="val"></span>
+         </div>
        </div>`;
     const src = row.querySelector(".src"), dst = row.querySelector(".dst");
-    const range = row.querySelector("input"), val = row.querySelector(".val");
+    const range = row.querySelector("input.depth"), val = row.querySelector(".addui .val");
     // A source or dest the current scene doesn't offer (an older scene, or a
     // voice that has gone away) would otherwise silently select the first
     // option and rewrite the route on the next edit. Keep it visible instead.
@@ -2030,6 +2084,51 @@ function renderRoutes(s){
     src.onchange = pick(src, "source");
     dst.onchange = pick(dst, "dest");
     row.querySelector(".del").onclick = () => send({type:"mod_remove", index:i});
+
+    // --- add | range -------------------------------------------------------
+    // Range mode needs the destination's min/max, which the engine supplies
+    // only where it is known (mod_destinations); elsewhere it is unavailable.
+    const d = dests.find(x => x.key === r.dest);
+    const hasRange = d && d.min !== undefined && d.max !== undefined;
+    const isRange = r.mode === "range" && hasRange;
+    row.querySelectorAll(".mode button").forEach(b => {
+      b.classList.toggle("on", (b.dataset.m === "range") === isRange);
+      if (b.dataset.m === "range" && !hasRange) {
+        b.disabled = true; b.title = "No known range for this destination";
+      }
+      b.onclick = () => { if (!b.disabled) send({type:"set", key:`route.${i}.mode`, value:b.dataset.m}); };
+    });
+    const gl = row.querySelector("input.glide"), glv = gl.nextElementSibling;
+    const glTxt = v => +v > 0 ? (+v).toFixed(2) + "s" : "off";
+    gl.value = r.glide ?? 0; glv.textContent = glTxt(gl.value);
+    gl.oninput = () => { glv.textContent = glTxt(gl.value);
+      send({type:"set", key:`route.${i}.glide`, value:+gl.value}); };
+    row.querySelector(".addui").hidden = isRange;
+    row.querySelector(".rangeui").hidden = !isRange;
+    if (isRange) {
+      const lo = row.querySelector("input.lo"), hi = row.querySelector("input.hi");
+      const im = row.querySelector("input.inmax"), imv = row.querySelector(".rangeui .val");
+      const span = d.max - d.min, step = span / 500;
+      const dec = span >= 50 ? 0 : span >= 0.5 ? 2 : 3;
+      for (const el of [lo, hi]) { el.min = d.min; el.max = d.max; el.step = step; }
+      lo.value = r.lo ?? d.min; hi.value = r.hi ?? d.max; im.value = r.in_max ?? 1;
+      row._range = {min: d.min, span};
+      const paint = () => {
+        const a = (+lo.value - d.min) / span, b = (+hi.value - d.min) / span;
+        const f = row.querySelector(".fill");
+        f.style.left = (Math.min(a, b) * 100) + "%";
+        f.style.width = (Math.abs(b - a) * 100) + "%";
+        row.querySelector(".rlo").textContent = "low " + (+lo.value).toFixed(dec);
+        row.querySelector(".rhi").textContent = "high " + (+hi.value).toFixed(dec)
+          + (+hi.value < +lo.value ? " (inverted)" : "");
+        imv.textContent = (+im.value).toFixed(2);
+        row._lohi = [a, b];
+      };
+      paint();
+      lo.oninput = () => { paint(); send({type:"set", key:`route.${i}.lo`, value:+lo.value}); };
+      hi.oninput = () => { paint(); send({type:"set", key:`route.${i}.hi`, value:+hi.value}); };
+      im.oninput = () => { paint(); send({type:"set", key:`route.${i}.in_max`, value:+im.value}); };
+    }
     box.appendChild(row);
   });
 }
@@ -2038,7 +2137,14 @@ function renderRoutes(s){
 // so you can see the mapping firing while you're choosing it.
 function updateRouteActivity(s){
   const src = s.mod_sources || {};
-  document.querySelectorAll("#routes .modrow").forEach(row => {
+  const pos = s.mod_route_pos || [];
+  document.querySelectorAll("#routes .modrow").forEach((row, i) => {
+    // Range routes: where the destination sits right now, between low and high.
+    const mark = row.querySelector(".dual .mark");
+    if (mark && row._lohi && pos[i] != null) {
+      const [a, b] = row._lohi;
+      mark.style.left = ((a + pos[i] * (b - a)) * 100).toFixed(1) + "%";
+    }
     const bar = row.querySelector(".live i");
     if (!bar) return;
     const v = Math.max(0, Math.min(1, src[row.dataset.src] ?? 0));
@@ -2415,7 +2521,9 @@ function markModulated(s){
   const by = new Map();
   for (const r of (s.modulation || [])) {
     if (!by.has(r.dest)) by.set(r.dest, []);
-    by.get(r.dest).push(`${lbl(r.source)} × ${(+r.depth).toFixed(2)}`);
+    by.get(r.dest).push(r.mode === "range"
+      ? `${lbl(r.source)} → range ${(+(r.lo ?? 0)).toFixed(2)}–${(+(r.hi ?? 1)).toFixed(2)}`
+      : `${lbl(r.source)} × ${(+r.depth).toFixed(2)}`);
   }
   // Recompute only when the routes or the layer rows change — this rides the
   // ~20Hz state broadcast, and the layer rows are rebuilt from scratch by
@@ -2441,11 +2549,16 @@ function markModulated(s){
       const row = el.closest(".field");
       if (!row) continue;
       row.classList.add("modulated");
-      row.title = `Modulated by ${srcs.join(" and ")}.\n\n`
-        + `The mapping is ADDED to this slider, so this control sets the `
-        + `minimum and the source adds on top — leaving it at 0 will not `
-        + `hold the value at 0. Edit or remove it under `
-        + `Modulation → Mappings to take back full control.`;
+      row.title = srcs.some(x => x.includes("→ range"))
+        ? `Controlled by ${srcs.join(" and ")}.\n\n`
+          + `A RANGE mapping owns this control: it sweeps between its low and `
+          + `high values and this slider is ignored while it exists. Switch it `
+          + `to "add" or remove it under Modulation → Mappings to take back control.`
+        : `Modulated by ${srcs.join(" and ")}.\n\n`
+          + `The mapping is ADDED to this slider, so this control sets the `
+          + `minimum and the source adds on top — leaving it at 0 will not `
+          + `hold the value at 0. Edit or remove it under `
+          + `Modulation → Mappings to take back full control.`;
     }
   }
 }
@@ -3373,6 +3486,7 @@ slider("mf-bloomint", "bloom_intensity", "mfbloomint", (v)=>(+v).toFixed(1), nul
 // speed/turbulence/hue, which no generator's param list actually matches.
 // renderLayers() builds the real set from the registry schema instead.
 slider("s-lfo","lfo_slow.rate","lfo");
+slider("s-lfo-mid","lfo_mid.rate","lfomid");
 slider("s-xf","crossfade","xf",(v)=>(+v).toFixed(1));
 slider("s-afade","audio_fade","safade",(v)=>(+v).toFixed(1),null);
 slider("s-startfade","start_fade","sstartfade",(v)=>(+v).toFixed(2),null);

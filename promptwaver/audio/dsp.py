@@ -1271,9 +1271,8 @@ class Soundscape:
 
     def _render_note_events(self, voice_name, n0, frames):
         """Render + age out all currently-active enveloped notes belonging to
-        `voice_name`. Shared by `pluck` and `arp` — they differ only in how
-        notes get scheduled (see `_schedule_notes`), not in how a scheduled
-        note sounds or decays."""
+        `voice_name`. Used by `pluck`. (`arp` shares the scheduling but renders
+        through `_render_arp_notes`, as the voice it arpeggiates.)"""
         out = np.zeros(frames, np.float32)
         idx = np.arange(n0, n0 + frames)
         alive = []
@@ -1655,30 +1654,141 @@ class Soundscape:
     def _render_arp(self, v, n0, frames):
         """Arpeggiate this voice's `chord` instead of sustaining it — steps
         through the chord in `arp.mode` order at `arp.rate` notes/beat, each
-        note a short enveloped pluck. Reuses the pluck note-lifecycle
-        machinery (and its overrun protection) unchanged."""
+        note decaying over `arp.decay`. Scheduling reuses the pluck machinery
+        (and its overrun protection); RENDERING is the voice's own oscillator,
+        see `_render_arp_notes`."""
         tempo = float(self.spec.get("tempo", 60))
         arp = v.get("arp") or {}
         rate = float(arp.get("rate", v.get("rate", 2.0)))
         interval = int(self.sr * 60.0 / max(1e-3, tempo * rate))
         chord = v.get("chord") or [0]
         root = v.get("note", 60)
-        wf = v.get("waveform", "sine")
+        # "saw", matching _render_osc and _render_pad. This defaulted to "sine",
+        # so a voice with no explicit waveform went from a saw stack to sine
+        # blips the moment its arp was switched on — and a sine has no
+        # harmonics for tone or resonance to shape, which is most of why every
+        # other control on the voice appeared to do nothing.
+        wf = v.get("waveform", "saw")
         decay = float(arp.get("decay", 0.35))
         mode = arp.get("mode", "up")
-
-        tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
 
         def freq_fn(step):
             return midi_to_hz(root + self._arp_note(chord, mode, step))
 
-        # `.get` with defaults, because this line is shared by _render_pluck
-        # and _render_arp — and an arp runs on a pad/osc voice, which carries
-        # neither key unless _normalise gated it in.
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone,
-                             drift=float(v.get("drift", 0.0)),
-                             resonance=float(v.get("resonance", 0.0)))
-        return self._render_note_events(v["name"], n0, frames)
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay,
+                             drift=float(v.get("drift", 0.0)))
+        return self._render_arp_notes(v, n0, frames)
+
+    #: Oscillator rows one arp voice may evaluate per block. A row is one
+    #: (distinct pitch x unison layer) — 6 pitches at unison 7, so any chord of
+    #: up to 6 notes renders whole even at the widest stack. Measured at the
+    #: worst case (rate 8, decay 3, unison 7, sub 1, drift 1 — drift gives every
+    #: note its own pitch, defeating dedup): 60 rows cost 22.6ms a block, 42
+    #: cost 14.7ms, against the library's 5-8ms per whole soundscape.
+    ARP_MAX_ROWS = 42
+
+    #: Output trim. Averaging detuned unison layers partly cancels, so at 0.6
+    #: (the old one-oscillator-per-note figure) the 23 arp voices in the library
+    #: came out a median 2.5dB quieter than before. 0.8 puts the median at
+    #: -0.2dB (range -2.6..+4.4dB) with no full mix peaking higher than it did.
+    ARP_OUTPUT_GAIN = 0.8
+
+    def _render_arp_notes(self, v, n0, frames):
+        """Render this voice's arp notes AS THE VOICE: its waveform, tone,
+        resonance, unison stack, detune spread and sub.
+
+        These used to go through `_render_note_events`, pluck's renderer — one
+        bare oscillator per note — so an osc voice lost unison, detune and sub
+        entirely with its arp on. Voice params are read LIVE here rather than
+        baked into each note at onset, so turning a knob changes notes that
+        are already ringing.
+
+        Batched per INSTRUMENTS.md s.2-3. A unison stack multiplies rows per
+        note, which a per-note loop can't afford, but arp notes walk a chord:
+        notes at the same pitch share oscillator rows exactly (phase comes from
+        the absolute sample clock), so sin() rows scale with DISTINCT pitches
+        x unison, not with notes. Each note contributes only its own envelope,
+        summed into its pitch group.
+        """
+        name = v["name"]
+        mine, other = [], []
+        for note in self._active_notes:
+            (mine if note["voice"] == name else other).append(note)
+        if not mine:
+            return np.zeros(frames, np.float32)
+
+        vt = v.get("type", "osc")
+        wf = v.get("waveform", "saw")
+        # Clamped on read: set_param bypasses _normalise.
+        tone = float(np.clip(v.get("tone", 1.0 if vt == "osc" else 0.4), 0.0, 1.0))
+        resonance = float(np.clip(v.get("resonance", 0.0), 0.0, 1.0))
+        detune = float(np.clip(v.get("detune", 0.01), 0.0, 0.1))
+        if vt == "osc":
+            unison = int(np.clip(v.get("unison", 1), 1, 7))
+            spread = np.linspace(-detune, detune, unison) if unison > 1 else np.array([0.0])
+            sub = float(np.clip(v.get("sub", 0.0), 0.0, 1.0))
+        else:
+            # pad thickens with a +/- detune pair rather than a unison count
+            spread = np.array([-detune, detune]) if detune > 0 else np.array([0.0])
+            sub = 0.0
+        layers = len(spread)
+
+        # Keep the newest notes whose distinct pitches fit the row budget.
+        # Oldest go first — an arp note is short, so the oldest is the
+        # quietest — and they leave the pool for good, like pluck's trim.
+        budget = max(1, self.ARP_MAX_ROWS // layers)
+        keep, pitches = [], set()
+        for note in reversed(mine):
+            key = round(note["freq"], 4)
+            if key not in pitches and len(pitches) >= budget:
+                continue
+            pitches.add(key)
+            keep.append(note)
+        mine = keep[::-1]
+
+        idx = np.arange(n0, n0 + frames)
+        t = idx / self.sr
+        starts = np.array([n["start"] for n in mine], dtype=np.int64)
+        decays = np.array([n["decay"] for n in mine], dtype=np.float64)
+        taus = np.maximum(decays, 0.05)
+
+        uniq = sorted(pitches)
+        col = {f: i for i, f in enumerate(uniq)}
+        group = np.array([col[round(n["freq"], 4)] for n in mine])
+        P = len(uniq)
+
+        # Per-pitch envelope sum, factorised (INSTRUMENTS.md s.3): a note that
+        # started before this block contributes exp(-(t'+a0)/tau) =
+        # exp(-t'/tau) * exp(-a0/tau), one shared row per distinct tau times a
+        # per-note scalar. Only notes STARTING mid-block need a row of their
+        # own. Without this, a dense arp with a long decay paid one exp() row
+        # per live note — up to the 96-note pool — and the envelopes, not the
+        # oscillators, were most of the cost.
+        E = np.zeros((P, frames))
+        tl = (idx - n0) / self.sr                                          # block-local time
+        before = starts <= n0
+        if before.any():
+            a0 = (n0 - starts[before]) / self.sr
+            for tau in np.unique(taus[before]):
+                m = taus[before] == tau
+                coef = np.bincount(group[before][m], weights=np.exp(-a0[m] / tau), minlength=P)
+                E += coef[:, None] * np.exp(-tl / tau)[None, :]
+        for k in np.flatnonzero(~before):
+            age = (idx - starts[k]) / self.sr
+            E[group[k]] += np.where(age >= 0, np.exp(-np.maximum(age, 0.0) / taus[k]), 0.0)
+
+        freqs = np.array(uniq, dtype=np.float64)
+        fu = (freqs[:, None] * (1.0 + spread[None, :])).ravel()             # (P*U,)
+        ph = fu[:, None] * t[None, :]
+        S = _osc(ph, wf, tone, float(fu.max()), self.sr, resonance)
+        S = S.reshape(len(uniq), layers, frames).mean(axis=1)                # (P, frames)
+        if sub > 0:
+            S = S + sub * _osc((freqs / 2.0)[:, None] * t[None, :], "sine")
+        out = (S * E).sum(axis=0)
+
+        alive = (n0 + frames - 1 - starts) / self.sr <= decays * 6
+        self._active_notes = other + [n for n, a in zip(mine, alive) if a]
+        return (out * self.ARP_OUTPUT_GAIN).astype(np.float32)
 
     def _render_noise(self, v, frames):
         tone = float(v.get("tone", 0.5))

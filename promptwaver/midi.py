@@ -85,6 +85,7 @@ ENGINE_RANGES = {
     "hue_value": (0.0, 1.0),
     "audio_link": (0.0, 2.0),
     "lfo_slow.rate": (0.01, 0.4),
+    "lfo_mid.rate": (0.05, 2.0),
     "lfo_mid.rate": (0.01, 0.8),
 }
 

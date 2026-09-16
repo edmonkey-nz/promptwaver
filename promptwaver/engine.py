@@ -604,13 +604,46 @@ class Engine:
             # saved back via Update scene from config.
             _, idx_s, attr = key.split(".", 2)
             idx = int(idx_s)
-            if self.scenes.current is None or attr not in ("depth", "source", "dest"):
+            if self.scenes.current is None or attr not in (
+                    "depth", "source", "dest", "mode", "lo", "hi", "in_max", "glide"):
                 return
             mods = self.scenes.current.spec.modulation
             if not (0 <= idx < len(mods)):
                 return
+            r = mods[idx]
             if attr == "depth":
-                mods[idx]["depth"] = float(value)
+                r["depth"] = float(value)
+            elif attr == "mode":
+                if str(value) == "range":
+                    r["mode"] = "range"
+                    # First switch to range: start at the destination's full
+                    # extent, so the route visibly does something before its
+                    # handles are touched.
+                    if "lo" not in r or "hi" not in r:
+                        rng = self._dest_range(r.get("dest", "")) or (0.0, 1.0)
+                        r.setdefault("lo", rng[0])
+                        r.setdefault("hi", rng[1])
+                else:
+                    # "add" is the default and isn't written, so a route that
+                    # has never been ranged saves exactly as it always did.
+                    # lo/hi/in_max stay, so toggling back restores the range.
+                    r.pop("mode", None)
+            elif attr in ("lo", "hi"):
+                v = float(value)
+                rng = self._dest_range(r.get("dest", ""))
+                if rng:
+                    v = max(rng[0], min(rng[1], v))
+                r[attr] = v
+            elif attr == "in_max":
+                r["in_max"] = max(0.01, float(value))
+            elif attr == "glide":
+                g = max(0.0, min(10.0, float(value)))
+                # Written only while in use, like mode — a route that never
+                # glides saves exactly as before.
+                if g > 0:
+                    r["glide"] = g
+                else:
+                    r.pop("glide", None)
             else:
                 # Never store an empty source/dest. A <select> asked for an
                 # option it doesn't have reports "", and silently accepting
@@ -1318,8 +1351,23 @@ class Engine:
         if self.scenes.current is None:
             return
         for r in self.scenes.current.spec.modulation:
-            self.matrix.add_route(r.get("source", "lfo_slow"), r.get("dest", ""),
-                                  float(r.get("depth", 1.0)), float(r.get("bias", 0.0)))
+            self._add_route_from_spec(r)
+
+    def _add_route_from_spec(self, r: dict):
+        """The one place a saved route dict becomes a live matrix route. There
+        used to be two copies (scene load and live edits), and a new field
+        added to one and not the other would work until the scene reloaded."""
+        self.matrix.add_route(r.get("source", "lfo_slow"), r.get("dest", ""),
+                              float(r.get("depth", 1.0)), float(r.get("bias", 0.0)),
+                              str(r.get("mode", "add")), float(r.get("lo", 0.0)),
+                              float(r.get("hi", 1.0)), float(r.get("in_max", 1.0)),
+                              float(r.get("glide", 0.0)))
+
+    def _dest_range(self, dest: str) -> tuple[float, float] | None:
+        for d in self.mod_destinations():
+            if d["key"] == dest and "min" in d:
+                return float(d["min"]), float(d["max"])
+        return None
 
     def add_route(self, source: str, dest: str, depth: float = 0.3):
         def apply():
@@ -1388,11 +1436,17 @@ class Engine:
         on hover, so the dropdown reads as English without cutting the tie to
         what's in the file and in TECHNICAL.md.
         """
-        def entry(key: str, group: str, fallback: str | None = None) -> dict:
-            return {"key": key,
-                    "label": self.DEST_LABELS.get(key,
-                                                  (fallback or key).replace("_", " ")),
-                    "group": group}
+        def entry(key: str, group: str, fallback: str | None = None,
+                  lo: float | None = None, hi: float | None = None) -> dict:
+            e = {"key": key,
+                 "label": self.DEST_LABELS.get(key, (fallback or key).replace("_", " ")),
+                 "group": group}
+            # min/max are what a RANGE route sweeps between. Only present
+            # where the range is actually known; the UI offers range mode
+            # nowhere else.
+            if lo is not None and hi is not None:
+                e["min"], e["max"] = float(lo), float(hi)
+            return e
 
         out = []
         seen = set()
@@ -1405,17 +1459,27 @@ class Engine:
                     if key in seen:
                         continue
                     seen.add(key)
-                    out.append(entry(key, group, p["key"]))
+                    out.append(entry(key, group, p["key"], p.get("min"), p.get("max")))
             if sc.is_3d:
                 for k in ("speed", "orbit_radius", "fov", "max_strokes"):
-                    out.append(entry(f"camera.{k}", "Camera", k))
+                    out.append(entry(f"camera.{k}", "Camera", k, *self.DEST_RANGES[f"camera.{k}"]))
         # Flagged in the group name because it is a real behavioural
         # difference, not a caveat: monitor filters are drawn in the browser
         # and never touch the vector data sent to the DAC, so a route here
         # does nothing at all on a laser.
         for k in ("glow", "trail", "kaleidoscope_segments", "line_curve", "line_width"):
-            out.append(entry(k, "Monitor · screen only"))
+            out.append(entry(k, "Monitor · screen only", None, *self.DEST_RANGES[k]))
         return out
+
+    #: Ranges for destinations that aren't generator params (those carry their
+    #: own, from the registry). These MIRROR the sliders in index.html
+    #: (#c-speed, #c-radius, #c-fov, #c-max, #mf-*) — change them together.
+    DEST_RANGES = {
+        "camera.speed": (0.0, 0.6), "camera.orbit_radius": (3.0, 20.0),
+        "camera.fov": (30.0, 100.0), "camera.max_strokes": (20.0, 400.0),
+        "glow": (0.0, 1.0), "trail": (0.0, 0.95), "kaleidoscope_segments": (0.0, 12.0),
+        "line_curve": (-1.0, 1.0), "line_width": (1.0, 8.0),
+    }
 
     #: Human labels for modulation SOURCES. `voice.*` is handled separately —
     #: those names come from whichever soundscape is loaded.
@@ -1510,8 +1574,7 @@ class Engine:
         self._refresh_midi_ranges()
         self.matrix.clear_routes()
         for r in spec.modulation:
-            self.matrix.add_route(r.get("source", "lfo_slow"), r.get("dest", ""),
-                                  float(r.get("depth", 1.0)), float(r.get("bias", 0.0)))
+            self._add_route_from_spec(r)
         # global audio<->visual coupling level (the "level effect"): scales every
         # route sourced from live audio, independent of each route's own depth
         self._set_audio_link(float(getattr(spec, "audio_link", 1.0)))
@@ -1779,6 +1842,12 @@ class Engine:
             # flat (a silent mic) is indistinguishable from a broken route.
             "mod_sources": {n: round(self.matrix.source_value(n), 3)
                             for n in self.matrix.sources},
+            # Per route, in spec order: where a RANGE route sits between its lo
+            # (0) and hi (1) right now, for the marker on its slider; None for
+            # add routes. A snapshot of the list, because the render thread
+            # rebuilds it (clear + append) while this runs on the broadcaster.
+            "mod_route_pos": [round(self.matrix.route_position(r), 3) if r.mode == "range"
+                              else None for r in list(self.matrix.routes)],
             "mic_online": self.analysis.online,
             "audio_react": self.audio_react,
             "mod_delay_mode": self.mod_delay_mode,

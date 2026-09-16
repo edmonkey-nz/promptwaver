@@ -72,6 +72,37 @@ onset, not a new renderer; and if you state a bound in a constant, test it —
 reached ±1.003, i.e. 10.53 cents against a stated 10.5) until the walk position
 was clamped.
 
+**Worked example 3 — the arp that wasn't its voice (2026-09).** "With the arp
+on, none of the other instrument settings do anything" was literally true, and
+measured: tone, resonance, detune, unison and sub all produced a 0.000 spectral
+difference. Two causes, both invisible from any one file:
+
+- `_render_arp` defaulted `waveform` to `"sine"` while `_render_osc` and
+  `_render_pad` default to `"saw"`. A voice that never set a waveform was a saw
+  stack with the arp off and pure sine blips with it on — and a sine has no
+  harmonics for tone or resonance to shape. **When one voice has two render
+  paths, their defaults must agree.**
+- The arp rendered through pluck's `_render_note_events`, one bare oscillator
+  per note, so unison/detune/sub were never read.
+
+`_render_arp_notes` now renders each note as the voice (waveform, tone,
+resonance, unison stack, detune, sub — read live, so knobs move ringing notes)
+in the batched shape: oscillator rows dedupe on pitch (an arp walks a chord),
+and envelopes factorise into one shared row per decay plus a per-note scalar,
+with only mid-block onsets getting their own row. Numbers: `wing_shimmer` went
+from 1.4ms (sine blips) to ~10ms a block, i.e. what the same voice costs with
+its arp off — that is the price of sounding like it. Factorising the envelopes
+took the dense no-drift worst case (notes piling up to the 96-note pool) from
+21.8ms to 12.6ms; `ARP_MAX_ROWS = 42` bounds the drift worst case, where every
+note is its own pitch, at ~16ms. `ARP_OUTPUT_GAIN = 0.8` recentres the 23 arp
+voices in the library at a median -0.2dB (range -2.6..+4.4) against the old
+sound; no full mix peaks higher (0.773 vs 0.768). Pluck output is bit-identical.
+
+A testing trap found on the way: a render is only reproducible with **three**
+seeds — `np.random.seed`, `random.seed` (swell phase and period), and the
+Soundscape's own `self._rng` (drift). Without the second, the committed code
+did not match itself and a regression check reported a false difference.
+
 ## 1. The two rendering shapes
 
 Every voice is one of these. Pick deliberately — this is the decision the rest
@@ -92,8 +123,8 @@ lives:
 
 | | per-note loop | batched matrix |
 |---|---|---|
-| used by | `pluck`, `arp` | `bell`, `harp` |
-| method | `_render_note_events` | `_render_bell_notes` / `_render_harp_notes` |
+| used by | `pluck` | `bell`, `harp`, `arp` |
+| method | `_render_note_events` | `_render_bell_notes` / `_render_harp_notes` / `_render_arp_notes` |
 | cost | one `_osc()` call **per note** | one `_osc()` call **total** |
 | shape | 1 fundamental per note | flatten (note × partial) into one 2D matrix |
 
