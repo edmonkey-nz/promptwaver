@@ -307,11 +307,11 @@
             }
           }
         ],
-        "scale": 1.0,
+        "scale": 4.5,
         "rotate": 0.0,
-        "spread": 1.0,
-        "glow": 0.1,
-        "max_strokes": 220
+        "spread": 0.83,
+        "glow": 0.0,
+        "max_strokes": 250
       }
     }
   ],
@@ -326,33 +326,37 @@
     {
       "source": "lfo_slow",
       "dest": "visual.rotate",
-      "depth": 0.12
+      "depth": 0.1
     },
     {
-      "source": "synth_mid",
-      "dest": "visual.glow",
-      "depth": 0.35
-    },
-    {
-      "source": "synth_high",
-      "dest": "visual.scale",
-      "depth": 0.22
-    },
-    {
-      "source": "audio_level",
+      "source": "lfo_slow",
       "dest": "visual.spread",
-      "depth": 0.18
+      "depth": 0.505,
+      "lo": 3.4516,
+      "hi": 1.806,
+      "in_max": 0.38,
+      "glide": 4.95
     }
   ],
   "camera": {
-    "max_strokes": 90
+    "max_strokes": 90,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.35,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": -0.91,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
-    "tempo": 68,
+    "tempo": 68.0,
     "master": 0.75,
     "swell_period": 58.5,
-    "filter_sweep_period": 52,
+    "filter_sweep_period": 52.0,
     "voices": [
       {
         "name": "hive_drone",
@@ -368,10 +372,31 @@
         "tone": 0.35,
         "detune": 0.008,
         "env": {
-          "attack": 8,
-          "decay": 12,
+          "attack": 8.0,
+          "decay": 10.0,
           "sustain": 0.7,
-          "release": 6
+          "release": 6.0
+        },
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.6,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "sweep": 0.17,
+        "lfo": {
+          "on": false,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
         }
       },
       {
@@ -385,23 +410,41 @@
           10,
           14
         ],
-        "level": 0.38,
-        "unison": 3,
-        "detune": 0.012,
-        "tone": 0.62,
-        "resonance": 0.7,
+        "level": 1.0,
+        "unison": 6,
+        "detune": 0.004,
+        "tone": 0.92,
+        "resonance": 0.81,
         "lfo": {
-          "on": true,
+          "on": false,
           "dest": "tone",
           "shape": "sine",
           "rate": 0.031,
           "depth": 0.28
         },
         "env": {
-          "attack": 6,
-          "decay": 8,
-          "sustain": 0.65,
+          "attack": 3.61,
+          "decay": 3.06,
+          "sustain": 0.85,
           "release": 5
+        },
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.66,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "arp": {
+          "on": true,
+          "mode": "up",
+          "rate": 2,
+          "decay": 0.3
         }
       },
       {
@@ -437,6 +480,15 @@
             "rate": 0.017,
             "depth": 0.22
           }
+        ],
+        "pan": 0.0,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
         ]
       },
       {
@@ -456,16 +508,54 @@
         "decay": 3.2,
         "tone": 0.72,
         "character": "celesta",
-        "drift": 0.18
+        "drift": 0.18,
+        "pan": 0.0,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
       },
       {
         "name": "hive_air",
         "type": "noise",
         "level": 0.12,
-        "tone": 0.45
+        "tone": 0.45,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.24,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
       }
     ],
-    "swell_amount": 0.444
+    "swell_amount": 0.444,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.4,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "filter_sweep_amount": 0.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
@@ -490,5 +580,8 @@
     "expansion": null
   },
   "shape_modulation": [],
-  "lfo": {}
+  "lfo": {
+    "lfo_slow": 0.03,
+    "lfo_mid": 0.2
+  }
 }
