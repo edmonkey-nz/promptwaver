@@ -1,0 +1,325 @@
+# Layer.__init__() got an unexpected keyword argument 'camera'
+
+```json
+{
+  "name": "semaphore flags slowing ships in 1826",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "semaphore_flag": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 0.35]},
+              {"op": "polyline", "pts": [[0, 0.35], [0.25, 0.5], [0.35, 0.3], [0, 0.35]], "closed": true},
+              {"op": "polyline", "pts": [[0, 0.35], [-0.25, 0.5], [-0.35, 0.3], [0, 0.35]], "closed": true}
+            ]
+          },
+          "ship_hull": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[-0.4, 0], [-0.3, -0.25], [0.3, -0.25], [0.4, 0], [-0.4, 0]], "closed": true},
+              {"op": "line", "a": [-0.35, 0], "b": [-0.35, 0.15]},
+              {"op": "line", "a": [-0.1, 0], "b": [-0.1, 0.2]},
+              {"op": "line", "a": [0.15, 0], "b": [0.15, 0.18]}
+            ]
+          },
+          "sail": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 0.5]},
+              {"op": "polyline", "pts": [[0, 0], [0.3, 0.15], [0.25, 0.5], [0, 0.5]], "closed": true}
+            ]
+          },
+          "cannon": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.08, "c": [0, 0], "seg": 16},
+              {"op": "line", "a": [0, 0], "b": [0.2, 0]},
+              {"op": "line", "a": [-0.06, -0.06], "b": [-0.15, -0.15]},
+              {"op": "line", "a": [-0.06, 0.06], "b": [-0.15, 0.15]}
+            ]
+          },
+          "wave": {
+            "space": "cart",
+            "ops": [
+              {"op": "arc", "r": 0.25, "a0": 0, "a1": 0.5, "c": [0, 0], "seg": 24},
+              {"op": "arc", "r": 0.35, "a0": 0, "a1": 0.4, "c": [0.5, 0], "seg": 20}
+            ]
+          },
+          "mast_cluster": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 0.6]},
+              {"op": "line", "a": [-0.08, 0.15], "b": [0.08, 0.15]},
+              {"op": "line", "a": [-0.1, 0.3], "b": [0.1, 0.3]},
+              {"op": "line", "a": [-0.12, 0.45], "b": [0.12, 0.45]}
+            ]
+          },
+          "signalman": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.06, "c": [0, 0.2], "seg": 12},
+              {"op": "line", "a": [0, 0.14], "b": [0, 0]},
+              {"op": "line", "a": [-0.08, 0.1], "b": [-0.16, 0.08]},
+              {"op": "line", "a": [0.08, 0.1], "b": [0.16, 0.08]},
+              {"op": "line", "a": [-0.05, 0], "b": [-0.1, -0.15]},
+              {"op": "line", "a": [0.05, 0], "b": [0.1, -0.15]}
+            ]
+          }
+        },
+        "nodes": [
+          {"def": "semaphore_flag", "at": [-45, -25], "scale": 1.2, "rotate": 0.1, "color": [1.0, 0.2, 0.2], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [-42, -20], "scale": 1.0, "rotate": 0.3, "color": [1.0, 0.3, 0.1], "glow": 0.75},
+          {"def": "semaphore_flag", "at": [-39, -15], "scale": 1.1, "rotate": 0.15, "color": [0.95, 0.25, 0.2], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [-36, -10], "scale": 0.95, "rotate": 0.25, "color": [1.0, 0.15, 0.15], "glow": 0.85},
+          {"def": "semaphore_flag", "at": [-33, -5], "scale": 1.15, "rotate": 0.05, "color": [1.0, 0.35, 0.2], "glow": 0.7},
+          {"def": "semaphore_flag", "at": [-30, 0], "scale": 1.0, "rotate": 0.35, "color": [0.9, 0.2, 0.25], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [-27, 5], "scale": 1.05, "rotate": 0.1, "color": [1.0, 0.25, 0.15], "glow": 0.75},
+          {"def": "semaphore_flag", "at": [-24, 10], "scale": 1.1, "rotate": 0.2, "color": [1.0, 0.2, 0.2], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [-21, 15], "scale": 0.9, "rotate": 0.3, "color": [0.95, 0.3, 0.25], "glow": 0.7},
+          {"def": "semaphore_flag", "at": [-18, 20], "scale": 1.12, "rotate": 0.15, "color": [1.0, 0.2, 0.1], "glow": 0.85},
+          {"def": "semaphore_flag", "at": [-15, 25], "scale": 1.0, "rotate": 0.25, "color": [1.0, 0.15, 0.2], "glow": 0.78},
+          {"def": "semaphore_flag", "at": [-12, 30], "scale": 1.08, "rotate": 0.05, "color": [0.98, 0.25, 0.15], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [-9, 35], "scale": 1.02, "rotate": 0.2, "color": [1.0, 0.2, 0.25], "glow": 0.72},
+          {"def": "semaphore_flag", "at": [-6, 38], "scale": 1.1, "rotate": 0.1, "color": [0.92, 0.28, 0.18], "glow": 0.82},
+          {"def": "semaphore_flag", "at": [-3, 40], "scale": 0.98, "rotate": 0.3, "color": [1.0, 0.22, 0.22], "glow": 0.76},
+          {"def": "semaphore_flag", "at": [0, 42], "scale": 1.06, "rotate": 0.15, "color": [0.96, 0.2, 0.2], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [3, 40], "scale": 1.0, "rotate": 0.25, "color": [1.0, 0.3, 0.15], "glow": 0.75},
+          {"def": "semaphore_flag", "at": [6, 38], "scale": 1.1, "rotate": 0.1, "color": [0.95, 0.2, 0.25], "glow": 0.83},
+          {"def": "semaphore_flag", "at": [9, 35], "scale": 0.95, "rotate": 0.2, "color": [1.0, 0.25, 0.1], "glow": 0.78},
+          {"def": "semaphore_flag", "at": [12, 30], "scale": 1.12, "rotate": 0.3, "color": [0.93, 0.22, 0.2], "glow": 0.81},
+          {"def": "semaphore_flag", "at": [15, 25], "scale": 1.0, "rotate": 0.15, "color": [1.0, 0.2, 0.2], "glow": 0.77},
+          {"def": "semaphore_flag", "at": [18, 20], "scale": 1.08, "rotate": 0.05, "color": [0.98, 0.28, 0.18], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [21, 15], "scale": 1.02, "rotate": 0.25, "color": [1.0, 0.18, 0.22], "glow": 0.74},
+          {"def": "semaphore_flag", "at": [24, 10], "scale": 1.1, "rotate": 0.1, "color": [0.96, 0.25, 0.2], "glow": 0.82},
+          {"def": "semaphore_flag", "at": [27, 5], "scale": 0.98, "rotate": 0.3, "color": [1.0, 0.2, 0.15], "glow": 0.76},
+          {"def": "semaphore_flag", "at": [30, 0], "scale": 1.06, "rotate": 0.15, "color": [0.94, 0.22, 0.25], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [33, -5], "scale": 1.0, "rotate": 0.2, "color": [1.0, 0.3, 0.1], "glow": 0.78},
+          {"def": "semaphore_flag", "at": [36, -10], "scale": 1.1, "rotate": 0.25, "color": [0.95, 0.2, 0.2], "glow": 0.81},
+          {"def": "semaphore_flag", "at": [39, -15], "scale": 0.95, "rotate": 0.1, "color": [1.0, 0.25, 0.2], "glow": 0.75},
+          {"def": "semaphore_flag", "at": [42, -20], "scale": 1.12, "rotate": 0.3, "color": [0.92, 0.2, 0.2], "glow": 0.83},
+          {"def": "semaphore_flag", "at": [45, -25], "scale": 1.0, "rotate": 0.15, "color": [1.0, 0.2, 0.25], "glow": 0.77},
+          {"def": "semaphore_flag", "at": [48, -28], "scale": 1.08, "rotate": 0.05, "color": [0.97, 0.28, 0.15], "glow": 0.79},
+          {"def": "semaphore_flag", "at": [50, -30], "scale": 1.02, "rotate": 0.2, "color": [1.0, 0.18, 0.18], "glow": 0.76},
+          {"def": "semaphore_flag", "at": [48, -32], "scale": 1.1, "rotate": 0.25, "color": [0.96, 0.22, 0.22], "glow": 0.8},
+          {"def": "semaphore_flag", "at": [45, -35], "scale": 0.98, "rotate": 0.1, "color": [1.0, 0.25, 0.2], "glow": 0.74},
+          {"def": "semaphore_flag", "at": [42, -38], "scale": 1.06, "rotate": 0.3, "color": [0.93, 0.2, 0.25], "glow": 0.82},
+          {"def": "ship_hull", "at": [-48, 0], "scale": 1.3, "rotate": 0, "color": [0.3, 0.5, 0.8], "glow": 0.65},
+          {"def": "ship_hull", "at": [-40, 8], "scale": 1.2, "rotate": 0.05, "color": [0.25, 0.45, 0.75], "glow": 0.6},
+          {"def": "ship_hull", "at": [-32, 16], "scale": 1.25, "rotate": 0.02, "color": [0.28, 0.48, 0.78], "glow": 0.65},
+          {"def": "ship_hull", "at": [-24, 24], "scale": 1.15, "rotate": 0.08, "color": [0.32, 0.52, 0.82], "glow": 0.62},
+          {"def": "ship_hull", "at": [-16, 30], "scale": 1.2, "rotate": 0.03, "color": [0.26, 0.46, 0.76], "glow": 0.64},
+          {"def": "ship_hull", "at": [-8, 35], "scale": 1.18, "rotate": 0.06, "color": [0.3, 0.5, 0.8], "glow": 0.63},
+          {"def": "ship_hull", "at": [0, 38], "scale": 1.22, "rotate": 0.01, "color": [0.27, 0.47, 0.77], "glow": 0.65},
+          {"def": "ship_hull", "at": [8, 35], "scale": 1.16, "rotate": 0.07, "color": [0.31, 0.51, 0.81], "glow": 0.62},
+          {"def": "ship_hull", "at": [16, 30], "scale": 1.21, "rotate": 0.04, "color": [0.25, 0.45, 0.75], "glow": 0.64},
+          {"def": "ship_hull", "at": [24, 24], "scale": 1.17, "rotate": 0.09, "color": [0.29, 0.49, 0.79], "glow": 0.63},
+          {"def": "ship_hull", "at": [32, 16], "scale": 1.19, "rotate": 0.02, "color": [0.32, 0.52, 0.82], "glow": 0.65},
+          {"def": "ship_hull", "at": [40, 8], "scale": 1.23, "rotate": 0.05, "color": [0.26, 0.46, 0.76], "glow": 0.61},
+          {"def": "ship_hull", "at": [48, 0], "scale": 1.2, "rotate": 0.03, "color": [0.3, 0.5, 0.8], "glow": 0.64},
+          {"def": "ship_hull", "at": [50, -12], "scale": 1.18, "rotate": 0.08, "color": [0.28, 0.48, 0.78], "glow": 0.62},
+          {"def": "ship_hull", "at": [48, -24], "scale": 1.15, "rotate": 0.04, "color": [0.27, 0.47, 0.77], "glow": 0.65},
+          {"def": "ship_hull", "at": [40, -32], "scale": 1.22, "rotate": 0.06, "color": [0.31, 0.51, 0.81], "glow": 0.63},
+          {"def": "ship_hull", "at": [32, -38], "scale": 1.17, "rotate": 0.01, "color": [0.25, 0.45, 0.75], "glow": 0.64},
+          {"def": "sail", "at": [-46, 2], "scale": 1.1, "rotate": 0.08, "color": [0.7, 0.85, 1.0], "glow": 0.55},
+          {"def": "sail", "at": [-38, 10], "scale": 1.0, "rotate": 0.12, "color": [0.75, 0.88, 1.0], "glow": 0.5},
+          {"def": "sail", "at": [-30, 18], "scale": 1.05, "rotate": 0.06, "color": [0.72, 0.86, 0.98], "glow": 0.52},
+          {"def": "sail", "at": [-22, 26], "scale": 0.95, "rotate": 0.1, "color": [0.68, 0.83, 0.95], "glow": 0.48},
+          {"def": "sail", "at": [-14, 32], "scale": 1.02, "rotate": 0.07, "color": [0.74, 0.87, 0.99], "glow": 0.51},
+          {"def": "sail", "at": [-6, 37], "scale": 1.08, "rotate": 0.11, "color": [0.7, 0.85, 1.0], "glow": 0.54},
+          {"def": "sail", "at": [2, 40], "scale": 0.98, "rotate": 0.05, "color": [0.76, 0.89, 1.0], "glow": 0.49},
+          {"def": "sail", "at": [10, 36], "scale": 1.03, "rotate": 0.09, "color": [0.71, 0.84, 0.97], "glow": 0.53},
+          {"def": "sail", "at": [18, 32], "scale": 1.07, "rotate": 0.08, "color": [0.73, 0.86, 0.98], "glow": 0.51},
+          {"def": "sail", "at": [26, 26], "scale": 0.96, "rotate": 0.12, "color": [0.69, 0.83, 0.96], "glow": 0.5},
+          {"def": "sail", "at": [34, 18], "scale": 1.01, "rotate": 0.06, "color": [0.75, 0.88, 1.0], "glow": 0.52},
+          {"def": "sail", "at": [42, 10], "scale": 1.06, "rotate": 0.1, "color": [0.7, 0.85, 0.99], "glow": 0.54},
+          {"def": "sail", "at": [50, 2], "scale": 0.99, "rotate": 0.04, "color": [0.74, 0.87, 0.98], "glow": 0.5},
+          {"def": "sail", "at": [52, -10], "scale": 1.04, "rotate": 0.11, "color": [0.72, 0.86, 0.97], "glow": 0.53},
+          {"def": "sail", "at": [50, -22], "scale": 1.0, "rotate": 0.07, "color": [0.76, 0.89, 1.0], "glow": 0.51},
+          {"def": "sail", "at": [42, -30], "scale": 1.05, "rotate": 0.09, "color": [0.7, 0.84, 0.96], "glow": 0.52},
+          {"def": "sail", "at": [34, -36], "scale": 0.97, "rotate": 0.08, "color": [0.73, 0.87, 0.99], "glow": 0.5},
+          {"def": "cannon", "at": [-50, 2], "scale": 0.8, "rotate": 0.15, "color": [0.4, 0.4, 0.4], "glow": 0.7},
+          {"def": "cannon", "at": [-42, 10], "scale": 0.75, "rotate": 0.1, "color": [0.35, 0.35, 0.35], "glow": 0.65},
+          {"def": "cannon", "at": [-34, 18], "scale": 0.85, "rotate": 0.2, "color": [0.38, 0.38, 0.38], "glow": 0.68},
+          {"def": "cannon", "at": [-26, 26], "scale": 0.78, "rotate": 0.12, "color": [0.36, 0.36, 0.36], "glow": 0.66},
+          {"def": "cannon", "at": [-18, 32], "scale": 0.8, "rotate": 0.18, "color": [0.39, 0.39, 0.39], "glow": 0.69},
+          {"def": "cannon", "at": [-10, 37], "scale": 0.77, "rotate": 0.08, "color": [0.34, 0.34, 0.34], "glow": 0.64},
+          {"def": "cannon", "at": [-2, 40], "scale": 0.82, "rotate": 0.14, "color": [0.37, 0.37, 0.37], "glow": 0.67},
+          {"def": "cannon", "at": [6, 36], "scale": 0.79, "rotate": 0.11, "color": [0.4, 0.4, 0.4], "glow": 0.7},
+          {"def": "cannon", "at": [14, 32], "scale": 0.81, "rotate": 0.19, "color": [0.35, 0.35, 0.35], "glow": 0.65},
+          {"def": "cannon", "at": [22, 26], "scale": 0.76, "rotate": 0.09, "color": [0.38, 0.38, 0.38], "glow": 0.68},
+          {"def": "cannon", "at": [30, 18], "scale": 0.84, "rotate": 0.17, "color": [0.36, 0.36, 0.36], "glow": 0.66},
+          {"def": "cannon", "at": [38, 10], "scale": 0.78, "rotate": 0.13, "color": [0.39, 0.39, 0.39], "glow": 0.69},
+          {"def": "cannon", "at": [46, 2], "scale": 0.83, "rotate": 0.1, "color": [0.34, 0.34, 0.34], "glow": 0.64},
+          {"def": "cannon", "at": [52, -8], "scale": 0.8, "rotate": 0.16, "color": [0.37, 0.37, 0.37], "glow": 0.67},
+          {"def": "cannon", "at": [50, -20], "scale": 0.77, "rotate": 0.12, "color": [0.4, 0.4, 0.4], "glow": 0.7},
+          {"def": "cannon", "at": [42, -28], "scale": 0.82, "rotate": 0.18, "color": [0.35, 0.35, 0.35], "glow": 0.65},
+          {"def": "cannon", "at": [34, -34], "scale": 0.79, "rotate": 0.11, "color": [0.38, 0.38, 0.38], "glow": 0.68},
+          {"def": "wave", "at": [-50, -8], "scale": 1.3, "rotate": 0, "color": [0.2, 0.6, 0.9], "glow": 0.55},
+          {"def": "wave", "at": [-40, 0], "scale": 1.2, "rotate": 0.15, "color": [0.25, 0.65, 0.92], "glow": 0.5},
+          {"def": "wave", "at": [-30, 12], "scale": 1.15, "rotate": 0.08, "color": [0.22, 0.58, 0.88], "glow": 0.52},
+          {"def": "wave", "at": [-20, 22], "scale": 1.25, "rotate": 0.2, "color": [0.28, 0.68, 0.95], "glow": 0.54},
+          {"def": "wave", "at": [-10, 32], "scale": 1.1, "rotate": 0.12, "color": [0.24, 0.62, 0.9], "glow": 0.51},
+          {"def": "wave", "at": [0, 40], "scale": 1.18, "rotate": 0.1, "color": [0.26, 0.64, 0.93], "glow": 0.53},
+          {"def": "wave", "at": [10, 34], "scale": 1.2, "rotate": 0.18, "color": [0.23, 0.6, 0.89], "glow": 0.52},
+          {"def": "wave", "at": [20, 24], "scale": 1.16, "rotate": 0.14, "color": [0.27, 0.67, 0.94], "glow": 0.54},
+          {"def": "wave", "at": [30, 14], "scale": 1.22, "rotate": 0.09, "color": [0.25, 0.63, 0.91], "glow": 0.5},
+          {"def": "wave", "at": [40, 4], "scale": 1.17, "rotate": 0.16, "color": [0.21, 0.57, 0.87], "glow": 0.53},
+          {"def": "wave", "at": [50, -4], "scale": 1.19, "rotate": 0.11, "color": [0.29, 0.69, 0.96], "glow": 0.54},
+          {"def": "wave", "at": [52, -16], "scale": 1.14, "rotate": 0.19, "color": [0.24, 0.61, 0.89], "glow": 0.51},
+          {"def": "wave", "at": [48, -26], "scale": 1.21, "rotate": 0.13, "color": [0.26, 0.65, 0.92], "glow": 0.53},
+          {"def": "wave", "at": [40, -34], "scale": 1.18, "rotate": 0.1, "color": [0.22, 0.59, 0.88], "glow": 0.52},
+          {"def": "mast_cluster", "at": [-44, 3], "scale": 1.1, "rotate": 0, "color": [0.5, 0.7, 0.9], "glow": 0.6},
+          {"def": "mast_cluster", "at": [-36, 11], "scale": 1.0, "rotate": 0.05, "color": [0.48, 0.68, 0.88], "glow": 0.58},
+          {"def": "mast_cluster", "at": [-28, 19], "scale": 1.05, "rotate": 0.02, "color": [0.52, 0.72, 0.92], "glow": 0.61},
+          {"def": "mast_cluster", "at": [-20, 27], "scale": 0.95, "rotate": 0.08, "color": [0.46, 0.66, 0.86], "glow": 0.57},
+          {"def": "mast_cluster", "at": [-12, 33], "scale": 1.02, "rotate": 0.03, "color": [0.51, 0.71, 0.91], "glow": 0.59},
+          {"def": "mast_cluster", "at": [-4, 38], "scale": 1.08, "rotate": 0.07, "color": [0.49, 0.69, 0.89], "glow": 0.6},
+          {"def": "mast_cluster", "at": [4, 38], "scale": 1.0, "rotate": 0.04, "color": [0.53, 0.73, 0.93], "glow": 0.62},
+          {"def": "mast_cluster", "at": [12, 33], "scale": 1.06, "rotate": 0.09, "color": [0.47, 0.67, 0.87], "glow": 0.58},
+          {"def": "mast_cluster", "at": [20, 27], "scale": 0.98, "rotate": 0.01, "color": [0.5, 0.7, 0.9], "glow": 0.6},
+          {"def": "mast_cluster", "at": [28, 19], "scale": 1.04, "rotate": 0.06, "color": [0.52, 0.72, 0.92], "glow": 0.61},
+          {"def": "mast_cluster", "at": [36, 11], "scale": 1.01, "rotate": 0.02, "color": [0.48, 0.68, 0.88], "glow": 0.58},
+          {"def": "mast_cluster", "at": [44, 3], "scale": 1.07, "rotate": 0.08, "color": [0.51, 0.71, 0.91], "glow": 0.59},
+          {"def": "mast_cluster", "at": [50, -6], "scale": 1.03, "rotate": 0.04, "color": [0.49, 0.69, 0.89], "glow": 0.6},
+          {"def": "mast_cluster", "at": [50, -18], "scale": 0.99, "rotate": 0.07, "color": [0.53, 0.73, 0.93], "glow": 0.62},
+          {"def": "mast_cluster", "at": [44, -30], "scale": 1.05, "rotate": 0.03, "color": [0.47, 0.67, 0.87], "glow": 0.58},
+          {"def": "mast_cluster", "at": [36, -36], "scale": 1.02, "rotate": 0.09, "color": [0.5, 0.7, 0.9], "glow": 0.6},
+          {"def": "signalman", "at": [-45, -2], "scale": 0.7, "rotate": 0.05, "color": [1.0, 0.8, 0.3], "glow": 0.8},
+          {"def": "signalman", "at": [-37, 6], "scale": 0.65, "rotate": 0.15, "color": [1.0, 0.75, 0.2], "glow": 0.75},
+          {"def": "signalman", "at": [-29, 14], "scale": 0.72, "rotate": 0.08, "color": [1.0, 0.85, 0.35], "glow": 0.82},
+          {"def": "signalman", "at": [-21, 22], "scale": 0.68, "rotate": 0.12, "color": [1.0, 0.78, 0.25], "glow": 0.77},
+          {"def": "signalman", "at": [-13, 28], "scale": 0.7, "rotate": 0.1, "color": [1.0, 0.82, 0.3], "glow": 0.8},
+          {"def": "signalman", "at": [-5, 36], "scale": 0.66, "rotate": 0.18, "color": [1.0, 0.76, 0.22], "glow": 0.76},
+          {"def": "signalman", "at": [3, 37], "scale": 0.71, "rotate": 0.06, "color": [1.0, 0.84, 0.32], "glow": 0.81},
+          {"def": "signalman", "at": [11, 31], "scale": 0.67, "rotate": 0.14, "color": [1.0, 0.8, 0.28], "glow": 0.78},
+          {"def": "signalman", "at": [19, 25], "scale": 0.69, "rotate": 0.09, "color": [1.0, 0.83, 0.33], "glow": 0.8},
+          {"def": "signalman", "at": [27, 17], "scale": 0.73, "rotate": 0.13, "color": [1.0, 0.77, 0.23], "glow": 0.76},
+          {"def": "signalman", "at": [35, 9], "scale": 0.68, "rotate": 0.11, "color": [1.0, 0.81, 0.29], "glow": 0.79},
+          {"def": "signalman", "at": [43, 1], "scale": 0.7, "rotate": 0.16, "color": [1.0, 0.85, 0.34], "glow": 0.82},
+          {"def": "signalman", "at": [51, -7], "scale": 0.65, "rotate": 0.07, "color": [1.0, 0.78, 0.26], "glow": 0.77},
+          {"def": "signalman", "at": [49, -19], "scale": 0.72, "rotate": 0.12, "color": [1.0, 0.82, 0.31], "glow": 0.81},
+          {"def": "signalman", "at": [43, -31], "scale": 0.67, "rotate": 0.1, "color": [1.0, 0.8, 0.27], "glow": 0.78},
+          {"def": "signalman", "at": [35, -37], "scale": 0.7, "rotate": 0.15, "color": [1.0, 0.84, 0.33], "glow": 0.8}
+        ],
+        "scale": 1.0,
+        "rotate": 0.0,
+        "spread": 1.0,
+        "glow": 0.1,
+        "max_strokes": 650
+      },
+      "camera": {
+        "mode": "path",
+        "waypoints": [
+          [-50, -35, 8],
+          [-30, -40, 6],
+          [0, -42, 7],
+          [30, -40, 6],
+          [50, -30, 8],
+          [55, 0, 9],
+          [50, 30, 8],
+          [0, 45, 7],
+          [-50, 30, 8],
+          [-55, 0, 9]
+        ],
+        "speed": 0.08,
+        "fov": 62,
+        "near": 0.4,
+        "far": 26,
+        "max_strokes": 90,
+        "depth": {"mode": "cull"}
+      }
+    }
+  ],
+  "palette": ["#0a0e27", "#ff3333", "#3366dd", "#ffff99"],
+  "modulation": [
+    {"source": "lfo_slow", "dest": "visual.rotate", "depth": 0.8},
+    {"source": "synth_low", "dest": "visual.scale", "depth": 0.22},
+    {"source": "synth_high", "dest": "visual.glow", "depth": 0.4},
+    {"source": "audio_level", "dest": "visual.spread", "depth": 0.3}
+  ],
+  "soundscape": {
+    "master_level": 0.7,
+    "master_tone": 0.5,
+    "swell_period": 45.0,
+    "filter_sweep_period": 52.0,
+    "filter_sweep_amount": 0.35,
+    "voices": [
+      {
+        "type": "pad",
+        "note": 24,
+        "chord": [0, 5, 9],
+        "tone": 0.35,
+        "detune": 0.008,
+        "level": 0.5,
+        "env": {
+          "attack": 8.0,
+          "decay": 4.0,
+          "sustain": 0.6,
+          "release": 6.0
+        }
+      },
+      {
+        "type": "osc",
+        "note": 48,
+        "chord": [0, 3, 7, 12],
+        "unison": 3,
+        "detune": 0.006,
+        "tone": 0.45,
+        "resonance": 0.65,
+        "sub": 0.3,
+        "level": 0.35,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.028,
+          "depth": 0.4
+        }
+      },
+      {
+        "type": "harp",
+        "scale": "minor",
+        "rate": 0.35,
+        "decay": 9.0,
+        "tone": 0.5,
+        "damp": 0.75,
+        "roll": 6,
+        "roll_spread": 0.08,
+        "level": 0.25,
+        "drift": 0.25,
+        "lfos": [
+          {
+            "on": true,
+            "dest": "level",
+            "shape": "sine",
+            "rate": 0.017,
+            "depth": 0.35
+          },
+          {
+            "on": true,
+            "dest": "pan",
+            "shape": "triangle",
+            "rate": 0.044,
+            "depth": 0.6
+          }
+        ]
+      },
+      {
+        "type": "noise",
+        "tone": 0.38,
+        "level": 0.15,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.031,
+          "depth": 0.5
+        }
+      }
+    ]
+  }
+}
+```

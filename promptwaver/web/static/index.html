@@ -822,7 +822,7 @@
         </details>
 
         <!-- Mappings sub-panel -->
-        <details class="accordion nested" id="acc-mod-mappings" closed>
+        <details class="accordion nested" id="acc-mod-mappings" open>
           <summary>Mappings</summary>
           <div class="accordion-body">
             <div id="routes" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -937,7 +937,16 @@
         <div class="char-row"><span class="char-lbl">static</span>
           <input type="range" id="d-evolution" min="0" max="1" step="0.01" value="0.5">
           <span class="char-lbl right">evolving</span></div>
+        <!-- Same control as the kiosk's interpretation setting, and the same
+             directive text (director.interpretation_directive). Unlike the
+             three above it has a DEAD ZONE: only the outer thirds add anything
+             to the prompt, which is why it carries a readout. -->
+        <div class="char-row"><span class="char-lbl">literal</span>
+          <input type="range" id="d-interp" min="0" max="1" step="0.01" value="0.5">
+          <span class="char-lbl right">abstract</span></div>
       </div>
+      <!-- NOT class="val" — body.hide-values would blank it. -->
+      <div class="hint" id="d-interp-read" style="margin:8px 0 12px"></div>
 
       <div class="field"><label>model</label>
         <select id="d-model">
@@ -3644,12 +3653,34 @@ $("kind-3d").onclick = () => setGenKind("3d");
 $("kind-2d").onclick = () => setGenKind("2d");
 setGenKind(genKind);
 
+// Literal <-> abstract. Mirrors director.INTERP_LITERAL_MAX / _ABSTRACT_MIN
+// for display only — the server builds the actual directive. Kept OUT of
+// charValues(), which the audio-regen request also spreads, and this is a
+// scene-only setting.
+function interpDirection(v){
+  if (v >= 0.65) return "abstract — evoke the subject's feeling and forms rather than depicting it";
+  if (v <= 0.35) return genKind === "2d"
+    ? "literal — recognisable flat line art, seen from one side"
+    : "literal — recognisable objects, correct proportions";
+  return "neutral — adds nothing to the prompt (move toward either end to steer)";
+}
+$("d-interp").oninput = () => {
+  $("d-interp-read").textContent = "interpretation: " + interpDirection(+$("d-interp").value);
+};
+$("d-interp").oninput();
+// The literal wording differs by kind (see director.interpretation_directive).
+["kind-3d", "kind-2d"].forEach(id => $(id).addEventListener("click", () => $("d-interp").oninput()));
+
 $("gen").onclick = () => {
   const k = $("kw").value.trim();
   if (!k || generating) return;
   startGen(genKind === "2d" ? "2D pattern" : "3D world");
   send({type:"generate", keyword:k, name:$("scenename").value.trim(), audio:$("audiokw").value.trim(),
-        size:currentNodes(), kind:genKind, ...charValues()});
+        // No size for 2D: the slider is hidden in that mode, and its leftover
+        // value used to go out anyway — carrying the 3D size directive into
+        // every flat-pattern request (see SceneDirector.generate).
+        ...(genKind === "3d" ? {size:currentNodes()} : {}),
+        kind:genKind, ...charValues(), interpretation:+$("d-interp").value});
 };
 // multiline field: Ctrl/Cmd+Enter submits, plain Enter makes a new line
 $("kw").addEventListener("keydown", e => {
@@ -3981,6 +4012,9 @@ $("show-prompts-open").onclick = () => {
     const gs = spec.generation_settings || {};
     const bits = [];
     if (gs.kind) bits.push(gs.kind.toUpperCase());
+    // Only named when it actually steered the prompt (see interpDirection).
+    if (typeof gs.interpretation === "number" && gs.interpretation >= 0.65) bits.push("abstract");
+    if (typeof gs.interpretation === "number" && gs.interpretation <= 0.35) bits.push("literal");
     // A bare number is a node target from the slider; the old tier names read
     // as themselves.
     if (gs.size) bits.push(typeof gs.size === "number" ? `${gs.size} nodes` : gs.size);

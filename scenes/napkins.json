@@ -1,0 +1,1531 @@
+{
+  "name": "napkins",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "fold_crease": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0,
+                  -0.35
+                ],
+                "b": [
+                  0,
+                  0.35
+                ]
+              }
+            ]
+          },
+          "diamond_fold": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0,
+                    -0.3
+                  ],
+                  [
+                    0.25,
+                    0
+                  ],
+                  [
+                    0,
+                    0.3
+                  ],
+                  [
+                    -0.25,
+                    0
+                  ]
+                ],
+                "closed": true
+              }
+            ]
+          },
+          "spiral_ribbon": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "arc",
+                "r": 0.25,
+                "a0": 0,
+                "a1": 0.5,
+                "c": [
+                  0,
+                  0
+                ],
+                "seg": 32
+              }
+            ]
+          },
+          "peaked_ridge": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    -0.3,
+                    -0.25
+                  ],
+                  [
+                    0,
+                    0.35
+                  ],
+                  [
+                    0.3,
+                    -0.25
+                  ]
+                ]
+              }
+            ]
+          },
+          "nested_triangle": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "ngon",
+                "n": 3,
+                "r": 0.28,
+                "c": [
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "star_crease": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "star",
+                "n": 5,
+                "r1": 0.32,
+                "r2": 0.14,
+                "c": [
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "horizon_edge": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    -0.4,
+                    0
+                  ],
+                  [
+                    -0.2,
+                    0.15
+                  ],
+                  [
+                    0,
+                    0.08
+                  ],
+                  [
+                    0.2,
+                    0.16
+                  ],
+                  [
+                    0.4,
+                    0
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "fold_crease",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.2,
+            "color": [
+              0.2,
+              0.8,
+              0.9
+            ],
+            "glow": 0.75,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.08,
+              "n": 3,
+              "hue_step": 0.05
+            }
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              1.2,
+              0.8
+            ],
+            "scale": 0.9,
+            "rotate": 0.15,
+            "color": [
+              0.1,
+              0.7,
+              1.0
+            ],
+            "glow": 0.7
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              -1.5,
+              -0.6
+            ],
+            "scale": 1.1,
+            "rotate": 0.33,
+            "color": [
+              0.3,
+              0.85,
+              0.95
+            ],
+            "glow": 0.72
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              2.1,
+              -1.3
+            ],
+            "scale": 0.85,
+            "rotate": 0.08,
+            "color": [
+              0.15,
+              0.75,
+              0.88
+            ],
+            "glow": 0.68
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              -0.9,
+              1.4
+            ],
+            "scale": 1.3,
+            "rotate": 0.22,
+            "color": [
+              0.25,
+              0.82,
+              0.92
+            ],
+            "glow": 0.76
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              1.8,
+              1.6
+            ],
+            "scale": 0.95,
+            "rotate": 0.41,
+            "color": [
+              0.12,
+              0.72,
+              0.98
+            ],
+            "glow": 0.71
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              -2.2,
+              0.3
+            ],
+            "scale": 1.05,
+            "rotate": 0.27,
+            "color": [
+              0.28,
+              0.83,
+              0.93
+            ],
+            "glow": 0.74
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              0.5,
+              -1.8
+            ],
+            "scale": 1.15,
+            "rotate": 0.12,
+            "color": [
+              0.18,
+              0.78,
+              0.89
+            ],
+            "glow": 0.7
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              -1.1,
+              -1.2
+            ],
+            "scale": 0.88,
+            "rotate": 0.35,
+            "color": [
+              0.22,
+              0.81,
+              0.91
+            ],
+            "glow": 0.73
+          },
+          {
+            "def": "fold_crease",
+            "at": [
+              2.5,
+              0.5
+            ],
+            "scale": 1.02,
+            "rotate": 0.19,
+            "color": [
+              0.14,
+              0.76,
+              0.87
+            ],
+            "glow": 0.69
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.9,
+              0.2,
+              0.6
+            ],
+            "glow": 0.8,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.4,
+              "n": 2,
+              "hue_step": 0.08
+            }
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              1.5,
+              0.3
+            ],
+            "scale": 0.85,
+            "rotate": 0.125,
+            "color": [
+              0.85,
+              0.25,
+              0.65
+            ],
+            "glow": 0.77
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              -1.3,
+              1.0
+            ],
+            "scale": 1.1,
+            "rotate": 0.25,
+            "color": [
+              0.95,
+              0.15,
+              0.55
+            ],
+            "glow": 0.82
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              0.8,
+              -1.5
+            ],
+            "scale": 0.92,
+            "rotate": 0.06,
+            "color": [
+              0.88,
+              0.22,
+              0.62
+            ],
+            "glow": 0.78
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              -2.0,
+              -0.8
+            ],
+            "scale": 1.05,
+            "rotate": 0.37,
+            "color": [
+              0.92,
+              0.18,
+              0.58
+            ],
+            "glow": 0.79
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              2.2,
+              1.2
+            ],
+            "scale": 0.97,
+            "rotate": 0.14,
+            "color": [
+              0.87,
+              0.24,
+              0.64
+            ],
+            "glow": 0.76
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              -0.6,
+              -1.8
+            ],
+            "scale": 1.08,
+            "rotate": 0.31,
+            "color": [
+              0.93,
+              0.17,
+              0.57
+            ],
+            "glow": 0.81
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              1.2,
+              1.7
+            ],
+            "scale": 0.9,
+            "rotate": 0.22,
+            "color": [
+              0.86,
+              0.26,
+              0.66
+            ],
+            "glow": 0.75
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              -1.8,
+              0.6
+            ],
+            "scale": 1.03,
+            "rotate": 0.09,
+            "color": [
+              0.91,
+              0.19,
+              0.59
+            ],
+            "glow": 0.8
+          },
+          {
+            "def": "diamond_fold",
+            "at": [
+              0.3,
+              1.2
+            ],
+            "scale": 0.94,
+            "rotate": 0.28,
+            "color": [
+              0.89,
+              0.21,
+              0.61
+            ],
+            "glow": 0.77
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.4,
+              0.95,
+              0.35
+            ],
+            "glow": 0.85,
+            "repeat": {
+              "kind": "radial",
+              "n": 6,
+              "hue_step": 0.04
+            }
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              1.6,
+              -0.9
+            ],
+            "scale": 0.88,
+            "rotate": 0.08,
+            "color": [
+              0.35,
+              0.92,
+              0.4
+            ],
+            "glow": 0.83
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              -1.4,
+              1.3
+            ],
+            "scale": 1.12,
+            "rotate": 0.33,
+            "color": [
+              0.45,
+              0.98,
+              0.32
+            ],
+            "glow": 0.87
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              2.0,
+              1.0
+            ],
+            "scale": 0.95,
+            "rotate": 0.16,
+            "color": [
+              0.38,
+              0.94,
+              0.37
+            ],
+            "glow": 0.84
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              -2.1,
+              -0.5
+            ],
+            "scale": 1.06,
+            "rotate": 0.24,
+            "color": [
+              0.42,
+              0.96,
+              0.34
+            ],
+            "glow": 0.86
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              0.7,
+              1.5
+            ],
+            "scale": 0.9,
+            "rotate": 0.11,
+            "color": [
+              0.39,
+              0.93,
+              0.38
+            ],
+            "glow": 0.82
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              -0.8,
+              -1.6
+            ],
+            "scale": 1.09,
+            "rotate": 0.29,
+            "color": [
+              0.44,
+              0.97,
+              0.33
+            ],
+            "glow": 0.88
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              1.3,
+              0.2
+            ],
+            "scale": 0.92,
+            "rotate": 0.19,
+            "color": [
+              0.36,
+              0.91,
+              0.41
+            ],
+            "glow": 0.81
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              -1.7,
+              0.9
+            ],
+            "scale": 1.04,
+            "rotate": 0.05,
+            "color": [
+              0.43,
+              0.95,
+              0.35
+            ],
+            "glow": 0.85
+          },
+          {
+            "def": "spiral_ribbon",
+            "at": [
+              2.3,
+              -0.3
+            ],
+            "scale": 0.98,
+            "rotate": 0.27,
+            "color": [
+              0.4,
+              0.94,
+              0.36
+            ],
+            "glow": 0.83
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.1,
+            "color": [
+              1.0,
+              0.5,
+              0.1
+            ],
+            "glow": 0.8,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.06,
+              "n": 4,
+              "hue_step": 0.06
+            }
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              1.4,
+              0.7
+            ],
+            "scale": 0.9,
+            "rotate": 0.2,
+            "color": [
+              0.98,
+              0.52,
+              0.12
+            ],
+            "glow": 0.78
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              -1.6,
+              -0.9
+            ],
+            "scale": 1.08,
+            "rotate": 0.12,
+            "color": [
+              1.0,
+              0.48,
+              0.08
+            ],
+            "glow": 0.82
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              2.2,
+              -1.1
+            ],
+            "scale": 0.87,
+            "rotate": 0.36,
+            "color": [
+              0.99,
+              0.51,
+              0.11
+            ],
+            "glow": 0.79
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              -0.5,
+              1.6
+            ],
+            "scale": 1.13,
+            "rotate": 0.08,
+            "color": [
+              1.0,
+              0.49,
+              0.09
+            ],
+            "glow": 0.81
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              1.0,
+              -1.8
+            ],
+            "scale": 0.93,
+            "rotate": 0.31,
+            "color": [
+              0.97,
+              0.53,
+              0.13
+            ],
+            "glow": 0.77
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              -2.0,
+              0.4
+            ],
+            "scale": 1.06,
+            "rotate": 0.15,
+            "color": [
+              1.0,
+              0.5,
+              0.1
+            ],
+            "glow": 0.8
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              2.4,
+              0.8
+            ],
+            "scale": 0.95,
+            "rotate": 0.25,
+            "color": [
+              0.99,
+              0.52,
+              0.12
+            ],
+            "glow": 0.78
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              -1.2,
+              1.3
+            ],
+            "scale": 1.02,
+            "rotate": 0.05,
+            "color": [
+              1.0,
+              0.47,
+              0.07
+            ],
+            "glow": 0.83
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              0.6,
+              0.5
+            ],
+            "scale": 0.91,
+            "rotate": 0.28,
+            "color": [
+              0.98,
+              0.51,
+              0.11
+            ],
+            "glow": 0.76
+          },
+          {
+            "def": "peaked_ridge",
+            "at": [
+              -1.8,
+              -1.5
+            ],
+            "scale": 1.1,
+            "rotate": 0.18,
+            "color": [
+              1.0,
+              0.49,
+              0.08
+            ],
+            "glow": 0.81
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.2,
+              0.4,
+              1.0
+            ],
+            "glow": 0.75,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.5,
+              "n": 3,
+              "hue_step": 0.07
+            },
+            "symmetry": {
+              "mirror": "xy"
+            }
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              1.3,
+              1.1
+            ],
+            "scale": 0.88,
+            "rotate": 0.167,
+            "color": [
+              0.18,
+              0.38,
+              0.98
+            ],
+            "glow": 0.73
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              -1.5,
+              -0.7
+            ],
+            "scale": 1.1,
+            "rotate": 0.333,
+            "color": [
+              0.22,
+              0.42,
+              1.0
+            ],
+            "glow": 0.77
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              2.0,
+              0.2
+            ],
+            "scale": 0.95,
+            "rotate": 0.083,
+            "color": [
+              0.19,
+              0.39,
+              0.99
+            ],
+            "glow": 0.74
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              -2.1,
+              1.0
+            ],
+            "scale": 1.05,
+            "rotate": 0.25,
+            "color": [
+              0.21,
+              0.41,
+              1.0
+            ],
+            "glow": 0.76
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              0.8,
+              -1.6
+            ],
+            "scale": 0.92,
+            "rotate": 0.417,
+            "color": [
+              0.2,
+              0.4,
+              0.99
+            ],
+            "glow": 0.72
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              -0.9,
+              1.4
+            ],
+            "scale": 1.08,
+            "rotate": 0.167,
+            "color": [
+              0.23,
+              0.43,
+              1.0
+            ],
+            "glow": 0.78
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              1.6,
+              -0.5
+            ],
+            "scale": 0.9,
+            "rotate": 0.25,
+            "color": [
+              0.17,
+              0.37,
+              0.97
+            ],
+            "glow": 0.71
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              -1.7,
+              0.7
+            ],
+            "scale": 1.03,
+            "rotate": 0.083,
+            "color": [
+              0.22,
+              0.42,
+              1.0
+            ],
+            "glow": 0.75
+          },
+          {
+            "def": "nested_triangle",
+            "at": [
+              2.3,
+              1.3
+            ],
+            "scale": 0.97,
+            "rotate": 0.333,
+            "color": [
+              0.19,
+              0.39,
+              0.98
+            ],
+            "glow": 0.73
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              1.0,
+              0.8,
+              0.2
+            ],
+            "glow": 0.9,
+            "repeat": {
+              "kind": "radial",
+              "n": 8,
+              "hue_step": 0.03
+            }
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              1.7,
+              0.4
+            ],
+            "scale": 0.86,
+            "rotate": 0.1,
+            "color": [
+              0.99,
+              0.79,
+              0.22
+            ],
+            "glow": 0.88
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              -1.4,
+              1.2
+            ],
+            "scale": 1.12,
+            "rotate": 0.3,
+            "color": [
+              1.0,
+              0.81,
+              0.18
+            ],
+            "glow": 0.92
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              2.1,
+              -1.0
+            ],
+            "scale": 0.93,
+            "rotate": 0.15,
+            "color": [
+              0.98,
+              0.78,
+              0.24
+            ],
+            "glow": 0.87
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              -2.0,
+              -0.3
+            ],
+            "scale": 1.07,
+            "rotate": 0.2,
+            "color": [
+              1.0,
+              0.82,
+              0.17
+            ],
+            "glow": 0.91
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              0.5,
+              1.7
+            ],
+            "scale": 0.89,
+            "rotate": 0.25,
+            "color": [
+              0.97,
+              0.77,
+              0.25
+            ],
+            "glow": 0.86
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              -1.1,
+              -1.5
+            ],
+            "scale": 1.1,
+            "rotate": 0.05,
+            "color": [
+              1.0,
+              0.8,
+              0.19
+            ],
+            "glow": 0.9
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              1.9,
+              1.1
+            ],
+            "scale": 0.91,
+            "rotate": 0.35,
+            "color": [
+              0.99,
+              0.79,
+              0.23
+            ],
+            "glow": 0.88
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              -1.8,
+              0.5
+            ],
+            "scale": 1.04,
+            "rotate": 0.12,
+            "color": [
+              1.0,
+              0.81,
+              0.18
+            ],
+            "glow": 0.89
+          },
+          {
+            "def": "star_crease",
+            "at": [
+              2.4,
+              0.0
+            ],
+            "scale": 0.95,
+            "rotate": 0.22,
+            "color": [
+              0.98,
+              0.78,
+              0.24
+            ],
+            "glow": 0.87
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "color": [
+              0.3,
+              0.9,
+              0.7
+            ],
+            "glow": 0.72,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.07,
+              "n": 3,
+              "hue_step": 0.05
+            }
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              1.5,
+              0.6
+            ],
+            "scale": 0.92,
+            "rotate": 0.11,
+            "color": [
+              0.28,
+              0.88,
+              0.72
+            ],
+            "glow": 0.7
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              -1.3,
+              1.0
+            ],
+            "scale": 1.09,
+            "rotate": 0.32,
+            "color": [
+              0.32,
+              0.92,
+              0.68
+            ],
+            "glow": 0.74
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              2.2,
+              -1.2
+            ],
+            "scale": 0.88,
+            "rotate": 0.08,
+            "color": [
+              0.29,
+              0.89,
+              0.71
+            ],
+            "glow": 0.69
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              -2.0,
+              0.2
+            ],
+            "scale": 1.06,
+            "rotate": 0.23,
+            "color": [
+              0.31,
+              0.91,
+              0.69
+            ],
+            "glow": 0.73
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              0.7,
+              -1.5
+            ],
+            "scale": 0.95,
+            "rotate": 0.17,
+            "color": [
+              0.27,
+              0.87,
+              0.73
+            ],
+            "glow": 0.68
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              -1.6,
+              -0.8
+            ],
+            "scale": 1.03,
+            "rotate": 0.29,
+            "color": [
+              0.33,
+              0.93,
+              0.67
+            ],
+            "glow": 0.75
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              1.2,
+              1.4
+            ],
+            "scale": 0.9,
+            "rotate": 0.06,
+            "color": [
+              0.3,
+              0.9,
+              0.7
+            ],
+            "glow": 0.71
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              -1.1,
+              1.5
+            ],
+            "scale": 1.08,
+            "rotate": 0.26,
+            "color": [
+              0.32,
+              0.92,
+              0.68
+            ],
+            "glow": 0.74
+          },
+          {
+            "def": "horizon_edge",
+            "at": [
+              2.0,
+              0.4
+            ],
+            "scale": 0.94,
+            "rotate": 0.14,
+            "color": [
+              0.28,
+              0.88,
+              0.72
+            ],
+            "glow": 0.69
+          }
+        ],
+        "scale": 2.89,
+        "rotate": 0.0,
+        "spread": 1.7,
+        "glow": 0.05,
+        "max_strokes": 60
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a15",
+    "#2dd4bf",
+    "#ff8c42",
+    "#ff1493",
+    "#00ff88",
+    "#4169ff",
+    "#ffed4e"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.rotate",
+      "depth": 0.15
+    },
+    {
+      "source": "audio_level",
+      "dest": "visual.glow",
+      "depth": 0.4
+    },
+    {
+      "source": "synth_low",
+      "dest": "visual.scale",
+      "depth": 0.12
+    },
+    {
+      "source": "synth_high",
+      "dest": "visual.spread",
+      "depth": 0.18
+    }
+  ],
+  "camera": {
+    "max_strokes": 90,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 52.0,
+    "master": 0.75,
+    "voices": [
+      {
+        "name": "water_drone",
+        "type": "pad",
+        "note": 36,
+        "chord": [
+          0,
+          5,
+          12
+        ],
+        "level": 0.55,
+        "tone": 0.28,
+        "detune": 0.006,
+        "env": {
+          "attack": 8.0,
+          "decay": 2.0,
+          "sustain": 0.8,
+          "release": 4.0
+        },
+        "lfo": {
+          "on": false,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.035,
+          "depth": 0.18
+        },
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "plate_resonance",
+        "type": "osc",
+        "note": 48,
+        "chord": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "level": 0.42,
+        "unison": 3,
+        "detune": 0.008,
+        "tone": 0.45,
+        "resonance": 0.65,
+        "env": {
+          "attack": 6.0,
+          "decay": 1.5,
+          "sustain": 0.75,
+          "release": 3.5
+        },
+        "lfos": [
+          {
+            "on": true,
+            "dest": "level",
+            "shape": "sine",
+            "rate": 0.043,
+            "depth": 0.22
+          },
+          {
+            "on": true,
+            "dest": "pan",
+            "shape": "triangle",
+            "rate": 0.061,
+            "depth": 0.3
+          }
+        ],
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "fold_pluck",
+        "type": "pluck",
+        "note": 60,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          9,
+          12
+        ],
+        "rate": 0.32,
+        "decay": 2.8,
+        "tone": 0.52,
+        "resonance": 0.48,
+        "level": 0.38,
+        "drift": 0.25,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "swish_harp",
+        "type": "harp",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          5,
+          7,
+          10,
+          12
+        ],
+        "rate": 0.18,
+        "decay": 9.0,
+        "tone": 0.58,
+        "damp": 0.62,
+        "roll": 6,
+        "roll_spread": 0.08,
+        "level": 0.32,
+        "drift": 0.15,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "water_wash",
+        "type": "noise",
+        "tone": 0.35,
+        "level": 0.2,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.027,
+          "depth": 0.25
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.39,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.4,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "folding napkins into amazing impossible shapes",
+  "audio_prompt": "swishes, plates clattering, washing water sounds,",
+  "generation_settings": {
+    "size": 250,
+    "warmth": 0.43,
+    "energy": 0.5,
+    "evolution": 0.65,
+    "interpretation": 0.43,
+    "kind": "2d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 12801,
+      "output_tokens": 18692,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.1063
+    },
+    "expansion": null
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
+}

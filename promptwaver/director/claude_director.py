@@ -319,7 +319,9 @@ ANGLES ARE IN TURNS (0..1), never radians. A quarter turn is 0.25.
 You author MOTIFS and then multiply them. This is the whole idea: never write
 out fifty individual strokes. Write one arm, one chevron, one petal — then let
 "repeat" and "symmetry" produce the rest. A good pattern is typically 3-6 nodes
-of authored geometry that expand into 60-300 strokes.
+of authored geometry that expand into 80-200 strokes — count them (a repeat of
+n crossed with a 12-fold radial is 12n strokes) and stay under 250. The best
+patterns here draw ~75-140; more reads as clutter, not richness.
 
 "defs" maps a motif name to {"space": "cart"|"polar", "ops": [ ... ]}.
 
@@ -385,7 +387,8 @@ LIVE-MODULATABLE controls, so always set them explicitly):
   "rotate" 0.0    whole-pattern spin, in turns
   "spread" 1.0    scales node PLACEMENT only, not node size
   "glow" 0.0      boost ADDED to every node's own glow
-  "max_strokes" 420   hard ceiling; raise for dense patterns, lower for a laser
+  "max_strokes"   set to about 1.2x the strokes your pattern expands to, 250 at
+                  most. It is a safety ceiling, NOT a target to fill
 
 MODULATION IS REQUIRED. A static pattern is a poster, not an instrument. Always
 return 3-4 routes so the pattern breathes and reacts.
@@ -418,6 +421,16 @@ by sound jitters, whereas brightness driven by sound is exactly right. Match
 band to destination — low band to size (it thumps), high band to spread or glow
 (it sparkles). DEPTHS MUST BE NON-ZERO, and 0.15-0.8 is the useful range; a
 depth of 0 is a route that does nothing.
+
+SOUNDSCAPE FORMAT — return it in a top-level "soundscape" field. Every voice
+MUST have a short snake_case "name" describing ITS sound in THIS scene
+("blade_whine", "sawdust_hiss", "signal_bell") — never omit it and never a
+generic label like "voice1" or "pad". The names appear in the mixer and in
+modulation sources ("voice.<name>"). Shape:
+  "soundscape": {"tempo":60, "master":0.8,
+    "voices":[{"name":"low_hum","type":"pad","note":36,"chord":[0,7,12],"level":0.5},
+              {"name":"flag_snap","type":"pluck","note":72,"scale":[0,3,7,10],"level":0.3}]}
+Other voice fields follow the soundscape guidance above.
 
 REQUIREMENTS for every 2D scene:
 - The layer's "generator" MUST be exactly the string "pattern2d". There is no
@@ -461,7 +474,7 @@ WORKED EXAMPLE (format only — for the keyword "neon temple"):
      {"def":"core","color":[0.8,0.35,1.0],"glow":1.0,"closed":true,
       "repeat":{"kind":"scale","factor":1.6,"n":3,"hue_step":0.09}}
    ],
-   "scale":1.0,"rotate":0.0,"spread":1.0,"glow":0.0,"max_strokes":420
+   "scale":1.0,"rotate":0.0,"spread":1.0,"glow":0.0,"max_strokes":90
  }}],
  "palette":["#05060f","#33e0d0","#ff6fd8"],
  "modulation":[{"source":"lfo_slow","dest":"visual.rotate","depth":1.0},
@@ -474,6 +487,42 @@ _SYSTEM_2D = _SYSTEM_2D_HEAD + _SOUNDSCAPE_GUIDE + _SYSTEM_2D_TAIL
 
 #: keyword -> the system prompt that authors that kind of scene.
 SYSTEM_PROMPTS = {"3d": _SYSTEM, "2d": _SYSTEM_2D}
+
+# The literal <-> abstract slider, shared by the Generate modal and the kiosk.
+# Only the ends say anything: the middle is silence, so a neutral setting costs
+# no tokens and biases nothing. The returned text rides in `generate(style=)`,
+# which puts it in the CACHE KEY — so rewording these sentences silently orphans
+# every cached entry generated under the old wording (kiosk and modal alike).
+# `kiosk-settings.html directionText()` and `index.html interpDirection()`
+# mirror the thresholds for display; change them together.
+INTERP_LITERAL_MAX = 0.35
+INTERP_ABSTRACT_MIN = 0.65
+
+
+def interpretation_directive(value, kind: str = "3d") -> str:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if v >= INTERP_ABSTRACT_MIN:
+        return ("Interpretation: LOOSE AND ABSTRACT. Evoke the feeling, rhythm and "
+                "forms of the subject rather than depicting it literally. Favour "
+                "geometric abstraction, repetition and structure over recognisable "
+                "objects — someone should feel the subject before they can name it.")
+    if v <= INTERP_LITERAL_MAX and kind == "2d":
+        # The 3D wording ("build the actual objects and place...") was measured
+        # pulling flat-pattern requests into writing 3D scenes, which fail. The
+        # kiosk only ever asks for 3D, so this branch touches none of its
+        # cache keys.
+        return ("Interpretation: LITERAL. Draw the subject as clear, recognisable "
+                "flat line art — its outline and defining details seen from one "
+                "side, like an illustration, in correct proportion. Still a flat "
+                "2D pattern: no depth, no perspective, no 3D scene.")
+    if v <= INTERP_LITERAL_MAX:
+        return ("Interpretation: LITERAL. Build the actual objects and place the "
+                "words name, clearly readable as what they are. Favour recognisable "
+                "silhouettes and correct proportions over abstraction.")
+    return ""
 
 
 _SOUNDSCAPE_SCHEMA = """{
@@ -766,6 +815,7 @@ SCENE_SIZE = {
 # budget, and overflowing it means a truncated response and a silent fall back
 # to the local director. Unused headroom costs nothing but latency.
 SIZE_MIN_TOKENS = {"massive": 32000}
+MIN_TOKENS_2D = 10000
 
 
 def _size_hint(nodes: int, path: bool = True) -> str:
@@ -1144,6 +1194,17 @@ class SceneDirector:
                 not str(size).strip().isdigit() and size not in SCENE_SIZE:
             size = "small"
         kind = kind if kind in SYSTEM_PROMPTS else "3d"
+        # A node count means nothing to a flat pattern, and sending one did
+        # real damage: `_size_hint` is a 3D directive — "MASSIVE, a place to
+        # travel through", a camera route with [x,y,z] waypoints, "-50..50 on
+        # each axis", "225-275 nodes, this OVERRIDES the guidance above" —
+        # appended after the 2D system prompt on every slider-sized request.
+        # It is why Haiku kept writing 3D "pattern3d" scenes, placing 2D nodes
+        # in tens, and blowing the stroke budget. The UI already hid the slider
+        # for 2D but still sent its value. Forced here too, so no caller (a
+        # regeneration replaying generation_settings, say) can reintroduce it.
+        if kind == "2d":
+            size = "small"
         # `kind` is part of the cache key: the same keyword legitimately has a
         # 3D and a 2D answer, and they must not collide.
         # `style` is part of the key for the same reason `kind` is: the same
@@ -1351,11 +1412,16 @@ class SceneDirector:
         # can't reach a laser at all), so it gets a stroke ceiling instead of
         # the PPS lecture.
         if kind == "2d":
-            budget_line = (f"Budget: keep the expanded pattern under about "
-                           f"{max(200, min(900, self.max_pps // 40))} strokes and set "
-                           f"\"max_strokes\" to match. Remember a repeat crossed with a "
-                           f"symmetry multiplies fast: 4 offsets x 12-fold radial is 48 "
-                           f"strokes from ONE authored line.")
+            # A fixed range, not one derived from max_pps: `max_pps // 40` put
+            # ~680 in the prompt on this rig — the largest stroke number the
+            # model saw, and the one it filled (463 drawn against library
+            # patterns that draw 32-222). A laser can't draw that many anyway:
+            # each stroke costs ~8 blanking points before any geometry.
+            budget_line = ("Budget: the expanded pattern should draw 80-200 strokes, "
+                           "never more than 250, with \"max_strokes\" about 1.2x that "
+                           "count. A repeat crossed with a symmetry multiplies fast: "
+                           "4 offsets x 12-fold radial is 48 strokes from ONE authored "
+                           "line.")
             effort_line = ""
         else:
             budget_line = (f"Hardware constraint: the laser draws at a maximum of "
@@ -1376,6 +1442,12 @@ class SceneDirector:
             max_tokens = token_budget(nodes, floor=tier["max_tokens"])
         else:
             max_tokens = max(tier["max_tokens"], SIZE_MIN_TOKENS.get(str(size), 0))
+        if kind == "2d":
+            # 2D sends no size, so it would get the bare effort tier — 4000 at
+            # "low", against real 2D responses measured at ~3900-6300 tokens. A
+            # ceiling is only billed for what's written; a truncation is billed
+            # in full and discarded.
+            max_tokens = max(max_tokens, MIN_TOKENS_2D)
         budget_chars = max_tokens * 4
 
         # The cost gate, before anything is sent. This is the only point at
@@ -1407,7 +1479,16 @@ class SceneDirector:
             # unchanged budget would likely just repeat the same overrun.
             last_parse_error = None
             for attempt in range(2):
-                text, stop_reason = self._stream_or_call(content, budget_chars, system)
+                # The retry is CORRECTIVE, not a blind resample. An identical
+                # request only helps a random slip (a dropped comma); the
+                # failure actually seen most is systematic — Haiku asked for a
+                # 2D scene about physical objects ("semaphore flags signalling
+                # a ship") wrote a 3D scene under a made-up "pattern3d" name on
+                # BOTH attempts, twice over, and each pair was billed in full
+                # (~$0.10) for nothing. Telling it what was rejected costs a few
+                # dozen input tokens.
+                ask = content if attempt == 0 else content + _retry_note(last_parse_error, kind)
+                text, stop_reason = self._stream_or_call(ask, budget_chars, system)
                 # Record the cost BEFORE judging whether the response is
                 # usable. Truncated and aborted responses are billed for
                 # everything they did generate, and those are the expensive
@@ -1438,6 +1519,10 @@ class SceneDirector:
                     spec = SceneSpec.from_dict(data)
                     if not spec.layers:
                         raise ValueError("model returned no layers")
+                    k = _bake_placement_units(spec)
+                    if k != 1.0:
+                        print(f"[promptwaver] director: 2D placements were ~{1/k:.0f}x "
+                              f"outside the frame — rescaled in the saved scene")
                     # A response can be syntactically valid JSON and still be
                     # unusable: Claude has been observed emitting a made-up
                     # generator name (e.g. "pattern3d", which doesn't exist —
@@ -1455,10 +1540,7 @@ class SceneDirector:
                     # path as a JSON parse failure, which is what this
                     # deserves — same failure class, just caught one layer
                     # deeper than syntax.
-                    known = available_generators()
-                    bad = [l.generator for l in spec.layers if l.generator not in known]
-                    if bad:
-                        raise ValueError(f"unknown generator {bad[0]!r} — have {known}")
+                    _validate_spec(spec, kind)
                     self.last_progress = 1.0
                     return spec, True
                 # Deliberately broad. This used to catch only JSONDecodeError
@@ -1622,6 +1704,84 @@ def _friendly_error(e: Exception) -> str:
     if "connection" in low or "network" in low or "timeout" in low:
         return "network error reaching the API"
     return s[:160]
+
+
+def _validate_spec(spec: SceneSpec, kind: str) -> None:
+    """Raise if a parsed response would not load and play as the kind asked for.
+
+    Name-checking the generator alone was not enough. A 2D request answered
+    with 3-number points parses, carries a valid "pattern2d" name, is saved as a
+    success — and then raises "cannot reshape array of size 3 into shape (2,)"
+    the first time it renders. The same went for a 2D request answered with a
+    perfectly good "world" layer: valid, playable, and not what was asked for.
+    So this checks the kind the generators actually derive, then renders one
+    frame, which is the only check that sees everything playback will.
+    """
+    known = available_generators()
+    bad = [l.generator for l in spec.layers if l.generator not in known]
+    if bad:
+        raise ValueError(f"unknown generator {bad[0]!r} — have {known}")
+    from ..generators import get as _get_generator
+    from ..scenes import Scene
+    got = "3d" if any(getattr(_get_generator(l.generator), "is_3d", False)
+                      for l in spec.layers) else "2d"
+    if got != kind:
+        raise ValueError(f"asked for a {kind.upper()} scene but got a {got.upper()} one "
+                         f"(generators: {[l.generator for l in spec.layers]})")
+    try:
+        Scene(spec).render(0.0, 0.0)
+    except Exception as e:
+        raise ValueError(f"scene failed to render: {type(e).__name__}: {e}") from e
+
+
+def _bake_placement_units(spec: SceneSpec) -> float:
+    """Apply pattern2d's wrong-units rescue to the spec itself; return the factor.
+
+    Models regularly place 2D nodes in tens ([4.2, 0.5], [-35, 15]) despite the
+    prompt saying in capitals that `at` is frame units. The renderer already
+    rescues that uniformly (`pattern2d._placement_scale`) — but only at draw
+    time, so the saved scene keeps the wrong units and warns on every load,
+    and the trial render in `_validate_spec` made each generation warn twice.
+    Baking the same factor in here draws the same picture from a file that is
+    correct on disk. Positions only: motif size lives in defs/scale, which the
+    rescue never touched either.
+    """
+    from ..generators.pattern2d import _placement_scale
+    worst = 1.0
+    for layer in spec.layers:
+        if getattr(layer, "generator", None) != "pattern2d":
+            continue
+        nodes = (layer.params or {}).get("nodes") or []
+        s = _placement_scale(nodes)
+        if s == 1.0:
+            continue
+        worst = min(worst, s)
+        for node in nodes:
+            at = node.get("at")
+            if isinstance(at, (list, tuple)) and len(at) >= 2:
+                node["at"] = [float(at[0]) * s, float(at[1]) * s]
+            ap = node.get("at_polar")
+            if isinstance(ap, (list, tuple)) and ap:
+                node["at_polar"] = [float(ap[0]) * s] + list(ap[1:])
+    return worst
+
+
+def _retry_note(error, kind: str) -> str:
+    """What the second attempt is told about the first. Kept short — it rides on
+    a full re-send of the prompt — and specific to the kind, because the common
+    systematic failure is a scene of the wrong kind rather than bad syntax."""
+    why = str(error)[:240] if error else "it could not be used"
+    if kind == "2d":
+        fix = ("This is a FLAT 2D pattern: the layer generator must be exactly "
+               "\"pattern2d\" (never \"world\", never \"pattern3d\"), every point is "
+               "exactly 2 numbers [x,y], and there is no camera route or depth. Draw "
+               "a subject that sounds three-dimensional as flat line art, the way a "
+               "physical subject is drawn in a flat illustration.")
+    else:
+        fix = ("This is a 3D world: the layer generator must be exactly \"world\", "
+               "following the schema in your instructions.")
+    return (f"\n\nIMPORTANT — your previous answer to this request was rejected and "
+            f"discarded: {why}. {fix} Return the complete corrected scene JSON.")
 
 
 def _extract_json(text: str) -> str:

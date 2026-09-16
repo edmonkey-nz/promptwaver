@@ -39,6 +39,7 @@ import numpy as np
 from . import settings
 from . import generators as gen
 from .scenes import Layer, SceneManager
+from .director.claude_director import interpretation_directive
 
 # Phases the kiosk page renders. `playing` is a resting state like `idle` —
 # both accept a button press; nothing else does.
@@ -439,18 +440,10 @@ class KioskSession:
         silence, so a neutral setting costs no tokens and biases nothing.
         """
         out = []
-        interp = float(self.gen.get("interpretation", 0.5))
-        if interp >= 0.65:
-            out.append(
-                "Interpretation: LOOSE AND ABSTRACT. Evoke the feeling, rhythm and "
-                "forms of the subject rather than depicting it literally. Favour "
-                "geometric abstraction, repetition and structure over recognisable "
-                "objects — someone should feel the subject before they can name it.")
-        elif interp <= 0.35:
-            out.append(
-                "Interpretation: LITERAL. Build the actual objects and place the "
-                "words name, clearly readable as what they are. Favour recognisable "
-                "silhouettes and correct proportions over abstraction.")
+        # Shared with the Generate modal — see director.interpretation_directive.
+        interp = interpretation_directive(self.gen.get("interpretation", 0.5))
+        if interp:
+            out.append(interp)
         if self.gen.get("exclude_figures", True):
             out.append(
                 "IMPORTANT: include NO human or animal figures — no people, no "

@@ -14,6 +14,8 @@ import math
 import os
 from dataclasses import dataclass, field, asdict
 
+import numpy as np
+
 from .geometry import Frame, clamp_frame
 from . import generators as gen
 
@@ -329,8 +331,90 @@ class Scene:
                 paths3d = g.render3d(t, p)
                 frame.extend(self.camera.project(paths3d, g.field_depth))
             else:
-                frame.extend(g.render(t, p))
+                frame.extend(_clip_2d(g.render(t, p)))
         return clamp_frame(frame)
+
+
+_CLIP_NUMPY_FROM = 64
+
+
+def _clip_2d(frame: Frame) -> Frame:
+    """Cut flat-generator strokes at the frame edge instead of squashing them.
+
+    `clamp_frame` below clips each COORDINATE into [-1,1]. For 3D that is a
+    no-op — the camera has already clipped every stroke properly — but a 2D
+    pattern reaching past the frame (a node at 2.2 is common in generated
+    scenes) had every outside point pushed onto the nearest edge, so the
+    off-frame part of each stroke was drawn as a line running along the
+    border. This cuts the stroke where it crosses the edge and drops the rest,
+    reusing the camera's own box clipper.
+
+    That clipper walks segments in Python, and a flat pattern can be 11,000+
+    points, so only strokes that actually leave the frame pay for it; a pattern
+    that stays inside is returned untouched, object for object.
+    """
+    from .geometry import Path
+    from .scene3d import _clip_frame
+    out: Frame = []
+    for path in frame:
+        pts = path.points
+        if len(pts) == 0 or float(np.abs(pts).max()) <= 1.0:
+            out.append(path)
+            continue
+        if path.closed and len(pts) > 1:
+            # The renderer joins last->first for a closed stroke; once cut, the
+            # pieces are open runs, so that closing edge must be clipped too.
+            pts = np.vstack([pts, pts[:1]])
+        # Two clippers, split by length: measured on 2,520 real off-frame
+        # strokes, the Python loop costs ~2.5us a point and the numpy one a
+        # flat ~140us, so short strokes (most of them) stay in Python and long
+        # rings go to numpy (a 64+ point stroke: 1790us -> 205us).
+        runs = _clip_frame(pts.tolist()) if len(pts) < _CLIP_NUMPY_FROM else _clip_polyline(pts)
+        for run in runs:
+            out.append(Path(run, path.color, False, path.glow))
+    return out
+
+
+def _clip_polyline(P: np.ndarray) -> list:
+    """Liang-Barsky against [-1,1]^2 over every segment at once; returns the
+    in-frame runs as (M,2) arrays.
+
+    Same result as `scene3d._clip_frame` (identical on 2,520 real strokes; it
+    differs only where a stroke leaves and re-enters within 1e-4, which that
+    one bridges and this one leaves as two runs), vectorised: that one loops over
+    segments in Python, which measured `crop circles` at 40ms a frame against
+    11ms unclipped — its big rings straddle the edge, so nearly every point
+    went through the loop. Numpy calls here are per STROKE, not per segment.
+    """
+    P = np.asarray(P, dtype=np.float64)
+    a, d = P[:-1], P[1:] - P[:-1]
+    n = len(a)
+    t0 = np.zeros(n)
+    t1 = np.ones(n)
+    ok = np.ones(n, dtype=bool)
+    for pe, qe in ((-d[:, 0], a[:, 0] + 1), (d[:, 0], 1 - a[:, 0]),
+                   (-d[:, 1], a[:, 1] + 1), (d[:, 1], 1 - a[:, 1])):
+        par = pe == 0
+        ok &= ~(par & (qe < 0))                  # parallel to and outside this edge
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r = np.where(par, 0.0, qe / np.where(par, 1.0, pe))
+        ent = ~par & (pe < 0)                    # entering: raises t0
+        ext = ~par & (pe > 0)                    # exiting: lowers t1
+        t0 = np.where(ent, np.maximum(t0, r), t0)
+        t1 = np.where(ext, np.minimum(t1, r), t1)
+    ok &= t0 <= t1
+    if not ok.any():
+        return []
+    c0 = a + t0[:, None] * d
+    c1 = a + t1[:, None] * d
+    # Consecutive kept segments are one run only if the point they share is
+    # inside — the first ends un-clipped AND the next starts un-clipped.
+    joined = ok[:-1] & ok[1:] & (t1[:-1] >= 1.0) & (t0[1:] <= 0.0)
+    idx = np.flatnonzero(ok)
+    brk = np.flatnonzero((np.diff(idx) != 1) | ~joined[idx[:-1]])
+    starts = np.concatenate(([idx[0]], idx[brk + 1]))
+    ends = np.concatenate((idx[brk], [idx[-1]]))
+    return [np.vstack([c0[s:s + 1], c1[s:e + 1]]) for s, e in zip(starts, ends)]
 
 
 # --- manager -----------------------------------------------------------------

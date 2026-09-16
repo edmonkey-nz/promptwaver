@@ -1,0 +1,332 @@
+# unknown generator 'pattern3d' — have ['attractor', 'flow_field', 'forest', 'ground_grid', 'pattern2d', 'ripples', 'world']
+
+```json
+{
+  "name": "folding napkins into amazing impossible shapes",
+  "layers": [
+    {
+      "generator": "pattern3d",
+      "params": {
+        "defs": {
+          "crease_line": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0, 0], "b": [0, 0, 1.2]}
+            ]
+          },
+          "fold_triangle": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 0, 0], [0.4, 0.3, 0], [0.2, 0.8, 0.3], [0, 0, 0]], "closed": true}
+            ]
+          },
+          "spiral_ribbon": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 0, 0], [0.15, 0.1, 0.2], [0.25, 0.3, 0.4], [0.28, 0.6, 0.6], [0.2, 0.85, 0.8]], "closed": false}
+            ]
+          },
+          "pocket_edge": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 0, 0], [0.3, 0.15, 0.1], [0.5, 0.1, 0.3], [0.6, 0.35, 0.2]], "closed": false}
+            ]
+          },
+          "diagonal_sweep": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [-0.2, -0.2, 0], "b": [0.6, 0.8, 0.5]}
+            ]
+          },
+          "layer_edge": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 0, 0], [0.5, 0, 0.2], [0.7, 0.4, 0.4], [0.5, 0.7, 0.5]], "closed": false}
+            ]
+          },
+          "intersection_cross": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [-0.3, 0, 0], "b": [0.3, 0, 0]},
+              {"op": "line", "a": [0, -0.3, 0], "b": [0, 0.3, 0.4]}
+            ]
+          }
+        },
+        "nodes": [
+          {"def": "crease_line", "at": [-40, -35, 2], "scale": 1.1, "rotate": [0, 0.15, 0], "color": [0.2, 0.9, 0.7], "glow": 0.8},
+          {"def": "crease_line", "at": [-38, -32, 1.5], "scale": 0.9, "rotate": [0.1, 0.25, 0.05], "color": [0.3, 0.85, 0.75], "glow": 0.75},
+          {"def": "crease_line", "at": [-35, -30, 3], "scale": 1.3, "rotate": [0.05, 0.35, 0], "color": [0.15, 0.95, 0.65], "glow": 0.85},
+          {"def": "crease_line", "at": [-32, -28, 2.5], "scale": 0.85, "rotate": [0, 0.2, 0.1], "color": [0.25, 0.88, 0.72], "glow": 0.78},
+          {"def": "crease_line", "at": [-30, -25, 1.8], "scale": 1.2, "rotate": [0.15, 0.1, 0], "color": [0.35, 0.92, 0.68], "glow": 0.82},
+          {"def": "crease_line", "at": [-28, -22, 2.8], "scale": 0.95, "rotate": [0.08, 0.4, 0.05], "color": [0.2, 0.87, 0.73], "glow": 0.80},
+          {"def": "crease_line", "at": [-25, -20, 3.2], "scale": 1.15, "rotate": [0, 0.28, 0], "color": [0.3, 0.91, 0.70], "glow": 0.83},
+          {"def": "crease_line", "at": [-22, -18, 2.2], "scale": 0.88, "rotate": [0.12, 0.15, 0.08], "color": [0.25, 0.89, 0.74], "glow": 0.79},
+          {"def": "crease_line", "at": [-20, -15, 1.6], "scale": 1.25, "rotate": [0.05, 0.32, 0], "color": [0.32, 0.93, 0.66], "glow": 0.84},
+          {"def": "crease_line", "at": [-18, -12, 2.9], "scale": 0.92, "rotate": [0.1, 0.22, 0.06], "color": [0.22, 0.86, 0.75], "glow": 0.81},
+          {"def": "crease_line", "at": [-15, -10, 3.4], "scale": 1.18, "rotate": [0, 0.38, 0], "color": [0.28, 0.90, 0.71], "glow": 0.85},
+          {"def": "crease_line", "at": [-12, -8, 2.1], "scale": 0.90, "rotate": [0.14, 0.18, 0.09], "color": [0.33, 0.94, 0.67], "glow": 0.80},
+          {"def": "crease_line", "at": [-10, -5, 1.7], "scale": 1.22, "rotate": [0.06, 0.26, 0], "color": [0.23, 0.88, 0.73], "glow": 0.82},
+          {"def": "crease_line", "at": [-8, -2, 3.1], "scale": 0.87, "rotate": [0.11, 0.34, 0.07], "color": [0.31, 0.92, 0.69], "glow": 0.84},
+          {"def": "crease_line", "at": [-5, 0, 2.5], "scale": 1.20, "rotate": [0, 0.30, 0], "color": [0.26, 0.89, 0.72], "glow": 0.81},
+          {"def": "crease_line", "at": [-2, 3, 1.9], "scale": 0.93, "rotate": [0.13, 0.20, 0.08], "color": [0.34, 0.91, 0.68], "glow": 0.83},
+          {"def": "crease_line", "at": [0, 5, 3.3], "scale": 1.16, "rotate": [0.05, 0.36, 0], "color": [0.24, 0.87, 0.74], "glow": 0.82},
+          {"def": "crease_line", "at": [3, 7, 2.3], "scale": 0.89, "rotate": [0.12, 0.24, 0.06], "color": [0.30, 0.93, 0.70], "glow": 0.85},
+          {"def": "crease_line", "at": [5, 10, 1.8], "scale": 1.19, "rotate": [0.08, 0.28, 0], "color": [0.27, 0.88, 0.73], "glow": 0.80},
+          {"def": "crease_line", "at": [8, 12, 2.7], "scale": 0.91, "rotate": [0.10, 0.33, 0.07], "color": [0.32, 0.90, 0.71], "glow": 0.84},
+          {"def": "crease_line", "at": [10, 15, 3.2], "scale": 1.21, "rotate": [0, 0.31, 0], "color": [0.25, 0.89, 0.72], "glow": 0.81},
+          {"def": "crease_line", "at": [13, 18, 2.0], "scale": 0.86, "rotate": [0.15, 0.19, 0.09], "color": [0.33, 0.92, 0.69], "glow": 0.83},
+          {"def": "crease_line", "at": [15, 20, 1.6], "scale": 1.23, "rotate": [0.07, 0.29, 0], "color": [0.23, 0.87, 0.74], "glow": 0.82},
+          {"def": "crease_line", "at": [18, 22, 2.9], "scale": 0.88, "rotate": [0.11, 0.35, 0.06], "color": [0.31, 0.91, 0.70], "glow": 0.85},
+          {"def": "crease_line", "at": [20, 25, 3.4], "scale": 1.17, "rotate": [0, 0.27, 0], "color": [0.26, 0.88, 0.73], "glow": 0.80},
+          {"def": "crease_line", "at": [23, 28, 2.2], "scale": 0.94, "rotate": [0.13, 0.21, 0.08], "color": [0.34, 0.93, 0.68], "glow": 0.84},
+          {"def": "crease_line", "at": [25, 30, 1.7], "scale": 1.18, "rotate": [0.06, 0.32, 0], "color": [0.24, 0.89, 0.72], "glow": 0.81},
+          {"def": "crease_line", "at": [28, 32, 3.0], "scale": 0.90, "rotate": [0.12, 0.37, 0.07], "color": [0.30, 0.92, 0.71], "glow": 0.83},
+          {"def": "crease_line", "at": [30, 35, 2.4], "scale": 1.20, "rotate": [0, 0.25, 0], "color": [0.27, 0.88, 0.73], "glow": 0.82},
+          {"def": "crease_line", "at": [33, 37, 1.9], "scale": 0.85, "rotate": [0.14, 0.23, 0.09], "color": [0.32, 0.91, 0.69], "glow": 0.85},
+          {"def": "crease_line", "at": [35, 40, 3.3], "scale": 1.22, "rotate": [0.09, 0.30, 0], "color": [0.25, 0.87, 0.74], "glow": 0.80},
+          {"def": "crease_line", "at": [38, 42, 2.1], "scale": 0.87, "rotate": [0.10, 0.38, 0.06], "color": [0.33, 0.93, 0.70], "glow": 0.84},
+          {"def": "crease_line", "at": [40, 45, 1.8], "scale": 1.19, "rotate": [0.05, 0.26, 0], "color": [0.23, 0.89, 0.73], "glow": 0.81},
+          {"def": "crease_line", "at": [43, 47, 2.8], "scale": 0.92, "rotate": [0.11, 0.34, 0.08], "color": [0.31, 0.90, 0.71], "glow": 0.83},
+          {"def": "crease_line", "at": [45, 50, 3.2], "scale": 1.16, "rotate": [0, 0.28, 0], "color": [0.26, 0.88, 0.72], "glow": 0.82},
+          {"def": "crease_line", "at": [48, 48, 2.0], "scale": 0.88, "rotate": [0.12, 0.20, 0.07], "color": [0.34, 0.92, 0.69], "glow": 0.85},
+
+          {"def": "fold_triangle", "at": [-38, -33, 2.3], "scale": 1.0, "rotate": [0.08, 0.12, 0.03], "color": [0.8, 0.25, 0.45], "glow": 0.75},
+          {"def": "fold_triangle", "at": [-33, -28, 1.8], "scale": 0.92, "rotate": [0.15, 0.3, 0.08], "color": [0.85, 0.30, 0.40], "glow": 0.78},
+          {"def": "fold_triangle", "at": [-28, -23, 2.7], "scale": 1.08, "rotate": [0.06, 0.18, 0], "color": [0.78, 0.28, 0.48], "glow": 0.80},
+          {"def": "fold_triangle", "at": [-23, -18, 2.2], "scale": 0.95, "rotate": [0.12, 0.25, 0.05], "color": [0.82, 0.32, 0.43], "glow": 0.76},
+          {"def": "fold_triangle", "at": [-18, -13, 1.6], "scale": 1.05, "rotate": [0.09, 0.35, 0.02], "color": [0.80, 0.27, 0.46], "glow": 0.79},
+          {"def": "fold_triangle", "at": [-13, -8, 2.9], "scale": 0.98, "rotate": [0.14, 0.22, 0.07], "color": [0.83, 0.31, 0.42], "glow": 0.81},
+          {"def": "fold_triangle", "at": [-8, -3, 2.4], "scale": 1.10, "rotate": [0.07, 0.28, 0], "color": [0.79, 0.26, 0.49], "glow": 0.77},
+          {"def": "fold_triangle", "at": [-3, 2, 1.9], "scale": 0.93, "rotate": [0.13, 0.33, 0.06], "color": [0.81, 0.29, 0.44], "glow": 0.80},
+          {"def": "fold_triangle", "at": [2, 7, 2.6], "scale": 1.07, "rotate": [0.10, 0.20, 0.03], "color": [0.84, 0.33, 0.41], "glow": 0.78},
+          {"def": "fold_triangle", "at": [7, 12, 2.1], "scale": 0.96, "rotate": [0.11, 0.31, 0.08], "color": [0.77, 0.27, 0.50], "glow": 0.82},
+          {"def": "fold_triangle", "at": [12, 17, 1.7], "scale": 1.09, "rotate": [0.08, 0.24, 0.01], "color": [0.80, 0.30, 0.45], "glow": 0.76},
+          {"def": "fold_triangle", "at": [17, 22, 2.8], "scale": 0.94, "rotate": [0.12, 0.36, 0.07], "color": [0.82, 0.34, 0.42], "glow": 0.81},
+          {"def": "fold_triangle", "at": [22, 27, 2.3], "scale": 1.06, "rotate": [0.06, 0.19, 0.02], "color": [0.78, 0.25, 0.48], "glow": 0.79},
+          {"def": "fold_triangle", "at": [27, 32, 1.8], "scale": 0.99, "rotate": [0.14, 0.32, 0.06], "color": [0.83, 0.32, 0.43], "glow": 0.80},
+          {"def": "fold_triangle", "at": [32, 37, 2.5], "scale": 1.11, "rotate": [0.09, 0.23, 0], "color": [0.79, 0.28, 0.47], "glow": 0.77},
+          {"def": "fold_triangle", "at": [37, 42, 2.0], "scale": 0.91, "rotate": [0.13, 0.34, 0.05], "color": [0.81, 0.31, 0.44], "glow": 0.82},
+          {"def": "fold_triangle", "at": [42, 47, 3.0], "scale": 1.08, "rotate": [0.07, 0.21, 0.03], "color": [0.84, 0.35, 0.40], "glow": 0.78},
+          {"def": "fold_triangle", "at": [47, 48, 2.2], "scale": 0.97, "rotate": [0.11, 0.37, 0.08], "color": [0.77, 0.26, 0.51], "glow": 0.81},
+
+          {"def": "spiral_ribbon", "at": [-36, -30, 1.5], "scale": 1.3, "rotate": [0.2, 0.08, 0.04], "color": [0.4, 0.95, 0.55], "glow": 0.88},
+          {"def": "spiral_ribbon", "at": [-30, -25, 2.8], "scale": 0.98, "rotate": [0.05, 0.4, 0.02], "color": [0.45, 0.98, 0.50], "glow": 0.85},
+          {"def": "spiral_ribbon", "at": [-24, -20, 2.1], "scale": 1.15, "rotate": [0.18, 0.15, 0.06], "color": [0.38, 0.92, 0.58], "glow": 0.84},
+          {"def": "spiral_ribbon", "at": [-18, -15, 1.9], "scale": 1.02, "rotate": [0.09, 0.35, 0.03], "color": [0.42, 0.96, 0.52], "glow": 0.86},
+          {"def": "spiral_ribbon", "at": [-12, -10, 2.6], "scale": 1.25, "rotate": [0.16, 0.22, 0.05], "color": [0.39, 0.94, 0.56], "glow": 0.83},
+          {"def": "spiral_ribbon", "at": [-6, -5, 2.3], "scale": 0.96, "rotate": [0.11, 0.38, 0.04], "color": [0.44, 0.97, 0.51], "glow": 0.87},
+          {"def": "spiral_ribbon", "at": [0, 0, 3.0], "scale": 1.20, "rotate": [0.14, 0.18, 0.02], "color": [0.41, 0.93, 0.54], "glow": 0.82},
+          {"def": "spiral_ribbon", "at": [6, 5, 1.7], "scale": 1.00, "rotate": [0.12, 0.33, 0.07], "color": [0.43, 0.95, 0.53], "glow": 0.85},
+          {"def": "spiral_ribbon", "at": [12, 10, 2.5], "scale": 1.18, "rotate": [0.17, 0.20, 0.01], "color": [0.40, 0.91, 0.57], "glow": 0.84},
+          {"def": "spiral_ribbon", "at": [18, 15, 2.2], "scale": 0.99, "rotate": [0.10, 0.37, 0.06], "color": [0.46, 0.98, 0.49], "glow": 0.86},
+          {"def": "spiral_ribbon", "at": [24, 20, 1.8], "scale": 1.22, "rotate": [0.15, 0.25, 0.03], "color": [0.38, 0.93, 0.59], "glow": 0.83},
+          {"def": "spiral_ribbon", "at": [30, 25, 2.9], "scale": 0.97, "rotate": [0.08, 0.32, 0.05], "color": [0.42, 0.94, 0.54], "glow": 0.87},
+          {"def": "spiral_ribbon", "at": [36, 30, 2.4], "scale": 1.19, "rotate": [0.13, 0.28, 0.02], "color": [0.39, 0.95, 0.55], "glow": 0.81},
+          {"def": "spiral_ribbon", "at": [42, 35, 1.6], "scale": 0.95, "rotate": [0.19, 0.16, 0.08], "color": [0.44, 0.97, 0.52], "glow": 0.86},
+          {"def": "spiral_ribbon", "at": [48, 40, 2.7], "scale": 1.23, "rotate": [0.11, 0.34, 0.04], "color": [0.41, 0.92, 0.56], "glow": 0.84},
+          {"def": "spiral_ribbon", "at": [50, 45, 2.0], "scale": 0.98, "rotate": [0.14, 0.23, 0.03], "color": [0.43, 0.96, 0.53], "glow": 0.85},
+
+          {"def": "pocket_edge", "at": [-35, -32, 2.1], "scale": 1.05, "rotate": [0.03, 0.17, 0.05], "color": [0.5, 0.4, 0.95], "glow": 0.72},
+          {"def": "pocket_edge", "at": [-29, -27, 1.6], "scale": 0.88, "rotate": [0.10, 0.29, 0.02], "color": [0.52, 0.45, 0.92], "glow": 0.75},
+          {"def": "pocket_edge", "at": [-23, -22, 2.5], "scale": 1.12, "rotate": [0.07, 0.12, 0.07], "color": [0.48, 0.38, 0.96], "glow": 0.73},
+          {"def": "pocket_edge", "at": [-17, -17, 2.0], "scale": 0.91, "rotate": [0.14, 0.34, 0.01], "color": [0.51, 0.42, 0.93], "glow": 0.76},
+          {"def": "pocket_edge", "at": [-11, -12, 1.8], "scale": 1.09, "rotate": [0.05, 0.21, 0.06], "color": [0.49, 0.39, 0.94], "glow": 0.74},
+          {"def": "pocket_edge", "at": [-5, -7, 2.7], "scale": 0.86, "rotate": [0.12, 0.31, 0.03], "color": [0.53, 0.46, 0.91], "glow": 0.77},
+          {"def": "pocket_edge", "at": [1, -2, 2.3], "scale": 1.14, "rotate": [0.08, 0.19, 0.04], "color": [0.50, 0.41, 0.95], "glow": 0.71},
+          {"def": "pocket_edge", "at": [7, 3, 1.7], "scale": 0.89, "rotate": [0.11, 0.36, 0.08], "color": [0.52, 0.44, 0.92], "glow": 0.75},
+          {"def": "pocket_edge", "at": [13, 8, 2.6], "scale": 1.11, "rotate": [0.06, 0.14, 0.02], "color": [0.48, 0.37, 0.97], "glow": 0.73},
+          {"def": "pocket_edge", "at": [19, 13, 2.1], "scale": 0.90, "rotate": [0.13, 0.32, 0.05], "color": [0.51, 0.43, 0.93], "glow": 0.76},
+          {"def": "pocket_edge", "at": [25, 18, 1.9], "scale": 1.10, "rotate": [0.09, 0.25, 0.03], "color": [0.49, 0.40, 0.94], "glow": 0.74},
+          {"def": "pocket_edge", "at": [31, 23, 2.8], "scale": 0.87, "rotate": [0.15, 0.30, 0.07], "color": [0.53, 0.47, 0.90], "glow": 0.77},
+          {"def": "pocket_edge", "at": [37, 28, 2.2], "scale": 1.13, "rotate": [0.07, 0.16, 0.01], "color": [0.50, 0.39, 0.96], "glow": 0.72},
+          {"def": "pocket_edge", "at": [43, 33, 1.8], "scale": 0.92, "rotate": [0.12, 0.35, 0.06], "color": [0.52, 0.45, 0.92], "glow": 0.75},
+          {"def": "pocket_edge", "at": [49, 38, 2.5], "scale": 1.08, "rotate": [0.10, 0.22, 0.02], "color": [0.48, 0.38, 0.95], "glow": 0.74},
+          {"def": "pocket_edge", "at": [48, 44, 2.0], "scale": 0.85, "rotate": [0.14, 0.33, 0.04], "color": [0.51, 0.42, 0.93], "glow": 0.76},
+
+          {"def": "diagonal_sweep", "at": [-37, -31, 1.4], "scale": 1.08, "rotate": [0.16, 0.11, 0.02], "color": [0.95, 0.55, 0.25], "glow": 0.80},
+          {"def": "diagonal_sweep", "at": [-31, -26, 2.4], "scale": 0.97, "rotate": [0.04, 0.39, 0.06], "color": [0.92, 0.50, 0.30], "glow": 0.78},
+          {"def": "diagonal_sweep", "at": [-25, -21, 1.9], "scale": 1.14, "rotate": [0.12, 0.17, 0.01], "color": [0.94, 0.52, 0.28], "glow": 0.81},
+          {"def": "diagonal_sweep", "at": [-19, -16, 2.5], "scale": 0.89, "rotate": [0.08, 0.34, 0.07], "color": [0.91, 0.48, 0.32], "glow": 0.77},
+          {"def": "diagonal_sweep", "at": [-13, -11, 1.7], "scale": 1.11, "rotate": [0.15, 0.20, 0.03], "color": [0.95, 0.54, 0.26], "glow": 0.79},
+          {"def": "diagonal_sweep", "at": [-7, -6, 2.8], "scale": 0.98, "rotate": [0.06, 0.37, 0.05], "color": [0.93, 0.51, 0.29], "glow": 0.82},
+          {"def": "diagonal_sweep", "at": [-1, -1, 2.2], "scale": 1.12, "rotate": [0.11, 0.24, 0.02], "color": [0.90, 0.47, 0.33], "glow": 0.76},
+          {"def": "diagonal_sweep", "at": [5, 4, 1.6], "scale": 0.95, "rotate": [0.14, 0.32, 0.08], "color": [0.94, 0.53, 0.27], "glow": 0.81},
+          {"def": "diagonal_sweep", "at": [11, 9, 2.6], "scale": 1.09, "rotate": [0.07, 0.19, 0.01], "color": [0.92, 0.49, 0.31], "glow": 0.78},
+          {"def": "diagonal_sweep", "at": [17, 14, 2.1], "scale": 0.96, "rotate": [0.13, 0.36, 0.06], "color": [0.95, 0.55, 0.25], "glow": 0.80},
+          {"def": "diagonal_sweep", "at": [23, 19, 1.8], "scale": 1.15, "rotate": [0.09, 0.23, 0.03], "color": [0.91, 0.46, 0.34], "glow": 0.77},
+          {"def": "diagonal_sweep", "at": [29, 24, 2.7], "scale": 0.92, "rotate": [0.12, 0.38, 0.07], "color": [0.93, 0.52, 0.28], "glow": 0.82},
+          {"def": "diagonal_sweep", "at": [35, 29, 2.3], "scale": 1.10, "rotate": [0.10, 0.21, 0.02], "color": [0.94, 0.51, 0.27], "glow": 0.79},
+          {"def": "diagonal_sweep", "at": [41, 34, 1.7], "scale": 0.94, "rotate": [0.14, 0.33, 0.05], "color": [0.90, 0.48, 0.32], "glow": 0.81},
+          {"def": "diagonal_sweep", "at": [47, 39, 2.5], "scale": 1.13, "rotate": [0.11, 0.18, 0.04], "color": [0.95, 0.54, 0.26], "glow": 0.78},
+          {"def": "diagonal_sweep", "at": [50, 46, 2.0], "scale": 0.99, "rotate": [0.15, 0.35, 0.06], "color": [0.92, 0.50, 0.31], "glow": 0.80},
+
+          {"def": "layer_edge", "at": [-34, -29, 2.3], "scale": 0.94, "rotate": [0.04, 0.14, 0.04], "color": [0.65, 0.7, 0.4], "glow": 0.68},
+          {"def": "layer_edge", "at": [-27, -24, 1.7], "scale": 1.06, "rotate": [0.11, 0.31, 0.01], "color": [0.68, 0.75, 0.35], "glow": 0.71},
+          {"def": "layer_edge", "at": [-20, -19, 2.6], "scale": 0.99, "rotate": [0.08, 0.20, 0.07], "color": [0.62, 0.68, 0.42], "glow": 0.69},
+          {"def": "layer_edge", "at": [-13, -14, 2.1], "scale": 1.04, "rotate": [0.13, 0.30, 0.02], "color": [0.67, 0.72, 0.38], "glow": 0.70},
+          {"def": "layer_edge", "at": [-6, -9, 1.9], "scale": 0.97, "rotate": [0.06, 0.24, 0.05], "color": [0.64, 0.69, 0.41], "glow": 0.72},
+          {"def": "layer_edge", "at": [1, -4, 2.7], "scale": 1.08, "rotate": [0.12, 0.35, 0.03], "color": [0.66, 0.73, 0.36], "glow": 0.68},
+          {"def": "layer_edge", "at": [8, 1, 2.2], "scale": 0.92, "rotate": [0.09, 0.17, 0.06], "color": [0.63, 0.70, 0.43], "glow": 0.71},
+          {"def": "layer_edge", "at": [15, 6, 1.8], "scale": 1.07, "rotate": [0.14, 0.32, 0.01], "color": [0.69, 0.76, 0.34], "glow": 0.69},
+          {"def": "layer_edge", "at": [22, 11, 2.5], "scale": 0.98, "rotate": [0.10, 0.22, 0.07], "color": [0.65, 0.71, 0.39], "glow": 0.72},
+          {"def": "layer_edge", "at": [29, 16, 2.0], "scale": 1.05, "rotate": [0.11, 0.33, 0.02], "color": [0.67, 0.74, 0.37], "glow": 0.70},
+          {"def": "layer_edge", "at": [36, 21, 1.8], "scale": 0.96, "rotate": [0.07, 0.19, 0.05], "color": [0.62, 0.67, 0.44], "glow": 0.71},
+          {"def": "layer_edge", "at": [43, 26, 2.6], "scale": 1.09, "rotate": [0.13, 0.34, 0.03], "color": [0.68, 0.75, 0.35], "glow": 0.69},
+          {"def": "layer_edge", "at": [50, 31, 2.3], "scale": 0.93, "rotate": [0.12, 0.18, 0.06], "color": [0.64, 0.70, 0.40], "glow": 0.72},
+          {"def": "layer_edge", "at": [48, 36, 1.9], "scale": 1.03, "rotate": [0.08, 0.30, 0.01], "color": [0.66, 0.73, 0.38], "glow": 0.70},
+          {"def": "layer_edge", "at": [44, 41, 2.7], "scale": 0.95, "rotate": [0.15, 0.25, 0.07], "color": [0.63, 0.69, 0.42], "glow": 0.71},
+          {"def": "layer_edge", "at": [48, 46, 2.1], "scale": 1.10, "rotate": [0.10, 0.36, 0.02], "color": [0.67, 0.72, 0.37], "glow": 0.68},
+
+          {"def": "intersection_cross", "at": [-32, -27, 1.5], "scale": 1.02, "rotate": [0.17, 0.10, 0.06], "color": [0.2, 0.6, 0.9], "glow": 0.76},
+          {"def": "intersection_cross", "at": [-25, -22, 2.2], "scale": 0.89, "rotate": [0.09, 0.27, 0.02], "color": [0.25, 0.65, 0.88], "glow": 0.79},
+          {"def": "intersection_cross", "at": [-18, -17, 1.8], "scale": 1.04, "rotate": [0.14, 0.15, 0.07], "color": [0.22, 0.62, 0.92], "glow": 0.77},
+          {"def": "intersection_cross", "at": [-11, -12, 2.5], "scale": 0.91, "rotate": [0.07, 0.33, 0.03], "color": [0.24, 0.64, 0.89], "glow": 0.78},
+          {"def": "intersection_cross", "at": [-4, -7, 2.0], "scale": 1.06, "rotate": [0.13, 0.21, 0.05], "color": [0.23, 0.61, 0.91], "glow": 0.76},
+          {"def": "intersection_cross", "at": [3, -2, 2.6], "scale": 0.88, "rotate": [0.11, 0.35, 0.04], "color": [0.26, 0.66, 0.87], "glow": 0.80},
+          {"def": "intersection_cross", "at": [10, 3, 1.9], "scale": 1.03, "rotate": [0.16, 0.12, 0.06], "color": [0.21, 0.59, 0.93], "glow": 0.75},
+          {"def": "intersection_cross", "at": [17, 8, 2.3], "scale": 0.92, "rotate": [0.10, 0.30, 0.02], "color": [0.25, 0.63, 0.90], "glow": 0.79},
+          {"def": "intersection_cross", "at": [24, 13, 1.7], "scale": 1.05, "rotate": [0.12, 0.19, 0.07], "color": [0.22, 0.60, 0.92], "glow": 0.77},
+          {"def": "intersection_cross", "at": [31, 18, 2.4], "scale": 0.90, "rotate": [0.08, 0.32, 0.03], "color": [0.24, 0.65, 0.89], "glow": 0.78},
+          {"def": "intersection_cross", "at": [38, 23, 2.1], "scale": 1.07, "rotate": [0.14, 0.23, 0.05], "color": [0.23, 0.62, 0.91], "glow": 0.76},
+          {"def": "intersection_cross", "at": [45, 28, 1.8], "scale": 0.87, "rotate": [0.15, 0.34, 0.04], "color": [0.26, 0.67, 0.86], "glow": 0.80},
+          {"def": "intersection_cross", "at": [50, 33, 2.5], "scale": 1.01, "rotate": [0.11, 0.16, 0.06], "color": [0.21, 0.61, 0.93], "glow": 0.75},
+          {"def": "intersection_cross", "at": [48, 38, 1.9], "scale": 0.93, "rotate": [0.13, 0.29, 0.02], "color": [0.25, 0.64, 0.90], "glow": 0.79},
+          {"def": "intersection_cross", "at": [46, 43, 2.6], "scale": 1.04, "rotate": [0.09, 0.22, 0.07], "color": [0.22, 0.59, 0.92], "glow": 0.77},
+          {"def": "intersection_cross", "at": [49, 48, 2.2], "scale": 0.94, "rotate": [0.12, 0.36, 0.01], "color": [0.24, 0.63, 0.89], "glow": 0.78}
+        ],
+        "camera": {
+          "mode": "path",
+          "waypoints": [
+            [-45, -40, 8],
+            [-30, -35, 7],
+            [-15, -20, 8],
+            [0, -10, 7.5],
+            [20, 0, 8],
+            [35, 15, 7],
+            [45, 35, 8.5],
+            [25, 45, 7.5],
+            [0, 50, 8],
+            [-30, 35, 7]
+          ],
+          "speed": 0.08,
+          "fov": 62,
+          "near": 0.4,
+          "far": 26,
+          "max_strokes": 90,
+          "depth": {"mode": "cull"}
+        },
+        "scale": 1.0,
+        "rotate": [0, 0, 0],
+        "spread": 1.0,
+        "glow": 0.0,
+        "max_strokes": 250
+      }
+    }
+  ],
+  "soundscape": {
+    "tempo": 50,
+    "master": 0.75,
+    "swell_period": 45,
+    "filter_sweep_period": 60,
+    "voices": [
+      {
+        "name": "fabric_swish_low",
+        "type": "pad",
+        "note": 30,
+        "chord": [0, 5, 12, 17],
+        "level": 0.45,
+        "tone": 0.3,
+        "detune": 0.008,
+        "env": {"attack": 8, "decay": 4, "sustain": 0.7, "release": 6},
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.031,
+          "depth": 0.35
+        }
+      },
+      {
+        "name": "water_pad_mid",
+        "type": "pad",
+        "note": 48,
+        "chord": [0, 3, 7, 10, 14],
+        "level": 0.55,
+        "tone": 0.42,
+        "detune": 0.012,
+        "env": {"attack": 10, "decay": 5, "sustain": 0.65, "release": 7},
+        "lfos": [
+          {
+            "on": true,
+            "dest": "level",
+            "shape": "sine",
+            "rate": 0.044,
+            "depth": 0.28
+          },
+          {
+            "on": true,
+            "dest": "detune",
+            "shape": "triangle",
+            "rate": 0.017,
+            "depth": 0.22
+          }
+        ]
+      },
+      {
+        "name": "clattering_bell",
+        "type": "bell",
+        "note": 72,
+        "scale": [0, 2, 4, 7, 9, 11],
+        "level": 0.38,
+        "character": "glockenspiel",
+        "rate": 0.3,
+        "decay": 3.5,
+        "tone": 0.68,
+        "drift": 0.25,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "sine",
+          "rate": 0.027,
+          "depth": 0.45
+        }
+      },
+      {
+        "name": "plucked_ripple",
+        "type": "harp",
+        "note": 60,
+        "scale": [0, 2, 5, 7, 9, 12],
+        "level": 0.32,
+        "rate": 0.18,
+        "decay": 8,
+        "tone": 0.55,
+        "damp": 0.65,
+        "roll": 6,
+        "roll_spread": 0.12,
+        "drift": 0.18
+      },
+      {
+        "name": "air_wash",
+        "type": "noise",
+        "tone": 0.35,
+        "level": 0.22
+      }
+    ]
+  },
+  "palette": [
+    "#0a1428",
+    "#00d4ff",
+    "#ff3366",
+    "#66ff00",
+    "#ffaa00",
+    "#8833ff",
+    "#00ffcc"
+  ],
+  "modulation": [
+    {"source": "lfo_slow", "dest": "visual.rotate", "depth": 0.08},
+    {"source": "synth_low", "dest": "visual.scale", "depth": 0.22},
+    {"source": "synth_high", "dest": "visual.glow", "depth": 0.65},
+    {"source": "synth_mid", "dest": "visual.spread", "depth": 0.28}
+  ]
+}
+```

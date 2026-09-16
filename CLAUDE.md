@@ -409,7 +409,9 @@ iterating saves real money.
 and the waypoint list are requested only by `_size_hint(nodes)` /
 `SCENE_SIZE["massive"]` — and `_resolve_size("small")` returns `(None, None)`,
 i.e. **no size directive at all**. So a string `size` silently produces
-orbit/drift-only scenes while any int always asks for a closed route. That is
+orbit/drift-only scenes while any int always asks for a closed route. (3D only — a
+2D request never receives a size directive; see "A 2D request must never carry
+a size" below.) That is
 why the slider-driven Generate panel always gets a path and the kiosk does not.
 
 **The size control and the route are separable, via `want_path`.** The kiosk
@@ -448,9 +450,72 @@ prompt text and scene params.
 `nodes` are the two richness dials; `enable()` and `_generate` both set
 `director.effort` from the setting, and `disable()` restores whatever it was.
 
-`kiosk-settings.html` mirrors `_style()`'s thresholds in JS to show the operator
-the sentence a slider position actually produces — if you change the wording or
-the 0.35/0.65 thresholds in `kiosk.py`, change `directionText()` too.
+**The interpretation slider is shared with the Generate modal.** Its directive
+text and 0.35/0.65 thresholds live once, in `director.interpretation_directive`;
+the kiosk's `_style()` and `Engine.generate_scene(interpretation=)` both call
+it. Two pages mirror the thresholds in JS for display only —
+`kiosk-settings.html directionText()` and `index.html interpDirection()` —
+change all three together. The **literal** end has separate 2D wording ("flat
+line art"), because the 3D wording pulled flat-pattern requests into writing 3D
+scenes; the kiosk only asks for 3D, so none of its cache keys moved. **Rewording the directive orphans cached scenes:**
+the text rides in `generate(style=)`, which is part of the cache key. The
+neutral middle returns `""`, so an untouched slider leaves the prompt and the
+key exactly as they were before the modal had it.
+
+**A generated response is validated by rendering it, and a failed attempt is
+retried with a correction.** `_validate_spec` rejects unknown generators, a
+scene whose derived kind differs from the one asked for, and anything that
+raises on a one-frame trial render — a 2D layer with 3-number points passes
+every name check and only breaks there. The retry appends `_retry_note` (what
+was rejected, plus kind-specific rules) rather than resending the identical
+request, because the most common failure is systematic: Haiku writing a 3D
+"pattern3d" scene for a 2D request on both attempts.
+
+**A 2D request must never carry a size.** `_size_hint` is a 3D directive —
+"MASSIVE, a place to travel through", a camera route with `[x,y,z]` waypoints,
+"-50..50 on each axis", "225-275 nodes, this OVERRIDES the guidance above" —
+and it was appended after the 2D system prompt on every request, because the
+Generate modal hid the size slider for 2D but still sent its value. That one
+leak explains every 2D failure logged since the slider landed (2026-08-15):
+3D `pattern3d` scenes, `camera` keys inside layers, nodes placed in tens, and
+blown stroke budgets. `SceneDirector.generate` now forces `size="small"` (no
+directive) for `kind == "2d"` so no caller can reintroduce it, the modal omits
+`size` for 2D, and `generation_settings.size` is recorded as `None`. 2D gets a
+`MIN_TOKENS_2D` output ceiling instead, since the bare "low" tier (4000) is
+under real 2D responses (~3900-6300). This changed the 2D cache key, which is
+intended: every 2D entry cached before it was generated under the 3D directive.
+
+**2D strokes are clipped at the frame edge, not clamped onto it.**
+`Scene.render` ends in `clamp_frame`, which clips each COORDINATE into [-1,1].
+The camera has already clipped 3D, so that's a no-op there — but a 2D pattern
+reaching past the frame had its outside points pushed onto the border and drawn
+as lines along it (263,040 such segments in 40 frames of `napkins`; also
+LionsMane, jupiter, crop circles, skilsaw). `_clip_2d` cuts those strokes
+properly; strokes wholly inside are returned untouched, and 3D output is
+identical. It picks a clipper by length because their costs cross at ~60
+points: `scene3d._clip_frame` (Python, ~2.5us/point) below `_CLIP_NUMPY_FROM`,
+the vectorised `_clip_polyline` (~140us flat) above — a single-clipper version
+took `crop circles` from 9 to 40ms a frame.
+
+**The 2D prompt's stroke numbers must agree with each other.** It used to say
+"60-300 strokes" in one place, "under ~`max_pps // 40`" (≈680 on this rig) in
+the per-request budget line, and `"max_strokes":420` in the example — and the
+model filled the biggest (463 drawn, against library patterns that draw 32-222).
+It now says 80-200 everywhere, 250 at most, with `max_strokes` as ~1.2x the
+expanded count. Don't cap `max_strokes` after generation instead: `pattern2d`
+stops at the budget node by node, so a cap drops whole later nodes (often the
+centre) rather than thinning the pattern evenly.
+
+**2D voices need their names asked for explicitly.** The voice schema with
+`"name"` lives in the 3D prompt's head, so 2D scenes came back unnamed and
+`_normalise` labelled them `voice1..N` (also why the log said `cleared LFO on
+'None'`). The 2D prompt now carries its own short soundscape format block.
+
+**2D placements in the wrong units are fixed in the saved file.**
+`_bake_placement_units` applies `pattern2d._placement_scale`'s rescue to the
+spec before validation — measured identical output (<1.2e-7) — because models
+place nodes in tens despite the prompt, and a rescue applied only at draw time
+left the file wrong and warning on every load.
 
 **`spec.layers` is `list[Layer|dict]`, and the director path always gives you
 `Layer`.** `SceneSpec.from_dict` converts layer dicts into the dataclass

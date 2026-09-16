@@ -10100,25 +10100,26 @@
       ]
     ],
     "speed": 0.0,
-    "fov": 62,
+    "fov": 49.0,
     "near": 0.4,
-    "far": 40,
-    "max_strokes": 120,
+    "far": 26.0,
+    "max_strokes": 175,
     "depth": {
       "mode": "cull"
     },
-    "orbit_radius": 9.0,
+    "orbit_radius": 11.5,
     "orbit_height": 1.5,
     "laser_max_strokes": null,
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.0,
+    "glow": 0.47,
     "trail": 0.0,
     "kaleidoscope_segments": 0,
     "bloom_spread": 0.005,
     "bloom_intensity": 2.5,
-    "line_curve": 0.0
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -10127,7 +10128,7 @@
     "distortion": 0.05,
     "delay": {
       "time": 0.55,
-      "feedback": 0.25,
+      "feedback": 0.69,
       "mix": 0.25
     },
     "voices": [
@@ -10162,7 +10163,14 @@
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "level"
+        }
       },
       {
         "name": "warmth",
@@ -10175,7 +10183,7 @@
           9,
           14
         ],
-        "level": 0.66,
+        "level": 0.85,
         "tone": 0.35,
         "detune": 0.012,
         "pan": -0.15,
@@ -10203,7 +10211,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "sweep": 0.79
       },
       {
         "name": "hum",
@@ -10219,7 +10228,7 @@
         "detune": 0.018,
         "sub": 0.3,
         "tone": 0.32,
-        "level": 0.49,
+        "level": 0.71,
         "pan": 0.2,
         "env": {
           "attack": 4.0,
@@ -10236,7 +10245,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "pulse",
@@ -10250,19 +10260,29 @@
           10,
           14
         ],
-        "level": 0.05,
-        "rate": 0.32,
-        "decay": 2.8,
-        "tone": 0.55,
+        "level": 0.68,
+        "rate": 0.15,
+        "decay": 5.05,
+        "tone": 0.1,
         "pan": -0.25,
-        "mute": true,
+        "mute": false,
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
         "distortion": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "character": "gamelan",
+        "drift": 0.2,
+        "lfo": {
+          "on": true,
+          "rate": 0.01,
+          "shape": "sine",
+          "depth": 0.63,
+          "dest": "detune"
+        },
+        "sweep": 0.39
       },
       {
         "name": "electricity",
@@ -10301,11 +10321,11 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0,
-    "filter_sweep_amount": 0.0,
+    "swell_period": 111.0,
+    "filter_sweep_amount": 0.4,
     "filter_sweep_period": 30.0
   },
-  "audio_link": 1.0,
+  "audio_link": 1.6,
   "midi_overrides": {},
   "image_prompt": "express the concept of AI from a 1960's eniac computer with vacuum tubes and pre-transistor electronics",
   "audio_prompt": "the sound ofmachines and vaccum tubes and electromechanial computers",

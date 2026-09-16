@@ -24,6 +24,7 @@ from .modulation import ModMatrix, LFO, Value
 from .scenes import SceneManager, SceneSpec
 from . import generators as gen
 from .director import SceneDirector
+from .director.claude_director import interpretation_directive
 from .audio import make_synth, AudioAnalysis
 from .geometry import test_pattern_frame
 from .output import make_output
@@ -704,10 +705,14 @@ class Engine:
     def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None,
                        size: str | int = "small", warmth: float | None = None,
                        energy: float | None = None, evolution: float | None = None,
-                       kind: str = "3d"):
+                       kind: str = "3d", interpretation: float | None = None):
         # the director call may hit the network; run it off the loop then queue
+        # `interpretation` (0 literal .. 1 abstract) becomes the same directive
+        # the kiosk sends — empty in the neutral middle, so an untouched slider
+        # leaves the prompt and the cache key exactly as they were.
         spec = self.director.generate(keyword, audio=audio, size=size, warmth=warmth,
-                                      energy=energy, evolution=evolution, kind=kind)
+                                      energy=energy, evolution=evolution, kind=kind,
+                                      style=interpretation_directive(interpretation, kind))
         # add every new generation to the library by default
         name = (name or "").strip() or spec.name or keyword
         spec.name = name
@@ -715,10 +720,13 @@ class Engine:
         spec.image_prompt = keyword
         spec.audio_prompt = audio or ""
         spec.generation_settings = {
-            "size": size,
+            # A 2D pattern has no size (the director ignores it — see
+            # SceneDirector.generate), so none is recorded.
+            "size": size if kind != "2d" else None,
             "warmth": warmth,
             "energy": energy,
             "evolution": evolution,
+            "interpretation": interpretation,
             # Recorded for the "show scene prompts" panel and to seed a
             # regeneration. The scene's ACTUAL kind is still derived from its
             # generators (Scene.is_3d) — this is what was asked for, not the

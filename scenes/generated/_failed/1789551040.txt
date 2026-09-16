@@ -1,0 +1,314 @@
+# unknown generator 'pattern3d' — have ['attractor', 'flow_field', 'forest', 'ground_grid', 'pattern2d', 'ripples', 'world']
+
+```json
+{
+  "name": "semaphore flags 1824",
+  "layers": [
+    {
+      "generator": "pattern3d",
+      "params": {
+        "defs": {
+          "flag_a": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 0.8]},
+              {"op": "polyline", "pts": [[0, 0.8], [0.45, 0.95], [0.5, 0.6], [0, 0.8]], "closed": true}
+            ]
+          },
+          "flag_b": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 0.8]},
+              {"op": "polyline", "pts": [[0, 0.8], [0.35, 0.88], [0.42, 0.5], [0, 0.8]], "closed": true}
+            ]
+          },
+          "pole": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, -0.15], "b": [0, 1.2]}
+            ]
+          },
+          "crossbeam": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [-0.6, 0], "b": [0.6, 0]}
+            ]
+          },
+          "rigging": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 1.0], "b": [-0.8, 0.3]},
+              {"op": "line", "a": [0, 1.0], "b": [0.8, 0.3]}
+            ]
+          },
+          "wave_arc": {
+            "space": "cart",
+            "ops": [
+              {"op": "arc", "r": 1.2, "a0": 0, "a1": 0.5, "c": [0, -0.8], "seg": 40}
+            ]
+          },
+          "beacon": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.25, "c": [0, 0], "seg": 16},
+              {"op": "line", "a": [0, 0.25], "b": [0, 0.6]},
+              {"op": "line", "a": [-0.25, 0], "b": [-0.55, 0]},
+              {"op": "line", "a": [0.25, 0], "b": [0.55, 0]},
+              {"op": "line", "a": [0, -0.25], "b": [0, -0.6]}
+            ]
+          }
+        },
+        "nodes": [
+          {"def": "flag_a", "at": [-48, 0, 0], "color": [0.2, 0.8, 1.0], "glow": 0.75, "scale": 1.1, "rotate": 0.0},
+          {"def": "pole", "at": [-48, 0, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [-42, 3, 0], "color": [1.0, 0.3, 0.2], "glow": 0.8, "scale": 0.95, "rotate": 0.15},
+          {"def": "pole", "at": [-42, 3, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [-36, 5, -1], "color": [0.2, 0.9, 0.6], "glow": 0.75, "scale": 1.05, "rotate": -0.08},
+          {"def": "pole", "at": [-36, 5, -1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [-30, 2, 1], "color": [0.9, 0.5, 1.0], "glow": 0.8, "scale": 0.98, "rotate": 0.22},
+          {"def": "pole", "at": [-30, 2, 1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [-24, -4, 0], "color": [1.0, 0.8, 0.1], "glow": 0.9, "scale": 1.08, "rotate": 0.05},
+          {"def": "pole", "at": [-24, -4, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [-18, -6, -2], "color": [0.3, 0.7, 1.0], "glow": 0.75, "scale": 0.92, "rotate": -0.12},
+          {"def": "pole", "at": [-18, -6, -2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "rigging", "at": [-48, 0, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-42, 3, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-36, 5, -1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-30, 2, 1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-24, -4, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-18, -6, -2], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "flag_a", "at": [-12, -8, 1], "color": [1.0, 0.4, 0.4], "glow": 0.8, "scale": 0.96, "rotate": 0.18},
+          {"def": "pole", "at": [-12, -8, 1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [-6, -5, -1], "color": [0.15, 0.9, 0.7], "glow": 0.75, "scale": 1.02, "rotate": -0.06},
+          {"def": "pole", "at": [-6, -5, -1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [0, 0, 0], "color": [1.0, 0.7, 0.2], "glow": 0.9, "scale": 1.1, "rotate": 0.1},
+          {"def": "pole", "at": [0, 0, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [6, 5, 1], "color": [0.4, 0.3, 1.0], "glow": 0.8, "scale": 0.94, "rotate": -0.15},
+          {"def": "pole", "at": [6, 5, 1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [12, 8, -1], "color": [0.8, 0.2, 0.8], "glow": 0.85, "scale": 1.03, "rotate": 0.08},
+          {"def": "pole", "at": [12, 8, -1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [18, 6, 0], "color": [0.2, 0.8, 0.3], "glow": 0.75, "scale": 0.99, "rotate": 0.12},
+          {"def": "pole", "at": [18, 6, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "rigging", "at": [-12, -8, 1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [-6, -5, -1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [0, 0, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [6, 5, 1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [12, 8, -1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [18, 6, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "flag_a", "at": [24, 4, 1], "color": [1.0, 0.5, 0.1], "glow": 0.88, "scale": 1.06, "rotate": -0.1},
+          {"def": "pole", "at": [24, 4, 1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [30, 2, -1], "color": [0.3, 0.6, 1.0], "glow": 0.78, "scale": 0.97, "rotate": 0.14},
+          {"def": "pole", "at": [30, 2, -1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [36, -5, 0], "color": [0.9, 0.2, 0.5], "glow": 0.82, "scale": 1.04, "rotate": 0.07},
+          {"def": "pole", "at": [36, -5, 0], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_b", "at": [42, -3, 1], "color": [0.2, 0.7, 0.85], "glow": 0.76, "scale": 0.95, "rotate": -0.09},
+          {"def": "pole", "at": [42, -3, 1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "flag_a", "at": [48, 0, -1], "color": [1.0, 0.6, 0.3], "glow": 0.87, "scale": 1.09, "rotate": 0.11},
+          {"def": "pole", "at": [48, 0, -1], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "rigging", "at": [24, 4, 1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [30, 2, -1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [36, -5, 0], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [42, -3, 1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "rigging", "at": [48, 0, -1], "color": [0.6, 0.6, 0.65], "glow": 0.35},
+          {"def": "wave_arc", "at": [-45, 2, -3], "color": [0.1, 0.4, 0.7], "glow": 0.5},
+          {"def": "wave_arc", "at": [-39, -2, -3], "color": [0.15, 0.45, 0.75], "glow": 0.5},
+          {"def": "wave_arc", "at": [-33, 4, -3], "color": [0.12, 0.42, 0.72], "glow": 0.5},
+          {"def": "wave_arc", "at": [-27, -3, -3], "color": [0.18, 0.48, 0.78], "glow": 0.5},
+          {"def": "wave_arc", "at": [-21, 1, -3], "color": [0.14, 0.44, 0.74], "glow": 0.5},
+          {"def": "wave_arc", "at": [-15, -5, -3], "color": [0.16, 0.46, 0.76], "glow": 0.5},
+          {"def": "wave_arc", "at": [-9, 2, -3], "color": [0.13, 0.43, 0.73], "glow": 0.5},
+          {"def": "wave_arc", "at": [-3, -4, -3], "color": [0.17, 0.47, 0.77], "glow": 0.5},
+          {"def": "wave_arc", "at": [3, 3, -3], "color": [0.15, 0.45, 0.75], "glow": 0.5},
+          {"def": "wave_arc", "at": [9, -2, -3], "color": [0.12, 0.42, 0.72], "glow": 0.5},
+          {"def": "wave_arc", "at": [15, 4, -3], "color": [0.18, 0.48, 0.78], "glow": 0.5},
+          {"def": "wave_arc", "at": [21, -3, -3], "color": [0.14, 0.44, 0.74], "glow": 0.5},
+          {"def": "wave_arc", "at": [27, 2, -3], "color": [0.16, 0.46, 0.76], "glow": 0.5},
+          {"def": "wave_arc", "at": [33, -4, -3], "color": [0.13, 0.43, 0.73], "glow": 0.5},
+          {"def": "wave_arc", "at": [39, 1, -3], "color": [0.17, 0.47, 0.77], "glow": 0.5},
+          {"def": "wave_arc", "at": [45, -2, -3], "color": [0.15, 0.45, 0.75], "glow": 0.5},
+          {"def": "beacon", "at": [-44, -4, 2], "color": [1.0, 0.85, 0.2], "glow": 0.95, "scale": 0.8},
+          {"def": "beacon", "at": [-38, 6, 2], "color": [1.0, 0.8, 0.15], "glow": 0.92, "scale": 0.75},
+          {"def": "beacon", "at": [-32, -3, 2], "color": [0.95, 0.9, 0.25], "glow": 0.94, "scale": 0.82},
+          {"def": "beacon", "at": [-26, 7, 2], "color": [1.0, 0.88, 0.18], "glow": 0.93, "scale": 0.78},
+          {"def": "beacon", "at": [-20, -5, 2], "color": [0.98, 0.85, 0.22], "glow": 0.91, "scale": 0.8},
+          {"def": "beacon", "at": [-14, 4, 2], "color": [1.0, 0.82, 0.2], "glow": 0.92, "scale": 0.76},
+          {"def": "beacon", "at": [-8, -2, 2], "color": [0.96, 0.88, 0.24], "glow": 0.93, "scale": 0.81},
+          {"def": "beacon", "at": [-2, 5, 2], "color": [1.0, 0.84, 0.19], "glow": 0.91, "scale": 0.77},
+          {"def": "beacon", "at": [4, -3, 2], "color": [0.97, 0.86, 0.23], "glow": 0.92, "scale": 0.79},
+          {"def": "beacon", "at": [10, 6, 2], "color": [1.0, 0.81, 0.17], "glow": 0.94, "scale": 0.75},
+          {"def": "beacon", "at": [16, -4, 2], "color": [0.99, 0.87, 0.25], "glow": 0.9, "scale": 0.82},
+          {"def": "beacon", "at": [22, 3, 2], "color": [1.0, 0.83, 0.21], "glow": 0.93, "scale": 0.78},
+          {"def": "beacon", "at": [28, -5, 2], "color": [0.95, 0.89, 0.26], "glow": 0.91, "scale": 0.8},
+          {"def": "beacon", "at": [34, 4, 2], "color": [1.0, 0.86, 0.2], "glow": 0.92, "scale": 0.76},
+          {"def": "beacon", "at": [40, -2, 2], "color": [0.98, 0.84, 0.24], "glow": 0.93, "scale": 0.81},
+          {"def": "beacon", "at": [46, 5, 2], "color": [1.0, 0.88, 0.18], "glow": 0.91, "scale": 0.77},
+          {"def": "crossbeam", "at": [-48, 0, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-42, 3, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-36, 5, -1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-30, 2, 1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-24, -4, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-18, -6, -2], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-12, -8, 1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [-6, -5, -1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [0, 0, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [6, 5, 1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [12, 8, -1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [18, 6, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [24, 4, 1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [30, 2, -1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [36, -5, 0], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [42, -3, 1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "crossbeam", "at": [48, 0, -1], "color": [0.55, 0.55, 0.6], "glow": 0.3, "scale": 0.5},
+          {"def": "flag_b", "at": [-51, 8, 2], "color": [0.7, 0.4, 0.9], "glow": 0.72, "scale": 0.88, "rotate": 0.25},
+          {"def": "flag_a", "at": [-46, -7, 3], "color": [0.3, 0.5, 1.0], "glow": 0.74, "scale": 1.07, "rotate": -0.11},
+          {"def": "flag_b", "at": [-40, 9, 2], "color": [0.85, 0.3, 0.7], "glow": 0.73, "scale": 0.91, "rotate": 0.19},
+          {"def": "flag_a", "at": [-34, -8, 3], "color": [0.25, 0.6, 0.95], "glow": 0.75, "scale": 1.05, "rotate": -0.07},
+          {"def": "flag_b", "at": [-28, 7, 2], "color": [0.9, 0.25, 0.65], "glow": 0.71, "scale": 0.93, "rotate": 0.23},
+          {"def": "flag_a", "at": [-22, -9, 3], "color": [0.2, 0.75, 0.9], "glow": 0.76, "scale": 1.08, "rotate": -0.13},
+          {"def": "flag_b", "at": [-16, 8, 2], "color": [0.8, 0.35, 0.75], "glow": 0.72, "scale": 0.89, "rotate": 0.17},
+          {"def": "flag_a", "at": [-10, -7, 3], "color": [0.35, 0.55, 1.0], "glow": 0.77, "scale": 1.03, "rotate": -0.05},
+          {"def": "flag_b", "at": [-4, 6, 2], "color": [0.75, 0.4, 0.8], "glow": 0.7, "scale": 0.96, "rotate": 0.21},
+          {"def": "flag_a", "at": [2, -8, 3], "color": [0.28, 0.68, 0.88], "glow": 0.78, "scale": 1.06, "rotate": -0.09},
+          {"def": "flag_b", "at": [8, 7, 2], "color": [0.88, 0.28, 0.68], "glow": 0.73, "scale": 0.94, "rotate": 0.16},
+          {"def": "flag_a", "at": [14, -9, 3], "color": [0.32, 0.58, 0.92], "glow": 0.76, "scale": 1.04, "rotate": -0.12},
+          {"def": "flag_b", "at": [20, 8, 2], "color": [0.82, 0.32, 0.72], "glow": 0.71, "scale": 0.98, "rotate": 0.2},
+          {"def": "flag_a", "at": [26, -7, 3], "color": [0.38, 0.52, 0.98], "glow": 0.75, "scale": 1.07, "rotate": -0.08},
+          {"def": "flag_b", "at": [32, 6, 2], "color": [0.92, 0.22, 0.62], "glow": 0.74, "scale": 0.92, "rotate": 0.24},
+          {"def": "flag_a", "at": [38, -8, 3], "color": [0.25, 0.65, 0.85], "glow": 0.77, "scale": 1.02, "rotate": -0.1},
+          {"def": "flag_b", "at": [44, 7, 2], "color": [0.78, 0.38, 0.78], "glow": 0.72, "scale": 0.95, "rotate": 0.18},
+          {"def": "flag_a", "at": [50, -6, 3], "color": [0.42, 0.48, 1.0], "glow": 0.79, "scale": 1.09, "rotate": -0.14},
+          {"def": "pole", "at": [-51, 8, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-46, -7, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-40, 9, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-34, -8, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-28, 7, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-22, -9, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-16, 8, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-10, -7, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [-4, 6, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [2, -8, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [8, 7, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [14, -9, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [20, 8, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [26, -7, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [32, 6, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [38, -8, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [44, 7, 2], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "pole", "at": [50, -6, 3], "color": [0.5, 0.5, 0.55], "glow": 0.4},
+          {"def": "wave_arc", "at": [-50, -9, -3], "color": [0.19, 0.49, 0.79], "glow": 0.5},
+          {"def": "wave_arc", "at": [-44, 10, -3], "color": [0.11, 0.41, 0.71], "glow": 0.5},
+          {"def": "wave_arc", "at": [-38, -10, -3], "color": [0.2, 0.5, 0.8], "glow": 0.5},
+          {"def": "wave_arc", "at": [-32, 9, -3], "color": [0.13, 0.43, 0.73], "glow": 0.5},
+          {"def": "wave_arc", "at": [-26, -9, -3], "color": [0.19, 0.49, 0.79], "glow": 0.5},
+          {"def": "wave_arc", "at": [-20, 8, -3], "color": [0.14, 0.44, 0.74], "glow": 0.5},
+          {"def": "wave_arc", "at": [-14, -10, -3], "color": [0.17, 0.47, 0.77], "glow": 0.5},
+          {"def": "wave_arc", "at": [-8, 7, -3], "color": [0.12, 0.42, 0.72], "glow": 0.5},
+          {"def": "wave_arc", "at": [-2, -8, -3], "color": [0.18, 0.48, 0.78], "glow": 0.5},
+          {"def": "wave_arc", "at": [4, 9, -3], "color": [0.15, 0.45, 0.75], "glow": 0.5},
+          {"def": "wave_arc", "at": [10, -9, -3], "color": [0.16, 0.46, 0.76], "glow": 0.5},
+          {"def": "wave_arc", "at": [16, 8, -3], "color": [0.13, 0.43, 0.73], "glow": 0.5},
+          {"def": "wave_arc", "at": [22, -10, -3], "color": [0.19, 0.49, 0.79], "glow": 0.5},
+          {"def": "wave_arc", "at": [28, 7, -3], "color": [0.14, 0.44, 0.74], "glow": 0.5},
+          {"def": "wave_arc", "at": [34, -8, -3], "color": [0.17, 0.47, 0.77], "glow": 0.5},
+          {"def": "wave_arc", "at": [40, 9, -3], "color": [0.12, 0.42, 0.72], "glow": 0.5},
+          {"def": "wave_arc", "at": [46, -9, -3], "color": [0.18, 0.48, 0.78], "glow": 0.5},
+          {"def": "wave_arc", "at": [52, 6, -3], "color": [0.15, 0.45, 0.75], "glow": 0.5},
+          {"def": "beacon", "at": [-52, 3, 2], "color": [1.0, 0.82, 0.19], "glow": 0.92, "scale": 0.77},
+          {"def": "beacon", "at": [-47, 9, 2], "color": [0.94, 0.91, 0.27], "glow": 0.93, "scale": 0.83},
+          {"def": "beacon", "at": [-41, -9, 2], "color": [1.0, 0.86, 0.21], "glow": 0.91, "scale": 0.75},
+          {"def": "beacon", "at": [-35, 10, 2], "color": [0.97, 0.83, 0.23], "glow": 0.94, "scale": 0.79},
+          {"def": "beacon", "at": [-29, -8, 2], "color": [1.0, 0.87, 0.26], "glow": 0.9, "scale": 0.82},
+          {"def": "beacon", "at": [-23, 9, 2], "color": [0.96, 0.84, 0.2], "glow": 0.92, "scale": 0.76},
+          {"def": "beacon", "at": [-17, -10, 2], "color": [1.0, 0.81, 0.24], "glow": 0.93, "scale": 0.81},
+          {"def": "beacon", "at": [-11, 8, 2], "color": [0.98, 0.89, 0.25], "glow": 0.91, "scale": 0.8},
+          {"def": "beacon", "at": [-5, -7, 2], "color": [1.0, 0.85, 0.18], "glow": 0.93, "scale": 0.78},
+          {"def": "beacon", "at": [1, 9, 2], "color": [0.95, 0.86, 0.22], "glow": 0.92, "scale": 0.77},
+          {"def": "beacon", "at": [7, -8, 2], "color": [1.0, 0.88, 0.27], "glow": 0.91, "scale": 0.81},
+          {"def": "beacon", "at": [13, 10, 2], "color": [0.99, 0.82, 0.2], "glow": 0.94, "scale": 0.79},
+          {"def": "beacon", "at": [19, -9, 2], "color": [1.0, 0.84, 0.23], "glow": 0.92, "scale": 0.75},
+          {"def": "beacon", "at": [25, 8, 2], "color": [0.97, 0.87, 0.25], "glow": 0.91, "scale": 0.82},
+          {"def": "beacon", "at": [31, -7, 2], "color": [1.0, 0.83, 0.19], "glow": 0.93, "scale": 0.8},
+          {"def": "beacon", "at": [37, 9, 2], "color": [0.96, 0.85, 0.24], "glow": 0.92, "scale": 0.77},
+          {"def": "beacon", "at": [43, -8, 2], "color": [1.0, 0.86, 0.21], "glow": 0.91, "scale": 0.81},
+          {"def": "beacon", "at": [49, 7, 2], "color": [0.98, 0.88, 0.26], "glow": 0.93, "scale": 0.78}
+        ],
+        "camera": {
+          "mode": "path",
+          "waypoints": [
+            [-56, 0, 10],
+            [-28, 12, 8],
+            [0, 8, 12],
+            [28, -8, 9],
+            [50, 5, 11],
+            [45, 15, 7],
+            [10, 20, 10],
+            [-30, 15, 8],
+            [-50, -10, 11],
+            [-35, -15, 9]
+          ],
+          "speed": 0.08,
+          "fov": 62,
+          "near": 0.4,
+          "far": 26,
+          "max_strokes": 90,
+          "depth": {"mode": "cull"}
+        },
+        "scale": 1.0,
+        "glow": 0.05,
+        "max_strokes": 650
+      }
+    }
+  ],
+  "palette": ["#0a0e1a", "#1dd0d0", "#ff4d6d", "#ffb703"],
+  "modulation": [
+    {"source": "lfo_slow", "dest": "visual.rotate", "depth": 0.08},
+    {"source": "synth_low", "dest": "visual.scale", "depth": 0.12},
+    {"source": "synth_mid", "dest": "visual.glow", "depth": 0.25},
+    {"source": "synth_high", "dest": "visual.spread", "depth": 0.15}
+  ],
+  "soundscape": {
+    "voices": [
+      {
+        "type": "pad",
+        "chord": [24, 28, 31, 36],
+        "tone": 0.25,
+        "detune": 0.008,
+        "env": {"attack": 12, "decay": 8, "sustain": 0.6, "release": 4},
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.018,
+          "depth": 0.18
+        }
+      },
+      {
+        "type": "noise",
+        "tone": 0.4,
+        "env": {"attack": 8, "decay": 6, "sustain": 0.4, "release": 3},
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.023,
+          "depth": 0.22
+        }
+      },
+      {
+        "type": "harp",
+        "scale": [0, 2, 4, 5, 7, 9, 11],
+        "rate": 0.28,
+        "decay": 9,
+        "tone": 0.35,
+        "damp": 0.8,
+        "roll": 6,
+        "roll_spread": 0.08,
+        "drift": 0.3
+      }
+    ],
+    "tempo": 55,
+    "scale": "minor",
+    "key": 48
+  }
+}
+```

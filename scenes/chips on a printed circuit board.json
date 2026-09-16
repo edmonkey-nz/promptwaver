@@ -720,7 +720,8 @@
               "axis": "z"
             }
           }
-        ]
+        ],
+        "shape_speed": 0.14
       }
     }
   ],
@@ -749,7 +750,7 @@
     {
       "source": "audio_level",
       "dest": "camera.speed",
-      "depth": 0.5
+      "depth": 0.125
     }
   ],
   "camera": {
@@ -759,9 +760,9 @@
       0,
       0
     ],
-    "orbit_radius": 12,
+    "orbit_radius": 7.5,
     "far": 19.0,
-    "speed": 0.8,
+    "speed": 0.01,
     "max_strokes": 110,
     "depth": {
       "mode": "cull"
@@ -775,7 +776,11 @@
     "glow": 0.0,
     "trail": 0.75,
     "laser_max_strokes": null,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -850,7 +855,7 @@
         "level": 0.35,
         "rate": 1.0,
         "decay": 0.4,
-        "pan": 0.15,
+        "pan": 0.0,
         "mute": false,
         "tone": 0.4,
         "detune": 0.01,
@@ -866,7 +871,9 @@
           "depth": 0.73,
           "dest": "pan"
         },
-        "distortion": 0.0
+        "distortion": 0.0,
+        "drift": 0.0,
+        "resonance": 0.33
       },
       {
         "name": "808_kick",
@@ -876,8 +883,8 @@
         "chord": [
           0
         ],
-        "level": 0.5,
-        "tone": 0.5,
+        "level": 0.63,
+        "tone": 0.06,
         "detune": 0.0,
         "pan": -0.1,
         "mute": false,
@@ -891,7 +898,15 @@
           7,
           10
         ],
-        "distortion": 0.0
+        "distortion": 0.0,
+        "lfos": [],
+        "lfo": {
+          "on": true,
+          "rate": 0.14,
+          "shape": "sine",
+          "depth": 0.77,
+          "dest": "sub"
+        }
       },
       {
         "name": "tech_texture",
@@ -922,8 +937,10 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_amount": 0.69,
-    "swell_period": 60.0
+    "swell_amount": 0.83,
+    "swell_period": 60.0,
+    "filter_sweep_amount": 0.49,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.55,
   "midi_overrides": {},

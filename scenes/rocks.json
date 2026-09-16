@@ -2332,9 +2332,14 @@
     "disable_plane": true,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.78,
+    "glow": 0.13,
     "trail": 0.71,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "laser_max_strokes": null,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -2459,7 +2464,8 @@
           "shape": "sine",
           "depth": 0.8,
           "dest": "distortion"
-        }
+        },
+        "resonance": 0.0
       },
       {
         "name": "minerals",
@@ -2485,7 +2491,9 @@
         "distortion": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "drift": 0.0,
+        "resonance": 0.0
       },
       {
         "name": "abyss",
@@ -2524,7 +2532,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

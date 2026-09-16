@@ -283,7 +283,7 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
                                            m["keyword"], m.get("name"), m.get("audio"),
                                            m.get("size", "small"), m.get("warmth"),
                                            m.get("energy"), m.get("evolution"),
-                                           m.get("kind", "3d"))
+                                           m.get("kind", "3d"), m.get("interpretation"))
                 # Cost rides on the ack rather than being read out of `state`: the
                 # state broadcast is a separate ~20Hz loop, so the client would
                 # otherwise be reading whatever snapshot happened to precede this

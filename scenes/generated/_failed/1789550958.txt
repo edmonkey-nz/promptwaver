@@ -1,0 +1,291 @@
+# unknown generator 'pattern3d' — have ['attractor', 'flow_field', 'forest', 'ground_grid', 'pattern2d', 'ripples', 'world']
+
+```json
+{
+  "name": "semaphore flags 1824",
+  "layers": [
+    {
+      "generator": "pattern3d",
+      "params": {
+        "defs": {
+          "flag_arm": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 2.2]},
+              {"op": "line", "a": [0, 2.2], "b": [0.15, 2.35]}
+            ]
+          },
+          "flag_square": {
+            "space": "cart",
+            "ops": [
+              {"op": "rect", "w": 1.1, "h": 1.1, "c": [0.55, 1.5]}
+            ]
+          },
+          "flag_pennant": {
+            "space": "cart",
+            "ops": [
+              {"op": "polyline", "pts": [[0, 1.2], [0.8, 1.8], [0, 2.4]], "closed": true}
+            ]
+          },
+          "mast": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 0], "b": [0, 3.5]},
+              {"op": "line", "a": [-0.08, 0.8], "b": [0.08, 0.8]},
+              {"op": "line", "a": [-0.06, 1.6], "b": [0.06, 1.6]},
+              {"op": "line", "a": [-0.1, 2.8], "b": [0.1, 2.8]}
+            ]
+          },
+          "rigging": {
+            "space": "cart",
+            "ops": [
+              {"op": "line", "a": [0, 2.8], "b": [-1.2, 3.2]},
+              {"op": "line", "a": [0, 2.8], "b": [1.2, 3.2]},
+              {"op": "line", "a": [0, 2.0], "b": [-0.9, 2.1]},
+              {"op": "line", "a": [0, 2.0], "b": [0.9, 2.1]}
+            ]
+          },
+          "signal_ring": {
+            "space": "cart",
+            "ops": [
+              {"op": "circle", "r": 0.35, "c": [0, 0], "seg": 32}
+            ]
+          },
+          "wave_crest": {
+            "space": "cart",
+            "ops": [
+              {"op": "arc", "r": 0.6, "a0": 0, "a1": 0.5, "c": [0, 0], "seg": 24}
+            ]
+          }
+        },
+        "objects": [
+          {"def": "mast", "at": [-35, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-20, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-5, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [12, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [28, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [40, 0, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [48, -15, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [45, -30, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [28, -42, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [8, -48, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-15, -45, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-38, -35, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-48, -15, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-50, 8, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-42, 28, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "mast", "at": [-25, 42, 0], "color": [0.3, 0.35, 0.4], "glow": 0.3},
+          {"def": "rigging", "at": [-35, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [-20, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [-5, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [12, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [28, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [40, 0, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [48, -15, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [45, -30, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [28, -42, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [8, -48, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [-15, -45, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "rigging", "at": [-38, -35, 0], "color": [0.5, 0.55, 0.6], "glow": 0.25},
+          {"def": "flag_square", "at": [-33, 1.2, 0.8], "rotate": 0.15, "color": [1.0, 0.15, 0.15], "glow": 0.8},
+          {"def": "flag_square", "at": [-32.5, 1.2, -0.8], "rotate": 0.08, "color": [1.0, 0.8, 0.1], "glow": 0.75},
+          {"def": "flag_square", "at": [-37, 1.5, 0.5], "rotate": 0.22, "color": [0.15, 0.8, 1.0], "glow": 0.8},
+          {"def": "flag_pennant", "at": [-18, 1.1, 1.2], "rotate": 0.05, "color": [1.0, 0.4, 0.1], "glow": 0.85},
+          {"def": "flag_pennant", "at": [-18.5, 1.1, -1.1], "rotate": 0.12, "color": [0.8, 0.15, 0.8], "glow": 0.8},
+          {"def": "flag_pennant", "at": [-21, 1.3, 0.3], "rotate": 0.18, "color": [0.1, 1.0, 0.6], "glow": 0.85},
+          {"def": "flag_square", "at": [-3, 1.2, 0.9], "rotate": 0.3, "color": [0.8, 0.8, 0.1], "glow": 0.75},
+          {"def": "flag_square", "at": [-4, 1.2, -0.7], "rotate": 0.1, "color": [1.0, 0.2, 0.7], "glow": 0.8},
+          {"def": "flag_square", "at": [-6.5, 1.5, 0.2], "rotate": 0.25, "color": [0.1, 0.8, 0.9], "glow": 0.8},
+          {"def": "flag_arm", "at": [14, 0.5, 1.0], "rotate": 0.1, "color": [1.0, 0.6, 0.1], "glow": 0.7},
+          {"def": "flag_arm", "at": [14.5, 0.5, -0.9], "rotate": 0.35, "color": [0.2, 0.8, 1.0], "glow": 0.75},
+          {"def": "flag_arm", "at": [11.5, 0.8, 0.1], "rotate": 0.2, "color": [1.0, 0.1, 0.5], "glow": 0.75},
+          {"def": "flag_pennant", "at": [30, 1.2, 1.1], "rotate": 0.08, "color": [0.9, 0.5, 0.1], "glow": 0.85},
+          {"def": "flag_pennant", "at": [29.5, 1.2, -1.0], "rotate": 0.28, "color": [0.1, 0.7, 1.0], "glow": 0.8},
+          {"def": "flag_pennant", "at": [32, 1.4, 0.4], "rotate": 0.15, "color": [0.9, 0.1, 0.9], "glow": 0.85},
+          {"def": "flag_square", "at": [42, 1.2, 0.85], "rotate": 0.12, "color": [0.1, 1.0, 0.4], "glow": 0.8},
+          {"def": "flag_square", "at": [42.5, 1.2, -0.95], "rotate": 0.22, "color": [1.0, 0.35, 0.1], "glow": 0.75},
+          {"def": "flag_square", "at": [39.5, 1.5, 0.3], "rotate": 0.18, "color": [0.1, 0.5, 1.0], "glow": 0.8},
+          {"def": "flag_arm", "at": [50, -14, 1.2], "rotate": 0.25, "color": [1.0, 0.1, 0.1], "glow": 0.75},
+          {"def": "flag_arm", "at": [50.5, -14, -0.8], "rotate": 0.05, "color": [0.1, 1.0, 0.8], "glow": 0.75},
+          {"def": "flag_arm", "at": [48, -14.5, 0.2], "rotate": 0.32, "color": [1.0, 0.8, 0.1], "glow": 0.7},
+          {"def": "flag_pennant", "at": [47, -29, 1.0], "rotate": 0.15, "color": [0.8, 0.1, 1.0], "glow": 0.85},
+          {"def": "flag_pennant", "at": [47.5, -29, -1.1], "rotate": 0.1, "color": [0.1, 0.9, 0.5], "glow": 0.8},
+          {"def": "flag_pennant", "at": [44.5, -29.5, 0.5], "rotate": 0.2, "color": [1.0, 0.5, 0.1], "glow": 0.85},
+          {"def": "flag_square", "at": [30, -41, 0.9], "rotate": 0.18, "color": [0.1, 0.3, 1.0], "glow": 0.8},
+          {"def": "flag_square", "at": [30.5, -41, -0.8], "rotate": 0.08, "color": [1.0, 0.1, 0.8], "glow": 0.75},
+          {"def": "flag_square", "at": [27, -41.5, 0.4], "rotate": 0.28, "color": [0.1, 1.0, 0.2], "glow": 0.8},
+          {"def": "flag_arm", "at": [10, -47, 1.1], "rotate": 0.22, "color": [1.0, 0.2, 0.4], "glow": 0.75},
+          {"def": "flag_arm", "at": [10.5, -47, -0.9], "rotate": 0.12, "color": [0.1, 0.8, 1.0], "glow": 0.75},
+          {"def": "flag_arm", "at": [7.5, -47.5, 0.3], "rotate": 0.35, "color": [0.9, 0.1, 0.2], "glow": 0.7},
+          {"def": "flag_pennant", "at": [-13, -44, 1.0], "rotate": 0.1, "color": [0.1, 1.0, 0.7], "glow": 0.85},
+          {"def": "flag_pennant", "at": [-13.5, -44, -1.2], "rotate": 0.25, "color": [1.0, 0.6, 0.1], "glow": 0.8},
+          {"def": "flag_pennant", "at": [-16, -44.5, 0.6], "rotate": 0.18, "color": [0.8, 0.1, 0.9], "glow": 0.85},
+          {"def": "flag_square", "at": [-36, -34, 0.95], "rotate": 0.2, "color": [0.1, 0.7, 0.9], "glow": 0.8},
+          {"def": "flag_square", "at": [-36.5, -34, -0.85], "rotate": 0.15, "color": [1.0, 0.4, 0.1], "glow": 0.75},
+          {"def": "flag_square", "at": [-39, -34.5, 0.35], "rotate": 0.1, "color": [0.2, 1.0, 0.1], "glow": 0.8},
+          {"def": "flag_arm", "at": [-46, -14, 1.15], "rotate": 0.08, "color": [1.0, 0.1, 0.6], "glow": 0.75},
+          {"def": "flag_arm", "at": [-46.5, -14, -0.95], "rotate": 0.3, "color": [0.1, 0.5, 1.0], "glow": 0.75},
+          {"def": "flag_arm", "at": [-49, -14.5, 0.25], "rotate": 0.12, "color": [1.0, 0.7, 0.1], "glow": 0.7},
+          {"def": "flag_pennant", "at": [-48, 9, 1.05], "rotate": 0.2, "color": [0.8, 0.1, 0.8], "glow": 0.85},
+          {"def": "flag_pennant", "at": [-48.5, 9, -1.15], "rotate": 0.05, "color": [0.1, 1.0, 0.3], "glow": 0.8},
+          {"def": "flag_pennant", "at": [-51, 9.5, 0.55], "rotate": 0.22, "color": [1.0, 0.3, 0.1], "glow": 0.85},
+          {"def": "flag_square", "at": [-40, 29, 0.92], "rotate": 0.25, "color": [0.1, 0.8, 0.5], "glow": 0.8},
+          {"def": "flag_square", "at": [-40.5, 29, -0.88], "rotate": 0.1, "color": [1.0, 0.1, 0.3], "glow": 0.75},
+          {"def": "flag_square", "at": [-43, 29.5, 0.4], "rotate": 0.2, "color": [0.1, 0.4, 1.0], "glow": 0.8},
+          {"def": "flag_arm", "at": [-23, 43, 1.08], "rotate": 0.15, "color": [1.0, 0.5, 0.1], "glow": 0.75},
+          {"def": "flag_arm", "at": [-23.5, 43, -1.0], "rotate": 0.28, "color": [0.1, 1.0, 0.9], "glow": 0.75},
+          {"def": "flag_arm", "at": [-26, 43.5, 0.28], "rotate": 0.08, "color": [0.9, 0.1, 0.4], "glow": 0.7},
+          {"def": "wave_crest", "at": [-35, -3, 0], "rotate": 0, "color": [0.1, 0.6, 0.9], "glow": 0.5},
+          {"def": "wave_crest", "at": [-20, -2.5, 0], "rotate": 0.15, "color": [0.15, 0.65, 0.95], "glow": 0.5},
+          {"def": "wave_crest", "at": [-5, -3.2, 0], "rotate": 0.1, "color": [0.1, 0.55, 0.85], "glow": 0.5},
+          {"def": "wave_crest", "at": [12, -2.8, 0], "rotate": 0.2, "color": [0.2, 0.6, 0.9], "glow": 0.5},
+          {"def": "wave_crest", "at": [28, -3.1, 0], "rotate": 0.05, "color": [0.1, 0.5, 0.8], "glow": 0.5},
+          {"def": "wave_crest", "at": [40, -2.6, 0], "rotate": 0.18, "color": [0.15, 0.7, 0.95], "glow": 0.5},
+          {"def": "wave_crest", "at": [48, -15, 2.5], "rotate": 0.12, "color": [0.1, 0.6, 0.85], "glow": 0.5},
+          {"def": "wave_crest", "at": [45, -30, 2.8], "rotate": 0.22, "color": [0.2, 0.65, 0.9], "glow": 0.5},
+          {"def": "wave_crest", "at": [28, -42, 3.0], "rotate": 0.08, "color": [0.1, 0.55, 0.8], "glow": 0.5},
+          {"def": "wave_crest", "at": [8, -48, 2.6], "rotate": 0.15, "color": [0.15, 0.6, 0.95], "glow": 0.5},
+          {"def": "wave_crest", "at": [-15, -45, 2.9], "rotate": 0.1, "color": [0.1, 0.7, 0.85], "glow": 0.5},
+          {"def": "wave_crest", "at": [-38, -35, 3.1], "rotate": 0.2, "color": [0.2, 0.55, 0.9], "glow": 0.5},
+          {"def": "wave_crest", "at": [-48, -15, 2.7], "rotate": 0.05, "color": [0.1, 0.65, 0.8], "glow": 0.5},
+          {"def": "wave_crest", "at": [-50, 8, 2.5], "rotate": 0.18, "color": [0.15, 0.6, 0.95], "glow": 0.5},
+          {"def": "wave_crest", "at": [-42, 28, 3.0], "rotate": 0.12, "color": [0.1, 0.5, 0.85], "glow": 0.5},
+          {"def": "wave_crest", "at": [-25, 42, 2.8], "rotate": 0.22, "color": [0.2, 0.7, 0.9], "glow": 0.5},
+          {"def": "signal_ring", "at": [-35, 3.5, 0], "color": [1.0, 0.8, 0.1], "glow": 0.9},
+          {"def": "signal_ring", "at": [-20, 3.5, 0], "color": [1.0, 0.3, 0.3], "glow": 0.9},
+          {"def": "signal_ring", "at": [-5, 3.5, 0], "color": [0.1, 0.9, 1.0], "glow": 0.9},
+          {"def": "signal_ring", "at": [12, 3.5, 0], "color": [0.8, 0.1, 0.9], "glow": 0.9},
+          {"def": "signal_ring", "at": [28, 3.5, 0], "color": [0.1, 1.0, 0.5], "glow": 0.9},
+          {"def": "signal_ring", "at": [40, 3.5, 0], "color": [1.0, 0.6, 0.1], "glow": 0.9},
+          {"def": "signal_ring", "at": [48, -15, 3.8], "color": [0.3, 0.8, 1.0], "glow": 0.9},
+          {"def": "signal_ring", "at": [45, -30, 4.0], "color": [1.0, 0.1, 0.6], "glow": 0.9},
+          {"def": "signal_ring", "at": [28, -42, 4.2], "color": [0.1, 1.0, 0.8], "glow": 0.9},
+          {"def": "signal_ring", "at": [8, -48, 3.9], "color": [1.0, 0.7, 0.1], "glow": 0.9},
+          {"def": "signal_ring", "at": [-15, -45, 4.1], "color": [0.2, 0.9, 1.0], "glow": 0.9},
+          {"def": "signal_ring", "at": [-38, -35, 4.3], "color": [0.9, 0.1, 0.7], "glow": 0.9},
+          {"def": "signal_ring", "at": [-48, -15, 3.95], "color": [0.1, 0.8, 0.6], "glow": 0.9},
+          {"def": "signal_ring", "at": [-50, 8, 3.7], "color": [1.0, 0.4, 0.1], "glow": 0.9},
+          {"def": "signal_ring", "at": [-42, 28, 4.2], "color": [0.1, 0.5, 1.0], "glow": 0.9},
+          {"def": "signal_ring", "at": [-25, 42, 4.0], "color": [0.8, 0.1, 1.0], "glow": 0.9}
+        ],
+        "camera": {
+          "mode": "path",
+          "waypoints": [
+            [-35, 0, 5],
+            [-5, 15, 8],
+            [28, 20, 10],
+            [48, -5, 12],
+            [40, -38, 10],
+            [8, -50, 8],
+            [-28, -48, 6],
+            [-48, -10, 7],
+            [-45, 25, 9],
+            [-15, 48, 8]
+          ],
+          "speed": 0.08,
+          "fov": 62,
+          "near": 0.4,
+          "far": 26,
+          "max_strokes": 90,
+          "depth": {"mode": "cull"}
+        }
+      }
+    }
+  ],
+  "palette": [
+    "#0a0a15",
+    "#1a3a4a",
+    "#ff5533",
+    "#ffcc22",
+    "#00ccff",
+    "#ff00ff",
+    "#00ff88",
+    "#ffaa11",
+    "#1a99ff"
+  ],
+  "soundscape": {
+    "voices": [
+      {
+        "type": "pad",
+        "chord": [36, 43, 50],
+        "tone": 0.22,
+        "detune": 0.008,
+        "env": {"attack": 8, "decay": 3, "sustain": 0.6, "release": 6},
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.032,
+          "depth": 0.35
+        }
+      },
+      {
+        "type": "osc",
+        "chord": [55, 62, 67],
+        "unison": 2,
+        "detune": 0.004,
+        "tone": 0.35,
+        "resonance": 0.6,
+        "env": {"attack": 6, "decay": 2, "sustain": 0.5, "release": 5},
+        "lfos": [
+          {
+            "on": true,
+            "dest": "pan",
+            "shape": "sine",
+            "rate": 0.017,
+            "depth": 0.4
+          },
+          {
+            "on": true,
+            "dest": "detune",
+            "shape": "triangle",
+            "rate": 0.058,
+            "depth": 0.3
+          }
+        ]
+      },
+      {
+        "type": "harp",
+        "scale": [60, 62, 64, 65, 67, 69, 71, 72],
+        "rate": 0.22,
+        "decay": 9,
+        "tone": 0.28,
+        "damp": 0.8,
+        "roll": 6,
+        "roll_spread": 0.065,
+        "drift": 0.28
+      },
+      {
+        "type": "noise",
+        "tone": 0.18,
+        "env": {"attack": 12, "decay": 4, "sustain": 0.25, "release": 8}
+      }
+    ],
+    "tempo": 55,
+    "key": "F minor",
+    "headroom": 0.18
+  },
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.rotate",
+      "depth": 0.6
+    },
+    {
+      "source": "synth_low",
+      "dest": "visual.scale",
+      "depth": 0.22
+    },
+    {
+      "source": "synth_mid",
+      "dest": "visual.glow",
+      "depth": 0.5
+    },
+    {
+      "source": "synth_high",
+      "dest": "visual.spread",
+      "depth": 0.15
+    }
+  ]
+}
+```
