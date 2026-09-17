@@ -1,0 +1,508 @@
+{
+  "name": "coffee",
+  "layers": [
+    {
+      "generator": "pattern2d",
+      "params": {
+        "defs": {
+          "grind_tooth": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.08,
+                  0.0
+                ],
+                "b": [
+                  0.32,
+                  0.02
+                ]
+              },
+              {
+                "op": "line",
+                "a": [
+                  0.32,
+                  0.02
+                ],
+                "b": [
+                  0.28,
+                  0.08
+                ]
+              }
+            ]
+          },
+          "burr_ring": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "circle",
+                "r": 0.24,
+                "c": [
+                  0,
+                  0
+                ],
+                "seg": 64
+              }
+            ]
+          },
+          "bean_scatter": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "polyline",
+                "pts": [
+                  [
+                    0.06,
+                    0.0
+                  ],
+                  [
+                    0.08,
+                    0.04
+                  ],
+                  [
+                    0.06,
+                    0.08
+                  ],
+                  [
+                    0.02,
+                    0.06
+                  ]
+                ],
+                "closed": true
+              }
+            ]
+          },
+          "pulse_line": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "line",
+                "a": [
+                  0.0,
+                  0.15
+                ],
+                "b": [
+                  0.0,
+                  0.65
+                ]
+              }
+            ]
+          },
+          "mechanical_grid": {
+            "space": "cart",
+            "ops": [
+              {
+                "op": "grid",
+                "w": 0.7,
+                "h": 0.7,
+                "nx": 4,
+                "ny": 4,
+                "c": [
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "crisp_arc": {
+            "space": "polar",
+            "ops": [
+              {
+                "op": "arc",
+                "r": 0.18,
+                "a0": 0.0,
+                "a1": 0.15,
+                "c": [
+                  0,
+                  0
+                ],
+                "seg": 24
+              }
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "def": "grind_tooth",
+            "color": [
+              0.9,
+              0.75,
+              0.2
+            ],
+            "glow": 0.9,
+            "repeat": {
+              "kind": "radial",
+              "n": 16,
+              "hue_step": 0.02
+            },
+            "symmetry": {
+              "mirror": "y"
+            }
+          },
+          {
+            "def": "burr_ring",
+            "color": [
+              0.75,
+              0.85,
+              0.95
+            ],
+            "glow": 0.7,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.4,
+              "n": 3,
+              "hue_step": 0.05
+            },
+            "symmetry": {
+              "radial": 4,
+              "hue_step": 0.03
+            }
+          },
+          {
+            "def": "pulse_line",
+            "color": [
+              0.95,
+              0.3,
+              0.4
+            ],
+            "glow": 0.85,
+            "at": [
+              0.35,
+              0.0
+            ],
+            "repeat": {
+              "kind": "offset",
+              "d": 0.08,
+              "n": 3,
+              "hue_step": 0.04
+            },
+            "symmetry": {
+              "mirror": "x"
+            }
+          },
+          {
+            "def": "bean_scatter",
+            "color": [
+              0.6,
+              0.4,
+              0.2
+            ],
+            "glow": 0.6,
+            "repeat": {
+              "kind": "radial",
+              "n": 12,
+              "hue_step": 0.02
+            },
+            "at_polar": [
+              0.5,
+              0.0
+            ]
+          },
+          {
+            "def": "crisp_arc",
+            "color": [
+              0.4,
+              0.9,
+              0.85
+            ],
+            "glow": 0.8,
+            "repeat": {
+              "kind": "offset",
+              "d": 0.06,
+              "n": 2,
+              "hue_step": 0.06
+            },
+            "symmetry": {
+              "radial": 8,
+              "hue_step": 0.03
+            }
+          },
+          {
+            "def": "mechanical_grid",
+            "color": [
+              0.7,
+              0.7,
+              0.85
+            ],
+            "glow": 0.5,
+            "scale": 0.35,
+            "repeat": {
+              "kind": "scale",
+              "factor": 1.8,
+              "n": 2,
+              "hue_step": 0.08
+            }
+          }
+        ],
+        "scale": 1.0,
+        "rotate": 0.0,
+        "spread": 1.81,
+        "glow": 0.1,
+        "max_strokes": 70
+      }
+    }
+  ],
+  "palette": [
+    "#0a0805",
+    "#e8d4a2",
+    "#ff4d6d",
+    "#c4f1f9"
+  ],
+  "audio_patch": {},
+  "modulation": [
+    {
+      "source": "lfo_slow",
+      "dest": "visual.rotate",
+      "depth": 0.205
+    },
+    {
+      "source": "voice.bean_crunch",
+      "dest": "visual.glow",
+      "depth": 1.01
+    },
+    {
+      "source": "mic_level",
+      "dest": "visual.scale",
+      "depth": 0.395
+    },
+    {
+      "source": "mic_level",
+      "dest": "visual.spread",
+      "depth": 0.48,
+      "mode": "range",
+      "lo": 0.0,
+      "hi": 3.0
+    }
+  ],
+  "camera": {
+    "max_strokes": 90,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "glow": 0.0,
+    "trail": 0.0,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 33.0,
+    "master": 0.75,
+    "voices": [
+      {
+        "name": "office_hum",
+        "type": "pad",
+        "note": 38,
+        "chord": [
+          0,
+          5,
+          12
+        ],
+        "tone": 0.35,
+        "level": 0.4,
+        "env": {
+          "attack": 3.0,
+          "decay": 2.0,
+          "sustain": 0.6,
+          "release": 2.5
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.3,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "burr_grind",
+        "type": "osc",
+        "note": 64,
+        "chord": [
+          0,
+          2,
+          7,
+          10
+        ],
+        "unison": 3,
+        "detune": 0.008,
+        "tone": 0.75,
+        "resonance": 0.6,
+        "level": 0.5,
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.08,
+          "depth": 0.35
+        },
+        "env": {
+          "attack": 0.2,
+          "decay": 1.2,
+          "sustain": 0.7,
+          "release": 1.0
+        },
+        "pan": 0.0,
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "bean_crunch",
+        "type": "pluck",
+        "note": 72,
+        "scale": [
+          0,
+          3,
+          5,
+          7,
+          10,
+          12
+        ],
+        "rate": 2.4,
+        "decay": 0.4,
+        "tone": 0.82,
+        "resonance": 0.55,
+        "level": 0.35,
+        "lfos": [
+          {
+            "on": true,
+            "dest": "rate",
+            "shape": "sine",
+            "rate": 0.035,
+            "depth": 0.4
+          }
+        ],
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "drift": 0.0,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "bell_accent",
+        "type": "bell",
+        "note": 79,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          10,
+          12
+        ],
+        "rate": 1.1,
+        "decay": 1.2,
+        "tone": 0.78,
+        "character": "glockenspiel",
+        "drift": 0.25,
+        "level": 0.25,
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "air_rush",
+        "type": "noise",
+        "tone": 0.68,
+        "level": 0.18,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.052,
+          "depth": 0.5
+        },
+        "pan": 0.0,
+        "mute": false,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.384,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.4,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "grinding coffee in a busy office",
+  "audio_prompt": "grinding, crunch, mechanical",
+  "generation_settings": {
+    "size": null,
+    "warmth": 0.24,
+    "energy": 0.61,
+    "evolution": 0.64,
+    "interpretation": 0.67,
+    "kind": "2d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 6095,
+      "output_tokens": 2052,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0164
+    },
+    "expansion": null
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.03,
+    "lfo_mid": 0.2
+  }
+}

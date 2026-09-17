@@ -10282,7 +10282,8 @@
           "depth": 0.63,
           "dest": "detune"
         },
-        "sweep": 0.39
+        "sweep": 0.39,
+        "gap": 11.0
       },
       {
         "name": "electricity",

@@ -104,7 +104,11 @@ DEFAULT_GEN = {
     "warmth": 0.5,
     "energy": 0.5,
     "evolution": 0.5,
-    "shape_speed": 1.0,      # world's own motion-rate param
+    # world's own motion-rate param. Matches GEN_SHAPE_SPEED_DEFAULT in the
+    # director: _apply_look runs AFTER director.generate, so a 1.0 here would
+    # silently undo the pacing every non-kiosk scene now gets. The operator's
+    # slider still spans 0..3 (GEN_RANGES) — this is only where it starts.
+    "shape_speed": 0.2,
     "glow": 0.35,            # base bloom for every visitor scene
     "glow_random": 0.25,     # +/- spread rolled per scene
     "trail_chance": 0.25,    # how often a scene gets trails at all

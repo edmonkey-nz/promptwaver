@@ -71,6 +71,7 @@ Schema:
   "name": string,
   "layers": [{"generator":"world","params":{
       "defs": { "<object>": [ <ops...> ], ... },      // YOUR authored geometry
+      "shape_speed": 0.2,                             // 0.15-0.30. See below.
       "nodes": [
         {"shape":"<object>", "pos":[x,y,z], "scale":float, "color":[r,g,b],
          "motion":{"type":"spin|bob|drift|pulse|none","speed":float,"amp":float,"axis":"x|y|z"}}
@@ -134,7 +135,7 @@ Voice types:
           "pluck"; on a sustained "osc" with a slow filter sweep it is the
           single most effective way to make a patch EVOLVE rather than drone.
   "pluck" sparse notes stepping through a scale (params: scale, rate, decay, tone,
-          resonance, drift)
+          resonance, drift, gap, play)
           "resonance" 0-1 puts a RESONANT PEAK at the tone cutoff instead of a
                     plain rolloff — the difference between a brightness fade
                     and an actual synth filter. 0.5-0.9 with a moving
@@ -144,7 +145,7 @@ Voice types:
   "bell"  struck notes with inharmonic (bell/chime, not string) partials —
           reach for this over "pluck" when the brief actually wants a bell,
           chime, or mallet-struck sound rather than a plucked string
-          (params: scale, rate, decay, tone)
+          (params: scale, rate, decay, tone, gap, play)
           "character" picks the struck voicing, and is the difference between
                     one bell and a family of them. "bell" (default) is a
                     church/chime clang; "celesta" is sweet and near-harmonic;
@@ -155,6 +156,29 @@ Voice types:
                     rather than a heavy chime — celesta and music_box in
                     particular suit gentle, melodic, childlike or nostalgic
                     briefs far better than the default bell does.
+          "gap"   SECONDS of silence between strikes, 0-30, on "bell",
+                    "pluck" and "harp". "rate" is notes per BEAT, so it is tied to
+                    tempo and cannot space notes more than a few seconds
+                    apart; "gap" is absolute wall time. Use it whenever the
+                    brief wants something occasional rather than rhythmic — a
+                    distant bell every 8-20s, a single pluck punctuating a
+                    drone. Omit it (or 0) for a part meant to keep time.
+          "play"  SECONDS the voice plays BEFORE each gap, 0-30. Pairs with
+                    "gap" as one cycle: play for this long, then silence for
+                    "gap", repeating. 0 (the default) means ONE strike per
+                    gap. Set it when you want a PHRASE rather than a single
+                    note — "play":3 with "gap":12 is a short flurry every 15
+                    seconds, which sounds composed where a lone strike sounds
+                    incidental. Notes inside the phrase fire at "rate" as
+                    usual. Does nothing without a "gap".
+                  On "harp" the unit of both is a whole ROLL, not a note: a
+                    "gap" with no "play" gives ONE complete cascade, then
+                    silence. That is the single most idiomatic setting for
+                    this voice — with a long "decay" the cascade rings on
+                    THROUGH its own gap, so the scene never actually goes
+                    quiet. Try "roll":7, "decay":10, "gap":12.
+                  Both: a voice this sparse only works against a sustained pad
+                    or noise bed; do not leave the scene silent.
           "drift" 0-1, slow random detune applied as each note is struck, so
                     the instrument wanders very slightly out of tune with
                     itself. 0 is exact; 0.2-0.4 is the tape-ish instability
@@ -167,7 +191,7 @@ Voice types:
           blooming and overlapping into itself long after it was played.
           Reach for this when the brief wants something spacious, liquid,
           shimmering, cascading, or harp/dulcimer/kalimba-like
-          (params: scale, rate, decay, tone, damp, roll, roll_spread)
+          (params: scale, rate, decay, tone, damp, roll, roll_spread, gap, play)
             "decay" up to 20s here, unlike every other voice's 6s ceiling.
                     6-12 is the useful range; that long ring IS the voice.
             "damp"  0-1.5, how much faster the high partials die than the
@@ -251,6 +275,14 @@ lines, not a mesh). Recognizable silhouette beats detail. Spread objects across
 positions about -8..8 so the camera can float among them. Gentle motion, long
 attack/release, colours matched to the mood. r,g,b are 0..1.
 
+PACE. "shape_speed" is a single multiplier on every node's "motion" at once, and
+it is the difference between a place you are inside and a screensaver. Set it in
+the range 0.15-0.30 — choose within that band for the subject (0.15 for something
+still and heavy: rocks, architecture, deep water; 0.30 for something quick:
+sparks, insects, machinery). Do NOT set it to 1.0; at that rate a whole scene
+vibrates and reads as noise. Per-node "motion" "speed" stays as authored — this
+scales all of it together.
+
 REQUIREMENTS for every scene:
 - The layer's "generator" MUST be exactly the string "world". There is no other
   valid value — a made-up name makes the scene unloadable.
@@ -276,6 +308,7 @@ WORKED EXAMPLE (format only — for the keyword "a campfire at night"):
      "rock":[{"op":"polyline","pts":[[-0.4,0,0],[0,0.35,0.2],[0.4,0,0.1],[0.1,-0.2,-0.3],[-0.4,0,0]],"closed":true}],
      "tree":[{"op":"line","a":[0,-1.5,0],"b":[0,2.5,0]},{"op":"line","a":[0,1.4,0],"b":[-0.8,2.2,0]},{"op":"line","a":[0,1.7,0],"b":[0.9,2.6,0]}]
    },
+   "shape_speed":0.18,
    "nodes":[
      {"shape":"ground","pos":[0,0,0],"color":[0.2,0.3,0.4]},
      {"shape":"flame","pos":[0,0,0],"scale":1.2,"color":[1,0.6,0.2],"motion":{"type":"pulse","speed":3,"amp":0.3}},
@@ -975,6 +1008,19 @@ def _apply_evolution(spec: SceneSpec, evolution: float | None) -> SceneSpec:
 GEN_SPEED_MIN, GEN_SPEED_MAX = 0.03, 0.15
 GEN_FAR_MAX = 28.0
 
+#: `world`'s own motion-rate multiplier. The generator DEFAULTS it to 1.0, and
+#: the model writes only `defs` and `nodes` unless asked — so before this every
+#: fresh 3D scene ran node motion at full rate, which reads as vibrating rather
+#: than alive. Measured across the library: of 15 saved `world` layers, 10 had
+#: no `shape_speed` at all (i.e. 1.0) and the 5 that did were all hand-slowed
+#: afterwards, to 0.08/0.10/0.11/0.17/0.26. The prompt now asks for 0.15-0.30
+#: and this clamps it there, because ABSENT is the common case and a clamp that
+#: only adjusts an existing key would do nothing on a real generation.
+GEN_SHAPE_SPEED_MIN, GEN_SHAPE_SPEED_MAX = 0.15, 0.30
+#: Used only when the model omitted the key entirely. Mid-band, leaning slow to
+#: match how the hand-tuned scenes above actually landed.
+GEN_SHAPE_SPEED_DEFAULT = 0.20
+
 
 def _max_strokes_for(nodes: int) -> int:
     """Stroke ceiling for a scene of this size.
@@ -996,6 +1042,43 @@ def _max_strokes_for(nodes: int) -> int:
 #: Slow the authored swell down. Applied as a MULTIPLIER, not a fixed value,
 #: so the variation Claude wrote between scenes survives.
 GEN_SWELL_STRETCH = 1.3
+
+
+def _apply_shape_speed(spec: SceneSpec) -> SceneSpec:
+    """Clamp every layer's node-motion rate into the band the instrument wants.
+
+    Split out of `_apply_pacing` and applied on the CACHE-READ path as well,
+    for the same reason `expand_spec` is: the cache key cannot tell an entry
+    written before this existed from one written after, and every entry cached
+    before it holds no `shape_speed` at all — i.e. full rate. Safe to run twice
+    because it is idempotent, which is exactly what the rest of `_apply_pacing`
+    is NOT: `swell_period` is multiplied by 1.3, so re-running it on every read
+    would compound. Don't merge this back in.
+
+    Unlike camera speed/far, the key is usually ABSENT rather than out of range
+    — it is a default on the generator class, not something the model writes —
+    so this SETS it as well as clamping it. Which generators own the param
+    comes from the registry rather than a hardcoded "world", the same way
+    kiosk's `_apply_look` asks.
+    """
+    from ..generators import get as _get_generator
+    for layer in spec.layers or []:
+        name = getattr(layer, "generator", None)
+        params = getattr(layer, "params", None)
+        if params is None and isinstance(layer, dict):
+            name, params = layer.get("generator"), layer.get("params")
+        if not isinstance(params, dict):
+            continue
+        cls = _get_generator(name) if name else None
+        if cls is None or "shape_speed" not in (getattr(cls, "defaults", None) or {}):
+            continue
+        try:
+            sp = float(params["shape_speed"])
+        except (KeyError, TypeError, ValueError):
+            sp = GEN_SHAPE_SPEED_DEFAULT
+        params["shape_speed"] = round(
+            max(GEN_SHAPE_SPEED_MIN, min(GEN_SHAPE_SPEED_MAX, sp)), 3)
+    return spec
 
 
 def _apply_pacing(spec: SceneSpec) -> SceneSpec:
@@ -1042,6 +1125,7 @@ def _apply_pacing(spec: SceneSpec) -> SceneSpec:
                 cam["far"] = round(max(1.0, min(GEN_FAR_MAX, float(cam["far"]))), 2)
             except (TypeError, ValueError):
                 cam["far"] = GEN_FAR_MAX
+    _apply_shape_speed(spec)
     scape = spec.soundscape
     if isinstance(scape, dict) and scape.get("swell_period"):
         try:
@@ -1217,6 +1301,11 @@ class SceneDirector:
         if use_cache and os.path.exists(cache):
             with open(cache) as f:
                 spec = _ensure_soundscape(SceneSpec.from_dict(json.load(f)))
+            # Same argument as the expansion below: every entry cached before
+            # the pace band existed holds no `shape_speed` at all, i.e. full
+            # rate, and the cache key cannot tell those apart from ones written
+            # since. Idempotent, so replaying a paced entry changes nothing.
+            _apply_shape_speed(spec)
             self.last_source = "cache"
             self.last_error = None
             self.last_cost = None          # served from disk; nothing was billed

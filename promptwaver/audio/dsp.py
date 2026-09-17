@@ -1199,6 +1199,21 @@ class Soundscape:
     # pathological tempo*rate combination from scheduling a burst of
     # thousands of notes within a single block in the first place.
     MIN_ONSET_INTERVAL_S = 0.04       # ~25 onsets/sec ceiling, plenty for ambient
+    # `gap` — extra SILENCE between strikes, in seconds, for the struck voices.
+    # Distinct from `rate`, which is notes per BEAT and so is both quantised to
+    # the grid and tied to tempo: spacing strikes 20s apart via rate alone
+    # means rate 0.05 at tempo 60, which is unusable on a slider and drifts
+    # with tempo. `gap` is absolute wall time added on top, so "a bell every
+    # 12 seconds" survives a tempo change. 0 is off and is the default, so no
+    # existing scene changes and _normalise adds no key to voices that never
+    # had one (see the library-churn note in INSTRUMENTS.md).
+    GAP_MAX_S = 30.0
+    # `play` — how long the voice plays BEFORE each gap, also in seconds. 0
+    # (the default) means a single strike per gap; anything above turns the
+    # gap into silence between PHRASES rather than between notes. Capped at
+    # the same 30s: the pair is a cycle, and a phrase longer than the silence
+    # around it stops reading as punctuation.
+    PLAY_MAX_S = 30.0
 
     # A SECOND, tighter cap on top of MAX_ACTIVE_NOTES, scoped to one bell
     # voice's own contribution to `_render_bell_notes`. MAX_ACTIVE_NOTES was
@@ -1247,18 +1262,33 @@ class Soundscape:
         return float(2.0 ** (cents / 1200.0))
 
     def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay,
-                        tone=1.0, drift=0.0, resonance=0.0):
+                        tone=1.0, drift=0.0, resonance=0.0,
+                        play_n=0, cycle_n=0):
         """Append onsets landing in this block for `voice_name`, then enforce
         the shared MAX_ACTIVE_NOTES cap. `freq_fn(step)` returns the Hz for
         onset index `step`. Shared by both `pluck` (indexes a scale) and `arp`
         (indexes a chord in a pattern) so both get the same overrun
-        protection for free."""
+        protection for free.
+
+        `play_n`/`cycle_n` gate the onsets into a repeating PHRASE: within each
+        `cycle_n` samples, only the first `play_n` are allowed to fire. Both 0
+        (the default, and what `arp` passes) means no gating at all. The gate
+        drops onsets rather than shortening `interval`, so notes inside a
+        phrase keep landing exactly on the tempo grid — a phrase is the same
+        instrument playing normally, just interrupted.
+
+        `step` keeps counting through the silences on purpose: the scale walk
+        continues underneath the gaps, so consecutive phrases start at
+        different points in the scale instead of relooping the same figure.
+        """
         interval = max(interval, int(self.sr * self.MIN_ONSET_INTERVAL_S))
         end = n0 + frames
         if interval <= 0:
             return
         first = ((n0 + interval - 1) // interval) * interval
         for onset in range(first, end, interval):
+            if cycle_n > 0 and (onset % cycle_n) >= play_n:
+                continue          # inside the gap between phrases
             step = onset // interval
             self._active_notes.append(dict(
                 start=onset, freq=freq_fn(step) * self._drift_factor(voice_name, drift),
@@ -1294,10 +1324,55 @@ class Soundscape:
         self._active_notes = alive
         return out * 0.6
 
-    def _render_pluck(self, v, n0, frames):
+    def _onset_cycle(self, v, rate):
+        """Onset spacing and the play/silence phrase cycle, in samples.
+
+        Returns `(interval, play_n, cycle_n)`. Three behaviours, chosen by how
+        `gap` and `play` are set — and the first two are what every existing
+        scene gets, so neither changes:
+
+          gap 0                -> (beat, 0, 0)     continuous, the original.
+          gap > 0, play 0      -> (beat+gap, 0, 0) ONE strike, then silence.
+          gap > 0, play > 0    -> (beat, play, play+gap)
+                                  strikes at the normal rate for `play`
+                                  seconds, then silence for `gap`, repeating.
+
+        The single-shot case widens `interval` instead of gating, because one
+        note per cycle needs no gate and this keeps the note count honest for
+        MAX_ACTIVE_NOTES. Both `gap` and `play` are wall-clock SECONDS, so a
+        phrase keeps its shape when the scene tempo changes; only the number
+        of notes inside it moves, which is what `rate` is for.
+
+        Clamped HERE and not only in `_normalise`, because `set_param` writes
+        live UI and MIDI values straight into the spec without normalising —
+        the standing rule for anything whose bad value is expensive. A huge
+        gap is merely slow, but a negative one would cancel the beat spacing
+        and schedule a burst.
+        """
+        def _sec(key, cap):
+            try:
+                return min(cap, max(0.0, float(v.get(key, 0.0) or 0.0)))
+            except (TypeError, ValueError):
+                return 0.0
+
         tempo = float(self.spec.get("tempo", 60))
+        beat = 60.0 / max(1e-3, tempo * rate)
+        gap = _sec("gap", self.GAP_MAX_S)
+        if gap <= 0.0:
+            return int(self.sr * beat), 0, 0
+        play = _sec("play", self.PLAY_MAX_S)
+        if play <= 0.0:
+            return int(self.sr * (beat + gap)), 0, 0
+        # A phrase shorter than one note spacing would gate every onset away
+        # and silence the voice outright. Floor it at one interval so the
+        # control always produces sound — "play" of 0 is how you ask for a
+        # single shot, and that is the branch above.
+        play = max(play, beat)
+        return int(self.sr * beat), int(self.sr * play), int(self.sr * (play + gap))
+
+    def _render_pluck(self, v, n0, frames):
         rate = float(v.get("rate", 1.0))          # notes per beat
-        interval = int(self.sr * 60.0 / max(1e-3, tempo * rate))
+        interval, play_n, cycle_n = self._onset_cycle(v, rate)
         scale = v.get("scale") or [0, 3, 7, 10]
         root = v.get("note", 72)
         wf = v.get("waveform", "sine")
@@ -1317,7 +1392,8 @@ class Soundscape:
         # neither key unless _normalise gated it in.
         self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone,
                              drift=float(v.get("drift", 0.0)),
-                             resonance=float(v.get("resonance", 0.0)))
+                             resonance=float(v.get("resonance", 0.0)),
+                             play_n=play_n, cycle_n=cycle_n)
         return self._render_note_events(v["name"], n0, frames)
 
     def _render_bell(self, v, n0, frames):
@@ -1330,9 +1406,8 @@ class Soundscape:
         that method does one `_osc()` call per note for one fundamental,
         and a bell needs a bank of partials per note — a different batching
         shape, not a bigger version of the same one."""
-        tempo = float(self.spec.get("tempo", 60))
         rate = float(v.get("rate", 1.0))          # strikes per beat
-        interval = int(self.sr * 60.0 / max(1e-3, tempo * rate))
+        interval, play_n, cycle_n = self._onset_cycle(v, rate)
         scale = v.get("scale") or [0, 3, 7, 10]
         root = v.get("note", 72)
         decay = float(v.get("decay", 1.2))
@@ -1344,7 +1419,8 @@ class Soundscape:
 
         character = str(v.get("character", "bell"))
         self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay, tone,
-                             drift=float(v.get("drift", 0.0)))   # bell: sine, no table
+                             drift=float(v.get("drift", 0.0)),   # bell: sine, no table
+                             play_n=play_n, cycle_n=cycle_n)
         return self._render_bell_notes(v["name"], n0, frames, tone, character)
 
     def _render_bell_notes(self, voice_name, n0, frames, tone, character="bell"):
@@ -1447,10 +1523,15 @@ class Soundscape:
         paying for. `roll` of 1 degenerates to the even one-note-per-beat
         pattern `pluck` produces.
         """
-        tempo = float(self.spec.get("tempo", 60))
         rate = float(v.get("rate", 0.5))              # rolls per beat
-        interval = max(int(self.sr * 60.0 / max(1e-3, tempo * rate)),
-                       int(self.sr * self.MIN_ONSET_INTERVAL_S))
+        # Same play/gap cycle as pluck and bell, but the unit here is a ROLL,
+        # not a note — see the gate in the loop below. `_onset_cycle`'s three
+        # branches land correctly on this voice as they are: no gap leaves the
+        # grid alone, and its single-shot branch widens `interval` to
+        # beat+gap, which here means one COMPLETE roll per cycle (the inner
+        # `for j in range(roll)` still runs) rather than one bare note.
+        interval, play_n, cycle_n = self._onset_cycle(v, rate)
+        interval = max(interval, int(self.sr * self.MIN_ONSET_INTERVAL_S))
         roll = max(1, min(12, int(v.get("roll", HARP_ROLL_DEFAULT))))
         spread = int(self.sr * max(self.MIN_ONSET_INTERVAL_S,
                                    float(v.get("roll_spread", 0.07))))
@@ -1463,21 +1544,51 @@ class Soundscape:
         root = int(v.get("note", 60))
         decay = float(v.get("decay", 6.0))
         tone = float(min(1.0, max(0.0, v.get("tone", 0.6))))
-        span = max(1, len(scale) * HARP_OCTAVES)
+        # A ROLL MUST BE ONE UNBROKEN ASCENT, so the range has to be at least
+        # as many degrees as the roll has notes. `roll` is clamped to 1..12
+        # above while this span is only len(scale) * HARP_OCTAVES — 8 for the
+        # usual 4-note scale — and nothing tied the two together. A roll of 12
+        # therefore ran out of degrees after 8 and wrapped back to the bottom
+        # MID-GESTURE: measured on `harp-2` (roll 12, 4-note scale) the sweep
+        # climbed 60->82 and then dropped to 60 for the remaining four notes,
+        # with the cliff moving one note earlier on every successive roll as
+        # `g` advanced. That is heard as the cascade stuttering and losing its
+        # top notes, which is exactly what it is.
+        #
+        # Widening is the fix rather than capping `roll`, which would silently
+        # drop notes the scene asked for. A 12-note roll on a 4-note scale now
+        # spans three octaves instead of two.
+        span = max(1, len(scale) * HARP_OCTAVES, roll)
+        # Headroom for the per-roll offset. The offset exists so successive
+        # rolls don't repeat the same sweep, but it must not push the TOP of
+        # the roll past the range — that was the second way to wrap, and it
+        # bit every harp scene periodically (once `g % span` exceeded
+        # `span - roll`), not just the ones with roll > span.
+        bases = max(1, span - roll + 1)
 
         end = n0 + frames
         # Look back far enough to catch rolls whose beat began in an earlier
         # block but whose later notes land in this one.
         g0 = max(0, (n0 - (roll - 1) * spread) // interval)
         for g in range(g0, end // interval + 1):
+            # Gate on the ROLL's own position in the cycle, not on each note's
+            # onset. Testing per note would let a phrase boundary land inside
+            # an ascending sweep and cut it off mid-gesture — destroying the
+            # thing the `spread` clamp above exists to protect. A roll either
+            # happens whole or not at all, so a roll that starts just before
+            # the gap is allowed to finish into it.
+            if cycle_n > 0 and ((g * interval) % cycle_n) >= play_n:
+                continue
             for j in range(roll):
                 onset = g * interval + j * spread
                 if not (n0 <= onset < end):
                     continue
-                # Each roll ascends from `j`, and successive rolls start one
-                # degree higher, so the gesture stays recognisable while never
-                # repeating the same sweep twice in a row.
-                d = (g + j) % span
+                # Each roll ascends from its own base, and successive rolls
+                # start one degree higher, so the gesture stays recognisable
+                # while never repeating the same sweep twice in a row. The
+                # base wraps, the ROLL never does: `d` is monotonic across the
+                # whole gesture, which is what makes it read as one sweep.
+                d = (g % bases) + j
                 self._active_notes.append(dict(
                     start=onset, wf="sine", decay=decay, voice=v["name"], tone=tone,
                     freq=midi_to_hz(root + scale[d % len(scale)] + 12 * (d // len(scale))),
@@ -2080,6 +2191,34 @@ def _normalise(spec: dict) -> dict:
         # mid-stream without a click (see _drift_factor).
         if v["type"] in ("pluck", "bell", "harp"):
             v["drift"] = _clamp(v.get("drift"), 0.0, 1.0, 0.0)
+        # Added silence between notes. Only the three voices that schedule
+        # onsets read it; on `harp` the unit is a whole roll rather than a
+        # single note, since that voice's gesture is the roll. Gated so a pad
+        # or noise voice gains no key on save, and only written when non-zero
+        # so the whole tracked scene library doesn't churn the first time
+        # anything is saved.
+        if v["type"] in ("pluck", "bell", "harp"):
+            g = _clamp(v.get("gap"), 0.0, Soundscape.GAP_MAX_S, 0.0)
+            if g > 0:
+                v["gap"] = g
+            else:
+                v.pop("gap", None)
+            # How long it plays before each gap. Meaningless without one, so
+            # it is dropped alongside it rather than left behind as a stale
+            # key on a voice that now runs continuously.
+            p = _clamp(v.get("play"), 0.0, Soundscape.PLAY_MAX_S, 0.0)
+            if g > 0 and p > 0:
+                v["play"] = p
+            else:
+                v.pop("play", None)
+        else:
+            # Nothing else schedules on the plain tempo grid, so these are
+            # inert anywhere but pluck/bell. Dropped rather than left alone:
+            # the model does occasionally put a param on the wrong voice, and
+            # a key that survives into the saved file reads as a setting that
+            # does something. Costs nothing on a voice that never had them.
+            v.pop("gap", None)
+            v.pop("play", None)
         # Resonance only means something where a wavetable is involved: `pad`
         # and `bell` build their own partials from sines, so they have no
         # cutoff to resonate at. Gated so those voices gain no key on save.

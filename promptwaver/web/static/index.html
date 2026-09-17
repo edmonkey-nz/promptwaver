@@ -425,6 +425,15 @@
   .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px}
   .voice .vname{font-family:var(--mono);font-size:12px;color:var(--ink)}
   .voice .vtype{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  /* Live output level per instrument, fed from that voice's `voice.<name>`
+     modulation source. Deliberately dimmer than the master VU's flat --cyan:
+     one of these sits above every voice in the strip, and at full brightness
+     a busy soundscape reads as a wall of meters. This is ambient "is it
+     making sound" feedback, not a meter anyone takes a number off — hence no
+     readout, and no `.val` class (which body.hide-values would collapse). */
+  .voice .vmtr{height:3px;border-radius:2px;background:var(--bg);overflow:hidden;margin:-2px 0 0}
+  .voice .vmtr i{display:block;height:100%;width:0%;background:rgba(51,224,208,.38);
+                 transition:width .08s linear}
   .voice .mutebtn{padding:3px 8px;font-size:11px;border-radius:6px}
   .voice .mutebtn.on{border-color:var(--amber);color:var(--amber)}
   .voice select{font-size:11px;padding:4px 6px}
@@ -794,41 +803,11 @@
       <h2>Master</h2>
     </div>
 
-    <!-- Was "Faders", and was nested INSIDE the group above — so that group's
-         heading silently spanned the master fader and these durations both.
-         Nothing in here is a fader: they are three fade TIMES. The two
-         controls that genuinely didn't belong have moved out (hue override up
-         to Master, scene PPS to Settings > Output). -->
-    <details class="accordion" id="acc-faders" closed>
-      <summary>Transitions</summary>
-      <div class="accordion-body">
-      <!-- Always visible (not display:none-toggled) so a scene switch
-           starting/ending doesn't pop this in and out of the layout,
-           shoving the crossfade/audio-fade fields below it around. Shows
-           "—/—" and an empty bar at rest. -->
-      <div class="xfade-indicator" id="xfade-indicator">
-        <div class="xfade-labels">
-          <span id="xfade-from">—</span>
-          <span id="xfade-to">—</span>
-        </div>
-        <div class="xfade-bar"><div class="xfade-glow" id="xfade-glow"></div></div>
-      </div>
-
-      <div class="field"><label>crossfade</label>
-        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="0">
-        <span class="val" id="v-xf">0.0</span></div>
-      <div class="field"><label>audio fade</label>
-        <input type="range" id="s-afade" min="0" max="16" step="0.5" value="2">
-        <span class="val" id="v-safade">2.0</span></div>
-      <!-- Distinct from "audio fade" above: that one is the scene-to-scene
-           soundscape crossfade, this is how long Start/Stop takes to bring
-           the room up or down. The beam still blanks instantly on Stop
-           regardless — only the sound rides. -->
-      <div class="field"><label>start/stop fade</label>
-        <input type="range" id="s-startfade" min="0" max="8" step="0.25" value="1.5">
-        <span class="val" id="v-sstartfade">1.5</span></div>
-      </div>
-    </details>
+    <!-- The Transitions pane (three fade durations + the crossfade progress
+         indicator) now lives in Settings > Transitions. They are set once for
+         a rig and then left alone, so they were costing a permanent slot in
+         the performance column for something nobody touches mid-show. Same
+         move, and same reasoning, as scene PPS before them. -->
  <details class="accordion" id="acc-modulation" open>
       <summary>Modulation</summary>
       <div class="accordion-body" style="display:flex;flex-direction:column;gap:8px">
@@ -1150,6 +1129,43 @@
       <div class="hint">clears the numeric readouts beside every slider and knob for a
         calmer surface. They reappear when you hover or drag the control, so fine
         adjustment still shows what it's doing.</div>
+    </div>
+
+    <!-- Moved here from the side column, where it held a permanent accordion
+         for three durations that are set once for a room and then left alone.
+         Nothing in here is a fader: they are fade TIMES. The controls that
+         genuinely didn't belong went elsewhere long before this (hue override
+         to Master, scene PPS to Output above). -->
+    <div class="group">
+      <h2 style="font-size:11px">Transitions</h2>
+      <!-- Always rendered (not display:none-toggled) so a scene switch
+           starting/ending doesn't pop this in and out of the layout, shoving
+           the fields below it around. Shows "—/—" and an empty bar at rest. -->
+      <div class="xfade-indicator" id="xfade-indicator">
+        <div class="xfade-labels">
+          <span id="xfade-from">—</span>
+          <span id="xfade-to">—</span>
+        </div>
+        <div class="xfade-bar"><div class="xfade-glow" id="xfade-glow"></div></div>
+      </div>
+      <div class="field" style="margin-top:8px"><label>crossfade</label>
+        <input type="range" id="s-xf" min="0" max="8" step="0.5" value="0">
+        <span class="val" id="v-xf">0.0</span></div>
+      <div class="hint">how long one scene takes to dissolve into the next.</div>
+      <div class="field" style="margin-top:8px"><label>audio fade</label>
+        <input type="range" id="s-afade" min="0" max="16" step="0.5" value="2">
+        <span class="val" id="v-safade">2.0</span></div>
+      <div class="hint">the soundscape's own scene-to-scene crossfade, separate
+        from the visual one above — sound usually wants longer.</div>
+      <!-- Distinct from "audio fade" above: that one is the scene-to-scene
+           soundscape crossfade, this is how long Start/Stop takes to bring
+           the room up or down. The beam still blanks instantly on Stop
+           regardless — only the sound rides. -->
+      <div class="field" style="margin-top:8px"><label>start/stop fade</label>
+        <input type="range" id="s-startfade" min="0" max="8" step="0.25" value="1.5">
+        <span class="val" id="v-sstartfade">1.5</span></div>
+      <div class="hint">how long Start/Stop takes to bring the room up or down.
+        The beam still blanks instantly on Stop — only the sound rides.</div>
     </div>
 
     <div class="group">
@@ -1659,6 +1675,8 @@ function paintState(s){
   // this pass, or they show their construction-time value until the next tick
   syncControls(s);
   renderVu(s);
+  // after renderSoundscape: the meters it just built have to exist to be fed
+  updateVoiceMeters(s);
   renderRoutes(s);
   // After renderLayers (line ~1165), whose rows this marks up.
   markModulated(s);
@@ -2130,6 +2148,20 @@ function renderRoutes(s){
       im.oninput = () => { paint(); send({type:"set", key:`route.${i}.in_max`, value:+im.value}); };
     }
     box.appendChild(row);
+  });
+}
+
+// Per-voice output meters in the soundscape strip. Updated every tick without
+// touching the strip itself: renderSoundscape rebuilds only when its signature
+// changes (a scene load, a waveform edit), so anything that has to move at
+// 20Hz has to be driven from here or it sits at its construction-time value.
+// Voice sources only exist while the synth is online, so with audio off the
+// bars correctly stay flat rather than disappearing.
+function updateVoiceMeters(s){
+  const src = s.mod_sources || {};
+  document.querySelectorAll("#voices .vmtr").forEach(m => {
+    const v = Math.max(0, Math.min(1, src[m.dataset.src] ?? 0));
+    m.firstElementChild.style.width = (v * 100).toFixed(1) + "%";
   });
 }
 
@@ -2979,6 +3011,17 @@ function renderSoundscape(s){
     const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center";
     hrow.appendChild(head); hrow.appendChild(mb);
     el.appendChild(hrow);
+    // Live output level, above this voice's controls. Driven per tick by
+    // updateVoiceMeters from the `voice.<name>` modulation source — the same
+    // number the Modulation > Sources list shows, so the two never disagree.
+    // It reads the voice's actual render peak, so a muted voice falls to zero
+    // on its own and the `level` knob below is visibly the cause of the bar.
+    const mtr = document.createElement("div");
+    mtr.className = "vmtr";
+    mtr.dataset.src = `voice.${v.name}`;
+    mtr.title = `live output level — voice.${v.name}`;
+    mtr.innerHTML = "<i></i>";
+    el.appendChild(mtr);
     el.appendChild(knob("level",`voice.${v.name}.level`,0,1,0.01, v.level ?? 0.4, x=>x.toFixed(2), {midi: mk("level")}));
     // WHICH KNOBS A VOICE GETS IS DECIDED BY WHAT ITS RENDERER ACTUALLY READS
     // in dsp.py, not by what happened to get UI first. That drift had left
@@ -3031,6 +3074,19 @@ function renderSoundscape(s){
     if (isType("pluck","bell")){
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
       el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
+      // `play` and `gap` are one cycle and read in that order: play for N
+      // seconds, then go quiet for M. Both are SECONDS of wall time, so the
+      // phrase keeps its shape when the tempo changes — unlike `rate` above,
+      // which is per beat. 0 on either is off, which is why the ranges start
+      // there rather than at 1s: the knobs have to be able to return to the
+      // default without retyping the scene. `play` reads "1 shot" at 0
+      // because that is exactly what a gap with no play window produces.
+      const gapK = knob("gap",`voice.${v.name}.gap`,0,30,0.5, v.gap ?? 0, x=>x ? x.toFixed(1)+"s" : "off", {midi: mk("gap")});
+      gapK.title = "Silence between strikes (or between phrases, if `play` is set). Seconds, so it survives a tempo change.";
+      el.appendChild(gapK);
+      const playK = knob("play",`voice.${v.name}.play`,0,30,0.5, v.play ?? 0, x=>x ? x.toFixed(1)+"s" : "1 shot", {midi: mk("play")});
+      playK.title = "How long it plays before each gap. 0 = a single strike per gap. Above 0, it plays at `rate` for this long, then goes quiet for `gap`. Needs a gap to do anything.";
+      el.appendChild(playK);
     }
     if (v.type==="bell"){
       // Which struck voicing the partial bank uses. A discrete choice like
@@ -3060,6 +3116,16 @@ function renderSoundscape(s){
       el.appendChild(knob("damp",`voice.${v.name}.damp`,0,1.5,0.01, v.damp ?? 0.7, x=>x.toFixed(2), {midi: mk("damp")}));
       el.appendChild(knob("roll",`voice.${v.name}.roll`,1,12,1, v.roll ?? 6, x=>x.toFixed(0), {midi: mk("roll")}));
       el.appendChild(knob("roll spread",`voice.${v.name}.roll_spread`,0.03,0.4,0.005, v.roll_spread ?? 0.07, x=>x.toFixed(3), {midi: mk("roll_spread")}));
+      // Same pair as pluck/bell, but the unit is a whole ROLL — so "1 shot"
+      // here means one complete cascade per gap, not one bare note. The gap
+      // is rarely real silence on this voice: with decay up to 20s the cascade
+      // rings on through it, which is the most musical use of the pair.
+      const hGap = knob("gap",`voice.${v.name}.gap`,0,30,0.5, v.gap ?? 0, x=>x ? x.toFixed(1)+"s" : "off", {midi: mk("gap")});
+      hGap.title = "Silence between rolls (or between phrases of rolls, if `play` is set). Seconds. The previous cascade keeps ringing through it.";
+      el.appendChild(hGap);
+      const hPlay = knob("play",`voice.${v.name}.play`,0,30,0.5, v.play ?? 0, x=>x ? x.toFixed(1)+"s" : "1 roll", {midi: mk("play")});
+      hPlay.title = "How long it plays before each gap. 0 = one complete roll per gap. Above 0, rolls fire at `rate` for this long, then it goes quiet for `gap`. Needs a gap to do anything.";
+      el.appendChild(hPlay);
     }
     // Resonance only exists where a wavetable does — pad and bell build their
     // partials from sines and have no cutoff to peak at. See RES_PEAK_GAIN.
