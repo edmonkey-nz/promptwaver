@@ -28,6 +28,7 @@ from .director.claude_director import interpretation_directive
 from .audio import make_synth, AudioAnalysis
 from .geometry import test_pattern_frame
 from .output import make_output
+from .recorder import SessionStore, Recorder, Player
 from .perf import LoopStats
 
 
@@ -456,6 +457,18 @@ class Engine:
         self.line_width = 1.0
         self._mod_line_width = 1.0
         # Modulated versions (live values, updated every tick)
+        # Live post-LFO voice params, refreshed from the synth each tick. See
+        # state()'s "lfo_values" — declared here so state() can be called
+        # before the render loop has run once.
+        self._lfo_values: dict[str, dict[str, float]] = {}
+        # Session recording. `_injecting` is what stops a replayed event from
+        # being recorded again: the player calls the same set_param the UI
+        # does, so without it a punched take would double every event it was
+        # in the middle of replaying.
+        self.takes = SessionStore()
+        self.recorder = Recorder(self.takes)
+        self.player: Player | None = None
+        self._injecting = False
         self._mod_glow = 0.0
         self._mod_trail = 0.0
         self._mod_kaleidoscope_segments = 0
@@ -520,6 +533,7 @@ class Engine:
 
     def set_param(self, key: str, value):
         """key like 'lfo_slow.rate', 'crossfade', 'layer0.<param>'."""
+        self._rec_note("set", key, value)
         def apply():
             self._apply_param(key, value)
         self._enqueue(apply)
@@ -1111,6 +1125,7 @@ class Engine:
 
     def set_audio_param(self, path: str, value):
         """Live synth control (master, tempo, distortion, delay.*, voice.*.*)."""
+        self._rec_note("set_audio", path, value)
         def apply():
             if getattr(self.synth, "online", False):
                 self.synth.set_audio_param(path, value)
@@ -1194,6 +1209,8 @@ class Engine:
                     "bloom_intensity": self.bloom_intensity,
                     "line_curve": self.line_curve,
                     "line_width": self.line_width,
+                    "hue_override": self.hue_override_on,
+                    "hue_value": self.hue_value,
                 })
                 # LFO rates travel with the scene like the rest of the
                 # modulation setup. Captured from the live sources rather than
@@ -1268,6 +1285,15 @@ class Engine:
         self.line_curve = float(cam_cfg.get("line_curve", 0.0))
         # 1.0 (unchanged) for every scene authored before this existed.
         self.line_width = float(cam_cfg.get("line_width", 1.0))
+        # Hue override. This block's whole point is that a per-scene visual
+        # setting loads as OFF rather than carrying over — and hue was the one
+        # that never made it in, so it stayed live across a scene load and
+        # recoloured whatever you loaded next. Restored (not merely applied
+        # when present) for the same reason `_apply_lfo` restores defaults:
+        # that is the half that actually stops the leak. Off/0.5 for every
+        # scene saved before this existed, which is all of them.
+        self.hue_override_on = bool(cam_cfg.get("hue_override", False))
+        self.hue_value = float(cam_cfg.get("hue_value", 0.5))
 
     #: Every sound-driven source. The "audio <-> visual" slider scales all of
     #: them together — it means "how much does sound move the picture", and a
@@ -1368,6 +1394,97 @@ class Engine:
             if d["key"] == dest and "min" in d:
                 return float(d["min"]), float(d["max"])
         return None
+
+    # --- session recording -------------------------------------------------
+    #
+    # See recorder.py for the format and why the tap sits at set_param /
+    # set_audio_param rather than at _enqueue.
+
+    def _rec_note(self, cmd: str, key: str, value):
+        """Record one parameter change, unless the player is what caused it."""
+        if self._injecting or not self.recorder.active:
+            return
+        self.recorder.note(cmd, key, value)
+
+    def _rec_inject(self, cmd: str, key, value):
+        """Apply one replayed event. Runs ON the render thread (the player is
+        advanced from the loop), so `_injecting` needs no lock: the only
+        writer is the same thread that reads it here."""
+        self._injecting = True
+        try:
+            if cmd == "set":
+                self._apply_param(key, value)
+            elif cmd == "set_audio":
+                if getattr(self.synth, "online", False):
+                    self.synth.set_audio_param(key, value)
+                sc = self.scenes.current
+                if sc is not None and sc.spec.soundscape:
+                    _apply_scape_param(sc.spec.soundscape, key, value)
+            elif cmd == "active":
+                self._set_active_now(bool(value))
+            elif cmd == "laser":
+                self.laser_on = bool(value)
+        finally:
+            self._injecting = False
+
+    def rec_start(self):
+        """Arm recording against the CURRENT scene, snapshotting its spec."""
+        def apply():
+            sc = self.scenes.current
+            spec = sc.spec.to_dict() if sc is not None else {}
+            self.recorder.start(self._current_library_name or "untitled", spec)
+        self._enqueue(apply)
+
+    def rec_stop(self):
+        self._enqueue(lambda: self.recorder.stop())
+
+    def rec_play(self, name: str):
+        """Load a take and start replaying it from the top."""
+        def apply():
+            take = self.takes.load(name)
+            if take is None:
+                return
+            self.player = Player(take, self._rec_inject)
+        self._enqueue(apply)
+
+    def rec_pause(self, value: bool | None = None):
+        """Hold the take's clock. The scene and the sound carry on — pausing a
+        replay means 'stop feeding me changes', not 'freeze the picture'."""
+        def apply():
+            if self.player is not None:
+                self.player.set_paused(
+                    (not self.player.paused) if value is None else bool(value))
+        self._enqueue(apply)
+
+    def rec_take_control(self, punch: bool = False):
+        """Stop the take driving the controls, leave everything where it is.
+
+        Nothing is restored or handed back: the player was never a separate
+        mode, only a second hand on the same controls, so the scene, the
+        soundscape and the scene clock simply carry on. The one thing that
+        DOES need attention is MIDI — after minutes of replay the engine's
+        values have moved but the physical knobs have not, which is exactly
+        the situation `rearm_takeover` exists for on a scene load.
+        """
+        def apply():
+            p = self.player
+            self.player = None
+            if p is None:
+                return
+            self.midi.rearm_takeover()
+            if punch:
+                sc = self.scenes.current
+                spec = sc.spec.to_dict() if sc is not None else {}
+                self.recorder.start(p.take.scene or "untitled", spec,
+                                    seed_events=p.remaining_prefix(),
+                                    punched_from=p.elapsed)
+        self._enqueue(apply)
+
+    def rec_delete(self, name: str) -> bool:
+        return self.takes.delete(name)
+
+    def rec_list(self, scene: str | None = None) -> list[dict]:
+        return self.takes.list(scene)
 
     def add_route(self, source: str, dest: str, depth: float = 0.3):
         def apply():
@@ -1610,6 +1727,22 @@ class Engine:
                 except Exception as e:
                     print(f"[promptwaver] action error: {e}")
 
+            # Replay, immediately AFTER the queue drain and before anything
+            # renders: a replayed event is the same kind of mutation a UI
+            # command is, so it has to land at the same point in the tick or
+            # a take would apply one frame later than it was recorded.
+            # Advanced here rather than on a thread of its own to keep the
+            # "one render thread, one queue" invariant — a second writer to
+            # engine state is exactly what that rule exists to prevent.
+            if self.player is not None:
+                self.player.advance()
+                if self.player.finished:
+                    # A take that runs out leaves everything where it put it,
+                    # same as taking control by hand. MIDI still has to be
+                    # re-armed: the knobs have not moved but the values have.
+                    self.player = None
+                    self.midi.rearm_takeover()
+
             # Retires the kiosk's error message back to idle. A no-op while
             # the toggle is off.
             self.kiosk.tick()
@@ -1656,6 +1789,12 @@ class Engine:
                 self._synth_srcs["synth_mid"].current = b.get("mid", 0.0)
                 self._synth_srcs["synth_high"].current = b.get("high", 0.0)
                 self._feed_voice_sources(b.get("voices") or {})
+                # Live post-LFO values for the UI's ghost markers. Latched
+                # here rather than fetched in `state()`: bands() is already
+                # being called on this tick, and state() runs 20x a second.
+                self._lfo_values = b.get("lfo") or {}
+            else:
+                self._lfo_values = {}
             # `audio_level` follows whichever feed the user picked. Engine
             # output is the default because that's what a scene's own routes
             # are written against.
@@ -1854,6 +1993,30 @@ class Engine:
             "mod_delay_ms": round(self.mod_delay_live * 1000),
             "mod_delay_auto_ms": round(self.mod_delay_auto() * 1000),
             "mod_destinations": self.mod_destinations(),
+            # Where every modulated value ACTUALLY is right now, for the UI's
+            # ghost markers. Two sources because there are two modulation
+            # systems: `matrix.last_value` covers routed destinations (camera,
+            # visual, monitor), `_lfo_values` the per-voice LFOs inside the
+            # synth. Both are small — only destinations something is driving —
+            # and both are already computed, so this adds no work to a method
+            # that runs 20 times a second.
+            # Transport only — the take LIST is answered on demand (it reads
+            # every file), the same reason the kiosk archive has its own
+            # command rather than riding the 20Hz broadcast.
+            "recording": {
+                "armed": self.recorder.active,
+                "name": self.recorder.name,
+                "elapsed": round(self.recorder.elapsed, 1),
+                "playing": self.player is not None,
+                "play_name": self.player.take.name if self.player else "",
+                "play_pos": round(self.player.elapsed, 2) if self.player else 0.0,
+                "play_len": round(self.player.take.duration, 2) if self.player else 0.0,
+                "play_paused": bool(self.player.paused) if self.player else False,
+            },
+            "mod_dest_values": {k: round(v, 4)
+                                for k, v in self.matrix.last_value.items()},
+            "lfo_values": {n: {k: round(x, 4) for k, x in d.items()}
+                           for n, d in (getattr(self, "_lfo_values", None) or {}).items()},
             # name -> human label, so the browser never carries its own copy
             # of the naming (same reason the cost estimate is server-side).
             "mod_source_labels": {n: self.mod_source_label(n)

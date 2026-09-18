@@ -536,13 +536,13 @@
     "disable_plane": false,
     "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.61,
-    "trail": 0.75,
+    "glow": 0.05,
+    "trail": 0.69,
     "laser_max_strokes": null,
     "kaleidoscope_segments": 0,
     "bloom_spread": 0.005,
     "bloom_intensity": 2.5,
-    "line_curve": 0.0,
+    "line_curve": 1.0,
     "line_width": 1.0
   },
   "pps": null,
@@ -625,7 +625,7 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 2,
+          "rate": 2.0,
           "decay": 0.5
         }
       },
@@ -642,10 +642,10 @@
           12
         ],
         "level": 0.22,
-        "rate": 0.15,
-        "decay": 2.35,
+        "rate": 0.3,
+        "decay": 0.55,
         "pan": 0.05,
-        "mute": true,
+        "mute": false,
         "tone": 0.4,
         "detune": 0.01,
         "unison": 1,
@@ -655,12 +655,14 @@
         ],
         "lfo": {
           "on": true,
-          "rate": 0.005,
+          "rate": 0.02,
           "shape": "random",
           "depth": 0.82,
           "dest": "depth"
         },
-        "distortion": 0.08
+        "distortion": 0.41,
+        "drift": 0.06,
+        "resonance": 0.77
       },
       {
         "name": "waves",

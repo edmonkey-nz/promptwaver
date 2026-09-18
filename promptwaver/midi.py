@@ -134,6 +134,10 @@ VOICE_RANGES = {
     "sub": (0.0, 1.0),
     "rate": (0.1, 4.0),
     "decay": (0.1, 6.0),
+    # Struck voices only (pluck/bell/harp). Seconds of wall time, matching the
+    # 0-30 knobs — a gap/play pair is a cycle, so both share a range.
+    "gap": (0.0, 30.0),
+    "play": (0.0, 30.0),
     "unison": (1.0, 7.0),
     "env.attack": (0.01, 15.0),
     "env.decay": (0.01, 8.0),
@@ -141,8 +145,9 @@ VOICE_RANGES = {
     "env.release": (0.05, 10.0),
     # Per-voice LFO. Rate matches dsp.LFO_MAX_RATE — this is an ambient
     # instrument, and a knob that spends most of its travel on speeds nobody
-    # wants is a knob with no useful resolution where it matters.
-    "lfo.rate": (0.0, 0.5),
+    # wants is a knob with no useful resolution where it matters. Measured
+    # across the library: 53 of 54 active LFOs sit below 0.2Hz.
+    "lfo.rate": (0.0, 0.2),
     "lfo.depth": (0.0, 1.0),
 }
 

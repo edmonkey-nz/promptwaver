@@ -10103,7 +10103,7 @@
     "fov": 49.0,
     "near": 0.4,
     "far": 26.0,
-    "max_strokes": 175,
+    "max_strokes": 120,
     "depth": {
       "mode": "cull"
     },

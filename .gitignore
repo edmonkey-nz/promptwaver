@@ -17,6 +17,9 @@ env/
 settings.json
 scenes/generated/*.json
 scenes/kiosk/*.json
+# Performance recordings. Same reasoning as the kiosk archive: they are a
+# record of what someone did on this machine, not part of the instrument.
+recordings/*.jsonl
 
 # OS / editor cruft
 .DS_Store

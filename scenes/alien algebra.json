@@ -7182,7 +7182,8 @@
               "axis": "y"
             }
           }
-        ]
+        ],
+        "shape_speed": 0.14
       }
     }
   ],
@@ -7199,7 +7200,10 @@
     {
       "source": "audio_level",
       "dest": "camera.speed",
-      "depth": 0.5
+      "depth": 0.5,
+      "mode": "range",
+      "lo": 0.0,
+      "hi": 0.0648
     }
   ],
   "camera": {
@@ -7261,11 +7265,11 @@
         -10
       ]
     ],
-    "speed": 0.05,
+    "speed": 0.02,
     "fov": 53.0,
     "near": 0.4,
-    "far": 12.0,
-    "max_strokes": 95,
+    "far": 9.0,
+    "max_strokes": 105,
     "depth": {
       "mode": "cull"
     },
@@ -7275,9 +7279,13 @@
     "disable_plane": false,
     "mirror_x": true,
     "mirror_y": false,
-    "glow": 0.0,
+    "glow": 0.14,
     "trail": 0.77,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.94,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -7299,7 +7307,7 @@
           0,
           -12
         ],
-        "unison": 5.0,
+        "unison": 5,
         "detune": 0.006,
         "sub": 0.65,
         "tone": 0.22,
@@ -7320,7 +7328,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "harmonic_pad",
@@ -7348,13 +7357,20 @@
         "decay": 1.2,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.21,
+        "distortion": 0.6,
         "scale": [
           0,
           3,
           7,
           10
-        ]
+        ],
+        "lfo": {
+          "on": true,
+          "rate": 0.036,
+          "shape": "sine",
+          "depth": 0.66,
+          "dest": "distortion"
+        }
       },
       {
         "name": "shrill_accent",
@@ -7388,7 +7404,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "solving_bells",
@@ -7402,16 +7419,16 @@
           11,
           14
         ],
-        "level": 0.03,
-        "rate": 0.3,
-        "decay": 2.2,
-        "tone": 0.35,
+        "level": 0.15,
+        "rate": 1.4,
+        "decay": 4.95,
+        "tone": 0.04,
         "pan": -0.3,
         "mute": false,
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.46,
+        "distortion": 0.0,
         "chord": [
           0
         ],
@@ -7421,7 +7438,11 @@
           "shape": "sine",
           "depth": 0.5,
           "dest": "detune"
-        }
+        },
+        "drift": 0.31,
+        "resonance": 0.56,
+        "gap": 6.5,
+        "play": 12.0
       }
     ],
     "swell_amount": 0.354,
@@ -7430,7 +7451,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 61.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

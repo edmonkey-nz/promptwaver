@@ -116,7 +116,10 @@
               "radial": 8
             }
           }
-        ]
+        ],
+        "spread": 0.82,
+        "max_strokes": 340,
+        "rotate": 0.0
       }
     }
   ],
@@ -125,17 +128,277 @@
     "#3ef08a",
     "#ffa724"
   ],
-  "camera": {
-    "glow": 0.0,
-    "trail": 0.35
-  },
+  "audio_patch": {},
   "modulation": [
     {
-      "source": "audio_level",
-      "dest": "visual.glow",
-      "depth": 0.4
+      "source": "voice.velocity_lead",
+      "dest": "visual.spread",
+      "depth": 0.4,
+      "glide": 2.45
     }
   ],
+  "camera": {
+    "glow": 0.0,
+    "trail": 0.35,
+    "disable_plane": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 90.0,
+    "master": 0.8,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.4,
+      "mix": 0.35
+    },
+    "voices": [
+      {
+        "name": "sub_engine",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 24,
+        "chord": [
+          0,
+          12
+        ],
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.6,
+        "tone": 0.25,
+        "level": 0.55,
+        "pan": 0.0,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.9,
+          "release": 3.0
+        },
+        "lfo": {
+          "on": false,
+          "dest": "sub",
+          "shape": "sine",
+          "rate": 0.04,
+          "depth": 0.4
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "resonance": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "hyperspace_pad",
+        "type": "pad",
+        "waveform": "triangle",
+        "note": 48,
+        "chord": [
+          0,
+          5,
+          9,
+          14
+        ],
+        "tone": 0.52,
+        "detune": 0.012,
+        "level": 0.45,
+        "pan": 0.0,
+        "env": {
+          "attack": 5.0,
+          "decay": 2.0,
+          "sustain": 0.88,
+          "release": 3.5
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.031,
+          "depth": 0.35
+        },
+        "mute": true,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "velocity_lead",
+        "type": "osc",
+        "waveform": "saw",
+        "note": 60,
+        "chord": [
+          0,
+          7,
+          12
+        ],
+        "unison": 4,
+        "detune": 0.018,
+        "tone": 0.68,
+        "level": 0.58,
+        "pan": 0.0,
+        "arp": {
+          "on": true,
+          "mode": "updown",
+          "rate": 1.5,
+          "decay": 0.25
+        },
+        "lfo": {
+          "on": true,
+          "dest": "detune",
+          "shape": "triangle",
+          "rate": 0.044,
+          "depth": 0.6
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "resonance": 0.0,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "light_burst",
+        "type": "bell",
+        "character": "glockenspiel",
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          5,
+          7,
+          10,
+          12
+        ],
+        "tone": 0.82,
+        "level": 0.28,
+        "rate": 0.35,
+        "decay": 2.2,
+        "gap": 8.5,
+        "play": 1.5,
+        "pan": 0.25,
+        "drift": 0.15,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "distant_chime",
+        "type": "bell",
+        "character": "celesta",
+        "note": 84,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ],
+        "tone": 0.75,
+        "level": 0.2,
+        "rate": 0.2,
+        "decay": 3.0,
+        "gap": 14.0,
+        "play": 0.8,
+        "pan": -0.3,
+        "drift": 0.12,
+        "mute": true,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ]
+      },
+      {
+        "name": "stellar_wind",
+        "type": "noise",
+        "level": 0.18,
+        "tone": 0.38,
+        "pan": 0.0,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.017,
+          "depth": 0.5
+        },
+        "mute": true,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      }
+    ],
+    "swell_amount": 0.3,
+    "eq": {
+      "low": 0.0,
+      "mid": 0.0,
+      "high": 0.0
+    },
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
   "image_prompt": "[demo] pattern x",
-  "soundscape": {}
+  "audio_prompt": "hyperspace, rockets, light speed,",
+  "generation_settings": {
+    "audio_cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 6436,
+      "output_tokens": 1015,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0115
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

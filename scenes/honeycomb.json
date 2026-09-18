@@ -336,6 +336,11 @@
       "hi": 1.806,
       "in_max": 0.38,
       "glide": 4.95
+    },
+    {
+      "source": "mic_level",
+      "dest": "visual.scale",
+      "depth": 0.3
     }
   ],
   "camera": {
@@ -347,7 +352,7 @@
     "trail": 0.35,
     "kaleidoscope_segments": 0,
     "bloom_spread": 0.005,
-    "bloom_intensity": 2.5,
+    "bloom_intensity": 1.0,
     "line_curve": -0.91,
     "line_width": 1.0
   },
@@ -410,14 +415,14 @@
           10,
           14
         ],
-        "level": 1.0,
+        "level": 0.58,
         "unison": 6,
         "detune": 0.004,
         "tone": 0.92,
         "resonance": 0.81,
         "lfo": {
-          "on": false,
-          "dest": "tone",
+          "on": true,
+          "dest": "level",
           "shape": "sine",
           "rate": 0.031,
           "depth": 0.28
@@ -426,7 +431,7 @@
           "attack": 3.61,
           "decay": 3.06,
           "sustain": 0.85,
-          "release": 5
+          "release": 5.0
         },
         "pan": 0.0,
         "mute": false,
@@ -443,9 +448,18 @@
         "arp": {
           "on": true,
           "mode": "up",
-          "rate": 2,
+          "rate": 1.75,
           "decay": 0.3
-        }
+        },
+        "lfos": [
+          {
+            "on": true,
+            "dest": "decay",
+            "shape": "sine",
+            "rate": 0.017,
+            "depth": 0.72
+          }
+        ]
       },
       {
         "name": "pollen_pulse",
@@ -459,7 +473,7 @@
           9,
           12
         ],
-        "level": 0.32,
+        "level": 0.56,
         "rate": 0.4,
         "decay": 2.8,
         "tone": 0.58,
@@ -479,17 +493,25 @@
             "shape": "sine",
             "rate": 0.017,
             "depth": 0.22
+          },
+          {
+            "on": true,
+            "dest": "gap",
+            "shape": "sine",
+            "rate": 0.012,
+            "depth": 0.6
           }
         ],
         "pan": 0.0,
-        "mute": true,
+        "mute": false,
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.0,
+        "distortion": 0.21,
         "chord": [
           0
-        ]
+        ],
+        "gap": 9.5
       },
       {
         "name": "amber_bell",
@@ -543,7 +565,7 @@
         ]
       }
     ],
-    "swell_amount": 0.444,
+    "swell_amount": 0.73,
     "distortion": 0.0,
     "delay": {
       "time": 0.4,
@@ -555,7 +577,7 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "filter_sweep_amount": 0.0
+    "filter_sweep_amount": 0.27
   },
   "audio_link": 1.0,
   "midi_overrides": {},

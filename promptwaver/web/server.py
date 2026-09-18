@@ -376,6 +376,26 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
                          float(m.get("depth", 0.3)))
     elif t == "mod_remove":
         engine.remove_route(int(m.get("index", -1)))
+    # --- session recording ---------------------------------------------
+    # `rec_takes` is answered on demand and scoped to one scene, so the
+    # dropdown only ever offers takes that belong to what is loaded.
+    elif t == "rec_start":
+        engine.rec_start()
+    elif t == "rec_stop":
+        engine.rec_stop()
+    elif t == "rec_play":
+        engine.rec_play(str(m.get("name", "")))
+    elif t == "rec_pause":
+        engine.rec_pause(m.get("value"))
+    elif t == "rec_take_control":
+        engine.rec_take_control(punch=bool(m.get("punch", False)))
+    elif t == "rec_delete":
+        engine.rec_delete(str(m.get("name", "")))
+        await ws.send_json({"type": "rec_takes",
+                            "takes": engine.rec_list(m.get("scene"))})
+    elif t == "rec_takes":
+        await ws.send_json({"type": "rec_takes",
+                            "takes": engine.rec_list(m.get("scene"))})
     elif t == "scene_update":
         engine.update_current_scene(camera=m.get("camera", True), soundscape=m.get("soundscape", True))
     elif t == "scene_load":

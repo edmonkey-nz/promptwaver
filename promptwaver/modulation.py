@@ -184,6 +184,12 @@ class ModMatrix:
     def __init__(self):
         self.sources: dict[str, Source] = {}
         self.routes: list[Route] = []
+        # {destination: last value returned by `value()`} — the live,
+        # post-routing number, which exists nowhere else: `Scene._resolve`
+        # consumes it immediately and the spec keeps the AUTHORED value so
+        # saves stay faithful. The UI's ghost markers read this. Only numbers
+        # are recorded; `value()` is also handed `defs`/`nodes` and the like.
+        self.last_value: dict[str, float] = {}
         self._values: dict[str, float] = {}
         # per-source multiplier — the "level effect": turn a whole source's
         # influence up or down (e.g. all audio_level-driven routes at once)
@@ -215,6 +221,11 @@ class ModMatrix:
         self._glide_stash = {(i, r.source, r.dest): r._smooth
                              for i, r in enumerate(self.routes) if r._smooth is not None}
         self.routes.clear()
+        # Routes are rebuilt from the spec on every edit, so a destination
+        # that just lost its last route would otherwise keep reporting the
+        # value it was left at — a ghost marker frozen where nothing is
+        # driving it any more.
+        self.last_value.clear()
 
     # per-tick
     def update(self, t: float, dt: float):
@@ -264,15 +275,22 @@ class ModMatrix:
         """
         v = base
         has_range = False
+        touched = False
         for r in self.routes:
             if r.dest != dest:
                 continue
             if r.mode == "range":
                 has_range = True
                 continue
+            touched = True
             scale = self.source_scale.get(r.source, 1.0)
             v += (self._src(r) + r.bias) * r.depth * scale
         if not has_range:
+            # Recorded only when a route actually touched this destination, so
+            # the dict stays the size of the routing table rather than growing
+            # an entry for every param of every layer on every frame.
+            if touched and isinstance(v, (int, float)) and not isinstance(v, bool):
+                self.last_value[dest] = float(v)
             return v
         ranged, n = 0.0, 0
         for r in self.routes:
@@ -284,4 +302,6 @@ class ModMatrix:
             if r.dest == dest and r.mode != "range":
                 scale = self.source_scale.get(r.source, 1.0)
                 v += (self._src(r) + r.bias) * r.depth * scale
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            self.last_value[dest] = float(v)
         return v

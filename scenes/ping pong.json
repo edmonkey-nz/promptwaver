@@ -1,0 +1,5237 @@
+{
+  "name": "ping pong",
+  "layers": [
+    {
+      "generator": "world",
+      "params": {
+        "defs": {
+          "floor": [
+            {
+              "op": "grid",
+              "w": 100,
+              "h": 100,
+              "nx": 20,
+              "ny": 20,
+              "plane": "xz",
+              "c": [
+                0,
+                -2,
+                0
+              ]
+            }
+          ],
+          "ball": [
+            {
+              "op": "circle",
+              "r": 0.25,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "circle",
+              "r": 0.25,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            },
+            {
+              "op": "circle",
+              "r": 0.25,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 12
+            }
+          ],
+          "table_edge": [
+            {
+              "op": "line",
+              "a": [
+                -3,
+                0,
+                0
+              ],
+              "b": [
+                3,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -3,
+                0,
+                0
+              ],
+              "b": [
+                -3,
+                -0.4,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                3,
+                0,
+                0
+              ],
+              "b": [
+                3,
+                -0.4,
+                0
+              ]
+            }
+          ],
+          "paddle": [
+            {
+              "op": "rect",
+              "w": 1.2,
+              "h": 0.3,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.6,
+                -0.15,
+                0
+              ],
+              "b": [
+                -0.6,
+                0.15,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                0.6,
+                -0.15,
+                0
+              ],
+              "b": [
+                0.6,
+                0.15,
+                0
+              ]
+            }
+          ],
+          "net": [
+            {
+              "op": "line",
+              "a": [
+                0,
+                0,
+                0
+              ],
+              "b": [
+                0,
+                1.5,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.3,
+                1.5,
+                0
+              ],
+              "b": [
+                0.3,
+                1.5,
+                0
+              ]
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0.1,
+                  0
+                ],
+                [
+                  0.05,
+                  0.2,
+                  0
+                ],
+                [
+                  0,
+                  0.3,
+                  0
+                ],
+                [
+                  -0.05,
+                  0.2,
+                  0
+                ],
+                [
+                  0,
+                  0.1,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0.4,
+                  0
+                ],
+                [
+                  0.05,
+                  0.5,
+                  0
+                ],
+                [
+                  0,
+                  0.6,
+                  0
+                ],
+                [
+                  -0.05,
+                  0.5,
+                  0
+                ],
+                [
+                  0,
+                  0.4,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0.7,
+                  0
+                ],
+                [
+                  0.05,
+                  0.8,
+                  0
+                ],
+                [
+                  0,
+                  0.9,
+                  0
+                ],
+                [
+                  -0.05,
+                  0.8,
+                  0
+                ],
+                [
+                  0,
+                  0.7,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  1.0,
+                  0
+                ],
+                [
+                  0.05,
+                  1.1,
+                  0
+                ],
+                [
+                  0,
+                  1.2,
+                  0
+                ],
+                [
+                  -0.05,
+                  1.1,
+                  0
+                ],
+                [
+                  0,
+                  1.0,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "arch": [
+            {
+              "op": "arc",
+              "r": 2,
+              "a0": 0,
+              "a1": 3.14159,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -2,
+                0,
+                0
+              ],
+              "b": [
+                -2,
+                -0.3,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                2,
+                0,
+                0
+              ],
+              "b": [
+                2,
+                -0.3,
+                0
+              ]
+            }
+          ],
+          "vibration_lines": [
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0.1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0.05,
+                  0
+                ],
+                [
+                  -0.1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  -0.05,
+                  0
+                ],
+                [
+                  0.1,
+                  0,
+                  0
+                ]
+              ],
+              "closed": false
+            },
+            {
+              "op": "polyline",
+              "pts": [
+                [
+                  0,
+                  0.2,
+                  0
+                ],
+                [
+                  0.08,
+                  0.2,
+                  0
+                ],
+                [
+                  0,
+                  0.25,
+                  0
+                ],
+                [
+                  -0.08,
+                  0.2,
+                  0
+                ],
+                [
+                  0,
+                  0.15,
+                  0
+                ]
+              ],
+              "closed": false
+            }
+          ],
+          "spin_cage": [
+            {
+              "op": "circle",
+              "r": 1,
+              "plane": "xy",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "circle",
+              "r": 1,
+              "plane": "xz",
+              "c": [
+                0,
+                0,
+                0
+              ],
+              "seg": 8
+            },
+            {
+              "op": "line",
+              "a": [
+                0,
+                -1,
+                0
+              ],
+              "b": [
+                0,
+                1,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -1,
+                0,
+                0
+              ],
+              "b": [
+                1,
+                0,
+                0
+              ]
+            }
+          ],
+          "barrier": [
+            {
+              "op": "rect",
+              "w": 0.4,
+              "h": 2,
+              "plane": "yz",
+              "c": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.2,
+                -1,
+                0
+              ],
+              "b": [
+                0.2,
+                -1,
+                0
+              ]
+            },
+            {
+              "op": "line",
+              "a": [
+                -0.2,
+                1,
+                0
+              ],
+              "b": [
+                0.2,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "shape_speed": 0.25,
+        "nodes": [
+          {
+            "shape": "floor",
+            "pos": [
+              0,
+              -2,
+              0
+            ],
+            "scale": 1,
+            "color": [
+              0.15,
+              0.18,
+              0.22
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -8,
+              1.2,
+              -12
+            ],
+            "scale": 1,
+            "color": [
+              1,
+              0.95,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.15,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -7.2,
+              0.8,
+              -11.5
+            ],
+            "scale": 0.95,
+            "color": [
+              0.98,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.8,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.8,
+              1.5,
+              -12.3
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.5,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9.2,
+              0.6,
+              -11.8
+            ],
+            "scale": 0.9,
+            "color": [
+              0.97,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.1,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -7.8,
+              1.3,
+              -13.1
+            ],
+            "scale": 1.02,
+            "color": [
+              1,
+              0.94,
+              0.82
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.2,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -8.5,
+              0.9,
+              -12.6
+            ],
+            "scale": 0.98,
+            "color": [
+              0.99,
+              0.91,
+              0.79
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.9,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -8,
+              0,
+              -12
+            ],
+            "scale": 1.2,
+            "color": [
+              0.3,
+              0.35,
+              0.42
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -8.5,
+              0.5,
+              -11
+            ],
+            "scale": 1,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.5,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -8,
+              0.2,
+              -12
+            ],
+            "scale": 1,
+            "color": [
+              0.5,
+              0.55,
+              0.65
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              -8,
+              1,
+              -12
+            ],
+            "scale": 1.5,
+            "color": [
+              0.45,
+              0.4,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.1,
+              "amp": 0.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -8.2,
+              -0.5,
+              -12.2
+            ],
+            "scale": 2,
+            "color": [
+              0.8,
+              0.75,
+              0.65
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6.5,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -3.5,
+              1.1,
+              -8.2
+            ],
+            "scale": 1.03,
+            "color": [
+              1,
+              0.96,
+              0.86
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.9,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -4.2,
+              0.7,
+              -8.8
+            ],
+            "scale": 0.92,
+            "color": [
+              0.98,
+              0.89,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.3,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -2.8,
+              1.4,
+              -7.9
+            ],
+            "scale": 1.04,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.6,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -5.1,
+              0.5,
+              -8.5
+            ],
+            "scale": 0.88,
+            "color": [
+              0.96,
+              0.88,
+              0.75
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.1,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -3.9,
+              1.2,
+              -9.1
+            ],
+            "scale": 1.01,
+            "color": [
+              0.99,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.7,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -4.6,
+              0.8,
+              -7.6
+            ],
+            "scale": 0.97,
+            "color": [
+              1,
+              0.92,
+              0.79
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -4,
+              0,
+              -8.5
+            ],
+            "scale": 1.3,
+            "color": [
+              0.32,
+              0.37,
+              0.44
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -4.3,
+              0.5,
+              -7
+            ],
+            "scale": 1.1,
+            "color": [
+              0.68,
+              0.58,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -4,
+              0.2,
+              -8.5
+            ],
+            "scale": 1.1,
+            "color": [
+              0.52,
+              0.57,
+              0.67
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -4,
+              1.2,
+              -8.5
+            ],
+            "scale": 1.3,
+            "color": [
+              0.42,
+              0.38,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.3,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -4.1,
+              -0.4,
+              -8.7
+            ],
+            "scale": 1.8,
+            "color": [
+              0.79,
+              0.74,
+              0.64
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.2,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              0.5,
+              1,
+              5.3
+            ],
+            "scale": 0.99,
+            "color": [
+              1,
+              0.95,
+              0.84
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.1,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              1.2,
+              0.6,
+              4.9
+            ],
+            "scale": 0.94,
+            "color": [
+              0.97,
+              0.91,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -0.3,
+              1.3,
+              5.8
+            ],
+            "scale": 1.06,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.4,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              1.8,
+              0.7,
+              5.1
+            ],
+            "scale": 0.91,
+            "color": [
+              0.96,
+              0.87,
+              0.74
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.95,
+              "amp": 0.26,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              0.8,
+              1.1,
+              6.2
+            ],
+            "scale": 1,
+            "color": [
+              0.99,
+              0.94,
+              0.82
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.2,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -0.1,
+              0.9,
+              4.6
+            ],
+            "scale": 0.96,
+            "color": [
+              1,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.8,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              0.5,
+              0,
+              5.2
+            ],
+            "scale": 1.4,
+            "color": [
+              0.3,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              0.2,
+              0.5,
+              6.5
+            ],
+            "scale": 1.05,
+            "color": [
+              0.72,
+              0.62,
+              0.52
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.6,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              0.5,
+              0.2,
+              5.2
+            ],
+            "scale": 1.2,
+            "color": [
+              0.51,
+              0.56,
+              0.66
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              0.5,
+              1.1,
+              5.2
+            ],
+            "scale": 1.6,
+            "color": [
+              0.44,
+              0.39,
+              0.49
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              0.5,
+              0.5,
+              5.2
+            ],
+            "scale": 0.8,
+            "color": [
+              0.35,
+              0.3,
+              0.4
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              0.3,
+              -0.3,
+              5.4
+            ],
+            "scale": 2.1,
+            "color": [
+              0.81,
+              0.76,
+              0.66
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6.8,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              5.8,
+              1.2,
+              12.1
+            ],
+            "scale": 1.02,
+            "color": [
+              1,
+              0.96,
+              0.87
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.7,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              6.5,
+              0.8,
+              11.6
+            ],
+            "scale": 0.93,
+            "color": [
+              0.98,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.4,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              5.1,
+              1.5,
+              12.5
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.3,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              7.2,
+              0.6,
+              11.9
+            ],
+            "scale": 0.89,
+            "color": [
+              0.97,
+              0.88,
+              0.76
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.05,
+              "amp": 0.27,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              6.1,
+              1.3,
+              13.2
+            ],
+            "scale": 1.03,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.8,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              5.4,
+              0.95,
+              12.7
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.94,
+              0.83
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              5.8,
+              0,
+              12.1
+            ],
+            "scale": 1.25,
+            "color": [
+              0.31,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              5.3,
+              0.5,
+              13.4
+            ],
+            "scale": 1.08,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.7,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              5.8,
+              0.2,
+              12.1
+            ],
+            "scale": 0.95,
+            "color": [
+              0.53,
+              0.58,
+              0.68
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              5.8,
+              1.3,
+              12.1
+            ],
+            "scale": 1.2,
+            "color": [
+              0.43,
+              0.38,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.5,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              5.6,
+              -0.5,
+              12.3
+            ],
+            "scale": 1.9,
+            "color": [
+              0.82,
+              0.77,
+              0.67
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.0,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              11.2,
+              1.1,
+              8.7
+            ],
+            "scale": 1.01,
+            "color": [
+              1,
+              0.95,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.3,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12,
+              0.7,
+              8.1
+            ],
+            "scale": 0.92,
+            "color": [
+              0.97,
+              0.89,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.0,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              10.4,
+              1.4,
+              9.1
+            ],
+            "scale": 1.04,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.5,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12.8,
+              0.5,
+              7.9
+            ],
+            "scale": 0.87,
+            "color": [
+              0.96,
+              0.86,
+              0.74
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.15,
+              "amp": 0.29,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              11.6,
+              1.2,
+              9.4
+            ],
+            "scale": 1.02,
+            "color": [
+              0.99,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              11.1,
+              0.8,
+              7.6
+            ],
+            "scale": 0.95,
+            "color": [
+              1,
+              0.92,
+              0.79
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.1,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              11.2,
+              0,
+              8.7
+            ],
+            "scale": 1.35,
+            "color": [
+              0.33,
+              0.37,
+              0.44
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              10.9,
+              0.5,
+              7.3
+            ],
+            "scale": 1.12,
+            "color": [
+              0.69,
+              0.59,
+              0.49
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.9,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              11.2,
+              0.2,
+              8.7
+            ],
+            "scale": 1.15,
+            "color": [
+              0.5,
+              0.55,
+              0.65
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              11.2,
+              1.2,
+              8.7
+            ],
+            "scale": 1.45,
+            "color": [
+              0.45,
+              0.4,
+              0.5
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.2,
+              "amp": 0.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              11.2,
+              0.5,
+              8.7
+            ],
+            "scale": 0.9,
+            "color": [
+              0.34,
+              0.29,
+              0.39
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              11,
+              -0.4,
+              8.9
+            ],
+            "scale": 2.0,
+            "color": [
+              0.8,
+              0.75,
+              0.65
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6.9,
+              "amp": 0.11,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              14.5,
+              1.3,
+              -3.2
+            ],
+            "scale": 1.0,
+            "color": [
+              1,
+              0.96,
+              0.86
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.8,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              15.3,
+              0.9,
+              -3.8
+            ],
+            "scale": 0.94,
+            "color": [
+              0.98,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.2,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              13.8,
+              1.6,
+              -2.7
+            ],
+            "scale": 1.06,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.6,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              16.1,
+              0.7,
+              -4.1
+            ],
+            "scale": 0.88,
+            "color": [
+              0.96,
+              0.87,
+              0.75
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.0,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              14.9,
+              1.4,
+              -2.3
+            ],
+            "scale": 1.04,
+            "color": [
+              0.99,
+              0.94,
+              0.82
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.1,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              15.6,
+              1.0,
+              -4.5
+            ],
+            "scale": 0.97,
+            "color": [
+              1,
+              0.93,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.9,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              14.8,
+              0,
+              -3.2
+            ],
+            "scale": 1.3,
+            "color": [
+              0.3,
+              0.35,
+              0.42
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              14.3,
+              0.5,
+              -5.2
+            ],
+            "scale": 1.06,
+            "color": [
+              0.71,
+              0.61,
+              0.51
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.5,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              14.8,
+              0.2,
+              -3.2
+            ],
+            "scale": 1.18,
+            "color": [
+              0.49,
+              0.54,
+              0.64
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              14.8,
+              1.4,
+              -3.2
+            ],
+            "scale": 1.4,
+            "color": [
+              0.41,
+              0.37,
+              0.47
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.4,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              14.6,
+              -0.6,
+              -3.4
+            ],
+            "scale": 2.2,
+            "color": [
+              0.83,
+              0.78,
+              0.68
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.1,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              9.1,
+              1.2,
+              -13.4
+            ],
+            "scale": 0.99,
+            "color": [
+              1,
+              0.94,
+              0.84
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              9.9,
+              0.8,
+              -12.9
+            ],
+            "scale": 0.91,
+            "color": [
+              0.97,
+              0.88,
+              0.76
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.3,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              8.3,
+              1.5,
+              -13.9
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.4,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              10.7,
+              0.6,
+              -12.6
+            ],
+            "scale": 0.9,
+            "color": [
+              0.96,
+              0.86,
+              0.73
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.08,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              9.5,
+              1.3,
+              -14.2
+            ],
+            "scale": 1.01,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.8,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              8.8,
+              0.95,
+              -13.5
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              9.2,
+              0,
+              -13.4
+            ],
+            "scale": 1.28,
+            "color": [
+              0.32,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              8.7,
+              0.5,
+              -14.7
+            ],
+            "scale": 1.09,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              9.2,
+              0.2,
+              -13.4
+            ],
+            "scale": 0.98,
+            "color": [
+              0.52,
+              0.57,
+              0.67
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              9.2,
+              1.2,
+              -13.4
+            ],
+            "scale": 1.55,
+            "color": [
+              0.46,
+              0.41,
+              0.51
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              9,
+              -0.5,
+              -13.6
+            ],
+            "scale": 1.95,
+            "color": [
+              0.81,
+              0.76,
+              0.66
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.3,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -11.8,
+              1.0,
+              6.9
+            ],
+            "scale": 1.03,
+            "color": [
+              1,
+              0.95,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -11.1,
+              0.6,
+              6.3
+            ],
+            "scale": 0.93,
+            "color": [
+              0.98,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -12.5,
+              1.3,
+              7.4
+            ],
+            "scale": 1.04,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.5,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -10.3,
+              0.7,
+              5.9
+            ],
+            "scale": 0.89,
+            "color": [
+              0.96,
+              0.87,
+              0.75
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.02,
+              "amp": 0.26,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -11.5,
+              1.1,
+              7.7
+            ],
+            "scale": 1.0,
+            "color": [
+              0.99,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.0,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -11.9,
+              0.8,
+              6.1
+            ],
+            "scale": 0.96,
+            "color": [
+              1,
+              0.92,
+              0.79
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.1,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -11.5,
+              0,
+              6.8
+            ],
+            "scale": 1.32,
+            "color": [
+              0.31,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -12.2,
+              0.5,
+              5.5
+            ],
+            "scale": 1.11,
+            "color": [
+              0.69,
+              0.59,
+              0.49
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.6,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -11.5,
+              0.2,
+              6.8
+            ],
+            "scale": 1.13,
+            "color": [
+              0.51,
+              0.56,
+              0.66
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -11.5,
+              1.2,
+              6.8
+            ],
+            "scale": 1.25,
+            "color": [
+              0.42,
+              0.38,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.2,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              -11.5,
+              0.5,
+              6.8
+            ],
+            "scale": 0.85,
+            "color": [
+              0.36,
+              0.31,
+              0.41
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -11.7,
+              -0.4,
+              7
+            ],
+            "scale": 2.05,
+            "color": [
+              0.79,
+              0.74,
+              0.64
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6.6,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -16.2,
+              1.1,
+              -8.5
+            ],
+            "scale": 1.02,
+            "color": [
+              1,
+              0.96,
+              0.86
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.8,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -15.4,
+              0.7,
+              -9.1
+            ],
+            "scale": 0.92,
+            "color": [
+              0.97,
+              0.89,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.4,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -17,
+              1.4,
+              -8
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.3,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -14.6,
+              0.5,
+              -9.4
+            ],
+            "scale": 0.87,
+            "color": [
+              0.96,
+              0.86,
+              0.74
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.06,
+              "amp": 0.27,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -15.8,
+              1.2,
+              -7.6
+            ],
+            "scale": 1.03,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -16.5,
+              0.9,
+              -8.8
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.94,
+              0.83
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -15.8,
+              0,
+              -8.5
+            ],
+            "scale": 1.26,
+            "color": [
+              0.3,
+              0.35,
+              0.42
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -16.5,
+              0.5,
+              -7.2
+            ],
+            "scale": 1.07,
+            "color": [
+              0.71,
+              0.61,
+              0.51
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.7,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -15.8,
+              0.2,
+              -8.5
+            ],
+            "scale": 1.16,
+            "color": [
+              0.5,
+              0.55,
+              0.65
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              -15.8,
+              1.1,
+              -8.5
+            ],
+            "scale": 1.5,
+            "color": [
+              0.44,
+              0.39,
+              0.49
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -16,
+              -0.5,
+              -8.7
+            ],
+            "scale": 2.15,
+            "color": [
+              0.82,
+              0.77,
+              0.67
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.2,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -5.3,
+              1.4,
+              14.2
+            ],
+            "scale": 1.01,
+            "color": [
+              1,
+              0.95,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.1,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -4.5,
+              1.0,
+              13.7
+            ],
+            "scale": 0.92,
+            "color": [
+              0.97,
+              0.89,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.0,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.1,
+              1.7,
+              14.7
+            ],
+            "scale": 1.04,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.5,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -3.7,
+              0.8,
+              13.3
+            ],
+            "scale": 0.88,
+            "color": [
+              0.96,
+              0.86,
+              0.74
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.04,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -4.9,
+              1.5,
+              15
+            ],
+            "scale": 1.02,
+            "color": [
+              0.99,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.1,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -5.6,
+              1.1,
+              14.4
+            ],
+            "scale": 0.97,
+            "color": [
+              1,
+              0.93,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -5.2,
+              0,
+              14.1
+            ],
+            "scale": 1.29,
+            "color": [
+              0.31,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -5.9,
+              0.5,
+              15.4
+            ],
+            "scale": 1.1,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -5.2,
+              0.2,
+              14.1
+            ],
+            "scale": 0.97,
+            "color": [
+              0.52,
+              0.57,
+              0.67
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -5.2,
+              1.3,
+              14.1
+            ],
+            "scale": 1.22,
+            "color": [
+              0.43,
+              0.38,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.3,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -5.4,
+              -0.6,
+              14.3
+            ],
+            "scale": 1.97,
+            "color": [
+              0.8,
+              0.75,
+              0.65
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.0,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              2.1,
+              -0.8,
+              -18.5
+            ],
+            "scale": 0.99,
+            "color": [
+              1,
+              0.94,
+              0.84
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              2.9,
+              -1.2,
+              -18
+            ],
+            "scale": 0.91,
+            "color": [
+              0.97,
+              0.88,
+              0.76
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.3,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              1.3,
+              -0.5,
+              -19
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.4,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              3.7,
+              -1.4,
+              -17.7
+            ],
+            "scale": 0.9,
+            "color": [
+              0.96,
+              0.86,
+              0.73
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.08,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              2.5,
+              -0.9,
+              -19.3
+            ],
+            "scale": 1.01,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.8,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              1.8,
+              -1.1,
+              -18.6
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              2.2,
+              0,
+              -18.5
+            ],
+            "scale": 1.28,
+            "color": [
+              0.32,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              1.7,
+              0.5,
+              -19.8
+            ],
+            "scale": 1.09,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              2.2,
+              0.2,
+              -18.5
+            ],
+            "scale": 0.98,
+            "color": [
+              0.52,
+              0.57,
+              0.67
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              2.2,
+              1.2,
+              -18.5
+            ],
+            "scale": 1.55,
+            "color": [
+              0.46,
+              0.41,
+              0.51
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              2,
+              -0.5,
+              -18.7
+            ],
+            "scale": 1.95,
+            "color": [
+              0.81,
+              0.76,
+              0.66
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.3,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9.8,
+              -1.1,
+              19.3
+            ],
+            "scale": 1.0,
+            "color": [
+              1,
+              0.96,
+              0.86
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.8,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9,
+              -1.5,
+              18.8
+            ],
+            "scale": 0.94,
+            "color": [
+              0.98,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.2,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -10.6,
+              -0.8,
+              19.8
+            ],
+            "scale": 1.06,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.6,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -8.2,
+              -1.7,
+              18.4
+            ],
+            "scale": 0.88,
+            "color": [
+              0.96,
+              0.87,
+              0.75
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.0,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9.4,
+              -1.2,
+              20.1
+            ],
+            "scale": 1.04,
+            "color": [
+              0.99,
+              0.94,
+              0.82
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.1,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -10,
+              -0.9,
+              19.5
+            ],
+            "scale": 0.97,
+            "color": [
+              1,
+              0.93,
+              0.8
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.9,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -9.2,
+              0,
+              19.3
+            ],
+            "scale": 1.3,
+            "color": [
+              0.3,
+              0.35,
+              0.42
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -9.9,
+              0.5,
+              20.6
+            ],
+            "scale": 1.06,
+            "color": [
+              0.71,
+              0.61,
+              0.51
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.5,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -9.2,
+              0.2,
+              19.3
+            ],
+            "scale": 1.18,
+            "color": [
+              0.49,
+              0.54,
+              0.64
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -9.2,
+              1.4,
+              19.3
+            ],
+            "scale": 1.4,
+            "color": [
+              0.41,
+              0.37,
+              0.47
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.4,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              -9.2,
+              0.5,
+              19.3
+            ],
+            "scale": 0.8,
+            "color": [
+              0.35,
+              0.3,
+              0.4
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -9.4,
+              -0.6,
+              19.5
+            ],
+            "scale": 2.2,
+            "color": [
+              0.83,
+              0.78,
+              0.68
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.1,
+              "amp": 0.14,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              16.5,
+              -1.3,
+              4.1
+            ],
+            "scale": 0.99,
+            "color": [
+              1,
+              0.94,
+              0.84
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              17.3,
+              -1.7,
+              3.5
+            ],
+            "scale": 0.91,
+            "color": [
+              0.97,
+              0.88,
+              0.76
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.3,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              15.7,
+              -1,
+              4.6
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.4,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              18.1,
+              -1.9,
+              3.1
+            ],
+            "scale": 0.9,
+            "color": [
+              0.96,
+              0.86,
+              0.73
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.08,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              16.9,
+              -1.4,
+              4.9
+            ],
+            "scale": 1.01,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.8,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              16.2,
+              -1.6,
+              4.2
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              16.6,
+              0,
+              4.1
+            ],
+            "scale": 1.28,
+            "color": [
+              0.32,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              16.1,
+              0.5,
+              2.8
+            ],
+            "scale": 1.09,
+            "color": [
+              0.7,
+              0.6,
+              0.5
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.8,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              16.6,
+              0.2,
+              4.1
+            ],
+            "scale": 0.98,
+            "color": [
+              0.52,
+              0.57,
+              0.67
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              16.6,
+              1.2,
+              4.1
+            ],
+            "scale": 1.55,
+            "color": [
+              0.46,
+              0.41,
+              0.51
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.3,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              16.4,
+              -0.5,
+              4.3
+            ],
+            "scale": 1.95,
+            "color": [
+              0.81,
+              0.76,
+              0.66
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.3,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -19.2,
+              -1.4,
+              -5.7
+            ],
+            "scale": 1.03,
+            "color": [
+              1,
+              0.95,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.2,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -18.4,
+              -1.8,
+              -6.3
+            ],
+            "scale": 0.93,
+            "color": [
+              0.98,
+              0.9,
+              0.78
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.22,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -20,
+              -1.1,
+              -5.2
+            ],
+            "scale": 1.04,
+            "color": [
+              1,
+              0.97,
+              0.88
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.5,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -17.6,
+              -2,
+              -6.6
+            ],
+            "scale": 0.89,
+            "color": [
+              0.96,
+              0.87,
+              0.75
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.02,
+              "amp": 0.26,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -18.8,
+              -1.5,
+              -4.9
+            ],
+            "scale": 1.0,
+            "color": [
+              0.99,
+              0.93,
+              0.81
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.0,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -19.5,
+              -1.7,
+              -6.1
+            ],
+            "scale": 0.96,
+            "color": [
+              1,
+              0.92,
+              0.79
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.1,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -18.8,
+              0,
+              -5.7
+            ],
+            "scale": 1.32,
+            "color": [
+              0.31,
+              0.36,
+              0.43
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -19.5,
+              0.5,
+              -4.4
+            ],
+            "scale": 1.11,
+            "color": [
+              0.69,
+              0.59,
+              0.49
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.6,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -18.8,
+              0.2,
+              -5.7
+            ],
+            "scale": 1.13,
+            "color": [
+              0.51,
+              0.56,
+              0.66
+            ]
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -18.8,
+              1.2,
+              -5.7
+            ],
+            "scale": 1.25,
+            "color": [
+              0.42,
+              0.38,
+              0.48
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.2,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              -18.8,
+              0.5,
+              -5.7
+            ],
+            "scale": 0.85,
+            "color": [
+              0.36,
+              0.31,
+              0.41
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -19,
+              -0.4,
+              -5.5
+            ],
+            "scale": 2.05,
+            "color": [
+              0.79,
+              0.74,
+              0.64
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 6.6,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12.3,
+              -1.6,
+              -14.8
+            ],
+            "scale": 1.02,
+            "color": [
+              1,
+              0.96,
+              0.86
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.8,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              13.1,
+              -2,
+              -14.3
+            ],
+            "scale": 0.92,
+            "color": [
+              0.97,
+              0.89,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.4,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              11.5,
+              -1.3,
+              -15.3
+            ],
+            "scale": 1.05,
+            "color": [
+              1,
+              0.98,
+              0.89
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.3,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              13.9,
+              -2.2,
+              -14
+            ],
+            "scale": 0.87,
+            "color": [
+              0.96,
+              0.86,
+              0.74
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.06,
+              "amp": 0.27,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12.7,
+              -1.7,
+              -15.6
+            ],
+            "scale": 1.03,
+            "color": [
+              0.99,
+              0.92,
+              0.8
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.9,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12,
+              -1.9,
+              -14.9
+            ],
+            "scale": 0.98,
+            "color": [
+              1,
+              0.94,
+              0.83
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.0,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              12.4,
+              0,
+              -14.8
+            ],
+            "scale": 1.26,
+            "color": [
+              0.3,
+              0.35,
+              0.42
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              11.7,
+              0.5,
+              -16.1
+            ],
+            "scale": 1.07,
+            "color": [
+              0.71,
+              0.61,
+              0.51
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.7,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              12.4,
+              0.2,
+              -14.8
+            ],
+            "scale": 1.16,
+            "color": [
+              0.5,
+              0.55,
+              0.65
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              12.4,
+              1.1,
+              -14.8
+            ],
+            "scale": 1.5,
+            "color": [
+              0.44,
+              0.39,
+              0.49
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.4,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              12.2,
+              -0.5,
+              -15
+            ],
+            "scale": 2.15,
+            "color": [
+              0.82,
+              0.77,
+              0.67
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.2,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -6.383,
+              -0.396,
+              -10.355
+            ],
+            "scale": 0.95,
+            "color": [
+              0.544,
+              0.516,
+              0.698
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -9.179,
+              -0.176,
+              -7.094
+            ],
+            "scale": 0.916,
+            "color": [
+              0.695,
+              0.577,
+              0.493
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.859,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -8.104,
+              1.038,
+              -5.498
+            ],
+            "scale": 0.992,
+            "color": [
+              0.986,
+              0.946,
+              0.805
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.243,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.899,
+              2.066,
+              -1.735
+            ],
+            "scale": 1.288,
+            "color": [
+              1.0,
+              0.971,
+              0.92
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.509,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -5.27,
+              0.342,
+              1.028
+            ],
+            "scale": 0.772,
+            "color": [
+              0.935,
+              0.905,
+              0.732
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.141,
+              "amp": 0.29,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -3.305,
+              0.809,
+              2.478
+            ],
+            "scale": 0.927,
+            "color": [
+              0.516,
+              0.532,
+              0.662
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -3.341,
+              -0.491,
+              4.84
+            ],
+            "scale": 1.171,
+            "color": [
+              1.0,
+              0.941,
+              0.873
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.015,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -1.429,
+              0.031,
+              8.088
+            ],
+            "scale": 1.15,
+            "color": [
+              0.7,
+              0.598,
+              0.531
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.008,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -2.283,
+              1.124,
+              9.677
+            ],
+            "scale": 1.12,
+            "color": [
+              1.0,
+              1.0,
+              0.819
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.334,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              0.5,
+              0.594,
+              13.964
+            ],
+            "scale": 1.089,
+            "color": [
+              0.373,
+              0.331,
+              0.415
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              3.035,
+              1.669,
+              13.634
+            ],
+            "scale": 1.203,
+            "color": [
+              1.0,
+              0.917,
+              0.863
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.91,
+              "amp": 0.19,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              4.996,
+              1.478,
+              11.466
+            ],
+            "scale": 0.928,
+            "color": [
+              1.0,
+              0.966,
+              0.913
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.872,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              6.757,
+              -0.641,
+              12.449
+            ],
+            "scale": 0.86,
+            "color": [
+              0.922,
+              0.924,
+              0.755
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 5.035,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              10.097,
+              1.927,
+              9.721
+            ],
+            "scale": 0.959,
+            "color": [
+              0.96,
+              0.987,
+              0.85
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.824,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              12.388,
+              0.29,
+              7.745
+            ],
+            "scale": 1.207,
+            "color": [
+              0.274,
+              0.305,
+              0.45
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              13.372,
+              -0.857,
+              5.83
+            ],
+            "scale": 0.874,
+            "color": [
+              0.946,
+              0.889,
+              0.761
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.336,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12.661,
+              1.245,
+              3.305
+            ],
+            "scale": 1.121,
+            "color": [
+              0.998,
+              0.916,
+              0.742
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.331,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              14.83,
+              1.03,
+              2.021
+            ],
+            "scale": 0.842,
+            "color": [
+              0.944,
+              0.892,
+              0.834
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.029,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              15.271,
+              0.114,
+              -2.466
+            ],
+            "scale": 1.33,
+            "color": [
+              0.272,
+              0.359,
+              0.382
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              14.098,
+              -1.342,
+              -5.047
+            ],
+            "scale": 0.974,
+            "color": [
+              0.918,
+              0.881,
+              0.765
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.851,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              11.08,
+              0.985,
+              -7.614
+            ],
+            "scale": 0.966,
+            "color": [
+              1.0,
+              0.988,
+              0.898
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.104,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              10.531,
+              1.677,
+              -10.519
+            ],
+            "scale": 1.007,
+            "color": [
+              1.0,
+              0.933,
+              0.827
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.983,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              8.602,
+              -0.408,
+              -11.84
+            ],
+            "scale": 1.099,
+            "color": [
+              0.533,
+              0.553,
+              0.633
+            ]
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              7.024,
+              -0.891,
+              -13.231
+            ],
+            "scale": 2.475,
+            "color": [
+              0.799,
+              0.734,
+              0.604
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 5.732,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              5.607,
+              1.457,
+              -16.666
+            ],
+            "scale": 1.162,
+            "color": [
+              0.963,
+              1.0,
+              0.831
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.143,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              3.795,
+              0.496,
+              -16.587
+            ],
+            "scale": 1.242,
+            "color": [
+              0.755,
+              0.629,
+              0.558
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.409,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              4.759,
+              0.593,
+              -15.824
+            ],
+            "scale": 1.005,
+            "color": [
+              1.0,
+              0.948,
+              0.768
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.188,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "spin_cage",
+            "pos": [
+              -0.853,
+              1.67,
+              -15.495
+            ],
+            "scale": 1.421,
+            "color": [
+              0.421,
+              0.421,
+              0.47
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.193,
+              "amp": 0,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -0.939,
+              0.251,
+              -12.183
+            ],
+            "scale": 0.996,
+            "color": [
+              0.699,
+              0.599,
+              0.539
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 2.081,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              0.347,
+              0.473,
+              -9.853
+            ],
+            "scale": 1.546,
+            "color": [
+              0.293,
+              0.336,
+              0.41
+            ]
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -0.354,
+              0.531,
+              -5.437
+            ],
+            "scale": 0.98,
+            "color": [
+              0.682,
+              0.617,
+              0.488
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.689,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -2.921,
+              -0.496,
+              -4.59
+            ],
+            "scale": 2.483,
+            "color": [
+              0.813,
+              0.745,
+              0.658
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 7.436,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              -4.499,
+              0.183,
+              -1.207
+            ],
+            "scale": 1.738,
+            "color": [
+              0.854,
+              0.714,
+              0.663
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8.801,
+              "amp": 0.12,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -8.126,
+              0.231,
+              -0.102
+            ],
+            "scale": 1.107,
+            "color": [
+              0.475,
+              0.581,
+              0.67
+            ]
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -5.751,
+              0.13,
+              4.167
+            ],
+            "scale": 1.093,
+            "color": [
+              0.509,
+              0.569,
+              0.601
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -4.142,
+              -0.367,
+              6.852
+            ],
+            "scale": 1.121,
+            "color": [
+              1.0,
+              0.903,
+              0.889
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.386,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -7.219,
+              0.306,
+              7.963
+            ],
+            "scale": 1.585,
+            "color": [
+              0.321,
+              0.31,
+              0.456
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -2.643,
+              1.187,
+              13.532
+            ],
+            "scale": 0.924,
+            "color": [
+              0.957,
+              0.897,
+              0.857
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.725,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9.06,
+              0.78,
+              13.293
+            ],
+            "scale": 1.137,
+            "color": [
+              0.989,
+              0.958,
+              0.874
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.071,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -7.868,
+              1.419,
+              17.736
+            ],
+            "scale": 0.766,
+            "color": [
+              0.942,
+              0.895,
+              0.731
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.659,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.248,
+              0.641,
+              18.223
+            ],
+            "scale": 0.974,
+            "color": [
+              1.0,
+              0.941,
+              0.814
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.875,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -10.503,
+              -1.608,
+              17.959
+            ],
+            "scale": 0.936,
+            "color": [
+              0.979,
+              0.935,
+              0.779
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.593,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              -12.102,
+              1.279,
+              12.775
+            ],
+            "scale": 1.442,
+            "color": [
+              0.475,
+              0.431,
+              0.533
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.368,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -10.44,
+              -1.391,
+              9.737
+            ],
+            "scale": 1.097,
+            "color": [
+              0.974,
+              0.962,
+              0.785
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.448,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              -14.691,
+              1.026,
+              7.844
+            ],
+            "scale": 1.304,
+            "color": [
+              0.437,
+              0.367,
+              0.473
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 2.261,
+              "amp": 0.08,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -15.469,
+              1.146,
+              6.745
+            ],
+            "scale": 1.035,
+            "color": [
+              0.964,
+              0.884,
+              0.74
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 5.28,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              -14.367,
+              0.281,
+              3.428
+            ],
+            "scale": 0.786,
+            "color": [
+              0.333,
+              0.314,
+              0.381
+            ]
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              -14.311,
+              0.466,
+              -0.688
+            ],
+            "scale": 1.433,
+            "color": [
+              0.357,
+              0.402,
+              0.477
+            ]
+          },
+          {
+            "shape": "barrier",
+            "pos": [
+              -14.344,
+              0.158,
+              -2.083
+            ],
+            "scale": 0.983,
+            "color": [
+              0.362,
+              0.287,
+              0.46
+            ]
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -18.236,
+              0.338,
+              -5.619
+            ],
+            "scale": 1.195,
+            "color": [
+              0.533,
+              0.577,
+              0.628
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -18.851,
+              -2.568,
+              -7.586
+            ],
+            "scale": 0.923,
+            "color": [
+              0.99,
+              0.924,
+              0.797
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.549,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -13.404,
+              0.608,
+              -6.448
+            ],
+            "scale": 0.926,
+            "color": [
+              0.949,
+              0.897,
+              0.795
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 3.825,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -12.513,
+              0.815,
+              -13.13
+            ],
+            "scale": 0.907,
+            "color": [
+              0.917,
+              0.828,
+              0.718
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 0.943,
+              "amp": 0.26,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -9.754,
+              0.953,
+              -7.215
+            ],
+            "scale": 0.882,
+            "color": [
+              0.981,
+              0.956,
+              0.741
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.393,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.244,
+              1.267,
+              -9.911
+            ],
+            "scale": 1.173,
+            "color": [
+              0.998,
+              0.95,
+              0.784
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.637,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -2.758,
+              0.794,
+              -9.128
+            ],
+            "scale": 0.997,
+            "color": [
+              0.946,
+              0.844,
+              0.77
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 5.098,
+              "amp": 0.23,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              -1.305,
+              0.945,
+              -13.547
+            ],
+            "scale": 1.234,
+            "color": [
+              0.663,
+              0.637,
+              0.498
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.87,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "table_edge",
+            "pos": [
+              1.571,
+              -0.324,
+              -12.02
+            ],
+            "scale": 1.184,
+            "color": [
+              0.31,
+              0.334,
+              0.403
+            ]
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              5.396,
+              0.08,
+              -10.434
+            ],
+            "scale": 0.926,
+            "color": [
+              0.964,
+              0.909,
+              0.768
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.07,
+              "amp": 0.25,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              6.851,
+              1.001,
+              -15.937
+            ],
+            "scale": 0.995,
+            "color": [
+              0.962,
+              0.99,
+              0.885
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 4.676,
+              "amp": 0.18,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "paddle",
+            "pos": [
+              10.415,
+              0.164,
+              -12.114
+            ],
+            "scale": 1.067,
+            "color": [
+              0.686,
+              0.576,
+              0.501
+            ],
+            "motion": {
+              "type": "spin",
+              "speed": 1.742,
+              "amp": 0,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              12.292,
+              -1.629,
+              -13.443
+            ],
+            "scale": 0.847,
+            "color": [
+              0.983,
+              0.944,
+              0.738
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 5.147,
+              "amp": 0.21,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              9.208,
+              0.009,
+              -14.764
+            ],
+            "scale": 0.776,
+            "color": [
+              0.97,
+              0.903,
+              0.709
+            ],
+            "motion": {
+              "type": "drift",
+              "speed": 1.149,
+              "amp": 0.28,
+              "axis": "x"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              7.974,
+              2.083,
+              -14.977
+            ],
+            "scale": 1.231,
+            "color": [
+              1.0,
+              0.917,
+              0.836
+            ],
+            "motion": {
+              "type": "bob",
+              "speed": 4.674,
+              "amp": 0.2,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "vibration_lines",
+            "pos": [
+              4.878,
+              -1.069,
+              -10.69
+            ],
+            "scale": 2.371,
+            "color": [
+              0.784,
+              0.727,
+              0.678
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 8.298,
+              "amp": 0.13,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              2.112,
+              1.357,
+              -7.968
+            ],
+            "scale": 1.016,
+            "color": [
+              0.951,
+              0.963,
+              0.869
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 5.101,
+              "amp": 0.16,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "net",
+            "pos": [
+              -1.667,
+              0.5,
+              -15.24
+            ],
+            "scale": 0.957,
+            "color": [
+              0.517,
+              0.517,
+              0.704
+            ]
+          },
+          {
+            "shape": "arch",
+            "pos": [
+              -3.143,
+              0.588,
+              -14.062
+            ],
+            "scale": 1.519,
+            "color": [
+              0.412,
+              0.371,
+              0.518
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 1.98,
+              "amp": 0.09,
+              "axis": "y"
+            }
+          },
+          {
+            "shape": "ball",
+            "pos": [
+              -6.158,
+              -1.007,
+              -12.286
+            ],
+            "scale": 1.112,
+            "color": [
+              0.988,
+              0.932,
+              0.873
+            ],
+            "motion": {
+              "type": "pulse",
+              "speed": 3.922,
+              "amp": 0.17,
+              "axis": "y"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "palette": [
+    "#0f1216",
+    "#fffaf0",
+    "#f0e5d8",
+    "#e8dcc8",
+    "#d4c4b0",
+    "#c4b4a0",
+    "#8b7f72",
+    "#6b5f52"
+  ],
+  "audio_patch": {
+    "engine": "pad",
+    "waveform": "sine",
+    "voices": 5,
+    "attack": 5,
+    "release": 6,
+    "base_note": 32,
+    "chord": [
+      0,
+      7,
+      12,
+      19
+    ]
+  },
+  "modulation": [
+    {
+      "source": "audio_level",
+      "dest": "camera.speed",
+      "depth": 0.5
+    }
+  ],
+  "camera": {
+    "mode": "path",
+    "waypoints": [
+      [
+        -8,
+        2,
+        -12
+      ],
+      [
+        -4,
+        2,
+        5.2
+      ],
+      [
+        0.5,
+        2,
+        14
+      ],
+      [
+        11.2,
+        2,
+        8.7
+      ],
+      [
+        14.8,
+        2,
+        -3.2
+      ],
+      [
+        9.2,
+        2,
+        -13.4
+      ],
+      [
+        2.2,
+        2,
+        -18.5
+      ],
+      [
+        -9.2,
+        2,
+        19.3
+      ],
+      [
+        -18.8,
+        2,
+        -5.7
+      ],
+      [
+        12.4,
+        2,
+        -14.8
+      ]
+    ],
+    "speed": 0.08,
+    "fov": 62,
+    "near": 0.4,
+    "far": 26.0,
+    "max_strokes": 90,
+    "depth": {
+      "mode": "cull"
+    }
+  },
+  "pps": null,
+  "soundscape": {
+    "tempo": 110,
+    "master": 0.75,
+    "distortion": 0.05,
+    "delay": {
+      "time": 0.35,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "voices": [
+      {
+        "name": "sub_bass",
+        "type": "osc",
+        "waveform": "sine",
+        "note": 28,
+        "chord": [
+          0,
+          7
+        ],
+        "unison": 2,
+        "detune": 0.008,
+        "sub": 0.6,
+        "tone": 0.25,
+        "level": 0.5,
+        "pan": 0,
+        "env": {
+          "attack": 6,
+          "decay": 2,
+          "sustain": 0.8,
+          "release": 4
+        }
+      },
+      {
+        "name": "pad_warmth",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 48,
+        "chord": [
+          0,
+          4,
+          7,
+          11
+        ],
+        "tone": 0.35,
+        "detune": 0.012,
+        "level": 0.4,
+        "pan": -0.15,
+        "env": {
+          "attack": 8,
+          "decay": 3,
+          "sustain": 0.75,
+          "release": 5
+        },
+        "lfo": {
+          "on": true,
+          "dest": "tone",
+          "shape": "sine",
+          "rate": 0.032,
+          "depth": 0.4
+        }
+      },
+      {
+        "name": "melodic_harp",
+        "type": "harp",
+        "waveform": "sine",
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          9,
+          11
+        ],
+        "tone": 0.3,
+        "level": 0.35,
+        "decay": 8,
+        "damp": 0.65,
+        "roll": 6,
+        "roll_spread": 0.07,
+        "rate": 0.4,
+        "gap": 8,
+        "pan": 0.2,
+        "drift": 0.25
+      },
+      {
+        "name": "pluck_texture",
+        "type": "pluck",
+        "waveform": "triangle",
+        "note": 60,
+        "scale": [
+          0,
+          2,
+          3,
+          5,
+          7,
+          8,
+          10
+        ],
+        "tone": 0.4,
+        "level": 0.25,
+        "rate": 2.2,
+        "decay": 1.2,
+        "gap": 0.5,
+        "pan": -0.2,
+        "drift": 0.3,
+        "resonance": 0.6,
+        "lfo": {
+          "on": true,
+          "dest": "pan",
+          "shape": "triangle",
+          "rate": 0.021,
+          "depth": 0.5
+        }
+      },
+      {
+        "name": "ambient_air",
+        "type": "noise",
+        "tone": 0.2,
+        "level": 0.12,
+        "pan": 0.1,
+        "lfo": {
+          "on": true,
+          "dest": "level",
+          "shape": "sine",
+          "rate": 0.015,
+          "depth": 0.6
+        }
+      }
+    ],
+    "swell_amount": 0.498
+  },
+  "audio_link": 1.0,
+  "midi_overrides": {},
+  "image_prompt": "ping pong balls boucing on a table",
+  "audio_prompt": "table tennis , balls officev sounds",
+  "generation_settings": {
+    "size": 240,
+    "warmth": 0.73,
+    "energy": 0.76,
+    "evolution": 0.83,
+    "interpretation": 0.73,
+    "kind": "3d",
+    "cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 6555,
+      "output_tokens": 15920,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0862
+    },
+    "expansion": {
+      "authored": 171,
+      "total": 240
+    }
+  },
+  "shape_modulation": [],
+  "lfo": {}
+}

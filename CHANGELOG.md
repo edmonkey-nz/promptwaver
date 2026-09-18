@@ -8,6 +8,109 @@ and APIs between minor versions until a 1.0 release.
 - Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.81.0]
+
+### Record and replay a performance
+
+A new **Recording** pane under Save/Inspect captures every parameter change —
+mouse or MIDI, camera or instrument — against the scene as it stands, and
+replays it in real time. Takes are listed for the loaded scene only.
+
+The tap sits at `Engine.set_param` / `set_audio_param`, which is where both
+input paths already converge (`MidiRouter` resolves a CC to exactly those two
+calls), so a knob and a mouse drag record identically. Timestamps are wall
+clock rather than the scene clock: `motion_rate` is itself a recorded
+parameter, so a Freeze during a take replays as a Freeze.
+
+**Take control** stops a replay and leaves everything exactly where it is —
+the scene keeps running, the sound keeps playing. Nothing is restored, because
+playback was never a separate mode, only a second hand on the same controls.
+It re-arms MIDI soft takeover, since after minutes of replay the values have
+moved but the physical knobs have not. Shift-click also punches in, writing a
+**new** take seeded with what played so far rather than overwriting the one
+being played. **Pause** holds the take's clock while the scene carries on.
+
+Takes are self-contained: the header carries the full scene spec, not the
+scene's name, so a take survives its scene being edited or deleted. Only
+performance commands are recorded — rig configuration (audio device, MIDI
+port, model, cost cap, kiosk) is deliberately excluded, since replaying those
+would reconfigure the machine.
+
+### `gap` and `play` on the struck voices
+
+`bell`, `pluck` and `harp` gain **gap** (0–30s of silence between strikes) and
+**play** (0–30s of playing before each gap). `rate` is notes per beat, so it is
+tied to tempo and cannot space notes more than a few seconds apart; these are
+absolute wall time. With `gap` alone you get one strike (on harp, one complete
+roll) per cycle; with `play` above 0 you get a phrase, then silence, repeating.
+Both default to 0 and are written to a scene only when non-zero, so no existing
+scene changes.
+
+On `harp` the unit is a whole roll, gated at the roll's own start so a phrase
+boundary can never cut an ascending cascade in half.
+
+### A harp roll no longer wraps mid-gesture
+
+A roll's scale degrees came from `(g + j) % span`, where `span` is
+`len(scale) × HARP_OCTAVES` — 8 for the usual 4-note scale — while `roll` is
+clamped to 1–12 with nothing tying the two together. A 12-note roll therefore
+ran out of degrees after 8 and **dropped back to the bottom of the range
+part-way through**, with the cliff moving one note earlier on each successive
+roll. Heard as the cascade stuttering and losing its top notes.
+
+The range now always covers the roll, and the per-roll offset is confined to
+the headroom left over. That second part fixes a wrap every harp scene hit
+periodically, not just ones with `roll > span`.
+
+Roll scheduling is also now **atomic** — a roll's notes are all committed when
+it starts, rather than the grid being re-walked each block with a lookback.
+That lookback assumed `interval` never changes, which stopped being true the
+moment an LFO could aim at something it is derived from: `lfo → rate` on a harp
+had been emitting fragments of two different gestures. Unmodulated scheduling
+is bit-identical to 0.80.0.
+
+### See where a modulated value actually is
+
+A control driven by an LFO or a mapping now shows a dim **ghost marker** at the
+value being produced, while the slider keeps showing what was authored. Both
+systems deliberately keep the authored value in the spec so saves stay
+faithful, which meant the live value existed nowhere a reader could see it.
+The marker is smoothed at display rate because its source is only sampled once
+per audio block.
+
+### Generated 3D scenes are paced
+
+`world`'s `shape_speed` is a class default of 1.0 that the model never wrote,
+so every fresh 3D scene ran node motion at full rate — measured across the
+library, 10 of 15 saved `world` layers had no value at all and the 5 that did
+had all been hand-slowed to 0.08–0.26. The director now asks for 0.15–0.30 and
+clamps to it, **setting** the key rather than only adjusting an existing one.
+Applied on the cache-read path too, so previously cached prompts are paced.
+
+### Interface
+
+- **Instruments** and **Soundscape** are separate collapsible panes, siblings
+  of the scene library, so the globals and the voices collapse independently.
+- Each instrument shows a dim live **output meter** above its controls.
+- Captions sit inline with their dropdowns instead of on a line of their own.
+- Help text moved behind a **?** affordance on the live performance surface.
+- A **DAC** status dot replaces the bare word `null` beside the version.
+- **Transitions** moved into Settings; it is set once for a rig, not worked
+  during a show.
+- Per-voice LFOs can target **decay**, **gap** and **play**; the LFO rate dial
+  is now 0–0.2Hz, measured against the library where 53 of 54 active LFOs sit
+  below 0.2 and most of the old dial was dead travel.
+
+### Fixed
+
+- **Hue override leaked between scenes.** It was pure engine state, so it
+  stayed live across a scene load and recoloured whatever you loaded next. It
+  now lives in the scene and restores to off on every load.
+- **A voice's mute button did not follow the engine.** Mute is the one voice
+  control that is not a slider, so the control registry never touched it and
+  the button kept whatever state it was built with — visible as soon as a
+  replayed take muted a voice.
+
 ## [0.80.0]
 
 ### Modulation mappings can own a range, and glide

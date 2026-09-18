@@ -245,7 +245,11 @@
     "mirror_y": false,
     "glow": 0.01,
     "trail": 0.12,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.97,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -280,7 +284,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "stillness",
@@ -409,7 +414,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},

@@ -223,7 +223,7 @@ with detune 0.005-0.01, and "sub": 0.4-0.8 for the octave below. Give it a
 long attack (2-6s) so it swells rather than thuds.
 
 Any voice can carry an LFO that modulates ONE of its own parameters:
-"lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate",
+"lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate|decay|gap|play",
         "shape":"sine|triangle|saw|square|random", "rate":<Hz>, "depth":0-1}
   dest "level"  tremolo — pulsing, breathing, heartbeat
        "pan"    auto-pan — movement across the stereo field
@@ -232,12 +232,18 @@ Any voice can carry an LFO that modulates ONE of its own parameters:
        "sub"    the weight underneath coming and going
        "waveform" steps between waveforms — abrupt, use sparingly
        "rate"   speeds a pluck/arp up and down
-RATE: 0 to 0.5 Hz, and values outside that are clamped. Even 0.5 is brisk for
+       "decay"  how long each note rings, swelling and dying back
+       "gap"    the silence between strikes opening and closing
+       "play"   the length of each phrase growing and shrinking
+     The last three only do anything on "pluck", "bell" and "harp" — the
+     voices that schedule notes. "gap" and "play" additionally need the voice
+     to be using them (see the "gap"/"play" params above); an LFO on "gap" is
+     the way to make a sparse voice drift between busy and almost silent.
+RATE: 0 to 0.2 Hz, and values outside that are clamped. Even 0.2 is brisk for
 this instrument — the useful range is 0.02-0.15 Hz, one cycle every 7 to 50
-seconds. Think "the room breathing", not "an effect pedal". Above about
-0.2 Hz the tone/detune/sub/waveform/rate targets start to granulate, because
-they are recalculated once per audio block; level and pan stay smooth
-throughout.
+seconds. Think "the room breathing", not "an effect pedal". Near the top of
+that range every target except level, pan, depth and distortion starts to
+granulate, because they are recalculated once per audio block.
 USE LFOs SPARINGLY. Most scenes want ONE, and many want none — stillness is
 what makes the one moving thing register. Hard limits:
   - never more than 2 voices in the whole soundscape, whatever the brief says

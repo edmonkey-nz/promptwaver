@@ -3011,7 +3011,8 @@
               "amp": 0.15
             }
           }
-        ]
+        ],
+        "shape_speed": 0.17
       }
     }
   ],
@@ -3087,7 +3088,7 @@
         27
       ]
     ],
-    "speed": 0.35,
+    "speed": 0.16,
     "fov": 33.0,
     "near": 0.4,
     "far": 40,
@@ -3101,7 +3102,13 @@
     "mirror_x": false,
     "mirror_y": false,
     "glow": 0.0,
-    "trail": 0.0
+    "trail": 0.0,
+    "laser_max_strokes": null,
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.0,
+    "line_width": 1.0
   },
   "pps": null,
   "soundscape": {
@@ -3110,7 +3117,7 @@
     "distortion": 0.0,
     "delay": {
       "time": 0.5,
-      "feedback": 0.4,
+      "feedback": 0.39,
       "mix": 0.35
     },
     "voices": [
@@ -3150,7 +3157,9 @@
           "shape": "sine",
           "depth": 0.72,
           "dest": "level"
-        }
+        },
+        "resonance": 0.0,
+        "distortion": 0.0
       },
       {
         "name": "molten_pad",
@@ -3165,7 +3174,7 @@
         ],
         "tone": 0.3,
         "detune": 0.015,
-        "level": 0.4,
+        "level": 0.8,
         "pan": 0.0,
         "env": {
           "attack": 8.0,
@@ -3190,7 +3199,8 @@
           "shape": "random",
           "depth": 0.5,
           "dest": "tone"
-        }
+        },
+        "distortion": 0.0
       },
       {
         "name": "thruster",
@@ -3228,7 +3238,9 @@
           "shape": "sine",
           "depth": 0.75,
           "dest": "detune"
-        }
+        },
+        "resonance": 0.0,
+        "distortion": 0.0
       },
       {
         "name": "signal_pulse",
@@ -3259,7 +3271,10 @@
           "shape": "sine",
           "depth": 0.73,
           "dest": "tone"
-        }
+        },
+        "drift": 0.0,
+        "resonance": 0.0,
+        "distortion": 0.0
       },
       {
         "name": "atmosphere",
@@ -3281,7 +3296,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "distortion": 0.0
       }
     ],
     "swell_amount": 0.0,
@@ -3290,8 +3306,18 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
-  "midi_overrides": {}
+  "midi_overrides": {},
+  "image_prompt": "",
+  "audio_prompt": "",
+  "generation_settings": {},
+  "shape_modulation": [],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

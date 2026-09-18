@@ -205,11 +205,21 @@ HARP_ROLL_DEFAULT = 6
 #: their "level" raised.
 HARP_OUTPUT_GAIN = 0.17
 
-#: Ceiling on a per-voice LFO's rate, in Hz. One cycle every two seconds is
-#: already brisk for ambient — the useful range in practice is an order of
-#: magnitude below this. Shared by the DSP clamp, the MIDI range table and the
-#: UI knob so all three agree on what the control means.
-LFO_MAX_RATE = 0.5
+#: Ceiling on a per-voice LFO's rate, in Hz. Shared by the DSP clamp, the MIDI
+#: range table and the UI knob so all three agree on what the control means —
+#: which is why this moves WITH the knob rather than staying wider than it.
+#:
+#: Lowered from 0.5 after measuring the library: of 54 active LFOs across the
+#: saved scenes, 53 sit below 0.2Hz and the single exception is 0.235. Most of
+#: the old dial was therefore dead travel, and the useful 0.02-0.15 range was
+#: squeezed into its bottom third. One cycle every five seconds is still brisk
+#: for an ambient instrument.
+LFO_MAX_RATE = 0.2
+
+#: Swing applied by an LFO aimed at `gap` or `play`, in seconds at depth 1.
+#: Additive rather than proportional — see `_lfo_apply_stepped` — so this is
+#: the whole story for how far those two can move.
+LFO_TIME_RANGE_S = 6.0
 
 #: Whole-mix "filter sweep": a slow, single-phase sine added to the static
 #: eq.high dB value, reusing _apply_eq's existing FFT machinery untouched —
@@ -567,6 +577,14 @@ class Soundscape:
         # than global so two Soundscapes rendering side by side (the mixer
         # crossfades two) don't share a stream and correlate their wobble.
         self._drift_pos: dict[str, float] = {}
+        # Per-harp-voice roll scheduler state: the phase accumulator, the roll
+        # counter, and notes of a committed roll not yet reached. See
+        # _schedule_harp — a roll is emitted as a unit, not re-derived.
+        self._harp_state: dict[str, dict] = {}
+        # {voice name: {param: live post-LFO value}} for the UI's ghost
+        # markers. Written once per block in `render`; read via the mixer's
+        # `bands()`, so it crosses to the engine on a path that already exists.
+        self._lfo_eff: dict[str, dict[str, float]] = {}
         self._rng = np.random.default_rng()
         self._voice_env: dict[str, Envelope] = {}     # ADSR per enveloped voice
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
@@ -709,7 +727,8 @@ class Soundscape:
     #: destination on a 2-channel rig would rewrite it to something else the
     #: moment that scene was saved.
     LFO_DESTS_SMOOTH = ("level", "pan", "depth", "distortion")
-    LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate")
+    LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate",
+                         "decay", "gap", "play")
     LFO_DESTS = LFO_DESTS_SMOOTH + LFO_DESTS_STEPPED
     LFO_SHAPES = ("sine", "triangle", "saw", "square", "random")
 
@@ -815,6 +834,26 @@ class Soundscape:
             # Multiplicative: rate is a tempo division, so a fixed offset
             # would mean something different at every tempo.
             ev["rate"] = float(max(0.05, v.get("rate", 1.0) * (1.0 + depth * 0.75 * mid)))
+        elif dest == "decay":
+            # Multiplicative, like `rate` and for a similar reason: decay's
+            # natural scale differs by more than an order of magnitude between
+            # voices — a 0.5s pluck against a 20s harp — so a fixed offset in
+            # seconds would be inaudible on one and obliterate the other.
+            ev["decay"] = float(min(HARP_MAX_DECAY, max(0.05,
+                v.get("decay", 1.2) * (1.0 + depth * 0.75 * mid))))
+        elif dest in ("gap", "play"):
+            # ADDITIVE, unlike the two above. These are absolute wall-clock
+            # seconds and both are legitimately 0 in a saved scene, where a
+            # multiplicative swing would be pinned at 0 and the LFO would look
+            # broken. Additive lets a continuous voice breathe in and out of
+            # being sparse, which is the reason to modulate them at all.
+            cap = self.GAP_MAX_S if dest == "gap" else self.PLAY_MAX_S
+            try:
+                base = float(v.get(dest, 0.0) or 0.0)
+            except (TypeError, ValueError):
+                base = 0.0
+            ev[dest] = float(min(cap, max(0.0,
+                base + depth * LFO_TIME_RANGE_S * mid)))
         elif dest == "waveform":
             # The "osc type" destination: step through the waveform list.
             # Deliberately quantised — the point is switching timbre, and a
@@ -920,6 +959,41 @@ class Soundscape:
                     # Chained: each returns a copy, so several stepped
                     # destinations stack instead of the last one winning.
                     rv = self._lfo_apply_stepped(rv, _l[1], _l[2], _l[3])
+
+            # WHERE THE VALUE ACTUALLY IS, for the UI's ghost markers. The
+            # authored value stays in the spec on purpose (so Save writes what
+            # was authored, not whatever the LFO was doing), which means the
+            # live value exists nowhere a reader can see it — hence this.
+            #
+            # Stepped destinations are already resolved in `rv`. The smooth
+            # ones are per-sample arrays below, so they are evaluated here at
+            # the block MIDPOINT with the same formulas: representative, not
+            # exact, which is all a readout needs. Non-numbers (`waveform`)
+            # are skipped — there is no knob position to show for those.
+            if lfos:
+                eff = {}
+                for _d in self.LFO_DESTS_STEPPED:
+                    if _d in lfos and isinstance(rv.get(_d), (int, float)):
+                        eff[_d] = float(rv[_d])
+                _l = lfos.get("level")
+                if _l is not None:
+                    eff["level"] = float(v.get("level", 0.4)) * (
+                        1.0 - _l[3] * (1.0 - (_l[1] + 1.0) * 0.5))
+                _l = lfos.get("pan")
+                if _l is not None:
+                    eff["pan"] = min(1.0, max(-1.0,
+                        float(v.get("pan", 0.0)) + _l[3] * _l[1]))
+                _l = lfos.get("depth")
+                if _l is not None:
+                    eff["depth"] = min(1.0, max(0.0,
+                        float(v.get("depth", 0.0)) + _l[3] * _l[1]))
+                _l = lfos.get("distortion")
+                if _l is not None:
+                    eff["distortion"] = min(1.0, max(0.0,
+                        float(v.get("distortion", 0.0)) + _l[3] * _l[1]))
+                self._lfo_eff[name] = eff
+            elif name in self._lfo_eff:
+                del self._lfo_eff[name]
 
             # Per-voice filter sweep: this voice's share of the scene's sweep,
             # as a swing of its own brightness. Stacks on top of a stepped
@@ -1567,32 +1641,79 @@ class Soundscape:
         bases = max(1, span - roll + 1)
 
         end = n0 + frames
-        # Look back far enough to catch rolls whose beat began in an earlier
-        # block but whose later notes land in this one.
-        g0 = max(0, (n0 - (roll - 1) * spread) // interval)
-        for g in range(g0, end // interval + 1):
-            # Gate on the ROLL's own position in the cycle, not on each note's
-            # onset. Testing per note would let a phrase boundary land inside
-            # an ascending sweep and cut it off mid-gesture — destroying the
-            # thing the `spread` clamp above exists to protect. A roll either
-            # happens whole or not at all, so a roll that starts just before
-            # the gap is allowed to finish into it.
-            if cycle_n > 0 and ((g * interval) % cycle_n) >= play_n:
+        # A ROLL IS ATOMIC: all of its notes are computed when the roll STARTS
+        # and any that land in later blocks are queued, rather than the grid
+        # being re-walked every block with a lookback.
+        #
+        # The old lookback assumed `interval` never changes, which stopped
+        # being true the moment an LFO could aim at something the interval is
+        # derived from. Measured with `lfo->rate` on a harp — which has been
+        # selectable all along — rolls came out in pieces: sizes 6,4,5,6,6,8,
+        # 5,3,3,2,2,3,1,7 instead of a steady 6. The grid moved between
+        # blocks, so the lookback re-derived different onsets and emitted
+        # fragments of two different gestures. `lfo->gap` and `lfo->play` hit
+        # exactly the same wall.
+        #
+        # Committing the whole roll up front makes it immune to anything the
+        # grid does afterwards, and the phase accumulator below reads
+        # `interval` fresh for each NEW roll, so modulation still changes the
+        # spacing BETWEEN rolls — which is the part that was wanted.
+        st = self._harp_state.setdefault(v["name"], {})
+        # Resync on first sight, and whenever the clock has moved somewhere
+        # the accumulator can't reach in one step (a scene load, a long
+        # stall). Snapped to the absolute grid so an unmodulated voice fires
+        # at exactly the multiples of `interval` the old code used.
+        if (st.get("next") is None or st["next"] < n0 - interval
+                or st["next"] > end + interval * 4):
+            st["next"] = (n0 // interval) * interval
+            st["g"] = st["next"] // interval
+            st["pend"] = []
+        pend = st.setdefault("pend", [])
+
+        # Notes of rolls committed in an earlier block. Their decay/tone were
+        # captured with the roll, so a gesture stays coherent even if an LFO
+        # moves those while it is still sounding.
+        rest = []
+        for onset, freq, ndecay, ntone in pend:
+            if onset < n0:
                 continue
+            if onset < end:
+                self._active_notes.append(dict(
+                    start=onset, wf="sine", decay=ndecay, voice=v["name"],
+                    tone=ntone, freq=freq, retire=None))
+            else:
+                rest.append((onset, freq, ndecay, ntone))
+        pend[:] = rest
+
+        while st["next"] < end:
+            onset0 = st["next"]
+            g = st["g"]
+            st["g"] = g + 1
+            st["next"] = onset0 + interval
+            if onset0 < n0:
+                continue
+            # Gate on the ROLL's own position in the cycle, not on each note's
+            # onset, and decided ONCE here — a roll either happens whole or
+            # not at all, so one that starts just before the gap is allowed to
+            # finish into it.
+            if cycle_n > 0 and (onset0 % cycle_n) >= play_n:
+                continue
+            base = g % bases
             for j in range(roll):
-                onset = g * interval + j * spread
-                if not (n0 <= onset < end):
-                    continue
+                onset = onset0 + j * spread
                 # Each roll ascends from its own base, and successive rolls
                 # start one degree higher, so the gesture stays recognisable
                 # while never repeating the same sweep twice in a row. The
                 # base wraps, the ROLL never does: `d` is monotonic across the
                 # whole gesture, which is what makes it read as one sweep.
-                d = (g % bases) + j
-                self._active_notes.append(dict(
-                    start=onset, wf="sine", decay=decay, voice=v["name"], tone=tone,
-                    freq=midi_to_hz(root + scale[d % len(scale)] + 12 * (d // len(scale))),
-                    retire=None))
+                d = base + j
+                freq = midi_to_hz(root + scale[d % len(scale)] + 12 * (d // len(scale)))
+                if onset < end:
+                    self._active_notes.append(dict(
+                        start=onset, wf="sine", decay=decay, voice=v["name"],
+                        tone=tone, freq=freq, retire=None))
+                else:
+                    pend.append((onset, freq, decay, tone))
 
         self._retire_excess(v["name"], self.MAX_ACTIVE_HARP_NOTES, end)
         if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
@@ -1998,11 +2119,16 @@ class SoundscapeMixer:
         # contributes nothing, and keying off peaks alone made its modulation
         # source blink in and out of existence.
         names = [v["name"] for v in (c.spec.get("voices") or []) if "name" in v]
+        # Copied, not handed over: the audio thread rewrites `_lfo_eff` every
+        # block, and this is read from the engine's loop. It is a handful of
+        # floats for the few voices that carry an LFO, so the copy is free.
+        eff = getattr(c, "_lfo_eff", None) or {}
         return {"level": self._peak,
                 "low": getattr(c, "band_low", 0.0),
                 "mid": getattr(c, "band_mid", 0.0),
                 "high": getattr(c, "band_high", 0.0),
-                "voices": {n: float(peaks.get(n, 0.0)) for n in names}}
+                "voices": {n: float(peaks.get(n, 0.0)) for n in names},
+                "lfo": {n: dict(d) for n, d in eff.items()}}
 
     @property
     def muted(self) -> bool:
