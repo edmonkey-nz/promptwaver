@@ -604,13 +604,6 @@
          parameter move. -->
     <span class="statusdot" id="midi-dot" title="MIDI input"></span>
     <span>MIDI in</span>
-    <!-- The laser DAC. Was the bare output name printed into the meta line
-         beside the version, where it read as the word "null" — accurate
-         (output/ilda.py's make_output falls back to NullOutput when no Helios
-         is found) but not something anyone could interpret. Green here means
-         a Helios is open and the beam can be armed. -->
-    <span class="statusdot" id="dac-dot" title="Helios laser DAC"></span>
-    <span>DAC</span>
   </div>
   <span class="meta" id="meta">connecting…</span>
   <span style="flex:1"></span>
@@ -621,7 +614,6 @@
        in one place, the Scene panel at the top of that column. -->
   <button id="motion-toggle" title="Ease all motion to a standstill over 2 seconds — LFOs, node motion and camera travel together. Audio reactivity keeps running, so the frozen picture still responds to sound." style="min-width:96px">❚❚ Freeze</button>
   <button class="go" id="master-toggle" style="min-width:100px">▶ Start</button>
-  <button class="go" id="laser-toggle" title="Physical DAC output — independent of Start/Stop. Off by default: visuals/audio/preview run normally, the real beam stays dark until this is turned on." style="min-width:110px">▶ Start Laser</button>
   <button id="fullscreen-toggle" title="Toggle fullscreen">⛶</button>
 </header>
 <div class="genstrip" id="genstrip" title="Click to open the Generate panel">
@@ -659,26 +651,19 @@
       <div class="field"><label>draw depth</label>
         <input type="range" id="c-far" min="6" max="40" step="1" value="30">
         <span class="val" id="v-cfar">30</span></div>
-      <!-- Two detail profiles from one render. The monitor draws whatever it's
-           given; the laser's PPS budget goes mostly on blanking jumps between
-           strokes, so a frame that looks rich on screen flickers on the beam.
-           The engine swaps between these when the beam is armed. Ceiling is
-           400 because measurement says nothing above that renders in budget —
-           offering more would only offer settings that drop frames. -->
+      <!-- Ceiling is 400 because measurement says nothing above that renders in
+           budget — offering more would only offer settings that drop frames. -->
       <div class="field"><label>max strokes</label>
         <input type="range" id="c-max" min="20" max="400" step="5" value="120">
         <span class="val" id="v-cmax">120</span></div>
-      <div class="field"><label>↳ on laser</label>
-        <input type="range" id="c-max-laser" min="0" max="400" step="5" value="0">
-        <span class="val" id="v-cmaxlaser">off</span></div>
-      <div class="hint" id="c-max-live" style="margin:-4px 0 8px"></div>
+      <div class="hint" style="margin:-4px 0 8px">how many strokes are drawn per frame, nearest first.</div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
         <input type="checkbox" id="c-disable-plane"> disable scene planes (if possible)
       </label>
         </div>
 
     <div class="group" id="g-monitor" style="width:100%">
-      <h2>Monitor filters<span class="help" data-help="Applied to the browser preview and the output window only. These never touch the vector data sent to the laser DAC, and they are stored per scene.">?</span></h2>
+      <h2>Monitor filters<span class="help" data-help="Applied by the browser renderer to the preview and the output windows, and stored per scene.">?</span></h2>
       <div class="field"><label>glow</label>
         <input type="range" id="mf-glow" min="0" max="1" step="0.01" value="0">
         <span class="val" id="v-mfglow">0.00</span></div>
@@ -694,7 +679,7 @@
       <div class="field"><label>kaleidoscope</label>
         <input type="range" id="mf-kaleidoscope" min="0" max="12" step="1" value="0">
         <span class="val" id="v-mfkaleidoscope">off</span></div>
-      <div class="field"><label title="Reshapes the polylines the engine produces. 0 draws them exactly as authored; right interpolates a spline through the same points (smooth); left drops points (angular/faceted). Screen only — the laser always gets the authored path.">line curve<br><span style="font-size:10px;color:var(--dim)">angular ← → smooth</span></label>
+      <div class="field"><label title="Reshapes the polylines the engine produces. 0 draws them exactly as authored; right interpolates a spline through the same points (smooth); left drops points (angular/faceted). Applies to the preview and output windows only.">line curve<br><span style="font-size:10px;color:var(--dim)">angular ← → smooth</span></label>
         <input type="range" id="mf-curve" min="-1" max="1" step="0.01" value="0">
         <span class="val" id="v-mfcurve">0.00</span></div>
       <!-- A multiplier on each surface's own stroke width, not an absolute
@@ -703,7 +688,7 @@
            both from where they already are. Only goes up: below ~1px the
            renderer's fixed half-pixel AA feather is wider than the line
            itself. See renderer.js _getLineWidth. -->
-      <div class="field"><label title="Thickens the drawn strokes on screen. A multiplier on each surface's own width, so the preview and the output window both widen from where they already are. Screen only — a laser's beam width is set by its optics, and the DAC is sent a constant intensity regardless.">line width</label>
+      <div class="field"><label title="Thickens the drawn strokes on screen. A multiplier on each surface's own width, so the preview and the output window both widen from where they already are. Applies to the preview and output windows only.">line width</label>
         <input type="range" id="mf-width" min="1" max="8" step="0.1" value="1">
         <span class="val" id="v-mfwidth">1.0</span></div>
       <details class="accordion nested" id="acc-bloom" closed>
@@ -727,7 +712,7 @@
       <div class="layer-desc" id="layer-desc"></div>
       <div class="field" style="margin-bottom:4px">
         <label style="display:flex;align-items:center;gap:6px;flex:0 0 auto"
-               title="Recolours every stroke to one hue, keeping each point's own saturation and brightness. Applies to the laser as well as the monitor.">
+               title="Recolours every stroke to one hue, keeping each point's own saturation and brightness.">
           <input type="checkbox" id="hue-override-on"> hue</label>
         <input type="range" id="hue-override-val" min="0" max="1" step="0.01" value="0.5">
         <span class="val" id="v-hueoverride">0.50</span></div>
@@ -892,7 +877,7 @@
          indicator) now lives in Settings > Transitions. They are set once for
          a rig and then left alone, so they were costing a permanent slot in
          the performance column for something nobody touches mid-show. Same
-         move, and same reasoning, as scene PPS before them. -->
+         move, and same reasoning, as other set-once rig settings before them. -->
  <details class="accordion" id="acc-modulation" open>
       <summary>Modulation</summary>
       <div class="accordion-body" style="display:flex;flex-direction:column;gap:8px">
@@ -1175,22 +1160,12 @@
 
     <div class="group">
       <h2 style="font-size:11px">Output</h2>
-      <div class="field"><label>max PPS</label>
-        <input type="text" inputmode="numeric" id="o-maxpps" value="20000" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="hint">hardware ceiling — sent to Claude so scenes are authored within budget.</div>
-      <!-- Moved here from the side column's fade pane, where it sat among
-           three crossfade durations with nothing in common with them. It is a
-           laser output setting, so it belongs beside the ceiling it overrides. -->
-      <div class="field" style="margin-top:8px"><label>scene PPS</label>
-        <input type="text" inputmode="numeric" id="o-scenepps" placeholder="auto" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono)"></div>
-      <div class="hint">per-scene override for the current scene. Blank = use the ceiling above.</div>
       <div class="field" style="margin-top:8px"><label>output ratio</label>
         <select id="o-ratio" style="flex:1"></select></div>
       <div class="hint">the shape of the surface you're projecting onto. A rig
         setting like keystone, so it survives scene changes. Widening it shows
         <b>more at the sides</b> rather than cropping — the field of view stays
-        vertical. <b>1:1</b> is a laser's native shape; the galvos scan a square,
-        so a wider ratio is letterboxed into it.</div>
+        vertical.</div>
       <div class="field" style="margin-top:8px"><label>wide ratios</label>
         <select id="o-fit" style="flex:1"></select></div>
       <div class="hint">how a scene is placed in a frame wider than the square
@@ -1220,7 +1195,7 @@
          for three durations that are set once for a room and then left alone.
          Nothing in here is a fader: they are fade TIMES. The controls that
          genuinely didn't belong went elsewhere long before this (hue override
-         to Master, scene PPS to Output above). -->
+         to Master). -->
     <div class="group">
       <h2 style="font-size:11px">Transitions</h2>
       <!-- Always rendered (not display:none-toggled) so a scene switch
@@ -1244,13 +1219,13 @@
         from the visual one above — sound usually wants longer.</div>
       <!-- Distinct from "audio fade" above: that one is the scene-to-scene
            soundscape crossfade, this is how long Start/Stop takes to bring
-           the room up or down. The beam still blanks instantly on Stop
+           the room up or down. The picture still clears instantly on Stop
            regardless — only the sound rides. -->
       <div class="field" style="margin-top:8px"><label>start/stop fade</label>
         <input type="range" id="s-startfade" min="0" max="8" step="0.25" value="1.5">
         <span class="val" id="v-sstartfade">1.5</span></div>
       <div class="hint">how long Start/Stop takes to bring the room up or down.
-        The beam still blanks instantly on Stop — only the sound rides.</div>
+        The picture still clears instantly on Stop — only the sound rides.</div>
     </div>
 
     <div class="group">
@@ -1282,21 +1257,10 @@
     </div>
 
     <div class="group">
-      <h2 style="font-size:11px">Keystone</h2>
-      <div class="hint">Corrects for an off-axis-mounted laser (trapezoid distortion) — a physical rig setting, not a scene one, so it stays fixed across scene switches. Applied to the real DAC output (output/ilda.py); the visualiser above mirrors it live so you can tune by eye without the laser on.</div>
-      <div class="field"><label>horizontal</label>
-        <input type="range" id="ks-h" min="-0.5" max="0.5" step="0.005" value="0">
-        <span class="val" id="v-ksh">0.000</span></div>
-      <div class="field"><label>vertical</label>
-        <input type="range" id="ks-v" min="-0.5" max="0.5" step="0.005" value="0">
-        <span class="val" id="v-ksv">0.000</span></div>
-      <button id="test-pattern-toggle">Show test pattern</button>
-      <div class="hint">overrides the current scene with a calibration grid — on the laser, the visualiser, and any open Output Window — until turned off.</div>
-    </div>
-
-    <div class="group">
       <h2 style="font-size:11px">Output monitors</h2>
-      <div class="hint">Output 1 and Output 2 (header buttons) show the same live feed. Flip reverses the whole image (no reflection, unlike the Global section's "mirror"). Keystone here is independent per window — for when each screen is physically mounted/angled differently (unlike the laser's, above, these are display-only, not sent anywhere). Glow/trail/mirror (Global section) are shared between both.</div>
+      <button id="test-pattern-toggle">Show test pattern</button>
+      <div class="hint">overrides the current scene with a calibration grid on the preview and every open Output window — use it to set each output's keystone below.</div>
+      <div class="hint">Output 1 and Output 2 (header buttons) show the same live feed. Flip reverses the whole image (no reflection, unlike the Global section's "mirror"). Keystone here is independent per window — for when each screen is physically mounted/angled differently (display-only, not sent anywhere). Glow/trail/mirror (Global section) are shared between both.</div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:4px">
         <input type="checkbox" id="out-show-fps"> show frame rate on output windows
       </label>
@@ -1547,12 +1511,8 @@ ws.onmessage = e => {
 
 function paintState(s){
   _lastState = s;
-  // Version only: the output name moved to its own dot in the status row.
+  // Version only.
   $("meta").textContent = `v${s.version}`;
-  // "null" is the no-DAC fallback, anything else is a real device.
-  const dac = s.output && s.output !== "null";
-  $("dac-dot").classList.toggle("on", !!dac);
-  $("dac-dot").title = dac ? `laser DAC: ${s.output}` : "no laser DAC found";
   const mt = $("master-toggle");
   mt.dataset.active = s.active ? "1" : "0";
   mt.textContent = s.active ? "■ Stop" : "▶ Start";
@@ -1570,22 +1530,6 @@ function paintState(s){
       : `${Math.round(now * 100)}%`;
     fz.className = s.motion === 0 ? "amber" : "";
   }
-  // Enable the laser button only when a real DAC is actually being driven.
-  // This used to test `s.output !== "dummy"` — a name no output class has ever
-  // had (`NullOutput.name` is "null"), so the condition was true for every
-  // output and the button was offered on machines running with no laser mode
-  // at all. Test POSITIVELY for the DAC, so a future output type has to opt in
-  // rather than accidentally arming a beam control. Disabled rather than
-  // hidden: the control keeps its place in the header and can say why it is
-  // unavailable, which a vanishing button cannot. Set as a property, not a
-  // class — updateLaserBtn() rewrites className on every toggle.
-  const laserBtn = $("laser-toggle");
-  if (laserBtn.dataset.title === undefined) laserBtn.dataset.title = laserBtn.title;
-  const dacLive = s.output === "helios";
-  laserBtn.disabled = !dacLive;
-  laserBtn.title = dacLive
-    ? laserBtn.dataset.title
-    : "No laser output \u2014 start with --laser and a connected Helios DAC to arm the beam.";
   $("claude-dot").classList.toggle("on", !!s.director_online);
   if (!$("d-model").dataset.init && s.director_choice) {
     $("d-model").dataset.init = "1";
@@ -1668,16 +1612,6 @@ function paintState(s){
   // denied it purely because the panel was labelled "Motion" and assumed a
   // flat scene.
   $("g-camera").style.display = s.scene_3d ? "flex" : "none";
-  // Which profile is actually rendering right now. Without this the slider can
-  // read 300 while the beam is armed and the renderer is quietly using 90.
-  const cml = $("c-max-live");
-  if (cml && s.camera) {
-    const live = s.camera.max_strokes_live, mon = s.camera.max_strokes;
-    cml.textContent = (live !== mon)
-      ? `drawing ${live} — laser profile active`
-      : `drawing ${live}`;
-    cml.style.color = (live !== mon) ? "var(--amber)" : "var(--dim)";
-  }
   // The Shape scale section is 3D-world-only. Swap its explanatory hint for
   // the "does nothing here" warning on a 2D scene, and hide its controls
   // rather than leaving buttons that silently do nothing. The two modulation
@@ -1730,26 +1664,16 @@ function paintState(s){
       $("c-mode").value = s.camera.mode;
     }
   }
-  // max PPS: reflect the persisted ceiling unless the user is actively editing
-  if (document.activeElement !== $("o-maxpps") && typeof s.max_pps === "number") {
-    $("o-maxpps").value = s.max_pps;
-  }
   syncOutputRatio(s);
   syncOutputFit(s);
   if (document.activeElement !== $("diag-enabled-toggle") && typeof s.diagnostics_enabled === "boolean") {
     $("diag-enabled-toggle").checked = s.diagnostics_enabled;
   }
-  if (typeof s.laser_on === "boolean") updateLaserBtn(s.laser_on);
   // s-afade / s-startfade / g-master are all registered controls now — see
   // syncControls, called below. Their bespoke activeElement-guarded copies
   // used to live here; the registry's drag/recency guard is strictly better
   // (focus is sticky after a drag ends, which stalled tracking until you
   // clicked elsewhere).
-  // per-scene PPS override: sync once per scene change, blank means "auto"
-  if ($("o-scenepps").dataset.scene !== s.scene) {
-    $("o-scenepps").dataset.scene = s.scene;
-    $("o-scenepps").value = (s.scene_pps_override ?? "") === "" ? "" : s.scene_pps_override;
-  }
   if (document.activeElement !== $("hue-override-on")) {
     $("hue-override-on").checked = !!s.hue_override;
   }
@@ -1990,7 +1914,7 @@ function renderPerf(s){
     <span>output (avg/max)</span><b>${d.avg_output_ms} / ${d.max_output_ms} ms</b>
     <span>frame budget</span><b>${d.budget_ms} ms</b>
     <span>tick interval (avg/max)</span><b class="${d.max_interval_ms > d.budget_ms*1.5 ? 'bad':''}">${d.avg_interval_ms} / ${d.max_interval_ms} ms</b>
-    <span>points (avg/max)</span><b>${d.avg_points} / ${d.max_points}</b>
+    <span>strokes (avg/max)</span><b>${d.avg_points} / ${d.max_points}</b>
     <span>dropped ticks</span><b class="${d.dropped_pct>2?'bad':''}">${d.dropped} (${d.dropped_pct}%)</b>
   `;
   const u = $("perf-drops");
@@ -2040,8 +1964,6 @@ $("a-copy").onclick = async () => {
     audio_diag: _lastState?.audio_diag,
     audio_devices: _lastState?.audio_devices,
     scene: _lastState?.scene,
-    output: _lastState?.output,
-    pps: _lastState?.pps,
   }, null, 2);
   try { await navigator.clipboard.writeText(payload);
     $("a-copy").textContent = "copied!"; setTimeout(()=>$("a-copy").textContent="Copy diagnostics", 1500);
@@ -2052,10 +1974,7 @@ $("perf-copy").onclick = async () => {
     perf_diag: _lastState?.perf_diag,
     scene: _lastState?.scene,
     scene_3d: _lastState?.scene_3d,
-    points: _lastState?.points,
     scene_transition: _lastState?.scene_transition,
-    output: _lastState?.output,
-    pps: _lastState?.pps,
   }, null, 2);
   try { await navigator.clipboard.writeText(payload);
     $("perf-copy").textContent = "copied!"; setTimeout(()=>$("perf-copy").textContent="Copy diagnostics", 1500);
@@ -3753,8 +3672,7 @@ function renderSoundscape(s){
 
 // Monitor-only visual filters (glow/trails) — a pure canvas-rendering
 // effect applied here and in output.html; never touches the vector data
-// handed to the laser DAC (engine.py/scene3d.py/ilda.py are untouched by
-// any of this). Synced across this page and any open Output Window via
+// the engine produces. Synced across this page and any open Output Window via
 // localStorage + the "storage" event, since they're separate browser
 // windows/tabs with no other shared state.
 const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, kaleidoscopeSegments: 0, keystoneH: 0, keystoneV: 0, contentAspect: 1, fit: "fit" };
@@ -3763,18 +3681,14 @@ const monitorFilters = { glow: 0, trail: 0, mirrorX: false, mirrorY: false, kale
 // Save Camera settings / Save all scene settings, loaded with the scene
 // they were saved on), so the engine is the source of truth. The Output
 // Window picks these up the same way, from its own copy of the same state
-// broadcast — see output.html. keystoneH/V is the LASER's keystone (a rig
-// setting, not per-scene — see Settings > Keystone) — applied here too so
-// this visualiser doubles as the laser's calibration reference; Output
-// 1/2 each have their own independent keystone instead (see
-// outputKeystoneSlider below), since those are separate physical screens.
+// broadcast — see output.html. The in-page preview has no keystone
+// (keystoneH/V stay 0); Output 1/2 each have their own independent keystone
+// (see outputKeystoneSlider below), since those are separate physical screens.
 function syncMonitorFilters(s){
   monitorFilters.glow = s.glow ?? 0;
   monitorFilters.trail = s.trail ?? 0;
   monitorFilters.mirrorX = !!s.mirror_x;
   monitorFilters.mirrorY = !!s.mirror_y;
-  monitorFilters.keystoneH = s.keystone_h ?? 0;
-  monitorFilters.keystoneV = s.keystone_v ?? 0;
   // Was missing entirely, which is why this preview and the output window
   // disagreed on every non-1:1 ratio: the renderer fell back to a square box
   // and pillarboxed it inside a canvas already reshaped to the output ratio,
@@ -3817,14 +3731,6 @@ function syncMonitorFilters(s){
     $("mf-bloomint").value = monitorFilters.bloomIntensity;
     $("v-mfbloomint").textContent = monitorFilters.bloomIntensity.toFixed(1);
   }
-  if (document.activeElement !== $("ks-h")) {
-    $("ks-h").value = monitorFilters.keystoneH;
-    $("v-ksh").textContent = monitorFilters.keystoneH.toFixed(3);
-  }
-  if (document.activeElement !== $("ks-v")) {
-    $("ks-v").value = monitorFilters.keystoneV;
-    $("v-ksv").textContent = monitorFilters.keystoneV.toFixed(3);
-  }
   const tpBtn = $("test-pattern-toggle");
   tpBtn.textContent = s.test_pattern_on ? "Hide test pattern" : "Show test pattern";
   tpBtn.className = s.test_pattern_on ? "amber" : "";
@@ -3842,7 +3748,7 @@ function syncMonitorFilters(s){
 // Output viewport ratio (Settings > Output). The preview canvas is reshaped to
 // match, so [-1,1] normalised space maps onto it directly and what's on screen
 // is the shape the projector will actually show — the same WYSIWYG contract
-// keystone already keeps with the DAC.
+// the output windows keep.
 let _ratioFp = "";
 function syncOutputRatio(s){
   const sel = $("o-ratio");
@@ -3944,14 +3850,9 @@ slider("c-speed","camera.speed","cspeed");
 slider("c-radius","camera.orbit_radius","cradius",(v)=>(+v).toFixed(1));
 slider("c-fov","camera.fov","cfov",(v)=>(+v).toFixed(0));
 // far ("draw depth") and max_strokes are the two that get changed by hand
-// when the rig moves between the laser and a data projector — the projector
-// takes far more detail than a laser's stroke budget allows.
+// when the rig moves between displays.
 slider("c-far","camera.far","cfar",(v)=>(+v).toFixed(0));
 slider("c-max","camera.max_strokes","cmax",(v)=>(+v).toFixed(0));
-// 0 means "no separate laser setting" — the scene then uses one density for
-// both outputs, which is how every scene authored before this behaved.
-slider("c-max-laser","camera.laser_max_strokes","cmaxlaser",
-       (v)=>(+v) ? (+v).toFixed(0) : "off");
 $("c-mode").onchange = () => send({type:"set",key:"camera.mode",value:$("c-mode").value});
 
 let generating = false, genTimer = null, genElapsedTimer = null, _genSeconds = 0;
@@ -4280,15 +4181,6 @@ $("d-cap").onchange = () => {
   refreshSizeEstimate();      // the warning line under the slider depends on it
 };
 
-function commitPps(el, key, allowBlank){
-  const raw = el.value.trim();
-  if (raw === "" && allowBlank) { send({type:"set", key, value:null}); return; }
-  const n = parseInt(raw, 10);
-  if (!isNaN(n) && n > 0) send({type:"set", key, value:n});
-}
-$("o-maxpps").addEventListener("change", () => commitPps($("o-maxpps"), "max_pps", false));
-$("o-scenepps").addEventListener("change", () => commitPps($("o-scenepps"), "scene.pps", true));
-
 $("master-toggle").onclick = () => {
   const nowActive = $("master-toggle").dataset.active === "1";
   send({type:"set_active", value: !nowActive});
@@ -4300,20 +4192,6 @@ $("motion-toggle").onclick = () => {
   const frozen = $("motion-toggle").dataset.frozen === "1";
   send({type:"set", key:"motion", value: frozen ? 1 : 0});
 };
-// Independent of Start/Stop: visuals+audio+preview can run with the laser
-// off — off is the default/safe state regardless of --laser at launch. Off
-// is styled "go" (safe/neutral); on is "amber" (live beam, matching this
-// codebase's existing warning-color convention) so the armed state reads at
-// a glance, the same way master-toggle already does for Start/Stop.
-let _laserOn = false;
-function updateLaserBtn(on){
-  _laserOn = on;
-  const b = $("laser-toggle");
-  b.textContent = on ? "■ Stop Laser" : "▶ Start Laser";
-  b.className = on ? "amber" : "go";
-}
-$("laser-toggle").onclick = () => send({type: "set_laser", value: !_laserOn});
-
 $("fullscreen-toggle").onclick = () => {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(err => console.error(err));
@@ -4329,7 +4207,7 @@ $("fullscreen-toggle").onclick = () => {
 $("hue-override-on").onchange = () => send({type:"set", key:"hue_override", value:$("hue-override-on").checked});
 // Disable scene plane: hides floor/ground/grid/plane-named nodes from a 3D
 // scene's own geometry — applied before the frame is built (World.render3d),
-// so laser and display are both affected identically, not just this preview.
+// so the preview and output windows are affected identically.
 $("c-disable-plane").onchange = () => send({type:"set", key:"disable_plane", value:$("c-disable-plane").checked});
 $("hue-override-val").oninput = () => {
   $("v-hueoverride").textContent = (+$("hue-override-val").value).toFixed(2);
@@ -4370,7 +4248,7 @@ $("show-title").onclick = () => {
 };
 
 // Output windows: separate, chrome-less browser windows for a projector or
-// second screen (independent of --laser — this is a software-only display
+// second screen (a software-only display
 // path, driven by the same websocket feed the control UI uses). Output 2 is
 // the same live feed as Output 1, just a second window — each one reads its
 // own flip-x/flip-y state (Settings > Output monitors) via a `?out=` id in
@@ -4714,7 +4592,7 @@ outputFlipCheckbox("out2-flip-x", 2, "x");
 outputFlipCheckbox("out2-flip-y", 2, "y");
 
 // Per-output-monitor keystone (Settings > Output monitors) — independent per
-// window, display-only (never sent anywhere, unlike the laser's below).
+// window, display-only (never sent anywhere).
 // Same localStorage pattern as the flip checkboxes just above.
 function outputKeystoneSlider(id, outputId, axis){
   const key = `pw_filter_keystone${axis}_${outputId}`;
@@ -4727,17 +4605,6 @@ outputKeystoneSlider("out1-ks-v", 1, "v");
 outputKeystoneSlider("out2-ks-h", 2, "h");
 outputKeystoneSlider("out2-ks-v", 2, "v");
 
-// Laser keystone — a live rig setting (Settings > Keystone), not per-scene;
-// see set_keystone's docstring in engine.py. Sent as {h, v} together so a
-// change to one doesn't race a change to the other.
-$("ks-h").oninput = () => {
-  $("v-ksh").textContent = (+$("ks-h").value).toFixed(3);
-  send({type: "set_keystone", h: +$("ks-h").value, v: +$("ks-v").value});
-};
-$("ks-v").oninput = () => {
-  $("v-ksv").textContent = (+$("ks-v").value).toFixed(3);
-  send({type: "set_keystone", h: +$("ks-h").value, v: +$("ks-v").value});
-};
 $("test-pattern-toggle").onclick = () => {
   const on = $("test-pattern-toggle").textContent.includes("Hide");
   send({type: "set_test_pattern", value: !on});
