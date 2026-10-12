@@ -256,6 +256,7 @@ class MidiInput:
         self.last_msg = 0.0
         self.msg_count = 0
         self.learn_key = None          # key awaiting a CC, or None
+        self.learn_voice = None        # voice awaiting a note/pad to PLAY it
         self.last_cc = None            # (cc, value) — shown in the UI for sanity
         self.error = None
         self._lock = threading.Lock()
@@ -461,6 +462,7 @@ class MidiInput:
             "active": self.active(),
             "count": self.msg_count,
             "learn": self.learn_key,
+            "learn_voice": self.learn_voice,
             "last_cc": self.last_cc,
             "map": {str(cc): k for cc, k in self.effective_map().items()},
             "overrides": self.router.scene_overrides(),
@@ -475,16 +477,39 @@ class MidiInput:
         blocks the render loop."""
         self.last_msg = time.monotonic()
         self.msg_count += 1
+        if msg.type in ("note_on", "note_off"):
+            self._on_note(msg)
+            return
         if msg.type != "control_change":
             return
         self.last_cc = [msg.control, msg.value]
 
-        # Learn takes priority over any existing binding for this CC.
+        # Play-learn: a pad (a CC that goes up on press) becomes a TRIGGER for
+        # the armed voice. Only a press arms it — the release that follows
+        # must not also be read as the binding.
+        if self.learn_voice is not None and msg.value > 0:
+            with self._lock:
+                voice, self.learn_voice = self.learn_voice, None
+            if voice:
+                self.router.bind_play(voice, {"kind": "cc", "cc": msg.control,
+                                              "ch": getattr(msg, "channel", 0)})
+            return
+
+        # Learn takes priority over any existing binding for this CC —
+        # including a trigger, so a pad can be re-learned as a knob.
         with self._lock:
             learning = self.learn_key
             self.learn_key = None
         if learning:
             self.bind(learning, msg.control)
+            return
+
+        # A CC bound as a trigger in this scene plays its voice, and wins over
+        # the global CC -> parameter map for that CC while the scene is loaded
+        # (same precedence as midi_overrides). Press = value > 0, release = 0.
+        trig = self._trigger_for(msg.control, getattr(msg, "channel", 0))
+        if trig:
+            self.router.play_trigger(trig, msg.value > 0, max(1, msg.value))
             return
 
         key = self.effective_map().get(msg.control)
@@ -494,6 +519,29 @@ class MidiInput:
         if rng is None:
             return
         self._apply(key, msg.value, rng[0], rng[1], self.mode_for(key))
+
+    def _trigger_for(self, cc: int, ch: int):
+        for voice, b in self.router.play_map().items():
+            if b.get("kind") == "cc" and b.get("cc") == cc and b.get("ch", 0) == ch:
+                return voice
+        return None
+
+    def _on_note(self, msg):
+        """A key on a MIDI keyboard. Play-learn binds its CHANNEL to the armed
+        voice; otherwise the voice bound to this channel plays the note at
+        pitch. Velocity 0 on a note_on is a note-off (running status)."""
+        on = msg.type == "note_on" and msg.velocity > 0
+        ch = getattr(msg, "channel", 0)
+        if on and self.learn_voice is not None:
+            with self._lock:
+                voice, self.learn_voice = self.learn_voice, None
+            if voice:
+                self.router.bind_play(voice, {"kind": "ch", "ch": ch})
+            return
+        for voice, b in self.router.play_map().items():
+            if b.get("kind") == "ch" and b.get("ch") == ch:
+                self.router.play_note(voice, msg.note, msg.velocity if on else 0, on)
+                return
 
     def _apply(self, key, value, lo, hi, mode):
         span = hi - lo
@@ -552,4 +600,17 @@ class MidiInput:
         """Arm (or, with the same key again / None, cancel) MIDI learn."""
         with self._lock:
             self.learn_key = None if (key is None or key == self.learn_key) else key
+            if self.learn_key is not None:
+                self.learn_voice = None
         return self.learn_key
+
+    def arm_play_learn(self, voice: str | None):
+        """Arm (or, with the same voice again / None, cancel) play-learn: the
+        next MIDI note binds its channel to `voice`, the next pad press (a CC
+        going up) binds that CC as its trigger. Cancels a parameter learn —
+        one learn at a time, so a CC can't be claimed by both."""
+        with self._lock:
+            self.learn_voice = None if (voice is None or voice == self.learn_voice) else voice
+            if self.learn_voice is not None:
+                self.learn_key = None
+        return self.learn_voice

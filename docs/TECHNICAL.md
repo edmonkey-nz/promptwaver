@@ -584,6 +584,59 @@ Two levels of storage:
 
 **Default layout**: CC 1–16 are the globals (master, camera speed, distortion, delay mix, EQ, swell, draw depth, max strokes, audio↔visual, crossfade, glow, trail, orbit distance, tempo); then banks of 8 for voice slots — CC 20–27 levels, 30–37 pans, 40–47 tone, 50–57 attack, 60–67 release. Learning a CC takes it from whatever held it, and unmapping hands it back.
 
+## Playing a scene's instruments (0.91)
+
+Each voice row has a **map** button beside its speaker-icon mute. Click it,
+then press what should play that voice:
+
+| input | binding | plays |
+|---|---|---|
+| a computer key | `{"kind": "key", "code": "KeyZ"}` | the voice as authored while held — its `chord` on pad/osc/sub, its root `note` on pluck/bell/harp, a gated burst on noise |
+| a MIDI pad (a CC that goes up on press) | `{"kind": "cc", "cc": 21, "ch": 0}` | the same, with the CC value as velocity |
+| a key on a MIDI keyboard | `{"kind": "ch", "ch": 0}` | every note on that channel, at pitch and velocity |
+
+Shift-click or right-click clears; Esc or a second click cancels learning.
+Bindings are per scene, by voice name (`SceneSpec.play_map`, written only when
+non-empty so unmapped scenes save unchanged), and a source bound to one voice
+is taken off any other. A trigger CC wins over the global CC→parameter map
+while the scene is loaded; a parameter MIDI-learn still claims it.
+
+**Played notes ARE the voice.** Struck voices' notes join `_active_notes` with
+the fields their own schedulers write, so their renderers, `MAX_ACTIVE_NOTES`
+and the bell/harp caps all apply. Held voices' notes go to `Soundscape._held`
+and render through `_render_held`: the voice's own oscillator rows
+(`_voice_rows`, shared with the arpeggiator — waveform, tone, resonance,
+unison/detune, sub) under a gated linear ADSR from the voice's `env`. They are
+added into the voice's signal before its gain, level, swell, distortion and
+pan, so mute silences them too. Velocity scales loudness linearly (64 ≈ half).
+Up to 16 held notes per voice; the oldest is released, not cut.
+`HELD_OUTPUT_GAIN` is per type because each drone renderer has its own internal
+gain: measured played-chord/own-drone RMS is 0.92–1.18 (pad), 0.99 (osc),
+0.94 (sub).
+
+**The note path never touches the render thread.** MIDI (mido's thread), a
+mapped computer key (websocket handler) and take replay (the render loop) all
+call `Engine.play_note` → `SoundscapeSynth.note`, which appends to a deque. The
+audio producer drains it at the top of each block (`_apply_notes`) and places
+each note at the same FRACTION of the block as its arrival was of the time
+since the previous render. Renders happen once per callback, so every note
+lands a constant ~3 blocks after it was played, instead of being snapped to a
+block start (2–3 blocks, jittery). Simulated with ±2 ms render jitter: 46.5 ms
+from press to its place in the playing block, sd 0.65 ms (snapping: 35 ms
+average, 24.6 ms spread); add the device's own ~1 block. **So a played note
+sounds ~70 ms after the press at the 1024 default and ~35 ms at 512**; struck
+voices feel tighter at 512 (Settings › Audio), which measured clean in steady
+play.
+
+**Recorded and replayed.** Played notes record into takes as command `"note"`
+(key `"<voice>|<pitch>"`, value `[on, vel]`), never coalesced. Replay passes
+each event's DUE time, so notes land where they were played, not on the 60Hz
+tick: measured spacing error 0.01 ms.
+
+**Load.** 16 held notes on a 7-voice unison osc with a sub, on top of eniac's
+soundscape: producer busy ~31% of the time (eniac alone ~11%), zero starved
+callbacks at 1024 and 512.
+
 ## Scene spec format
 
 ```json

@@ -36,50 +36,26 @@ client-side heuristics** — e.g. a monotonically increasing `spec_rev` in
 `state()`, bumped by `_install_spec`, so the client can baseline on the first
 broadcast whose revision matches the load it asked for.
 
-### e) 25-note MIDI keyboard playing a scene's own instrument
+### e) Playing a scene's instruments — BUILT in 0.91
 
-Play one of the loaded scene's voices from a MIDI controller (and optionally
-the QWERTY keyboard), instead of only turning its knobs.
+Each voice has a **map** button (beside its speaker-icon mute) that learns what
+plays it: a computer key, a MIDI pad (CC press) or a MIDI keyboard channel (at
+pitch). Saved per scene; played notes record into takes and replay at their
+exact time. See docs/TECHNICAL.md "Playing a scene's instruments" for the
+measured latency (a constant ~3 blocks: ~70 ms at 1024, ~35 ms at 512), the
+struck/held split and the gain calibration.
 
-**The blocking constraint is latency, and it should be settled before any UI
-work.** The synth renders whole blocks inside the audio callback, and
-`audio_blocksize` defaults to **8192 frames ≈ 186ms** at 44.1kHz. A note
-cannot sound before the start of the next block, so at the default every
-keypress is up to a fifth of a second late — unplayable. 1024 frames ≈ 23ms is
-fine; 2048 ≈ 46ms is borderline. Blocksize is already a setting, so step one
-is simply: does this machine run glitch-free at 1024 with a busy scene? If
-not, the feature isn't worth building.
+Not built, natural next steps:
 
-Given that, the pieces:
-
-1. **Note events into the engine.** `midi.py` handles CC only today — add
-   note-on/note-off. Notes must NOT go through `_enqueue`: that queue is
-   drained by the render thread at `fps`, adding another ~22ms and jitter on
-   top. They want a lock-free queue read directly by the audio callback.
-
-2. **A playable voice in the DSP.** `Soundscape` renders from a static spec;
-   the only per-note machinery is `pluck`'s scheduler. **Reuse it.** The
-   arpeggiator already schedules through that same path specifically so it
-   can't reintroduce the unbounded-note-growth bug fixed in 0.12.0 — a played
-   note should take the same route and inherit the same note cap.
-
-3. **Voice selection.** Which of the scene's voices the keyboard drives. The
-   voice keeps its own waveform/tone/env, so a played note *is* that
-   instrument. Per-scene, so it belongs in `SceneSpec` (`played_voice`, read
-   with a default like every other field, keeping the round-trip
-   backward-compatible).
-
-4. **QWERTY input.** Browser `keydown`/`keyup` → websocket → the same queue.
-   Needs auto-repeat suppression and a focus guard so typing in the prompt box
-   doesn't play notes. Latency is worse over the websocket — treat it as a
-   convenience for auditioning, not for performance.
-
-5. **UI.** A 25-key widget under the Soundscape pane, plus the voice picker.
-   Highlight held notes; show the octave offset.
-
-Worth flagging that this changes what the app *is* — from a generative
-instrument you tune into one you also play. Velocity curves, sustain pedal and
-sequencing are all natural follow-ons; none are in scope above.
+- **A QWERTY piano layout** (two rows as a keyboard, octave keys). Today a
+  computer key is one trigger playing the voice as authored, not a pitch.
+- **Sustain pedal** (CC 64) and **velocity curves** — velocity is linear now.
+- **A "play only" switch per voice**: played notes add to the voice's own
+  generative output; there is no way yet to silence the pattern but keep the
+  played notes (mute silences both).
+- **Automatic 512 while playing.** Deliberately not done: changing blocksize
+  restarts the stream (an audible gap) and 512 starved 3 callbacks in 23 scene
+  switches. It is a manual Settings › Audio choice for now.
 
 ### f) HOLD — bluetooth controllers from the laser-arcade sibling project
 

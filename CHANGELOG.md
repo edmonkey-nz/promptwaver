@@ -7,6 +7,29 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.91.0]
+
+### Play a scene's instruments
+
+Every voice now has a **map** button. Click it, then press what should play
+that voice: a **computer key**, a **MIDI pad** (a CC press), or a key on a
+**MIDI keyboard**, which binds that keyboard's channel so it plays the voice
+at pitch and velocity. A key or pad plays the voice as authored while held:
+its chord on pad/osc/sub, its root on pluck/bell/harp, a gated burst on
+noise. Mappings are saved with the scene. Shift-click or right-click clears.
+
+Played notes are the voice itself: they use its waveform, tone, unison,
+envelope, level, pan and effects, and its mute silences them. They are
+recorded into takes and replay at the exact time they were played.
+
+They never go through the render loop. A played note is placed in the audio
+by the time it arrived, so it sounds a **constant** ~3 blocks later: about
+70 ms at the 1024 default and about 35 ms at 512, instead of jumping around
+by a whole block. 16 held notes on a heavy 7-voice unison osc measured zero
+audio dropouts at both sizes.
+
+The mute button is now a speaker icon with on/off state.
+
 ## [0.90.0]
 
 ### Every output now draws at the display's refresh, on the GPU

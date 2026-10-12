@@ -16,6 +16,7 @@ import queue
 import sys
 import threading
 import time
+from collections import deque
 
 from .dsp import SoundscapeMixer, default_soundscape, SR, SUPPORTED_CHANNELS
 from .diagnostics import CallbackStats, list_devices
@@ -87,6 +88,8 @@ class NullSynth:
     def set_audio_param(self, path, value): pass
     def set_muted(self, muted, fade=0.0): pass
     def soundscape(self): return None
+    def note(self, name, pitch, vel, on, t=None): pass
+    def trigger_pitches(self, name): return []
     def diagnostics(self): return None
     def vu(self): return None
     def bands(self): return {"level": 0.0, "low": 0.0, "mid": 0.0, "high": 0.0, "voices": {}}
@@ -134,6 +137,13 @@ class SoundscapeSynth:
         self._producer: threading.Thread | None = None
         self._producer_stop: threading.Event | None = None
         self._residual = None       # tail of a block the last callback didn't use
+        # PLAYED notes (keys, pads, MIDI keyboard, take replay) waiting for
+        # the producer: (arrival time, voice, pitch, velocity, on). A deque
+        # because append/popleft are atomic — MIDI's thread, the websocket
+        # handler and the render loop all add to it without taking the audio
+        # lock. See `note` and `_apply_notes`.
+        self._notes: deque = deque()
+        self._last_render_t: float | None = None
 
     def _produce(self):
         """Render blocks ahead of the callback, forever, on a normal thread.
@@ -149,6 +159,7 @@ class SoundscapeSynth:
                 try:
                     with self._lock:
                         crossfading = self._scape._phase is not None
+                        self._apply_notes()
                         pending = (self._scape.render(self.blocksize), crossfading)
                 except Exception:
                     # A broken soundscape must not kill the audio thread and
@@ -162,6 +173,43 @@ class SoundscapeSynth:
                 pending = None
             except queue.Full:
                 pass                       # re-check the stop flag, then retry
+
+    def note(self, name: str, pitch: int, vel: int, on: bool, t: float | None = None):
+        """Queue a played note-on/off for voice `name`. `t` is when it was
+        played (time.monotonic); default now. Never touches the audio lock or
+        the engine queue — the producer picks it up at its next block."""
+        self._notes.append((time.monotonic() if t is None else float(t),
+                            name, int(pitch), int(vel), bool(on)))
+
+    def trigger_pitches(self, name: str) -> list[int]:
+        with self._lock:
+            return self._scape.trigger_pitches(name)
+
+    def _apply_notes(self):
+        """Place queued notes into the block about to render. Called by the
+        producer with the audio lock held.
+
+        A note is placed at the same FRACTION of this block as its arrival
+        was of the time since the previous render, not at the block start.
+        Renders happen once per callback (the queue is one block deep), so
+        every note then lands a constant ~3 blocks after it was played instead
+        of being snapped to a block boundary — 2-3 blocks of jitter becomes a
+        fixed delay, which is what makes it playable."""
+        now = time.monotonic()
+        block_s = self.blocksize / float(self.sr)
+        prev = self._last_render_t
+        if prev is None or now - prev > 4 * block_s:
+            prev = now - block_s           # first block, or after a stall
+        self._last_render_t = now
+        if not self._notes:
+            return
+        span = max(now - prev, 1e-6)
+        n0 = self._scape.clock
+        last = self.blocksize - 1
+        while self._notes:
+            t, name, pitch, vel, on = self._notes.popleft()
+            frac = min(1.0, max(0.0, (t - prev) / span))
+            self._scape.play(name, pitch, vel, on, n0 + min(last, int(frac * self.blocksize)))
 
     def _callback(self, outdata, frames, time_info, status):
         """Realtime thread. Copies only — no synthesis, no allocation, no lock.

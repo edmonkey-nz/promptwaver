@@ -293,7 +293,7 @@ The trade that move makes: the producer is a **plain Python thread**, so it lost
 
 ### Synth voices have a formula — read `docs/INSTRUMENTS.md` before adding one
 
-**`docs/INSTRUMENTS.md` is the recipe for adding a voice type to `audio/dsp.py`**: the two rendering shapes and when each applies, the measured cost model (~0.6ms per note×partial row against a 186ms block budget, 120 rows the safe ceiling for one voice — both measured at the OLD 8192-frame block; at today's 1024 default the library runs 0.9–4.8ms p95 per 23.2ms block, small blocks cost proportionally ~1.3–1.6× more, and the row ceiling has not been re-measured), the note-lifecycle guards and the assumptions a sustaining voice breaks, output-gain calibration, and the **five registration points** — `VOICE_TYPES`, the `render` dispatch, `_normalise`, `_SOUNDSCAPE_GUIDE`, and the `#voices` panel — none of which check each other, so missing one leaves the voice inaudible, unselectable, or invisible.
+**`docs/INSTRUMENTS.md` is the recipe for adding a voice type to `audio/dsp.py`**: the two rendering shapes and when each applies, the measured cost model (~0.6ms per note×partial row against a 186ms block budget, 120 rows the safe ceiling for one voice — both measured at the OLD 8192-frame block; at today's 1024 default the library runs 0.9–4.8ms p95 per 23.2ms block, small blocks cost proportionally ~1.3–1.6× more, and the row ceiling has not been re-measured), the note-lifecycle guards and the assumptions a sustaining voice breaks, output-gain calibration, and the **registration points** — `VOICE_TYPES`, the `render` dispatch, `_normalise`, `_coerce`, `_SOUNDSCAPE_GUIDE`, the `#voices` panel, and (since 0.91) `Soundscape.play`/`trigger_pitches` for how a played note sounds — none of which check each other, so missing one leaves the voice inaudible, unselectable, invisible or unplayable.
 
 Two things from it that bite outside the audio module: `_normalise`'s output is what gets written to `scenes/<name>.json`, so defaulting a new field on every voice churns the whole tracked library on the next save — gate voice-specific fields on `v["type"]`. And **`set_param` bypasses `_normalise`**, so live UI/MIDI writes land in the spec unclamped and anything dangerous must also be clamped where it's read.
 
@@ -323,6 +323,14 @@ captures `live` — the `[(scene, gain)]` pair — BEFORE a completing crossfade
 swaps `current`, so the frame where a fade ends still holds both scenes.
 
 ### Threading: one render thread, one queue
+
+**The one exception: played notes.** A mapped key, MIDI pad, MIDI keyboard
+note or replayed take note goes `Engine.play_note` → `SoundscapeSynth.note` (a
+deque) → the audio producer, which places it by arrival time
+(`_apply_notes`). It must NEVER go through `_enqueue`: the render loop's tick
+would add ~16 ms plus jitter on top of the audio latency, and the arrival-time
+placement is what turns block-snapped jitter into a constant delay (see
+docs/TECHNICAL.md "Playing a scene's instruments").
 
 `Engine` runs a single daemon render thread at `fps`. Every mutation from the web layer or MIDI goes through `_enqueue(fn)`; the loop drains the queue at the top of each tick. **Never mutate engine or scene state directly from a web handler** — that's the invariant the whole control surface depends on.
 

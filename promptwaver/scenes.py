@@ -60,10 +60,21 @@ class SceneSpec:
     # leave behind, and the value reset on restart. Empty means "use the
     # engine defaults", so every pre-existing scene keeps its old behaviour.
     lfo: dict = field(default_factory=dict)
+    # Which input PLAYS each voice, by voice name (like midi_overrides):
+    # {"<voice>": {"kind": "key", "code": "KeyZ"} | {"kind": "cc", "cc": 21,
+    # "ch": 0} | {"kind": "ch", "ch": 0}}. A key or CC is a trigger (press
+    # plays the voice's own chord/root, release lets go); a MIDI channel plays
+    # the voice at pitch from a keyboard. Empty for every scene that has none.
+    play_map: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
         d["layers"] = [asdict(l) if isinstance(l, Layer) else l for l in self.layers]
+        # Written only when there is one, so a scene saved without any mapping
+        # stays byte-for-byte what it was (no "play_map": {} churning every
+        # tracked scene the next time it is saved).
+        if not d.get("play_map"):
+            d.pop("play_map", None)
         return d
 
     @staticmethod
@@ -85,6 +96,7 @@ class SceneSpec:
             generation_settings=d.get("generation_settings", {}),
             shape_modulation=d.get("shape_modulation", []),
             lfo=d.get("lfo", {}),
+            play_map=d.get("play_map", {}),
         )
 
 

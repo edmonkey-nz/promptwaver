@@ -324,8 +324,8 @@ pluck and reads as broken).
 
 ## 6. The registration points
 
-Five places, none of which check each other. Missing any one leaves the voice
-inaudible, unselectable, or invisible.
+Seven places, none of which check each other. Missing any one leaves the voice
+inaudible, unselectable, invisible, or unplayable from a key or keyboard.
 
 | where | what |
 |---|---|
@@ -335,6 +335,7 @@ inaudible, unselectable, or invisible.
 | `dsp.py` `_coerce` | **any non-float param** — it `float()`s everything it doesn't know |
 | `claude_director.py` `_SOUNDSCAPE_GUIDE` | so the director can select it |
 | `web/static/index.html` (`#voices` panel) | knobs for the new params |
+| `dsp.py` `Soundscape.play` + `trigger_pitches` | how a PLAYED note sounds: struck (joins `_active_notes`, decays) or held (`_held`, gated by the voice's `env`) — and what one trigger plays |
 
 `_coerce` is the one that bites, because it only fails on a LIVE edit — the
 voice renders fine from a saved scene and then throws `could not convert string

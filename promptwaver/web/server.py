@@ -450,6 +450,19 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
         ok = engine.midi.open_port(m.get("name", ""))
         return {"type": "midi_result", "action": "port", "ok": ok,
                 "error": engine.midi.error}
+    elif t == "play_learn":
+        # Map button: arm (or cancel) MIDI play-learn for a voice. Computer
+        # keys are learned by the page itself, which then sends play_map_set.
+        engine.midi.arm_play_learn(m.get("voice"))
+    elif t == "play_map_set":
+        engine.set_play_map(str(m.get("voice", "")), m.get("binding"))
+    elif t == "play_map_clear":
+        engine.set_play_map(str(m.get("voice", "")), None)
+    elif t == "play_note":
+        # A mapped computer key, pressed or released. Straight to the engine,
+        # NOT through _enqueue — see Engine.play_note.
+        engine.play_trigger(str(m.get("voice", "")), bool(m.get("on")),
+                            int(m.get("vel", 110)))
     elif t == "midi_learn":
         # Same key again (or no key) cancels — the UI's learn button is a
         # toggle, so clicking the pulsing one backs out of learn mode.

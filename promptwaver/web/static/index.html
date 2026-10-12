@@ -481,8 +481,17 @@
   .voice .vmtr{height:3px;border-radius:2px;background:var(--bg);overflow:hidden;margin:-2px 0 0}
   .voice .vmtr i{display:block;height:100%;width:0%;background:rgba(51,224,208,.38);
                  transition:width .08s linear}
-  .voice .mutebtn{padding:3px 8px;font-size:11px;border-radius:6px}
+  .voice .mutebtn{padding:3px 7px;font-size:11px;border-radius:6px;line-height:0}
+  .voice .mutebtn svg{width:15px;height:15px;vertical-align:middle}
   .voice .mutebtn.on{border-color:var(--amber);color:var(--amber)}
+  .voice .vbtns{display:flex;gap:6px;align-items:center}
+  /* Map: what PLAYS this voice — a computer key, a MIDI pad (CC) or a MIDI
+     keyboard channel. Shows the binding once there is one. */
+  .voice .mapbtn{padding:3px 8px;font-size:11px;border-radius:6px;min-width:34px}
+  .voice .mapbtn.bound{border-color:var(--cyan);color:var(--cyan)}
+  .voice .mapbtn.learn{border-color:var(--amber);color:var(--amber);animation:mappulse 0.9s ease-in-out infinite}
+  .voice .mapbtn.playing{background:var(--cyan);color:#04211f}
+  @keyframes mappulse{50%{opacity:.45}}
   .voice select{font-size:11px;padding:4px 6px}
   .diagrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-family:var(--mono);
            font-size:11px;color:var(--dim)}
@@ -1709,6 +1718,7 @@ function paintState(s){
   markModulated(s);
   paintRecording(s);
   syncVoiceMutes(s);
+  syncMapButtons();
   // Takes are per scene, so the list is refetched when the scene changes.
   if (s.scene && s.scene !== _takeScene) refreshTakes(s.scene);
   // after syncControls/markModulated: the ghosts are positioned against each
@@ -2690,9 +2700,117 @@ function syncVoiceMutes(s){
     if (el.classList.contains("muted") === m) continue;
     el.classList.toggle("muted", m);
     btn.classList.toggle("on", m);
-    btn.textContent = m ? "muted" : "mute";
+    setMuteIcon(btn, m);
   }
 }
+
+// Speaker icon for a voice's mute button: sound waves = sounding; a crossed
+// speaker in amber = muted. The words stay in the tooltip and aria-label.
+const _SPK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/>';
+function setMuteIcon(btn, muted){
+  btn.innerHTML = _SPK + (muted
+    ? '<path d="M16 9l6 6M22 9l-6 6"/></svg>'
+    : '<path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10"/></svg>');
+  btn.title = muted ? "muted — click to unmute" : "mute";
+  btn.setAttribute("aria-label", muted ? "unmute voice" : "mute voice");
+}
+
+// --- playing the scene's instruments ------------------------------------
+//
+// Each voice's map button binds what PLAYS it: the next computer key, MIDI
+// pad (a CC press) or MIDI keyboard note (binds that keyboard's channel, so it
+// plays the voice at pitch). Saved with the scene. Shift-click or right-click
+// clears. A computer key or pad plays the voice as authored — its chord on
+// pad/osc/sub, its root on the struck voices — for as long as it is held.
+let _keyLearnVoice = null;          // voice waiting for a computer key or MIDI
+let _learnFrom = "";                // that voice's binding when learn was armed
+const _keysDown = new Map();        // e.code -> voice, while held
+
+function _playMap(){ return (_lastState?.scene_spec || {}).play_map || {}; }
+
+function bindingLabel(b){
+  if (!b) return "map";
+  if (b.kind === "key") return (b.code || "").replace(/^Key|^Digit/, "") || "key";
+  if (b.kind === "cc") return `CC${b.cc}`;
+  if (b.kind === "ch") return `ch${(b.ch ?? 0) + 1}`;
+  return "map";
+}
+
+function paintMapBtn(btn, voice){
+  const b = _playMap()[voice];
+  const learning = _keyLearnVoice === voice;
+  btn.textContent = learning ? "press…" : bindingLabel(b);
+  btn.classList.toggle("bound", !!b && !learning);
+  btn.classList.toggle("learn", learning);
+  btn.title = learning
+    ? "Press a computer key, a MIDI pad, or a key on a MIDI keyboard to play this voice. Click again (or Esc) to cancel."
+    : b ? `Played by ${b.kind === "ch" ? "MIDI keyboard channel " + ((b.ch ?? 0) + 1) : b.kind === "cc" ? "MIDI pad CC " + b.cc : "computer key " + bindingLabel(b)}. Shift-click or right-click to clear.`
+        : "Map a computer key, MIDI pad or MIDI keyboard to play this voice. For struck voices (pluck, bell, harp) a 512 audio blocksize feels tighter — Settings › Audio.";
+}
+
+function syncMapButtons(){
+  // A learn finished from MIDI shows up as this voice's binding changing.
+  if (_keyLearnVoice && JSON.stringify(_playMap()[_keyLearnVoice] || null) !== _learnFrom)
+    _keyLearnVoice = null;
+  for (const btn of document.querySelectorAll("#voices .mapbtn")) paintMapBtn(btn, btn.dataset.voice);
+}
+
+function togglePlayLearn(voice){
+  const arming = _keyLearnVoice !== voice;
+  _keyLearnVoice = arming ? voice : null;
+  _learnFrom = JSON.stringify(_playMap()[voice] || null);
+  // The server arms MIDI play-learn for the same voice, so whichever input
+  // arrives first — computer key or MIDI — makes the binding.
+  send({type:"play_learn", voice: arming ? voice : null});
+  syncMapButtons();
+}
+
+function _typing(e){
+  const t = e.target;
+  if (!t) return false;
+  const tag = (t.tagName || "").toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || t.isContentEditable;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (_typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (document.querySelector(".modal-backdrop.open")) return;
+  if (_keyLearnVoice) {
+    if (e.key === "Escape") { togglePlayLearn(_keyLearnVoice); return; }
+    if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+    e.preventDefault();
+    const voice = _keyLearnVoice;
+    _keyLearnVoice = null;
+    send({type:"play_learn", voice:null});
+    send({type:"play_map_set", voice, binding:{kind:"key", code:e.code}});
+    syncMapButtons();
+    return;
+  }
+  const pm = _playMap();
+  const voice = Object.keys(pm).find(n => pm[n].kind === "key" && pm[n].code === e.code);
+  if (!voice) return;
+  e.preventDefault();
+  if (e.repeat || _keysDown.has(e.code)) return;     // a held key auto-repeats
+  _keysDown.set(e.code, voice);
+  send({type:"play_note", voice, on:true});
+  document.querySelector(`#voices .mapbtn[data-voice="${CSS.escape(voice)}"]`)?.classList.add("playing");
+});
+document.addEventListener("keyup", (e) => {
+  const voice = _keysDown.get(e.code);
+  if (!voice) return;
+  _keysDown.delete(e.code);
+  send({type:"play_note", voice, on:false});
+  document.querySelector(`#voices .mapbtn[data-voice="${CSS.escape(voice)}"]`)?.classList.remove("playing");
+});
+// A key held while the window loses focus never sends its keyup: let go of
+// everything rather than leave a note sounding forever.
+window.addEventListener("blur", () => {
+  for (const [, voice] of _keysDown) send({type:"play_note", voice, on:false});
+  _keysDown.clear();
+  document.querySelectorAll("#voices .mapbtn.playing").forEach(b => b.classList.remove("playing"));
+});
 
 // --- session recording -------------------------------------------------
 //
@@ -3337,12 +3455,23 @@ function renderSoundscape(s){
     const head = document.createElement("div"); head.className="vhead";
     head.innerHTML = `<span class="vname">${v.name}</span><span class="vtype">${v.type}</span>`;
     const mb = document.createElement("button");
-    mb.className = "mutebtn" + (v.mute?" on":""); mb.textContent = v.mute?"muted":"mute";
+    mb.className = "mutebtn" + (v.mute?" on":"");
+    setMuteIcon(mb, !!v.mute);
     mb.onclick = () => { const nm=!el.classList.contains("muted");
-      el.classList.toggle("muted",nm); mb.classList.toggle("on",nm); mb.textContent=nm?"muted":"mute";
+      el.classList.toggle("muted",nm); mb.classList.toggle("on",nm); setMuteIcon(mb, nm);
       sendAudio(`voice.${v.name}.mute`, nm); };
+    const pb = document.createElement("button");
+    pb.className = "mapbtn"; pb.dataset.voice = v.name;
+    pb.onclick = (e) => {
+      if (e.shiftKey) { send({type:"play_map_clear", voice:v.name}); return; }
+      togglePlayLearn(v.name);
+    };
+    pb.oncontextmenu = (e) => { e.preventDefault(); send({type:"play_map_clear", voice:v.name}); };
+    paintMapBtn(pb, v.name);
+    const btns = document.createElement("div"); btns.className = "vbtns";
+    btns.appendChild(pb); btns.appendChild(mb);
     const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center";
-    hrow.appendChild(head); hrow.appendChild(mb);
+    hrow.appendChild(head); hrow.appendChild(btns);
     el.appendChild(hrow);
     // Live output level, above this voice's controls. Driven per tick by
     // updateVoiceMeters from the `voice.<name>` modulation source — the same

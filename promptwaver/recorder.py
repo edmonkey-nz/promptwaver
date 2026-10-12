@@ -54,8 +54,9 @@ COALESCE_S = 0.02
 #: write to the shared settings.json. Replaying those would silently
 #: reconfigure the machine when someone opened a take.
 #: "laser" was here until the laser was removed; old takes that carry it
-#: just have those events dropped on load (see `load`).
-COMMANDS = ("set", "set_audio", "active", "blank")
+#: just have those events dropped on load (see `load`). "note" is a PLAYED
+#: note (key, pad or MIDI keyboard): key "<voice>|<pitch>", value [on, vel].
+COMMANDS = ("set", "set_audio", "active", "blank", "note")
 
 
 def _safe(name: str) -> str:
@@ -241,7 +242,9 @@ class Recorder:
             # file for this would cost a seek per event, so the superseded
             # line is left on disk and `load` keeps the LAST of any duplicate
             # pair — sort is stable, so later wins naturally.
-            if self._events:
+            # Notes are never coalesced: a quick note-on/note-off pair is two
+            # events with the same key, and merging them loses the note.
+            if self._events and cmd != "note":
                 last = self._events[-1]
                 if (last["c"] == cmd and last.get("k") == key
                         and t - last["t"] < COALESCE_S):
@@ -325,8 +328,12 @@ class Player:
             e = ev[self._i]
             self._i += 1
             if not self._skip(e):
+                # When it was DUE, on the monotonic clock — the loop ticks at
+                # 60Hz, so an event is up to a tick late here; played notes
+                # use this to land at their recorded time, not the tick's.
+                due = time.monotonic() - (now - e["t"])
                 try:
-                    self._inject(e["c"], e.get("k"), e.get("v"))
+                    self._inject(e["c"], e.get("k"), e.get("v"), due)
                 except Exception:
                     # One bad event must not kill the render thread — that is
                     # also what drains the action queue, so it would look like

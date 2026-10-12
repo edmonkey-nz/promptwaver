@@ -573,6 +573,10 @@ class Soundscape:
         self._clock = 0                          # absolute sample index
         self._delay = Delay(sr, channels=self.channels)
         self._active_notes: list[dict] = []      # for pluck/arp voices
+        # Notes PLAYED on a held voice (pad/osc/sub/noise) from a key, pad or
+        # MIDI keyboard — see `play` and `_render_held`. Struck voices' played
+        # notes go into `_active_notes` instead, beside their own.
+        self._held: dict[str, list[dict]] = {}
         # Pitch-drift walk position per voice, and its generator. Seeded rather
         # than global so two Soundscapes rendering side by side (the mixer
         # crossfades two) don't share a stream and correlate their wobble.
@@ -659,6 +663,7 @@ class Soundscape:
     def set_spec(self, spec: dict):
         self.spec = _normalise(spec)
         self._active_notes.clear()
+        self._held.clear()
         self._voice_env = {}
         self._voice_env_on = {}
         for v in self.spec["voices"]:
@@ -1025,6 +1030,11 @@ class Soundscape:
                 mono = self._render_noise(rv, frames)
             else:
                 continue
+            if self._held.get(name):
+                # Played notes join the voice's own sound BEFORE its gain,
+                # level, swell, distortion and pan — a played note IS this
+                # instrument, and muting the voice silences it too.
+                mono = mono + self._render_held(rv, n0, frames)
             mono = mono * gain
             level = float(v.get("level", 0.4))
             lfo = lfos.get("level")
@@ -1386,6 +1396,8 @@ class Soundscape:
                 continue
             age = (idx - note["start"]) / self.sr
             env = np.where(age >= 0, np.exp(-age / max(0.05, note["decay"])), 0.0)
+            if "amp" in note:                     # a PLAYED note's velocity
+                env = env * note["amp"]
             if age[-1] <= note["decay"] * 6:
                 alive.append(note)
             ph = note["freq"] * (idx / self.sr)
@@ -1526,6 +1538,8 @@ class Soundscape:
 
         age = (idx[None, :] - starts[:, None]) / self.sr           # (N, frames)
         env = np.where(age >= 0, np.exp(-age / np.maximum(decays, 0.05)[:, None]), 0.0)
+        if any("amp" in n for n in mine):         # PLAYED notes carry a velocity
+            env = env * np.array([n.get("amp", 1.0) for n in mine])[:, None]
 
         # tone brightens/dulls the fixed partial table, same spirit as pad's
         # tone-driven rolloff — it doesn't change WHICH partials ring, only
@@ -1818,7 +1832,10 @@ class Soundscape:
             for ki in range(n_partials):
                 tau = decay / HARP_PARTIAL_K[ki] ** damp
                 row = rows.setdefault((note["freq"] * HARP_PARTIAL_K[ki], tau), len(rows))
-                g[row] = g.get(row, 0.0) + amps[ki] * math.exp(startloc / tau)
+                c = amps[ki] * math.exp(startloc / tau)
+                if "amp" in note:                 # a PLAYED note's velocity
+                    c *= note["amp"]
+                g[row] = g.get(row, 0.0) + c
 
         self._active_notes = other + alive
         if not rows:
@@ -1925,6 +1942,178 @@ class Soundscape:
     #: -0.2dB (range -2.6..+4.4dB) with no full mix peaking higher than it did.
     ARP_OUTPUT_GAIN = 0.8
 
+    # --- played notes (keys, pads, a MIDI keyboard) ---------------------------
+    #: Held notes ringing at once on one voice. Past this the OLDEST is released
+    #: (not cut — a cut clicks), which is what a polyphonic synth does too.
+    MAX_HELD_NOTES = 16
+    #: Per type, calibrated so a played trigger (the voice's chord) sits near
+    #: that voice's own drone playing the same chord — each type's drone
+    #: renderer carries its own internal gain, so one number cannot fit all.
+    #: Measured played/drone RMS at 0.5 for all: pad 0.92-1.18, osc 0.73,
+    #: sub 0.35; see docs/TECHNICAL.md "Playing a scene's instruments".
+    HELD_OUTPUT_GAIN = {"pad": 0.5, "osc": 0.68, "sub": 1.4}
+    STRUCK_TYPES = ("pluck", "bell", "harp")
+
+    @property
+    def clock(self) -> int:
+        """The sample index the NEXT `render` starts at."""
+        return self._clock
+
+    def _voice(self, name):
+        for v in self.spec.get("voices", []):
+            if v["name"] == name:
+                return v
+        return None
+
+    def trigger_pitches(self, name) -> list[int]:
+        """What a single trigger (a mapped key or pad) plays on this voice:
+        the voice as authored — its `chord` on pad/osc/sub, its root `note`
+        on the struck voices, one gated burst on noise."""
+        v = self._voice(name)
+        if v is None:
+            return []
+        root = int(v.get("note", 60))
+        if v.get("type") in ("pad", "osc", "sub"):
+            return [root + int(c) for c in (v.get("chord") or [0])]
+        return [root]
+
+    def play(self, name: str, pitch: int, vel: int, on: bool, start: int):
+        """Start (or release) a PLAYED note on voice `name` at absolute sample
+        `start`. Called by the synth's producer with the block it is about to
+        render, so `start` is inside or just ahead of that block.
+
+        Struck voices take note-on only — they decay on their own — and join
+        `_active_notes` with the same fields their schedulers write, so their
+        existing renderers draw them and the existing caps apply. Held voices
+        go to `_held`, gated until note-off by the voice's own ADSR."""
+        v = self._voice(name)
+        if v is None:
+            return
+        vt = v.get("type", "pad")
+        start = int(start)
+        amp = max(0.0, min(1.0, float(vel) / 127.0))
+        freq = midi_to_hz(pitch)
+        if vt in self.STRUCK_TYPES:
+            if not on:
+                return
+            if vt == "pluck":
+                note = dict(start=start, freq=freq, wf=v.get("waveform", "sine"),
+                            decay=float(v.get("decay", 1.2)), voice=name,
+                            tone=float(min(1.0, max(0.0, v.get("tone", 1.0)))),
+                            resonance=float(v.get("resonance", 0.0)), amp=amp)
+            elif vt == "bell":
+                note = dict(start=start, freq=freq, wf="sine",
+                            decay=float(v.get("decay", 1.2)), voice=name, amp=amp)
+            else:   # harp — same decay clamp _schedule_harp applies
+                note = dict(start=start, freq=freq, wf="sine", voice=name,
+                            decay=float(min(HARP_MAX_DECAY, max(0.05, v.get("decay", 6.0)))),
+                            tone=float(min(1.0, max(0.0, v.get("tone", 0.6)))),
+                            retire=None, amp=amp)
+            self._active_notes.append(note)
+            if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
+                self._active_notes = self._active_notes[-self.MAX_ACTIVE_NOTES:]
+            return
+        if vt not in self.ENVELOPED_TYPES:
+            return
+        held = self._held.setdefault(name, [])
+        if on:
+            held.append(dict(pitch=int(pitch), freq=freq, start=start, off=None, amp=amp))
+            live = [n for n in held if n["off"] is None]
+            if len(live) > self.MAX_HELD_NOTES:
+                live[0]["off"] = start
+        else:
+            for n in reversed(held):
+                if n["pitch"] == int(pitch) and n["off"] is None:
+                    n["off"] = max(start, n["start"])
+                    break
+
+    def _render_held(self, v, n0, frames):
+        """This voice's PLAYED held notes for one block: one gated linear ADSR
+        per note (the voice's own `env`, the same shape `Envelope` uses for
+        the voice itself), summed per distinct pitch over one batched set of
+        oscillator rows (`_voice_rows`), so a played note sounds exactly like
+        the voice. Noise is pitchless: one gate over a noise block."""
+        name = v["name"]
+        notes = self._held.get(name) or []
+        if not notes:
+            return 0.0
+        e = v.get("env") or {}
+        # Clamped on read: set_param bypasses _normalise.
+        A = max(1e-3, float(e.get("attack", 3.0)))
+        D = max(1e-3, float(e.get("decay", 1.2)))
+        Sus = min(1.0, max(0.0, float(e.get("sustain", 0.85))))
+        R = max(1e-3, float(e.get("release", 2.5)))
+
+        def on_level(age):
+            return np.where(age < A, age / A,
+                            np.where(age < A + D, 1.0 - (1.0 - Sus) * (age - A) / D, Sus))
+
+        idx = np.arange(n0, n0 + frames)
+        starts = np.array([n["start"] for n in notes], dtype=np.int64)
+        age = (idx[None, :] - starts[:, None]) / self.sr                   # (N, frames)
+        env = np.where(age >= 0, on_level(np.maximum(age, 0.0)), 0.0)
+        for k, n in enumerate(notes):
+            if n["off"] is None:
+                continue
+            off_age = (n["off"] - n["start"]) / self.sr
+            lvl = float(on_level(np.array(max(off_age, 0.0))))
+            rel = lvl * np.clip(1.0 - (age[k] - off_age) / R, 0.0, 1.0)
+            env[k] = np.where(age[k] >= off_age, rel, env[k])
+        env *= np.array([n["amp"] for n in notes])[:, None]
+
+        # A released note leaves once its release has run out.
+        end = n0 + frames
+        self._held[name] = [n for n in notes
+                            if n["off"] is None or (end - n["off"]) / self.sr <= R]
+
+        if v.get("type") == "noise":
+            return self._render_noise(v, frames) * np.minimum(env.sum(axis=0), 1.0)
+        uniq = sorted({n["freq"] for n in notes})
+        col = {f: i for i, f in enumerate(uniq)}
+        E = np.zeros((len(uniq), frames))
+        for k, n in enumerate(notes):
+            E[col[n["freq"]]] += env[k]
+        S = self._voice_rows(v, np.array(uniq, dtype=np.float64), idx / self.sr)
+        gain = self.HELD_OUTPUT_GAIN.get(v.get("type"), 0.5)
+        return ((S * E).sum(axis=0) * gain).astype(np.float32)
+
+    def _voice_osc(self, v):
+        """`(waveform, tone, resonance, detune spread, sub)` — how this voice
+        sounds a pitch. Shared by arp notes and played held notes, so both
+        are rendered AS the voice: its waveform, tone, resonance, unison stack
+        (osc) or detune pair (pad/sub), and sub-octave."""
+        vt = v.get("type", "osc")
+        wf = v.get("waveform", "saw")
+        # Clamped on read: set_param bypasses _normalise.
+        tone = float(np.clip(v.get("tone", 1.0 if vt == "osc" else 0.4), 0.0, 1.0))
+        resonance = float(np.clip(v.get("resonance", 0.0), 0.0, 1.0))
+        detune = float(np.clip(v.get("detune", 0.01), 0.0, 0.1))
+        if vt == "osc":
+            unison = int(np.clip(v.get("unison", 1), 1, 7))
+            spread = np.linspace(-detune, detune, unison) if unison > 1 else np.array([0.0])
+            sub = float(np.clip(v.get("sub", 0.0), 0.0, 1.0))
+        else:
+            # pad thickens with a +/- detune pair rather than a unison count
+            spread = np.array([-detune, detune]) if detune > 0 else np.array([0.0])
+            sub = 0.0
+        return wf, tone, resonance, spread, sub
+
+    def _voice_rows(self, v, freqs, t):
+        """One oscillator row per pitch in `freqs` (absolute-time phase, so
+        notes at the same pitch share a row exactly), as this voice sounds it.
+        Batched per docs/INSTRUMENTS.md s.2: one `_osc` call for every pitch x
+        unison layer, not one per note."""
+        wf, tone, resonance, spread, sub = self._voice_osc(v)
+        layers = len(spread)
+        frames = len(t)
+        fu = (freqs[:, None] * (1.0 + spread[None, :])).ravel()             # (P*U,)
+        ph = fu[:, None] * t[None, :]
+        S = _osc(ph, wf, tone, float(fu.max()), self.sr, resonance)
+        S = S.reshape(len(freqs), layers, frames).mean(axis=1)               # (P, frames)
+        if sub > 0:
+            S = S + sub * _osc((freqs / 2.0)[:, None] * t[None, :], "sine")
+        return S
+
     def _render_arp_notes(self, v, n0, frames):
         """Render this voice's arp notes AS THE VOICE: its waveform, tone,
         resonance, unison stack, detune spread and sub.
@@ -1949,20 +2138,7 @@ class Soundscape:
         if not mine:
             return np.zeros(frames, np.float32)
 
-        vt = v.get("type", "osc")
-        wf = v.get("waveform", "saw")
-        # Clamped on read: set_param bypasses _normalise.
-        tone = float(np.clip(v.get("tone", 1.0 if vt == "osc" else 0.4), 0.0, 1.0))
-        resonance = float(np.clip(v.get("resonance", 0.0), 0.0, 1.0))
-        detune = float(np.clip(v.get("detune", 0.01), 0.0, 0.1))
-        if vt == "osc":
-            unison = int(np.clip(v.get("unison", 1), 1, 7))
-            spread = np.linspace(-detune, detune, unison) if unison > 1 else np.array([0.0])
-            sub = float(np.clip(v.get("sub", 0.0), 0.0, 1.0))
-        else:
-            # pad thickens with a +/- detune pair rather than a unison count
-            spread = np.array([-detune, detune]) if detune > 0 else np.array([0.0])
-            sub = 0.0
+        spread = self._voice_osc(v)[3]
         layers = len(spread)
 
         # Keep the newest notes whose distinct pitches fit the row budget.
@@ -2009,13 +2185,7 @@ class Soundscape:
             age = (idx - starts[k]) / self.sr
             E[group[k]] += np.where(age >= 0, np.exp(-np.maximum(age, 0.0) / taus[k]), 0.0)
 
-        freqs = np.array(uniq, dtype=np.float64)
-        fu = (freqs[:, None] * (1.0 + spread[None, :])).ravel()             # (P*U,)
-        ph = fu[:, None] * t[None, :]
-        S = _osc(ph, wf, tone, float(fu.max()), self.sr, resonance)
-        S = S.reshape(len(uniq), layers, frames).mean(axis=1)                # (P, frames)
-        if sub > 0:
-            S = S + sub * _osc((freqs / 2.0)[:, None] * t[None, :], "sine")
+        S = self._voice_rows(v, np.array(uniq, dtype=np.float64), t)         # (P, frames)
         out = (S * E).sum(axis=0)
 
         alive = (n0 + frames - 1 - starts) / self.sr <= decays * 6
@@ -2087,6 +2257,19 @@ class SoundscapeMixer:
 
     def set_param(self, path: str, value):
         self.current.set_param(path, value)   # live tweaks always target the incoming/current one
+
+    # Played notes go to the soundscape rendering right now. A note played
+    # during the fade-out half of a scene switch dies with that soundscape at
+    # the swap, which is what a scene change means.
+    @property
+    def clock(self) -> int:
+        return self.current.clock
+
+    def play(self, name, pitch, vel, on, start):
+        self.current.play(name, pitch, vel, on, start)
+
+    def trigger_pitches(self, name):
+        return self.current.trigger_pitches(name)
 
     def set_channels(self, channels: int):
         """Re-point at a different output width. Applied to the live

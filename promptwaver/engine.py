@@ -33,6 +33,35 @@ from .recorder import SessionStore, Recorder, Player
 from .perf import LoopStats
 
 
+def _clean_binding(b) -> dict | None:
+    """A play_map binding from the page or MIDI learn, reduced to the known
+    shapes; None if it is none of them. These values go straight into the
+    scene file."""
+    if not isinstance(b, dict):
+        return None
+    kind = b.get("kind")
+    try:
+        if kind == "key" and isinstance(b.get("code"), str) and 0 < len(b["code"]) <= 32:
+            return {"kind": "key", "code": b["code"]}
+        if kind == "cc":
+            return {"kind": "cc", "cc": int(b["cc"]) & 127, "ch": int(b.get("ch", 0)) & 15}
+        if kind == "ch":
+            return {"kind": "ch", "ch": int(b["ch"]) & 15}
+    except (KeyError, TypeError, ValueError):
+        return None
+    return None
+
+
+def _same_source(a: dict, b: dict) -> bool:
+    if a.get("kind") != b.get("kind"):
+        return False
+    if a["kind"] == "key":
+        return a.get("code") == b.get("code")
+    if a["kind"] == "cc":
+        return a.get("cc") == b.get("cc") and a.get("ch", 0) == b.get("ch", 0)
+    return a.get("ch") == b.get("ch")
+
+
 class MidiRouter:
     """The seam between MIDI and the engine.
 
@@ -68,6 +97,21 @@ class MidiRouter:
     def scene_overrides(self) -> dict:
         sc = self.engine.scenes.current
         return dict(sc.spec.midi_overrides) if sc else {}
+
+    # Playing the scene's instruments (see Engine.play_note). Called on mido's
+    # thread; the note path never goes through the engine queue.
+    def play_map(self) -> dict:
+        sc = self.engine.scenes.current
+        return dict(sc.spec.play_map) if sc else {}
+
+    def play_note(self, voice, pitch, vel, on):
+        self.engine.play_note(voice, pitch, vel, on)
+
+    def play_trigger(self, voice, on, vel=110):
+        self.engine.play_trigger(voice, on, vel)
+
+    def bind_play(self, voice, binding):
+        self.engine.set_play_map(voice, binding)
 
     def _resolve(self, key: str):
         from . import midi as _midi
@@ -377,6 +421,8 @@ class Engine:
         self.cpu_clients = 0
         # Latest client_stats from each GPU view, keyed by socket (server).
         self.client_stats: dict = {}
+        # voice -> pitches a held-down trigger started (see play_trigger)
+        self._trigger_held: dict[str, list[int]] = {}
         self._last_cpu_draw = 0.0
         self._mod_delay_checked = 0.0
         self._gpu_blobs: dict[int, bytes] = {}
@@ -1053,6 +1099,61 @@ class Engine:
                 _apply_scape_param(sc.spec.soundscape, path, value)
         self._enqueue(apply)
 
+    # playing the scene's instruments -------------------------------------
+    #
+    # A played note NEVER goes through `_enqueue`: that queue is drained by
+    # the render thread once per tick (~16ms plus jitter), on top of the
+    # audio's own latency. Notes go straight to the synth's note deque and the
+    # audio producer places them at their arrival time (SoundscapeSynth
+    # ._apply_notes) — safe from any thread: MIDI's, the websocket handler's,
+    # and the render loop's for take replay.
+
+    def play_note(self, voice: str, pitch: int, vel: int, on: bool,
+                  t: float | None = None):
+        """Note-on/off on `voice` at MIDI `pitch`. Recorded into a take like
+        any other gesture (as command "note"), never coalesced."""
+        self.synth.note(voice, pitch, vel, on, t)
+        self._rec_note("note", f"{voice}|{int(pitch)}", [bool(on), int(vel)])
+
+    def play_trigger(self, voice: str, on: bool, vel: int = 110):
+        """A mapped key or pad: press plays the voice as authored (its chord on
+        pad/osc/sub, its root on the struck voices — Soundscape
+        .trigger_pitches); release lets go of exactly the pitches the press
+        started, even if the voice's chord was edited in between."""
+        if on:
+            if voice in self._trigger_held:
+                return                           # already down (key repeat)
+            pitches = list(self.synth.trigger_pitches(voice))
+            self._trigger_held[voice] = pitches
+            for p in pitches:
+                self.play_note(voice, p, vel, True)
+        else:
+            for p in self._trigger_held.pop(voice, []):
+                self.play_note(voice, p, 0, False)
+
+    def set_play_map(self, voice: str, binding: dict | None):
+        """Bind (or with None, clear) what plays `voice` in the current scene.
+        One binding per voice, and a source bound to one voice is taken off
+        any other — a key or pad plays exactly one instrument. Saved with the
+        scene (`SceneSpec.play_map`) by the normal Save."""
+        def apply():
+            sc = self.scenes.current
+            if sc is None:
+                return
+            pm = dict(sc.spec.play_map or {})
+            if binding is None:
+                pm.pop(voice, None)
+            else:
+                b = _clean_binding(binding)
+                if b is None:
+                    return
+                for other, ob in list(pm.items()):
+                    if other != voice and _same_source(ob, b):
+                        del pm[other]
+                pm[voice] = b
+            sc.spec.play_map = pm
+        self._enqueue(apply)
+
     # MIDI ------------------------------------------------------------------
     def pin_midi_map(self) -> dict:
         """"Pin MIDI map to scene" (Global section) — freeze the currently
@@ -1336,7 +1437,7 @@ class Engine:
             return
         self.recorder.note(cmd, key, value)
 
-    def _rec_inject(self, cmd: str, key, value):
+    def _rec_inject(self, cmd: str, key, value, due: float | None = None):
         """Apply one replayed event. Runs ON the render thread (the player is
         advanced from the loop), so `_injecting` needs no lock: the only
         writer is the same thread that reads it here."""
@@ -1352,6 +1453,12 @@ class Engine:
                     _apply_scape_param(sc.spec.soundscape, key, value)
             elif cmd == "active":
                 self._set_active_now(bool(value))
+            elif cmd == "note":
+                voice, _, pitch = str(key).rpartition("|")
+                on, vel = (list(value) + [False, 0])[:2]
+                # `due`: the recorded time on the monotonic clock, so the note
+                # lands where it was played rather than on this loop tick.
+                self.synth.note(voice, int(pitch), int(vel), bool(on), due)
             # Takes recorded before the laser was removed may carry "laser"
             # events; like any unknown command they are skipped.
         finally:
@@ -1890,7 +1997,8 @@ class Engine:
                            "params": {"defs": {k: None for k in defs}}})
         return {"name": spec.name, "layers": layers,
                 "image_prompt": spec.image_prompt, "audio_prompt": spec.audio_prompt,
-                "generation_settings": spec.generation_settings}
+                "generation_settings": spec.generation_settings,
+                "play_map": spec.play_map}
 
     def state(self) -> dict:
         cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
