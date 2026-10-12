@@ -148,6 +148,83 @@ class Pattern2D(Generator):
         return out
 
 
+    # --- GPU renderer (see Generator.gpu_tick / gpu_pack) ----------------------
+
+    def gpu_tick(self, t: float, p: dict) -> dict:
+        return {"scale": float(p.get("scale", 1.0)), "rotate": float(p.get("rotate", 0.0)),
+                "spread": float(p.get("spread", 1.0)),
+                "glow": max(0.0, min(1.0, float(p.get("glow", 0.0)))),
+                "max_strokes": max(1, int(p.get("max_strokes", 420)))}
+
+    def gpu_pack(self, p: dict) -> dict:
+        """Every stroke `render` can emit, in emit order, with the four live
+        scalars factored out. `render` computes, per stroke,
+
+            Q = ((P + c*(spread-1)) * ns) @ NR + at*spread*pscale, then
+            Q = (Q * scale) @ R(rotate)
+
+        where c is the stroke's own centroid. That is linear in `spread`, so
+        each stroke ships `P*ns@NR`, the spread direction `c*ns@NR` and its
+        placement `at*pscale`, and the browser rebuilds Q from this tick's
+        uniforms (scene-eval.js `evalPattern`). `max_strokes` is a prefix of
+        this list, as `render`'s budget is."""
+        defs = p.get("defs") or {}
+        nodes = p.get("nodes") or []
+        pscale = _placement_scale(nodes)
+        out = []
+        for node in nodes:
+            name = node.get("def") or node.get("shape")
+            base = self._geom_for(name, defs) if name else []
+            if not base:
+                continue
+            items = [(P, 0.0) for P in base]
+            items = apply_repeat(items, node.get("repeat"))
+            items = apply_symmetry(items, node.get("symmetry"))
+            n_scale = float(node.get("scale", 1.0))
+            n_rot = float(node.get("rotate", 0.0))
+            NR = _rot_matrix(n_rot).T if n_rot else None
+            at0 = _placement(node) * pscale
+            color = node.get("color") or [1.0, 1.0, 1.0]
+            glow = float(node.get("glow", 0.0))
+            closed = bool(node.get("closed", False))
+            for P, hue_d in items:
+                Q = P * n_scale
+                c = P.mean(axis=0) * n_scale
+                if NR is not None:
+                    Q = Q @ NR
+                    c = c @ NR
+                out.append((Q, c, at0, hue_shift(color, hue_d), glow, closed))
+        return _pack_pattern(out)
+
+def _pack_pattern(base_items_by_node) -> dict:
+    """Shared by Pattern2D.gpu_pack and the test pattern: per-stroke points
+    plus the terms the browser needs to apply the four live scalars."""
+    stroke_i, stroke_f, pts = [], [], []
+    n = 0
+    for Q0, cterm, at0, color, glow, closed in base_items_by_node:
+        stroke_i.append([n, len(Q0), int(closed), 0])
+        stroke_f.append([float(cterm[0]), float(cterm[1]), float(at0[0]), float(at0[1]),
+                         float(color[0]), float(color[1]), float(color[2]), float(glow)])
+        pts.append(np.asarray(Q0, np.float32).reshape(-1, 2))
+        n += len(Q0)
+    return {
+        "kind": "pattern2d",
+        "arrays": {
+            "stroke_i": np.asarray(stroke_i, np.int32).reshape(-1, 4),
+            "stroke_f": np.asarray(stroke_f, np.float32).reshape(-1, 8),
+            "pts": np.concatenate(pts) if pts else np.zeros((0, 2), np.float32),
+        },
+    }
+
+
+def pack_frame_2d(frame) -> dict:
+    """A fixed 2D frame (the test pattern) in pattern2d's wire format, drawn
+    with the identity uniforms."""
+    z = np.zeros(2, np.float32)
+    return _pack_pattern((p.points, z, z, p.color, getattr(p, "glow", 0.0), p.closed)
+                         for p in frame)
+
+
 def _spread(items, spread: float):
     """Push each piece away from the centre WITHOUT resizing it.
 

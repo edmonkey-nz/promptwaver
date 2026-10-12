@@ -17,11 +17,13 @@ import json
 import os
 import threading
 import time
+from collections import deque
 
 import numpy as np
 
 from .modulation import ModMatrix, LFO, Value
 from .scenes import Layer, SceneManager, SceneSpec
+from .gpu_pack import TEST_PATTERN_ID, pack_test_pattern
 from . import generators as gen
 from .director import SceneDirector
 from .director.claude_director import interpretation_directive
@@ -359,6 +361,15 @@ class Engine:
         # tuned against a known shape (straight border, diagonals, crosshair)
         # rather than whatever a scene happens to be showing.
         self.test_pattern_on = False
+        # GPU output plumbing — see _publish_snapshot. `cpu_clients` is how
+        # many connected clients are on the CPU reference renderer (set by the
+        # server); while it's 0 no CPU frame is drawn at all.
+        self.snapshots: deque = deque(maxlen=32)
+        self._snap_seq = 0
+        self.on_snapshot = None
+        self.cpu_clients = 0
+        self._gpu_blobs: dict[int, bytes] = {}
+        self._test_pattern_blob = pack_test_pattern()
         # "Disable Audio"/"Disable Visuals" (Global section): independent,
         # gracefully-fadeable gates layered on top of the instant active/blank
         # ones above — see _sync_audio_mute and the visual-fade block in _loop.
@@ -1562,6 +1573,70 @@ class Engine:
         # route sourced from live audio, independent of each route's own depth
         self._set_audio_link(float(getattr(spec, "audio_link", 1.0)))
 
+    # GPU snapshots ---------------------------------------------------------
+    def _snapshot(self, now: float, live: bool) -> dict:
+        """The moving half of what the GPU outputs draw — everything the
+        browser evaluator needs on top of each scene's packed geometry
+        (Scene.gpu_blob) to reproduce this tick's frame. Small (~1 kB) and
+        built every tick, so keep it to primitives.
+
+        Ordering matches the CPU post-processing in `_loop`: per-scene
+        crossfade gain, then the visual-fade gain, then the hue override; the
+        test pattern replaces the lot."""
+        scenes = []
+        if live:
+            for sc, gain in self.scenes.live:
+                if sc.gpu_id not in self._gpu_blobs:
+                    self._gpu_blobs[sc.gpu_id] = sc.gpu_blob()
+                scenes.append({
+                    "id": sc.gpu_id,
+                    "a": 1.0 if gain is None else float(gain),
+                    "cam": sc.camera.gpu_state() if sc.camera is not None else None,
+                    "layers": [u for _, _, u in sc._tick_state],
+                    "sm": sc._shape_scales,
+                })
+            # Geometry for scenes no longer live is dropped; a client that
+            # never saw it had no use for it.
+            if len(self._gpu_blobs) > len(scenes):
+                keep = {s["id"] for s in scenes}
+                for gid in [g for g in self._gpu_blobs if g not in keep]:
+                    del self._gpu_blobs[gid]
+        return {
+            "type": "frame", "seq": self._snap_seq, "te": now,
+            "gain": self._visual_gain,
+            "hue": self.hue_value if self.hue_override_on else None,
+            "test": bool(self.test_pattern_on and live),
+            "plane": bool(self.disable_plane),
+            "f": {"glow": self._mod_glow, "trail": self._mod_trail,
+                  "kal": max(0, round(self._mod_kaleidoscope_segments)),
+                  "curve": self._mod_line_curve, "width": self._mod_line_width},
+            "scenes": scenes,
+        }
+
+    def _publish_snapshot(self, now: float, live: bool):
+        """Serialise this tick's snapshot once and hand it to the server.
+
+        Serialised HERE, on the render thread, so every client gets the same
+        string and the event loop never touches engine state. The deque is
+        the hand-off: the server drains everything newer than what each
+        client last got, so a slow event-loop wakeup never drops a tick."""
+        self._snap_seq += 1
+        msg = json.dumps(self._snapshot(now, live), separators=(",", ":"))
+        self.snapshots.append((self._snap_seq, msg))
+        cb = self.on_snapshot
+        if cb is not None:
+            try:
+                cb()
+            except Exception:
+                pass
+
+    def gpu_geometry(self, gid: int) -> bytes | None:
+        """Packed geometry for a live scene id (or the test pattern), for the
+        server to send a client that hasn't seen it yet."""
+        if gid == TEST_PATTERN_ID:
+            return self._test_pattern_blob
+        return self._gpu_blobs.get(gid)
+
     # loop ------------------------------------------------------------------
     def _loop(self):
         prev = time.monotonic()
@@ -1606,6 +1681,9 @@ class Engine:
                 # used to be `now - _t0`, which needed the epoch shifted by
                 # each paused tick to stop it jumping forward on resume.)
                 self._last_frame = []
+                # Still published: an empty snapshot is what tells the GPU
+                # outputs to go dark, and keeps their clock estimate fed.
+                self._publish_snapshot(now, live=False)
                 sleep = period - (time.monotonic() - now)
                 if sleep > 0:
                     time.sleep(sleep)
@@ -1674,7 +1752,13 @@ class Engine:
             # eff_dt here: the camera integrates its position by dt, so a
             # scaled dt is what brings a fly-through to a stop rather than
             # leaving it coasting at full speed through a frozen world.
-            frame = self.scenes.render(t, eff_dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
+            #
+            # tick() advances the scene; drawing a CPU frame is separate and
+            # only happens while some client is on the CPU reference renderer
+            # (`cpu_clients`, kept by the server). GPU outputs evaluate the
+            # geometry themselves from the snapshot published below.
+            self.scenes.tick(t, eff_dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
+            frame = self.scenes.draw() if self.cpu_clients > 0 else []
 
             # "Disable Visuals" fade — dims every point's colour toward black
             # over _visual_fade_dur seconds, the same per-point scaling trick
@@ -1704,8 +1788,9 @@ class Engine:
                 # Overrides whatever the scene rendered this tick for every
                 # output window at once, so keystone reads the same
                 # regardless of which output you're looking at while tuning.
-                frame = test_pattern_frame()
+                frame = test_pattern_frame() if self.cpu_clients > 0 else []
             self._last_frame = frame
+            self._publish_snapshot(now, live=True)
             self.perf.tick()   # cheap interval/fps tracking — always on, see LoopStats.tick
             if self._diag_enabled:
                 render_dur = time.monotonic() - t_render0

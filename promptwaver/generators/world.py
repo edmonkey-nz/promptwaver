@@ -212,10 +212,15 @@ class World(Generator3D):
         defs = p.get("defs", {})
         disable_plane = p.get("_disable_plane", False)
         cam = p.get("_camera")
-        # Everything below this line sees shape time, not scene time. `t` is
-        # used for exactly two things down there — animated primitives and
-        # node motion — so substituting it is the whole implementation.
-        t = self._shape_time(t, float(p.get("shape_speed", 1.0)))
+        # Everything below this line sees shape time, not scene time — `t` is
+        # used for node motion, so substituting it is the whole
+        # implementation. `Scene.draw` passes the clock `gpu_tick` already
+        # advanced this tick; advancing it again here would run shapes at
+        # double speed whenever the CPU reference renderer is also drawing.
+        if "_shape_t" in p:
+            t = p["_shape_t"]
+        else:
+            t = self._shape_time(t, float(p.get("shape_speed", 1.0)))
 
         # Fly mode is excluded deliberately: it wraps geometry in Z against
         # `field_depth` and tracks the camera as a travelled distance
@@ -226,6 +231,75 @@ class World(Generator3D):
         if cam is None or getattr(cam, "mode", "fly") == "fly":
             return self._render_all(t, nodes, defs, disable_plane)
         return self._render_budgeted(t, nodes, defs, disable_plane, cam)
+
+    # --- GPU renderer (see Generator.gpu_tick / gpu_pack) ----------------------
+
+    #: Motion types as the browser evaluator numbers them. Anything else —
+    #: "none", a missing block, or a type this build doesn't know — is 0, which
+    #: is what `_motion` does with it too (identity).
+    _MOTION_CODES = {"spin": 1, "bob": 2, "drift": 3, "pulse": 4}
+    _AXIS_CODES = {"x": 0, "z": 2}            # anything else is y (1), as _rot_axis
+
+    def gpu_tick(self, t: float, p: dict) -> dict:
+        return {"t": self._shape_time(t, float(p.get("shape_speed", 1.0)))}
+
+    def gpu_pack(self, p: dict) -> dict:
+        """Every node's resting placement plus its def's LOCAL geometry —
+        nothing time-dependent. The browser applies `_motion`, the camera's
+        two-stage stroke budget and the projection itself each frame
+        (scene-eval.js `evalWorld`), so this is sent once per scene.
+
+        Nodes whose geometry is empty are left out: neither render path ever
+        draws them. Order is preserved, because the budget's sort is stable
+        and ties fall back to authored order."""
+        nodes = p.get("nodes", [])
+        defs = p.get("defs", {})
+        shapes: list[str] = []          # node `shape` names, for shape_modulation
+        shape_ix: dict[str, int] = {}
+        node_f, node_i, stroke_i, pts = [], [], [], []
+        n_pts = 0
+        for node in nodes:
+            local, radius = self._geom_for(node, defs, 0.0)
+            if not local:
+                continue
+            m = node.get("motion") or {}
+            kind = m.get("type", "none") if m else "none"
+            moving = bool(m) and kind != "none"          # _render_budgeted's test
+            pos = node.get("pos") or (0.0, 0.0, 0.0)
+            col = node.get("color", [1.0, 1.0, 1.0])
+            node_f.append([float(pos[0]), float(pos[1]), float(pos[2]),
+                           float(node.get("scale", 1.0)),
+                           float(col[0]), float(col[1]), float(col[2]),
+                           float(m.get("speed", 0.3)), float(m.get("amp", 0.3)),
+                           float(radius), 0.0, 0.0])
+            shape = node.get("shape")
+            if isinstance(shape, str):
+                if shape not in shape_ix:
+                    shape_ix[shape] = len(shapes)
+                    shapes.append(shape)
+                sidx = shape_ix[shape]
+            else:
+                sidx = -1
+            node_i.append([self._MOTION_CODES.get(kind, 0) if moving else 0,
+                           self._AXIS_CODES.get(m.get("axis", "y"), 1),
+                           int(moving), sidx, int(_skip_plane(node, True)),
+                           len(stroke_i), len(local), 0])
+            for path in local:
+                q = np.asarray(path.points, np.float32).reshape(-1, 3)
+                stroke_i.append([n_pts, len(q), int(path.lod), 0])
+                pts.append(q)
+                n_pts += len(q)
+        return {
+            "kind": "world",
+            "field_depth": float(self.field_depth),
+            "shapes": shapes,
+            "arrays": {
+                "node_f": np.asarray(node_f, np.float32).reshape(-1, 12),
+                "node_i": np.asarray(node_i, np.int32).reshape(-1, 8),
+                "stroke_i": np.asarray(stroke_i, np.int32).reshape(-1, 4),
+                "pts": (np.concatenate(pts) if pts else np.zeros((0, 3), np.float32)),
+            },
+        }
 
     def _render_all(self, t, nodes, defs, disable_plane):
         """Transform every node — the original behaviour, kept for fly mode

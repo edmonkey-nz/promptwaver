@@ -192,6 +192,24 @@ class Generator:
         (defaults + spec + live modulation) supplied by the engine."""
         raise NotImplementedError
 
+    # --- GPU renderer ---------------------------------------------------------
+    # The browser evaluates a scene's geometry itself: `gpu_pack` describes it
+    # ONCE per scene (see gpu_pack.py for the wire format), and `gpu_tick`
+    # supplies the per-tick values that move it. web/static/scene-eval.js is
+    # the other half of both, and has to agree with `render`/`render3d` —
+    # change them together.
+
+    def gpu_tick(self, t: float, p: dict) -> dict:
+        """Per-tick uniforms for the browser evaluator. Also where a generator
+        advances any clock of its own — `Scene.tick` calls this exactly once
+        per tick whether or not anything is drawn on the CPU."""
+        return {}
+
+    def gpu_pack(self, p: dict) -> dict:
+        """`{"kind": ..., "arrays": {name: ndarray}, ...meta}` describing this
+        layer's static geometry. "empty" draws nothing."""
+        return {"kind": "empty", "arrays": {}}
+
 
 class Generator3D(Generator):
     """A world-space generator. Emits `Path3D`s that the scene's camera projects.

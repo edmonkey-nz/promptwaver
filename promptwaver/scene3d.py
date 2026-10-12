@@ -377,6 +377,22 @@ class Camera:
         # and this one is strictly smaller, so that cone stays conservative.
         return f * max(self.aspect, 1.0)
 
+    def gpu_state(self) -> dict:
+        """Everything the browser evaluator needs to repeat `project` (and
+        World's budget pre-pass) for this tick. The camera itself is NOT
+        ported to JS — its motion is integrated here and only the result is
+        sent; see scene-eval.js `evalWorld`."""
+        d = self.depth
+        out = {"mode": self.mode, "f": self._focal(), "fov": self.fov,
+               "aspect": self.aspect, "near": self.near, "far": self.far,
+               "ms": int(self.max_strokes),
+               "depth": [d.mode, list(d.near_color), list(d.far_color), bool(d.ttl_quantize)]}
+        if self.mode == "fly":
+            out.update(z=self.z, yaw=self._yaw, pitch=self._pitch, height=self.height)
+        else:
+            out.update(pos=[float(v) for v in self.pos], target=[float(v) for v in self.target])
+        return out
+
     def project(self, paths3d: list[Path3D], field_depth: float) -> Frame:
         """Project world paths to 2D. Fly mode wraps geometry in Z for an endless
         field; orbit/drift use a look-at view of a bounded, composed scene."""

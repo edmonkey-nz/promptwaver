@@ -9,6 +9,7 @@ crossfade between scenes.
 
 from __future__ import annotations
 
+import itertools
 import json
 import math
 import os
@@ -89,6 +90,9 @@ class SceneSpec:
 
 # --- live scene --------------------------------------------------------------
 
+# 0 is reserved for the test pattern's geometry (see gpu_pack.TEST_PATTERN_ID).
+_GPU_IDS = itertools.count(1)
+
 class Scene:
     """A built, renderable scene."""
 
@@ -117,6 +121,14 @@ class Scene:
         if self.is_3d:
             from .scene3d import make_camera
             self.camera = make_camera(spec.camera)
+        # Identifies this scene's geometry to the browser renderer. A new
+        # Scene object (load, crossfade, rebuild after a geometry edit) is new
+        # geometry; scalar param edits mutate this one and change uniforms only.
+        self.gpu_id = next(_GPU_IDS)
+        self._gpu_blob: bytes | None = None
+        self._shape_scales: dict = {}
+        self._tick_t = 0.0
+        self._tick_state: list = []
 
     def camera_modes(self) -> list[str]:
         """Which camera modes actually work for this scene.
@@ -248,19 +260,19 @@ class Scene:
             v = math.sin(2.0 * math.pi * x)
         return v
 
-    def _apply_shape_modulation(self, base_params, synth):
-        """Apply shape modulation to world nodes based on voice parameters or LFO."""
+    def _shape_mod_scales(self, synth) -> dict:
+        """`{shape name: scale multiplier}` from this scene's shape_modulation
+        routes, read off the synth's live voice params / LFOs this tick.
+
+        Split out of the old `_apply_shape_modulation` so the GPU path can
+        send the handful of multipliers instead of copying every node. Empty
+        when nothing applies, which is the common case."""
         mods = self.spec.shape_modulation
         if not mods or not synth or not getattr(synth, "online", False):
-            return base_params
+            return {}
 
         scape = synth.soundscape() or {}
         voices = {v["name"]: v for v in scape.get("voices", [])}
-
-        p = dict(base_params)
-        nodes = p.get("nodes", [])
-        if not nodes:
-            return p
 
         # Build a map of shape -> list of modulations
         shape_mods = {}
@@ -297,54 +309,88 @@ class Scene:
             if shape not in shape_mods:
                 shape_mods[shape] = {}
             shape_mods[shape][dest] = xf
+        # Only `scale` is applied (position/rotation were never implemented).
+        return {shape: m["scale"] for shape, m in shape_mods.items() if "scale" in m}
 
-        # Apply modulations to nodes
-        if shape_mods:
-            new_nodes = []
-            for node in nodes:
-                node_shape = node.get("shape")
-                if node_shape in shape_mods:
-                    mods_for_shape = shape_mods[node_shape]
-                    node = dict(node)  # shallow copy
-                    if "scale" in mods_for_shape:
-                        node["scale"] = node.get("scale", 1.0) * mods_for_shape["scale"]
-                    # position and rotation modulations could be added here
-                new_nodes.append(node)
-            p["nodes"] = new_nodes
-
+    @staticmethod
+    def _apply_shape_scales(base_params, scales: dict):
+        """The CPU-render half of shape modulation: a params dict whose matched
+        nodes carry their scale multiplied in. Copies only what it changes."""
+        p = dict(base_params)
+        nodes = p.get("nodes", [])
+        if not nodes or not scales:
+            return p
+        new_nodes = []
+        for node in nodes:
+            node_shape = node.get("shape")
+            if node_shape in scales:
+                node = dict(node)  # shallow copy
+                node["scale"] = node.get("scale", 1.0) * scales[node_shape]
+            new_nodes.append(node)
+        p["nodes"] = new_nodes
         return p
 
-    def render(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
-        frame: Frame = []
+    def tick(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False,
+             synth=None) -> list:
+        """Advance everything time-driven for this tick and resolve this tick's
+        params — WITHOUT drawing. Returns `[(generator, params, uniforms)]`.
+
+        This is what the GPU path runs every tick: the browser evaluates the
+        geometry itself from `uniforms` (see each generator's `gpu_tick`) plus
+        the camera's `gpu_state()`. `draw()` turns the same state into a CPU
+        frame for the reference renderer. They are separate so that running
+        both in one tick advances the camera and the shape clocks ONCE —
+        `render()` is just the two back to back."""
         if self.camera is not None:
             self.camera.update(t, dt, matrix)
+        self._shape_scales = self._shape_mod_scales(synth)
+        state = []
         for g, base_params in self._gens:
             p = self._resolve(g, base_params, matrix)
             if getattr(g, "is_3d", False):
-                # Apply shape modulation for World generators
-                if g.__class__.__name__ == "World":
-                    p = self._apply_shape_modulation(p, synth)
                 # "Disable scene plane" (Camera controls): world.py's World
                 # generator looks for this key and skips any node whose
                 # shape/primitive name looks like a floor/ground/grid/plane —
                 # a loose key on the params dict rather than a new method
-                # signature, matching how the rest of this dict is already
-                # loosely extended (e.g. primitives get `t` merged in the
-                # same way). Generators that don't look for it just ignore it.
+                # signature. Generators that don't look for it just ignore it.
                 p["_disable_plane"] = disable_plane
-                # Same loose-key convention as `_disable_plane` above. The
-                # World generator uses this to decide visibility and spend
-                # its stroke budget per NODE before doing any per-stroke
-                # transform work (see World._render_budgeted) — without it
-                # the whole world gets transformed every frame just for the
-                # camera to discard most of it. Generators that don't look
-                # for it ignore it.
+                # Same loose-key convention. The World generator uses this to
+                # decide visibility and spend its stroke budget per NODE before
+                # doing any per-stroke transform work (see
+                # World._render_budgeted).
                 p["_camera"] = self.camera
+            state.append((g, p, g.gpu_tick(t, p)))
+        self._tick_t = t
+        self._tick_state = state
+        return state
+
+    def draw(self) -> Frame:
+        """The CPU frame for the state the last `tick()` left. Advances nothing."""
+        frame: Frame = []
+        t = self._tick_t
+        for g, p, u in self._tick_state:
+            if getattr(g, "is_3d", False):
+                if self._shape_scales and g.__class__.__name__ == "World":
+                    p = self._apply_shape_scales(p, self._shape_scales)
+                if "t" in u:
+                    p = dict(p)
+                    p["_shape_t"] = u["t"]     # the clock tick() already advanced
                 paths3d = g.render3d(t, p)
                 frame.extend(self.camera.project(paths3d, g.field_depth))
             else:
                 frame.extend(_clip_2d(g.render(t, p)))
         return clamp_frame(frame)
+
+    def render(self, t: float, dt: float = 0.0, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
+        self.tick(t, dt, matrix, disable_plane, synth)
+        return self.draw()
+
+    def gpu_blob(self) -> bytes:
+        """This scene's geometry, packed once for the browser renderer."""
+        if self._gpu_blob is None:
+            from .gpu_pack import pack_scene
+            self._gpu_blob = pack_scene(self)
+        return self._gpu_blob
 
 
 _CLIP_NUMPY_FROM = 64
@@ -440,6 +486,7 @@ class SceneManager:
         self._xfade = 0.0        # 0..1 progress
         self._xfade_dur = 0.0
         self._lib_cache: list[dict] | None = None
+        self.live: list = []      # [(scene, gain|None)] shown by the last tick()
 
     # library ---------------------------------------------------------------
     def library(self) -> list[dict]:
@@ -522,22 +569,39 @@ class SceneManager:
             "progress": min(1.0, self._xfade),
         }
 
-    def render(self, t: float, dt: float, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
+    def tick(self, t: float, dt: float, matrix=None, disable_plane: bool = False, synth=None):
+        """Advance the live scene(s) and the crossfade. Leaves `live` — the
+        `[(scene, gain)]` this tick shows — for `draw()` and the GPU snapshot.
+
+        The pair is captured BEFORE a completing crossfade swaps `current`, so
+        the frame where the fade ends still contains both scenes (the outgoing
+        one at gain 0), exactly as the single-pass render always produced."""
         if self.current is None:
-            return []
-        frame = self.current.render(t, dt, matrix, disable_plane, synth)
-        if self._next is not None:
-            # MVP crossfade: dim the outgoing, bring up the incoming, both drawn.
-            # A later version resamples both to a common point budget and
-            # interpolates positions (shape-tween) — see README roadmap.
-            self._xfade += dt / max(self._xfade_dur, 1e-4)
-            a = min(1.0, self._xfade)
-            for p in frame:
-                p.color = tuple(c * (1 - a) for c in p.color)
-            nxt = self._next.render(t, dt, matrix, disable_plane, synth)
-            for p in nxt:
-                p.color = tuple(c * a for c in p.color)
-            frame = frame + nxt
-            if self._xfade >= 1.0:
-                self.current, self._next = self._next, None
+            self.live = []
+            return
+        self.current.tick(t, dt, matrix, disable_plane, synth)
+        if self._next is None:
+            self.live = [(self.current, None)]      # None: full brightness, untouched
+            return
+        # MVP crossfade: dim the outgoing, bring up the incoming, both drawn.
+        self._xfade += dt / max(self._xfade_dur, 1e-4)
+        a = min(1.0, self._xfade)
+        self._next.tick(t, dt, matrix, disable_plane, synth)
+        self.live = [(self.current, 1 - a), (self._next, a)]
+        if self._xfade >= 1.0:
+            self.current, self._next = self._next, None
+
+    def draw(self) -> Frame:
+        """The CPU frame for the last `tick()`."""
+        frame: Frame = []
+        for scene, gain in getattr(self, "live", []):
+            part = scene.draw()
+            if gain is not None:
+                for p in part:
+                    p.color = tuple(c * gain for c in p.color)
+            frame = frame + part
         return frame
+
+    def render(self, t: float, dt: float, matrix=None, disable_plane: bool = False, synth=None) -> Frame:
+        self.tick(t, dt, matrix, disable_plane, synth)
+        return self.draw()

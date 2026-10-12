@@ -37,7 +37,7 @@ _PROJECT_ROOT = bundle_dir()
 def make_app(engine) -> web.Application:
     app = web.Application()
     app["engine"] = engine
-    app["clients"] = {}   # ws -> {"hq": bool}
+    app["clients"] = {}   # ws -> {"hq", "gpu", "local", ...} — see ws_handler
 
     _NO_CACHE = {"Cache-Control": "no-store, no-cache, must-revalidate",
                  "Pragma": "no-cache"}
@@ -117,10 +117,22 @@ def make_app(engine) -> web.Application:
         # the request (and so the peer address) isn't available later.
         peer = request.transport.get_extra_info("peername") if request.transport else None
         host = peer[0] if peer else ""
+        # ?gpu=1: this page renders on the GPU from packed geometry plus the
+        # per-tick snapshot (see _frame_sender) and wants no preview frames.
+        # Anything else is a CPU-reference client fed engine.preview() as
+        # before; while there are none, the engine draws no CPU frame at all.
         request.app["clients"][ws] = {
             "hq": request.query.get("hq") == "1",
+            "gpu": request.query.get("gpu") == "1",
             "local": host in ("127.0.0.1", "::1", "::ffff:127.0.0.1"),
+            # Last snapshot sent: start from the newest, not the buffered
+            # backlog — a late joiner wants the present, not 0.5 s of replay.
+            "seq": (engine.snapshots[-1][0] - 1) if engine.snapshots else 0,
+            "geom": set(),          # geometry ids already sent
         }
+        _count_cpu_clients(request.app)
+        if request.app["clients"][ws]["gpu"]:
+            request.app["frame_event"].set()     # send geometry + a frame now
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
@@ -132,6 +144,7 @@ def make_app(engine) -> web.Application:
             pass
         finally:
             request.app["clients"].pop(ws, None)
+            _count_cpu_clients(request.app)
         return ws
 
     async def broadcaster(app):
@@ -168,9 +181,14 @@ def make_app(engine) -> web.Application:
                     # whenever the projector window was the only client.
                     payload_std = None
                     payload_hq = None
+                    payload_gpu = None
                     for ws, meta in list(app["clients"].items()):
                         try:
-                            if meta.get("hq"):
+                            if meta.get("gpu"):
+                                if payload_gpu is None:
+                                    payload_gpu = json.dumps({"type": "state", "state": state})
+                                await ws.send_str(payload_gpu)
+                            elif meta.get("hq"):
                                 if payload_hq is None:
                                     preview_hq = engine.preview(max_points=3000, stroke_thin=150)
                                     payload_hq = json.dumps({"type": "state", "state": state, "preview": preview_hq})
@@ -189,11 +207,58 @@ def make_app(engine) -> web.Application:
         except asyncio.CancelledError:
             pass
 
+    async def frame_sender(app):
+        """Per-tick snapshots and scene geometry to the GPU clients.
+
+        Woken by the engine (`engine.on_snapshot`) every time it publishes,
+        rather than polling, so a frame leaves within the event loop's next
+        turn. Each client gets every snapshot newer than the last one it was
+        sent, and a scene's geometry (binary) the first time a snapshot it is
+        about to receive refers to it."""
+        ev = app["frame_event"]
+        try:
+            while True:
+                await ev.wait()
+                ev.clear()
+                snaps = list(engine.snapshots)
+                if not snaps:
+                    continue
+                ids = {}                  # seq -> geometry ids, parsed once
+                for ws, meta in list(app["clients"].items()):
+                    if not meta.get("gpu"):
+                        continue
+                    try:
+                        for seq, msg in snaps:
+                            if seq <= meta["seq"]:
+                                continue
+                            if seq not in ids:
+                                ids[seq] = _geometry_ids(msg)
+                            for gid in ids[seq]:
+                                if gid not in meta["geom"]:
+                                    blob = engine.gpu_geometry(gid)
+                                    if blob is not None:
+                                        await ws.send_bytes(blob)
+                                        meta["geom"].add(gid)
+                            await ws.send_str(msg)
+                            meta["seq"] = seq
+                    except Exception:
+                        app["clients"].pop(ws, None)
+                        _count_cpu_clients(app)
+        except asyncio.CancelledError:
+            pass
+
     async def on_start(app):
+        app["frame_event"] = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        # Called on the engine's render thread; must only schedule.
+        engine.on_snapshot = lambda: loop.call_soon_threadsafe(app["frame_event"].set)
         app["broadcast_task"] = asyncio.create_task(broadcaster(app))
+        app["frame_task"] = asyncio.create_task(frame_sender(app))
 
     async def on_cleanup(app):
+        engine.on_snapshot = None
         app["broadcast_task"].cancel()
+        app["frame_task"].cancel()
 
     app.router.add_get("/", index)
     app.router.add_get("/output", output_page)
@@ -223,6 +288,22 @@ def make_app(engine) -> web.Application:
 
 # Commands the kiosk page itself sends. Everything else is an operator command
 # and is restricted to loopback while kiosk mode is armed.
+def _count_cpu_clients(app):
+    """Tell the engine how many clients need CPU frames (see Engine.cpu_clients)."""
+    app["engine"].cpu_clients = sum(1 for m in app["clients"].values() if not m.get("gpu"))
+
+
+def _geometry_ids(msg: str) -> list[int]:
+    """Geometry a snapshot refers to: its live scenes, plus the test pattern.
+    Parsed back out of the serialised snapshot rather than passed alongside it,
+    so the engine's hand-off stays one string per tick."""
+    d = json.loads(msg)
+    ids = [s["id"] for s in d.get("scenes", [])]
+    if d.get("test"):
+        ids.append(0)
+    return ids
+
+
 _KIOSK_COMMANDS = {"kiosk_press", "kiosk_release", "kiosk_cancel",
                    "kiosk_confirm", "kiosk_retry"}
 
