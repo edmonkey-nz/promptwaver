@@ -5,8 +5,80 @@ and under active development** — expect breaking changes to scene JSON shape
 and APIs between minor versions until a 1.0 release.
 
 ## [Unreleased]
-- Helios DAC SDK build/install instructions (`libHeliosDacAPI.so` + udev rules)
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
+
+## [0.90.0]
+
+### Every output now draws at the display's refresh, on the GPU
+
+The projector window used to be capped at ~19.5 fps: Python projected every
+stroke on the CPU and sent each finished frame as JSON over a 20 Hz broadcast,
+and the page painted only when a message arrived. Now Python sends each scene's
+geometry **once**, plus a ~0.5 kB snapshot every tick (camera pose, layer
+uniforms, crossfade and fade gains, the modulated filters), and the browser
+evaluates and draws every frame itself on `requestAnimationFrame`.
+
+Measured on this build's hybrid laptop: **60 fps at 1080p and at 4K on the GTX
+1650** (0.4–2.2 ms of JS a frame), 60 fps at 1080p on the integrated AMD GPU
+(38–42 at 4K, fill-bound). The control-page preview, both output windows and
+the kiosk page all use it; `?renderer=cpu` keeps the old path as a reference.
+
+The browser evaluator (`scene-eval.js`) is a twin of the Python renderer —
+node motion, the camera's nearest-first `max_strokes` budget, projection,
+clipping, depth colour — and `tools/gpu_twin` checks the two against each other:
+the same strokes on all 25 library scenes plus 15 variants. A frame clock
+interpolates between snapshots with an adaptive ~18 ms delay, which the
+audio-sync compensation now subtracts so audio-driven visuals still land on
+the sound.
+
+The engine ticks at 60 Hz and no longer draws: a tick is ~0.6 ms where
+rendering took 8–18 ms, which frees the GIL the audio producer competes for.
+The 20 Hz state broadcast also stopped carrying the whole scene spec (5–13 ms
+of serialising per tick, read by nobody); eniac's messages went 111 → 27 kB.
+
+The Performance panel lists every GPU output with its fps, draw cost, delay,
+canvas size and **which GPU the browser gave it** — on a hybrid laptop that is
+often the integrated one. The max-strokes slider now reaches 1000.
+
+### Lower audio latency: blocksize 1024 by default (was 8192)
+
+The audio blocksize had to be 8192 (~372 ms from synthesis to the ear)
+because the render thread's per-frame projection starved the audio producer
+at anything smaller. With that work gone, it doesn't: measured silently on
+`hot lava`, `eniac` and `LionsMane`, **1024 (~46 ms) and 512 (~23 ms) ran 60 s
+with zero starved callbacks**, where before this release 1024 starved 3.4% of
+callbacks on eniac. Under a scene-switching stress (23 loads with crossfades in
+90 s) 512 starved three callbacks and 1024 none, so **1024 is the new default**.
+A blocksize you already saved still wins — set Settings › Audio › blocksize to
+1024 to get it. Gesture-to-screen latency dropped too: a control change now
+reaches an output in ~13 ms (median, was ~53) and is drawn ~20 ms after the
+gesture.
+
+### The laser output is gone
+
+No more Helios DAC / ILDA output: the `--laser`, `--pps`, `--max-step`,
+`--invert-x` and `--keystone-*` flags, PPS settings, laser arming, laser
+keystone and the laser density profile are removed. Saved scenes keep their
+`pps`/`laser_max_strokes` keys (ignored), so no file changes. The director
+prompts keep the sparse, low-poly instruction as house style with every
+number unchanged; the cache key doesn't include prompt text, so no cached
+scene was orphaned.
+
+### The legacy procedural generators are gone
+
+`flow_field`, `attractor`, `ripples`, `forest` and `ground_grid` are removed —
+no saved scene used them. A scene naming one still loads with that layer
+skipped. The offline director builds its forest as a `world` scene and maps
+the old flow/cloud/smoke/rain keywords to seeded flat patterns; `jellyfish` is
+now static. The startup keyword "water flowing" therefore opens as a flat
+pattern instead of a flow field.
+
+### Fixed
+
+- **WebGL context restore drew nothing.** A restored context loses its
+  extensions; the handler rebuilt programs and buffers but never re-enabled
+  `EXT_color_buffer_float`, so every float render target was incomplete.
+- The VS Code launch presets passed `--web`, which doesn't exist.
 
 ## [0.81.0]
 

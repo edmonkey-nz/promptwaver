@@ -757,9 +757,9 @@
 
         <div class="field"><label>blocksize</label>
           <select id="a-blocksize">
-            <option value="512">512</option><option value="1024">1024</option>
+            <option value="512">512</option><option value="1024" selected>1024</option>
             <option value="2048">2048</option>
-            <option value="4096">4096</option><option value="8192" selected>8192</option>
+            <option value="4096">4096</option><option value="8192">8192</option>
             <option value="16384">16384</option><option value="32768">32768</option>
           </select></div>
         <div class="field"><label>latency</label>
@@ -1852,7 +1852,7 @@ function renderAudioOutput(s){
   // even reach the Apply button — this is what made a newly-picked
   // blocksize/latency look like it "snapped back to the current setting".
   if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-blocksize")) {
-    $("a-blocksize").value = String(s.audio_cfg.blocksize ?? 8192);
+    $("a-blocksize").value = String(s.audio_cfg.blocksize ?? 1024);
   }
   if (s.audio_cfg && !audioCfgDirty && !audioApplyPending && document.activeElement !== $("a-latency")) {
     $("a-latency").value = s.audio_cfg.latency ?? "high";

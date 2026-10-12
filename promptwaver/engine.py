@@ -307,7 +307,14 @@ class Engine:
         self.output_fit = _fit if _fit in OUTPUT_FITS else "fit"
         self._audio_cfg = {
             "device": _settings.get("audio_device"),
-            "blocksize": int(_settings.get("audio_blocksize", 8192)),
+            # 1024 (~46 ms to the ear) since 0.90. It used to be 8192 (~372 ms)
+            # because the render thread's per-frame projection starved the
+            # audio producer at anything smaller; the GPU output path took
+            # that work off the render thread. Measured: 1024 clean through
+            # 23 scene switches with crossfades, 512 starved 3 callbacks there
+            # (one prerendered block is only 11.6 ms of slack). A saved
+            # audio_blocksize still wins — this is only the first-run default.
+            "blocksize": int(_settings.get("audio_blocksize", 1024)),
             "latency": _settings.get("audio_latency", "high"),
             # Output width: 2 (stereo), 4 (quad) or 6 (quad carried on a 5.1
             # stream). A RIG setting, like output_ratio — it belongs to the

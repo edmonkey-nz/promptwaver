@@ -23,8 +23,12 @@ dies a few seconds later, which looks exactly like a crash.
 on 8080. Scope every cleanup to your own port:
 
 ```bash
-pkill -f "run.py --web-port 8098"     # never a bare pkill -f run.py
+pkill -f "[r]un.py --web-port 8098"   # never a bare pkill -f run.py
 ```
+
+`pkill -f` matches ITS OWN shell's command line: write the pattern with the
+`[r]` bracket, and never put the stop and the restart in the same Bash call —
+the restart's text matches too, and the shell running both is killed (exit 144).
 
 Wait for it properly rather than sleeping a fixed amount:
 
@@ -42,6 +46,28 @@ Playwright is installed but **its browsers are not** — use system Chrome:
 ```python
 b = await pw.chromium.launch(channel="chrome")
 ```
+
+That headless default renders on **SwiftShader (software)** — fine for "does
+it draw, any page errors", useless for frame rates. For the real GPU on this
+hybrid laptop:
+
+```python
+NV = {"__NV_PRIME_RENDER_OFFLOAD": "1", "__GLX_VENDOR_LIBRARY_NAME": "nvidia"}
+b = await pw.chromium.launch(channel="chrome", env=dict(os.environ, **NV),
+        args=["--enable-gpu", "--use-angle=gl", "--ignore-gpu-blocklist"])
+```
+
+Without the env it lands on the AMD iGPU (also worth measuring — it is what a
+plain launch gets). Confirm with `gpuView.gpuName()` on an output page. 4K is
+`new_context(viewport={"width":1920,"height":1080}, device_scale_factor=2)`.
+
+On the GPU path (the default since 0.90) each page has a `PWGpuView`
+(`gpuView` on output/kiosk, `_gpuPreview` on the control page):
+`gpuView.stats()` gives rAF fps, draw ms, strokes and interpolation delay,
+`gpuView.clock.latest()` the newest engine snapshot, `gpuView.list` the
+evaluated strokes. Canvas pixels are readable (`preserveDrawingBuffer`) by
+drawing the canvas into a 2D canvas. `?renderer=cpu&full=1` on `/output` is
+the unthinned CPU reference to compare against.
 
 Skeleton that works:
 
@@ -84,7 +110,8 @@ Symptom first — that's what you'll actually observe.
 | An element you targeted is nowhere on screen | Name doesn't imply location — `#apistatus` is **not** in the header | Grep the markup for the id before targeting it; the header's visible text is `#meta` |
 | Transient UI captured as blank | It auto-hides on a timer that expired during the wait | Freeze it: `await pg.evaluate("()=>clearTimeout(_costTimer)")` before the shot |
 | Canvas screenshot empty or wrong element | The preview canvas is `#view` | — |
-| Canvas is black even though a scene is loaded | The engine starts **paused**; `_last_frame` is empty until Start | Click `#master-toggle`, or set `engine.active = True` in-process |
+| Canvas is black even though a scene is loaded | The engine starts **paused** and publishes empty snapshots until Start | Click `#master-toggle`, or send `{type:"set_active", value:true}` |
+| Two screenshots of a "frozen" scene differ | A route from `mic_level` (coffee, honeycomb) — the mic is live even with `--no-audio` | Compare against itself first; pick a scene without mic routes |
 | State read after a `sleep` is stale | The websocket broadcasts ~20Hz, so a 6s sleep leaves ~120 buffered messages and the *first* one you read is 6s old | Drain to the newest before asserting |
 | A scene switch appears not to happen | Loads are async and the crossfade keeps `scenes.current` on the **outgoing** scene until it completes | Wait ~5s, or set `crossfade` to 0 first |
 | Panel shows the previous scene's data | Same crossfade lag | Same |
@@ -113,8 +140,8 @@ above — but `web.run_app` needs the main thread, so you cannot start the
 server in a thread. Use the engine directly:
 
 ```python
-e = Engine(library_dir="scenes", cache_dir="scenes/generated",
-           enable_laser=False, enable_audio=False)
+e = Engine(library_dir="scenes", cache_dir="scenes/generated", enable_audio=False)
+e.cpu_clients = 1                      # else no CPU frame is ever drawn (_last_frame stays [])
 e.set_param("crossfade", 0.0)          # no crossfade lag in tests
 e._install_spec(spec); e.start(); e.set_active(True)
 ```

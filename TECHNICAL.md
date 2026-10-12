@@ -631,7 +631,9 @@ The UI's director line reports the source of the last scene: *composed by Claude
 
 ## Blocksize and audio configuration
 
-**Blocksize** governs the audio callback buffer size. Bigger = more buffer headroom, more latency before you hear a change; smaller = lower latency but more CPU work per callback.
+**Blocksize** governs the audio callback buffer size. Bigger = more buffer headroom, more latency before you hear a change; smaller = lower latency but more CPU work per callback. With one prerendered block, the latency from synthesis to the ear is about two blocks: 8192 ≈ 372 ms, 2048 ≈ 93 ms, **1024 ≈ 46 ms (the default since 0.90)**, 512 ≈ 23 ms.
+
+The default used to be 8192 because the render thread's per-frame projection competed with the audio producer for the GIL. On the GPU output path a tick costs ~0.6 ms, and the producer keeps up at every size down to 512 in steady play (zero starved callbacks over 60 s on `hot lava`, `eniac`, `LionsMane`; producer busy 10–19% of the time). 512 is the one that fails under scene switching — one block is only 11.6 ms of slack, and a scene load packs its geometry on the render thread (~15 ms for eniac) — so 1024 is the default and 512 is for when you know the set has no switching.
 
 Sizes up to 32768 are available. If picking a higher blocksize resets back to a lower one, your audio backend is imposing a ceiling — this is common on PipeWire/PulseAudio virtual devices. To raise that ceiling:
 

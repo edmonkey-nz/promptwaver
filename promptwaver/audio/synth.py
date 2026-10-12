@@ -96,7 +96,7 @@ class NullSynth:
 
 
 class SoundscapeSynth:
-    def __init__(self, sr: int = SR, blocksize: int = 8192, device=None,
+    def __init__(self, sr: int = SR, blocksize: int = 1024, device=None,
                  latency="high", enable_diagnostics=True, channels: int = 2):
         import sounddevice as sd
         self._sd = sd

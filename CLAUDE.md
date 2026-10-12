@@ -9,7 +9,6 @@ The venv is at `.venv` and is not activated automatically — invoke it explicit
 ```bash
 .venv/bin/python run.py                                  # browser UI on :8080
 .venv/bin/python run.py --web-port 8097 --no-audio       # usual dev invocation
-.venv/bin/python run.py --laser --pps 11000 --invert-x   # with Helios hardware
 .venv/bin/python run.py --list-midi                      # enumerate MIDI ports
 ```
 
@@ -22,11 +21,18 @@ Lint/format (config in `pyproject.toml`, line length 100, `E501` deliberately ig
 .venv/bin/black .
 ```
 
-**There is no test suite** — no pytest, no test files, no CI lint or test gate. `.github/workflows/build.yml` only builds PyInstaller binaries on `v*` tags. Verify changes by running the app and looking at the preview; don't claim tests pass. **The `verify-in-app` skill has the working browser-automation recipe and this repo's traps** — read it before hand-rolling one.
+**There is no test suite** — no pytest, no CI lint or test gate. `.github/workflows/build.yml` only builds PyInstaller binaries on `v*` tags. Verify changes by running the app and looking at the preview; don't claim tests pass. **The `verify-in-app` skill has the working browser-automation recipe and this repo's traps** — read it before hand-rolling one.
+
+The one exception is **`tools/gpu_twin/`**, the twin test for the browser's scene evaluator (see "The GPU output path" below). Run it after ANY change to `web/static/scene-eval.js` or to the Python it mirrors — it compares the two numerically on every library scene, no browser needed:
+
+```bash
+.venv/bin/python tools/gpu_twin/twin_gen.py /tmp/pw_twin 20
+node tools/gpu_twin/twin_test.js /tmp/pw_twin promptwaver/web/static/scene-eval.js   # ALL PASS
+```
 
 Two things that bite regardless of how you verify:
 
-- **The user is usually running their own instance on :8080.** Use a different port and scope any `pkill` to it — a bare `pkill -f run.py` kills their session. **A second port is NOT an isolated instance**: both processes share `settings.json` and the whole `scenes/` tree, so a test that saves a setting overwrites theirs, and the kiosk settings page's "Delete all" wipes `scenes/kiosk/` for both. Read a value before assuming a surprising one came from your own test.
+- **The user is usually running their own instance on :8080.** Use a different port and scope any `pkill` to it — a bare `pkill -f run.py` kills their session. Write it `pkill -f "[r]un.py --web-port 8098"`, and **never in the same command as the restart**: `pkill -f` matches its own shell's command line, so a pattern that appears anywhere in that line (the restart included) kills the shell running it, exit 144. **A second port is NOT an isolated instance**: both processes share `settings.json` and the whole `scenes/` tree, so a test that saves a setting overwrites theirs, and the kiosk settings page's "Delete all" wipes `scenes/kiosk/` for both. Read a value before assuming a surprising one came from your own test.
 - **`body.hide-values` collapses any `.val` element to zero width.** That's correct for slider readouts, and wrong for anything else — text you want read must not carry that class, or it renders blank with no error.
 
 Local settings including the Anthropic API key live in `settings.json` at the repo root (gitignored, untracked). `scenes/*.json` **is** tracked — saving a scene from the UI dirties the working tree.
@@ -153,13 +159,15 @@ Read `TECHNICAL.md` for the subsystem-level detail. What follows is the load-bea
 
 ### Everything is a `Path`
 
-`geometry.Path` — an `(N,2)` polyline in normalized `[-1,1]`, one RGB colour, and an optional per-stroke `glow` — is the universal unit. A frame is `list[Path]`. Generators produce them, the laser planner and the browser canvas both consume them, so preview and hardware output are the same data by construction. `Path3D` is the world-space variant; a `Camera` projects it down to `Path`.
+`geometry.Path` — an `(N,2)` polyline in normalized `[-1,1]`, one RGB colour, and an optional per-stroke `glow` — is the universal unit. A frame is `list[Path]`. `Path3D` is the world-space variant; a `Camera` projects it down to `Path`.
+
+The Python frame is now the **reference**, not what the outputs draw: the GPU outputs evaluate the same frame in the browser (`scene-eval.js`) from geometry sent once plus a per-tick snapshot. Python still draws it for the CPU reference renderer (`?renderer=cpu`), for the director's trial render, and as the ground truth `tools/gpu_twin` checks the browser against. There is no laser output any more (removed in 0.90).
 
 This is a **vector** instrument: strokes only, no fills, no pixels.
 
 ### Generators, and the derivation that decides everything
 
-Two families behind one registry (`generators/base.py`, `@register` / `create`):
+Two families behind one registry (`generators/base.py`, `@register` / `create`), and since 0.90 exactly one generator in each:
 
 - `Generator.render(t, p) -> Frame` — 2D, drawn directly in normalized space
 - `Generator3D.render3d(t, p) -> list[Path3D]` — world space, projected by the scene camera
@@ -171,7 +179,9 @@ Two generators carry most of the weight, and both are **declarative interpreters
 - `world` (3D) — `defs` are shape-grammar geometry expanded by `shapes.py`; nodes place them. 32 of 35 pre-existing library scenes use it and nothing else.
 - `pattern2d` (2D) — flat symmetric line-art via `patterns2d.py`. No camera, composed directly in the frame.
 
-`flow_field`, `attractor`, and `ripples` are the original procedural generators. They were long stranded — the director could not select them and the UI exposed only three param keys — which is why `ripples` and `attractor` appear in zero saved scenes. The registry is now self-describing and the UI builds panels from it, so they are fully adjustable by hand again. They are still not *AI-selectable*, though: each director prompt names exactly one generator (`_SYSTEM` → `world`, `_SYSTEM_2D` → `pattern2d`), so a generated scene is always one of those two.
+The procedural generators (`flow_field`, `attractor`, `ripples`, `forest`, `ground_grid`) were **removed in 0.90**: no saved scene used them, and their per-frame procedural geometry could not be uploaded once. A scene that names one still loads — `Scene.__init__` puts a `MissingGenerator` in that layer's SLOT (layer params are addressed by index, so dropping it would re-point every later layer's controls) and logs it. The offline director (`director/fallback.py`) builds its forest from `world` defs and sends the old flow/cloud/smoke/rain keywords to seeded `pattern2d`. `jellyfish` is now a static primitive. Each director prompt names exactly one generator (`_SYSTEM` → `world`, `_SYSTEM_2D` → `pattern2d`).
+
+**Both remaining generators have a GPU half**: `gpu_pack(params)` describes the static geometry once, `gpu_tick(t, p)` gives the per-tick uniforms and is where a generator advances its own clocks (`World._shape_time`). A new generator needs both, plus its evaluator in `scene-eval.js` — see "The GPU output path".
 
 ### Two director prompts, chosen explicitly
 
@@ -192,6 +202,11 @@ Cost estimates are served by `director.estimate()` over the websocket rather tha
 One call reliably writes ~200 nodes; the renderer handles ~3200. `director/expand.py` closes the gap by instancing the model's own `defs` along its own camera route — every added node is a copy of an authored one, repositioned by decomposing against the route into (lateral, height, forward) so a floor stays on the floor. Seeded from the request, so a cache hit and a fresh generation agree, and applied on **both** the cache-read and fresh-generation paths. Always reported as `{authored, total}` — never present a grown world as though the model wrote all of it.
 
 ### Two render-loop invariants that are easy to undo
+
+These describe the PYTHON renderer — since 0.90 the CPU reference and the twin
+test's ground truth, not what the outputs draw. `scene-eval.js` mirrors the
+same culling, budget and projection in JS, so a change to any of it is made in
+both places and checked with `tools/gpu_twin`.
 
 **`_motion` must stay after the cull in `World._render_budgeted`.** Evaluating it per-node before the visibility test was ~20% of frame time on a big world and ~94% of that was discarded. Culling deliberately tests the node's *resting* position with the bounding sphere inflated by `amp` to cover where motion could carry it; that bound is conservative, and the reordering was verified bit-identical over 40 frames.
 
@@ -231,11 +246,14 @@ everywhere is draw ORDER, which is invisible under additive blending. The
 transform itself is exact to 1e-15. Don't "fix" the ordering by restoring a
 per-stroke `.sum(axis=0)` — that loop is most of what was removed.
 
-**Stroke count is what costs, not node count.** From the same measurements:
-`cutlery drawer` draws 10 strokes from 690 nodes at 11ms, while `bikes` draws
-120 from 330 nodes at 30ms. `max_strokes` is therefore the lever when a scene
-overruns — bikes measures 30.1ms at 120, 21.0 at 70, 16.0 at 55, against a
-22.2ms budget at 45fps that a loaded app roughly halves again.
+**Stroke count is what costs the PYTHON renderer, not node count.** From the
+same measurements: `cutlery drawer` draws 10 strokes from 690 nodes at 11ms,
+while `bikes` draws 120 from 330 nodes at 30ms. That was why `max_strokes` was
+the lever when a scene overran. On the GPU path it is not a cost lever at all
+(a whole 2,962-stroke eniac is a few ms of JS) — `max_strokes` is now purely
+each scene's authored DENSITY, nearest strokes first, and it is kept because
+it is part of how every 3D scene looks. The slider reaches 1000; MIDI (CC 10)
+and modulation keep 20-400 so existing mappings behave as they did.
 
 **A scalar layer-param change must not rebuild the Scene.** `Scene.set_layer_param` writes to the live params dict that `render` already resolves from. A rebuild throws away geometry caches and resets generator runtime state — which is what `world`'s accumulated shape clock (`_shape_time`) depends on. Rebuild only for keys absent from `schema()`.
 
@@ -269,6 +287,8 @@ A producer thread now renders `PRERENDER_BLOCKS` ahead into a queue and **the ca
 
 The trade that move makes: the producer is a **plain Python thread**, so it lost the realtime scheduling priority the PortAudio callback had. On a scene whose frame cost fills the frame budget (`hot lava`: ~20–23ms against 22ms at 45fps) the render thread never yields and the producer starves — 34% of callbacks on that scene, at CPython's default 5ms GIL handover. `GIL_SWITCH_INTERVAL = 0.0005`, set in `SoundscapeSynth.start()`, is what fixes it, at ~3% of the frame rate on the worst scene. **Raising `PRERENDER_BLOCKS` is the wrong instinct and is measurably worse** (18.8% → 21.1% → 49.1% starved at depths 1/2/4): a deeper queue just means the producer runs flat out for longer, competing harder for the GIL. Depth helps jitter; this is an average-throughput problem.
 
+**Since 0.90 the render thread no longer saturates**, so the default blocksize is 1024 (~46 ms to the ear) instead of 8192 (~372 ms). Measured: 1024 and 512 run with zero starved callbacks in steady play; under scene switching (crossfade + geometry packing, ~15 ms on the render thread for eniac) 512 starved 3 callbacks in 23 switches and 1024 none. Three places carry the default — `SoundscapeSynth.__init__`, the engine's `audio_blocksize` fallback, and index.html's preselected option. **Measure blocksize changes with `Engine.synth.reconfigure()` in-process, never `Engine.configure_audio()` or the websocket `audio_config`: those persist `audio_blocksize` to the shared settings.json.** Silence a measurement with `disable_audio(fade=0)` — the mute gate multiplies the finished mix by 0, so the DSP load is unchanged.
+
 **A starved callback is invisible to PortAudio.** It writes silence and returns in under a millisecond — on time, with data — so no underflow flag is set and `underruns`, `avg_duration_ms` and the budget percentages all stay green while the output gaps. That is how a badly dropping build shipped. `CallbackStats.starved`/`starved_pct` is the only counter that moves; keep it in any health judgement about the audio stream.
 
 ### Synth voices have a formula — read `INSTRUMENTS.md` before adding one
@@ -281,47 +301,110 @@ Two things from it that bite outside the audio module: `_normalise`'s output is 
 
 `Engine._scene_t` advances by `dt * motion_rate`, and `t` is what every time-driven thing reads. That's what makes **Freeze** work: ramping one number decelerates LFO phase, node motion and camera travel together. Note the deliberate asymmetry — `matrix.update()` gets **real** `dt` while `t` is frozen, so audio-driven sources keep slewing and a frozen pattern still reacts to sound. Don't "fix" that by passing the scaled dt to both.
 
-### The render loop paces itself to whoever is consuming it
+### The render loop ticks; it does not draw
 
-`Engine._target_fps` runs the full `fps` only when a beam is live
-(`output.name == "helios" and laser_on`), and `idle_fps` (24, a persisted rig
-setting) otherwise. A laser redraws the whole frame every tick and flickers
-below ~40fps; the browser is a different consumer entirely, receiving the
-preview over a **fixed ~20Hz broadcast** — so with no beam armed, more than
-half of every frame computed at 45fps was thrown away before anything could
-see it.
+`Engine._loop` runs at a fixed `fps` (60). A tick drains the queue, advances
+the clock, the matrix and `SceneManager.tick()` (camera, shape clocks, params,
+crossfade), and publishes a snapshot — ~0.6 ms on eniac, measured. It draws a
+CPU frame ONLY while a CPU-reference client is connected (`cpu_clients`, kept
+by the server), and then at most `idle_fps` (24, a persisted rig setting) times
+a second, because that path is shown over the ~20Hz preview broadcast and
+drawing it every tick would spend 8-13 ms of GIL per tick on frames nobody can
+see. Don't make the tick draw unconditionally again: that render-thread GIL
+time is exactly what used to starve the audio producer.
 
-`LoopStats.set_fps` retargets the budget with it, or the panel keeps quoting
-the old one and a loop deliberately running at 24fps reads as permanently ~47%
-dropped. The cost is that modulation sources tick at `idle_fps` while the beam
-is off, so audio-reactive movement is sampled a little more coarsely.
-
-Measured on `bikes` (330 nodes) — the scene that prompted all of this —
-render went 59.2ms to 20.6ms across the lateral reject and the batched
-projection, and 70.3% dropped ticks became 0.5% screen-only / 26.3% with the
-laser armed.
+`Scene.tick()` / `Scene.draw()` are split so that running both in one tick
+advances the camera and the shape clocks ONCE: `World.gpu_tick` advances
+`_shape_time`, and `render3d` reads the result from `p["_shape_t"]` rather than
+advancing it again. `render()` (tick + draw) is kept for the director's trial
+render and `tools/bench_scene.py`, and is bit-identical to the pre-split
+render over 40 frames on every scene and through crossfades. `SceneManager.tick`
+captures `live` — the `[(scene, gain)]` pair — BEFORE a completing crossfade
+swaps `current`, so the frame where a fade ends still holds both scenes.
 
 ### Threading: one render thread, one queue
 
 `Engine` runs a single daemon render thread at `fps`. Every mutation from the web layer or MIDI goes through `_enqueue(fn)`; the loop drains the queue at the top of each tick. **Never mutate engine or scene state directly from a web handler** — that's the invariant the whole control surface depends on.
 
-The websocket broadcasts state and a thinned preview frame at ~20Hz on the same process, so anything expensive in `state()` competes with rendering for the GIL. `SceneManager.library()` (which reads each scene once to derive its kind), `generators.catalog()`, and `Scene.layer_schemas()` are all cached for this reason. Anything else added to `state()` should be too — assume it runs 20 times a second forever.
+The websocket broadcasts state at ~20Hz (plus a thinned preview frame, to CPU-reference clients only) on the same process, so anything expensive in `state()` competes with the render thread and the audio producer for the GIL. **`state()["scene_spec"]` is deliberately a slim view** (`_scene_spec_view`: def names, prompts, generation settings — what index.html reads): it used to be the whole `spec.to_dict()`, measured at 5-13 ms a tick (eniac 13.1 ms, 84 kB) for data no projector window read. If the page needs another spec field, add it to the view. `SceneManager.library()` (which reads each scene once to derive its kind), `generators.catalog()`, and `Scene.layer_schemas()` are all cached for this reason. Anything else added to `state()` should be too — assume it runs 20 times a second forever.
+
+### The GPU output path
+
+What every browser surface draws, since 0.90. **Python sends geometry once and
+a small snapshot per tick; the browser evaluates and draws every frame.**
+
+- **Snapshot** (`Engine._snapshot`, ~0.5 kB JSON, every tick): per live scene
+  its `gpu_id`, crossfade gain, `Camera.gpu_state()` (pose, focal, near/far,
+  max_strokes, depth cue) and each layer's `gpu_tick()` uniforms; plus the
+  visual-fade gain, hue override, test-pattern flag, disable-plane flag and the
+  modulated monitor filters. Serialised once on the render thread and handed to
+  the server through `engine.snapshots` (a deque) + `engine.on_snapshot`, which
+  only does `loop.call_soon_threadsafe(event.set)` — it runs on the render
+  thread, so it must never do more than schedule.
+- **Geometry** (`gpu_pack.py`, binary, once per Scene object): a uint32 header
+  length, a JSON header, then 4-byte-aligned arrays the browser views in place.
+  A new Scene object (load, crossfade, rebuild after a non-schema edit) is a new
+  `gpu_id` and new geometry; scalar edits are uniforms only. The server sends a
+  client each id the first time a snapshot it is about to receive names it, so
+  geometry always arrives before the first frame that needs it.
+- **Clients opt in with `?gpu=1`** on the websocket. Everything else is a CPU
+  reference client (engine.preview frames, as before). `?renderer=cpu` on a page
+  selects that; `output?renderer=cpu&full=1` is unthinned, for pixel compares.
+- **`scene-eval.js` is a TWIN of the Python renderer** — `_motion`,
+  `World._render_budgeted`/`_render_all`, `Camera.project`/`_project_lookat`,
+  `_clip_and_project`, `_clip_frame`, `DepthCue.color_for`, `Pattern2D.render`
+  (via its packed form), `_clip_2d`, the crossfade and post-processing in
+  `SceneManager.draw`/`Engine._loop`. Its header lists the mapping. It emulates
+  float32 where Python computes in float32, including the look-at centroid
+  sums (np.add.reduceat accumulates in float32; a float64 sum reorders
+  near-ties, and the budget CUTS on that order). Strokes still legitimately come
+  out in a slightly different ORDER on near-tied distances — invisible under
+  additive blending, which is why `tools/gpu_twin` compares stroke SETS.
+  Measured: same strokes on all 25 library scenes + 15 variants, max point
+  error 2e-5. **Run the twin test after touching either side.**
+- **`frame-clock.js`** estimates the engine-clock offset as the windowed
+  minimum of (arrival − te) and interpolates snapshots at `now − offset −
+  delay`, `delay` = one tick + p95 jitter (~18 ms with one output, ~30 ms with
+  four windows open). Continuous values lerp; discrete ones (scenes present,
+  flags, integer budgets, kaleidoscope segments) come from the later snapshot.
+- **`gpu-view.js`** draws on rAF, reschedules FIRST, try/catches each frame,
+  reports `client_stats` (fps, draw ms, delay, size, GPU name from
+  `WEBGL_debug_renderer_info`) every 2 s. The server accepts `client_stats`
+  before the kiosk loopback gate; `state()["outputs"]` carries them to the
+  Performance panel.
+- **Audio sync includes the visual latency.** `mod_delay_auto` subtracts
+  `visual_latency()` (worst output/kiosk window's delay + one refresh), re-applied
+  every ~2 s on the render thread. Before, the 20Hz broadcast's own lag was never
+  compensated.
+- **Geometry pruning in the page waits 10 s** after arrival: geometry lands just
+  before the first snapshot naming it and the server sends each id once, so
+  pruning in that gap would lose it for good.
+- **WebGL context restore re-runs `_initGLState()`** (EXT_color_buffer_float,
+  blend state). Before 0.90 it rebuilt only programs and buffers, so a restored
+  context drew nothing — found by forcing a loss with `WEBGL_lose_context`.
+
+**Why JS evaluation and not a vertex shader:** `line_curve` (6 of 25 library
+scenes) re-splines/decimates the PROJECTED polyline and needs neighbouring
+points, and the `max_strokes` budget already needs every candidate point
+transformed to get its z-range — a GLSL version would have duplicated that
+work and added a second twin. Moving the transform into the shader remains
+open if a scene ever needs it; nothing measured so far does.
 
 ### Loose keys on the params dict
 
 Cross-cutting render inputs are passed as underscore-prefixed keys on the resolved params dict (`p["_camera"]`, `p["_disable_plane"]`) rather than by widening method signatures. Generators that don't look for them ignore them. Follow this convention rather than changing the generator interface.
 
-### Laser vs display are deliberately different
+### Monitor filters live in the renderer
 
-Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve, line width — are **browser-only** and never touch the vector data sent to the DAC. They're implemented in `web/static/renderer.js` and stored per-scene in `spec.camera`.
+Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve, line width — are applied by `web/static/renderer.js` over the finished frame, never authored into scene geometry, and stored per-scene in `spec.camera`. The modulatable ones (glow, trail, kaleidoscope, line curve, line width) reach the GPU outputs in the 60Hz snapshot (`snap.f`); the slow ones (mirror, bloom, fit, content aspect) come off the 20Hz state.
 
 **`line_width` only widens** (1..8, a multiplier on each surface's own base stroke) because the renderer's AA feather is a fixed half pixel: a stroke thinner than that never reaches full alpha at its centre, and every line goes semi-transparent with brighter dots at the joints. It is a multiplier rather than a pixel count so the two browser surfaces keep their deliberate difference — see `renderer.js _getLineWidth`.
 
 **`line_curve` is bipolar** (-1..1) where every other filter is unipolar: 0 means "draw the polyline exactly as authored", positive resamples it through a spline, negative drops points. It is centred rather than based at 0 specifically so the default leaves saved geometry untouched — don't "normalise" it to 0..1.
 
-`Path.glow` (per-stroke, authored by `pattern2d`) is monitor-only for the same reason: the DAC's per-point intensity channel is written as a constant 255, so brightness on a laser is carried by RGB, not blur.
+`Path.glow` (per-stroke, authored by `pattern2d`) feeds the renderer's glow target through a second colour attachment in the same geometry pass (MRT), so per-stroke glow costs no extra draw.
 
-**Both surfaces share one renderer.** `web/static/renderer.js` is loaded by `index.html` and `output.html` alike and owns all drawing; each page only supplies a `filters` object and a canvas. This replaced a hand-duplicated pair of paint functions, so a change to how strokes are drawn is now made once. What legitimately differs is what each page puts in `filters`: the in-page preview has no flip (it isn't a physical screen) and a fixed hairline line width, while the output window scales width with the viewport and carries per-monitor flip/keystone from localStorage.
+**Every surface shares one renderer.** `web/static/renderer.js` is loaded by `index.html`, `output.html` and `kiosk.html` alike and owns all drawing; each page only supplies a `filters` object and a canvas (and, on the GPU path, a `PWGpuView`). This replaced a hand-duplicated pair of paint functions, so a change to how strokes are drawn is now made once. What legitimately differs is what each page puts in `filters`: the in-page preview has no flip (it isn't a physical screen) and a fixed hairline line width, while the output window scales width with the viewport and carries per-monitor flip/keystone from localStorage.
 
 ### Output ratio and content aspect are two different numbers
 
@@ -330,7 +413,7 @@ Monitor filters — bloom, trails, mirror, kaleidoscope, keystone, line curve, l
 - **3D**: the camera divides x by the viewport aspect (`scene3d._clip_and_project`), so its normalized box already *is* the viewport's shape. Content aspect = output aspect.
 - **2D**: `pattern2d` composes in a square and never sees the ratio. Content aspect = 1.0, whatever the rig is.
 
-Derived from `Scene.is_3d`, same as everything else that asks that question — don't store it. Every consumer (`renderer.js`'s letterbox, `ilda.PathPlanner`) takes the **content** aspect; assuming the box always filled the viewport is what stretched every flat pattern on a non-1:1 rig and squeezed it vertically on the beam.
+Derived from `Scene.is_3d`, same as everything else that asks that question — don't store it. The renderer's letterbox takes the **content** aspect; assuming the box always filled the viewport is what stretched every flat pattern on a non-1:1 rig. (On the GPU path the 3D aspect reaches `scene-eval.js` as `cam.aspect` in the snapshot, the same number the Python camera divides by.)
 
 `output_fit` (`fit` / `fill` / `stretch`) resolves the remaining mismatch — letterbox, pan-and-scan, or distort. **It is resolved in two different places, and that's the point:**
 
@@ -341,9 +424,7 @@ So "the sides are empty on a 3D scene at 16:9" is **not** a letterboxing bug —
 
 Both browser surfaces read `content_aspect` + `output_fit` straight off engine state. **`index.html`'s `syncMonitorFilters` must keep setting them**: it originally didn't, and the preview silently fell back to a square box inside a canvas already reshaped to the ratio, so 3D scenes rendered horizontally squashed there and correct in the output window.
 
-For laser output, `output/ilda.py` resamples each stroke to `max_step` spacing and inserts blanking and dwell points **between every stroke** (~8 fixed points per stroke transition). So the PPS budget is dominated by *stroke count*, not geometry complexity: at 28000 PPS and 45fps you have roughly 620 points per frame, and a full-width stroke alone costs ~67. Chaining strokes into continuous polylines is the highest-leverage optimisation for dense flat content.
-
-The browser side is no longer the bottleneck it was: rendering is WebGL2 and a full-HD frame with bloom costs ~0.5ms, against a 50ms budget. **Assume the monitor's frame rate is limited by the ~20Hz broadcast, not by drawing** — if it reads low, profile `engine.preview()`/`state()` and the broadcaster before touching the renderer.
+**The output's frame rate is the display's refresh**, not the broadcast: the GPU path draws on requestAnimationFrame. Measured on this laptop: 60 fps at 1080p and 4K on the GTX 1650, 0.4-2.2 ms of JS per frame; the AMD iGPU holds 60 at 1080p but only 38-42 at 4K, fill-bound on the five full-screen float post passes that run every frame. If an output reads slow, look at the Performance panel's GPU-outputs lines first — on a hybrid laptop the browser often gets the integrated GPU.
 
 ### Kiosk mode is a runtime toggle, and diverges from `generate_scene` on purpose
 
@@ -395,13 +476,12 @@ Three more that were found by measuring, not by reading:
   HTTP stack takes the first address and blocks where curl races both families
   — so `_ensure_model` probes IPv6 once and hides AAAA records for the
   download if it's dead. A hang inside `enable()` looks exactly like a freeze.
-- **The kiosk page coalesces frames; `output.html` does not.** Painting
-  synchronously inside `ws.onmessage` means a backlog is replayed rather than
-  skipped, and the overlay ends up behind the engine — measured at ~2s between
-  the press and "Listening". The kiosk page updates the overlay immediately and
-  defers drawing to a `requestAnimationFrame` that only ever draws the newest
-  state (~0.5s after the fix). Worth copying to `output.html` if it ever reads
-  laggy there.
+- **Never paint inside `ws.onmessage`.** Doing so replays a backlog instead
+  of skipping it, and the kiosk overlay ended up behind the engine — measured
+  at ~2s between the press and "Listening". Every page now draws on
+  requestAnimationFrame (`PWGpuView`); the kiosk updates its overlay straight
+  from the 20Hz state. The CPU reference path (`?renderer=cpu`) still paints in
+  the handler on output.html, which is fine for a reference and not for a show.
 
 **The kiosk deliberately does not read the director cache** (`use_cache=False`
 in `_generate` — the only place in the app that opts out). The prompts likely to
