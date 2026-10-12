@@ -67,7 +67,7 @@ BELL_PARTIAL_AMP_SUM = float(BELL_PARTIAL_AMPS.sum())
 
 #: Struck-instrument voicings for `bell`, as (ratios, amps).
 #:
-#: This is a PARAM, not a new voice type, on INSTRUMENTS.md §0's test: the
+#: This is a PARAM, not a new voice type, on docs/INSTRUMENTS.md §0's test: the
 #: rendering shape is unchanged, only the numbers in the partial table move.
 #: §2 is the reason it's free — once `_render_bell_notes` is at (N*P, frames)
 #: resolution, what those P rows contain costs nothing extra. Every entry is
@@ -270,7 +270,7 @@ VOICE_SWEEP_TONE_RANGE = 0.4
 #: dialogue has nothing obvious to put there) and a real LFE (which needs a
 #: crossover — a per-block filter, and this file forbids the per-sample
 #: recursion the cheap version of one wants) are deliberately still open
-#: questions. See future.md rather than guessing at them here.
+#: questions. See docs/future.md rather than guessing at them here.
 SURROUND_LAYOUTS = {
     2: (0, 1, None, None),
     4: (0, 1, 2, 3),
@@ -397,7 +397,7 @@ def _wavetable(waveform: str, tone_q: int, n: int, res_q: int = 0) -> np.ndarray
     # Resonance as a peak in the HARMONIC domain rather than a filter.
     #
     # A real resonant filter is a per-sample recursion, which this module
-    # forbids (INSTRUMENTS.md: pure numpy, block-granular, no per-sample Python
+    # forbids (docs/INSTRUMENTS.md: pure numpy, block-granular, no per-sample Python
     # loop). But the rolloff above is already an explicit lowpass expressed as
     # per-harmonic gain, so resonance is just one more term multiplying the
     # same vector — and because tables are cached by (waveform, tone, n, res),
@@ -501,7 +501,7 @@ def _pan_gains(pan, depth, channels: int):
     so turning surround off — or loading a surround-authored scene on a stereo
     rig — reproduces exactly the mix that was there before this existed. A
     fold-down would want attenuation *and* high-frequency damping to read as
-    distance, and per-voice damping is the expensive half (see future.md); a
+    distance, and per-voice damping is the expensive half (see docs/future.md); a
     bare attenuation on its own mostly just makes a voice quieter for no
     audible reason.
 
@@ -1280,7 +1280,7 @@ class Soundscape:
     # with tempo. `gap` is absolute wall time added on top, so "a bell every
     # 12 seconds" survives a tempo change. 0 is off and is the default, so no
     # existing scene changes and _normalise adds no key to voices that never
-    # had one (see the library-churn note in INSTRUMENTS.md).
+    # had one (see the library-churn note in docs/INSTRUMENTS.md).
     GAP_MAX_S = 30.0
     # `play` — how long the voice plays BEFORE each gap, also in seconds. 0
     # (the default) means a single strike per gap; anything above turns the
@@ -1935,7 +1935,7 @@ class Soundscape:
         baked into each note at onset, so turning a knob changes notes that
         are already ringing.
 
-        Batched per INSTRUMENTS.md s.2-3. A unison stack multiplies rows per
+        Batched per docs/INSTRUMENTS.md s.2-3. A unison stack multiplies rows per
         note, which a per-note loop can't afford, but arp notes walk a chord:
         notes at the same pitch share oscillator rows exactly (phase comes from
         the absolute sample clock), so sin() rows scale with DISTINCT pitches
@@ -1989,7 +1989,7 @@ class Soundscape:
         group = np.array([col[round(n["freq"], 4)] for n in mine])
         P = len(uniq)
 
-        # Per-pitch envelope sum, factorised (INSTRUMENTS.md s.3): a note that
+        # Per-pitch envelope sum, factorised (docs/INSTRUMENTS.md s.3): a note that
         # started before this block contributes exp(-(t'+a0)/tau) =
         # exp(-t'/tau) * exp(-a0/tau), one shared row per distinct tau times a
         # per-note scalar. Only notes STARTING mid-block need a row of their
@@ -2185,7 +2185,7 @@ def _coerce(field, value):
         return str(value)
     if field == "character":
         # Validated here as well as in `_normalise`, because `set_param`
-        # bypasses normalisation entirely (INSTRUMENTS.md §6) — a live UI or
+        # bypasses normalisation entirely (docs/INSTRUMENTS.md §6) — a live UI or
         # MIDI write lands straight in the spec and then gets SAVED there.
         c = str(value)
         return c if c in BELL_CHARACTERS else "bell"

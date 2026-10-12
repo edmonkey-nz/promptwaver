@@ -158,17 +158,22 @@ behave differently from its siblings, this is where it costs nothing.
 
 ## 3. The cost model
 
-### The 186ms block budget is not the budget
+### The block budget is not the budget
 
-The audio block is 8192 frames at 44.1kHz, so the callback nominally has
-**186ms**. Treating that as the target is the mistake that shipped a broken
-voice: `harp` was measured at 75ms, judged "comfortably inside budget", and
-dropped out audibly in the real app.
+**Since 0.90 the default block is 1024 frames (23.2ms at 44.1kHz)**, down from
+8192 (186ms); a saved `audio_blocksize` still wins. The numbers in this section
+that say 8192 were measured at the old size — read them as ratios, and see
+"Calibrate against the library" below for the 1024 figures.
+
+At 8192 the callback nominally had **186ms**. Treating that as the target is
+the mistake that shipped a broken voice: `harp` was measured at 75ms, judged
+"comfortably inside budget", and dropped out audibly in the real app.
 
 Two reasons the real ceiling is far lower:
 
-- **Rendering competes for the GIL** with the 45fps visual render thread and
-  the ~20Hz websocket broadcaster. Measured: a soundscape costing 14.5ms alone
+- **Rendering competes for the GIL** with the render thread and the ~20Hz
+  websocket broadcaster. (Before 0.90 that render thread projected every frame
+  at 45fps; it now only ticks, ~0.6ms, which is what made 1024 viable.) Measured: a soundscape costing 14.5ms alone
   took 28ms with a single competing CPU-bound thread, and spiked to 43ms.
   Whatever you measure in isolation, assume roughly double under load.
 - **You have no idea what scene it runs under.** Cost is per-*voice*, but the
@@ -184,10 +189,21 @@ under six competing threads). The budget above is what the *producer* has, and
 it gets a full block period to use it — but the buffer is one block deep, so a
 voice that regularly exceeds a block period will still drop out.
 
-**Calibrate against the library, not the budget.** Every saved scene's
-soundscape renders in **5–8ms** a block. That is the number to sit near. A
-voice at 5× the library baseline is a voice that will drop out on someone's
-machine.
+**Calibrate against the library, not the budget.** Measured 2026-10-13 on all
+26 library soundscapes, 8 s of audio each, first quarter skipped:
+
+| block | library mean per block | library p95 per block | worst single block | share of the block |
+|---|---|---|---|---|
+| 1024 (23.2ms) | 0.7–2.4ms | 0.9–4.8ms | 7.0ms (`LionsMane`) | p95 4–21% |
+| 8192 (186ms) | 2.2–18.1ms | — | 27.7ms (`Mandala`) | ~1–15% |
+
+**Small blocks cost proportionally more.** Going 8192 → 1024 divides the
+frames by 8 but the cost only by ~5–7: every block pays a fixed numpy dispatch
+overhead per voice and per row (§2 — the win is fewer calls, not cheaper ones).
+So a voice's share of the budget is ~1.3–1.6× larger at 1024 than the 8192
+figures below suggest, and the "120 rows" ceiling in the table was set at 8192
+and **has not been re-measured at 1024** — leave margin under it. A voice
+at 5× the library baseline is a voice that will drop out on someone's machine.
 
 ### What actually costs
 

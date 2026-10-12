@@ -6,7 +6,7 @@ wrong one is silent data loss:
 
 * **`bundle_dir()`** — `sys._MEIPASS`, the directory PyInstaller unpacks the
   executable into. Read-only in practice and **deleted when the process
-  exits**. Everything shipped inside the binary (the web UI, about.md, the
+  exits**. Everything shipped inside the binary (the web UI, content/*.md, the
   starter scene library) is here.
 * **`data_dir()`** — beside the executable itself, and the only place that
   survives a restart. Anything the app WRITES belongs here: settings.json, the

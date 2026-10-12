@@ -26,16 +26,6 @@ rather than failing.
 | [python-rtmidi](https://github.com/SpotlightKid/python-rtmidi) | MIT | MIDI port I/O |
 | [RtMidi](https://github.com/thestk/rtmidi) | MIT (with an attribution request) | the C++ library python-rtmidi wraps |
 
-## Hardware
-
-| Component | Licence | Used for |
-|---|---|---|
-| [Helios DAC SDK](https://bitlasers.com/helios-laser-dac/) | MIT | `libHeliosDacAPI.so`, the laser DAC interface |
-
-`libHeliosDacAPI.so` is **not** included in this repository — see the README's
-install section for building or obtaining it. It is a product of Gitle Mikkelsen
-/ Bitlasers.
-
 ## Development only
 
 Not required to run PromptWaver, and not a dependency of any shipped code

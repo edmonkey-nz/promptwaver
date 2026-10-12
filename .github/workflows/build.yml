@@ -72,8 +72,7 @@ jobs:
             --hidden-import=tkinter --hidden-import=tkinter.ttk \
             --add-data "promptwaver/web/static:promptwaver/web/static" \
             --add-data "scenes:scenes" \
-            --add-data "about.md:." \
-            --add-data "welcome.md:." \
+            --add-data "promptwaver/content:promptwaver/content" \
             run.py
 
       - name: Build executable with PyInstaller (Windows)
@@ -84,8 +83,7 @@ jobs:
           --hidden-import=tkinter --hidden-import=tkinter.ttk
           --add-data "promptwaver/web/static;promptwaver/web/static"
           --add-data "scenes;scenes"
-          --add-data "about.md;."
-          --add-data "welcome.md;."
+          --add-data "promptwaver/content;promptwaver/content"
           run.py
 
       # PyInstaller names every platform's binary `promptwaver` (or

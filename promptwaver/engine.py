@@ -1477,7 +1477,7 @@ class Engine:
         Each entry carries both a `key` (what the matrix and the scene JSON
         use) and a human `label`. The browser shows the label and puts the key
         on hover, so the dropdown reads as English without cutting the tie to
-        what's in the file and in TECHNICAL.md.
+        what's in the file and in docs/TECHNICAL.md.
         """
         def entry(key: str, group: str, fallback: str | None = None,
                   lo: float | None = None, hi: float | None = None) -> dict:

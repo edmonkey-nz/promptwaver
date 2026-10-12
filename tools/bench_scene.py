@@ -2,7 +2,7 @@
 """Render-cost benchmark: how big a scene can the engine actually draw?
 
 The repo has no test suite and no timing harness, so every performance number
-in TECHNICAL.md is prose from a one-off measurement that can't be re-checked.
+in docs/TECHNICAL.md is prose from a one-off measurement that can't be re-checked.
 This makes the measurement repeatable — run it before and after any change to
 `scene3d.py` or `generators/world.py` and compare.
 

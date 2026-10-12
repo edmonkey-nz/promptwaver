@@ -26,12 +26,13 @@ import time
 from aiohttp import web, WSMsgType
 
 _STATIC = os.path.join(os.path.dirname(__file__), "static")
-# Read-only docs shipped with the app. bundle_dir() is the repo root from a
-# checkout and PyInstaller's unpack directory in a packaged build, which is
-# where --add-data puts them.
+# Read-only docs shipped with the app (the About and Welcome panels).
+# bundle_dir() is the repo root from a checkout and PyInstaller's unpack
+# directory in a packaged build, and --add-data puts promptwaver/content at the
+# same relative path in both — see .github/workflows/build.yml.
 from ..paths import bundle_dir
 
-_PROJECT_ROOT = bundle_dir()
+_CONTENT = os.path.join(bundle_dir(), "promptwaver", "content")
 
 
 def make_app(engine) -> web.Application:
@@ -82,12 +83,12 @@ def make_app(engine) -> web.Application:
         shows up on the next open without a restart — it's a document, not a
         hot path, and it's opened by hand a handful of times a session.
         """
-        path = os.path.join(_PROJECT_ROOT, "about.md")
+        path = os.path.join(_CONTENT, "about.md")
         try:
             with open(path, encoding="utf-8") as f:
                 text = f.read()
         except FileNotFoundError:
-            text = ("# About\n\nCreate `about.md` in the project root and it "
+            text = ("# About\n\nCreate `promptwaver/content/about.md` and it "
                     "will be shown here.")
         except Exception as e:
             text = f"# About\n\nCould not read about.md: {e}"
@@ -95,12 +96,12 @@ def make_app(engine) -> web.Application:
 
     async def welcome(request):
         """Serve welcome.md as text for the Welcome modal to render."""
-        path = os.path.join(_PROJECT_ROOT, "welcome.md")
+        path = os.path.join(_CONTENT, "welcome.md")
         try:
             with open(path, encoding="utf-8") as f:
                 text = f.read()
         except FileNotFoundError:
-            text = ("# Welcome to PromptWaver\n\nCreate `welcome.md` in the project root "
+            text = ("# Welcome to PromptWaver\n\nCreate `promptwaver/content/welcome.md` "
                     "and it will be shown here.")
         except Exception as e:
             text = f"# Welcome\n\nCould not read welcome.md: {e}"

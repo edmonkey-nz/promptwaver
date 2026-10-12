@@ -1045,7 +1045,7 @@
           <!-- Sonnet/Opus disabled, not removed: Sonnet-5 at high effort has been
                measured overshooting 64,000 output tokens without closing its JSON
                on a big scene ask, getting truncated, billed in full, and taking up
-               to 491s to fail (see TECHNICAL.md "What models actually do when
+               to 491s to fail (see docs/TECHNICAL.md "What models actually do when
                asked for a big scene"). Opus is pricier still ($5/$25 per million vs
                Sonnet's $3/$15) with no measurement suggesting it fares better.
                Uncomment to bring either back. -->
@@ -2051,7 +2051,7 @@ function renderRoutes(s){
   const box = $("routes"); box.innerHTML = "";
 
   // Labels are plain English; the underlying key rides along as the option's
-  // `title` so it can still be matched against the scene JSON, TECHNICAL.md
+  // `title` so it can still be matched against the scene JSON, docs/TECHNICAL.md
   // and MIDI bindings. Both come from the engine (mod_destinations /
   // mod_source_labels) so the browser holds no naming of its own.
   const srcLabel = n => (s.mod_source_labels || {})[n]
@@ -3363,7 +3363,7 @@ function renderSoundscape(s){
     // showed rate but not decay/tone, `osc` showed unison/detune but not
     // tone, and pad/sub read detune with nothing to set it from. If you add a
     // `v.get("x")` to a renderer, it belongs in one of the rows below — same
-    // discipline as INSTRUMENTS.md's registration points.
+    // discipline as docs/INSTRUMENTS.md's registration points.
     const isType = (...t) => t.includes(v.type);
     if (isType("pad","sub","pluck","osc")){
       const sel = document.createElement("select");
@@ -4383,7 +4383,7 @@ $("gen-close").onclick = () => closeModal("modal-generate");
 $("settings-open").onclick = () => openModal("modal-settings");
 $("settings-close").onclick = () => closeModal("modal-settings");
 
-// About — renders about.md from the project root. Fetched on first open
+// About — renders promptwaver/content/about.md. Fetched on first open
 // rather than at load, since most sessions never open it.
 let aboutLoaded = false;
 $("about-open").onclick = async () => {

@@ -277,9 +277,6 @@ Two things to fix if this is ever built:
   now collapsed by default there. Revisit if that gets annoying.
 - **`apply_audio_to_scene` doesn't update `spec.audio_prompt`**, so a scene's
   recorded prompt still shows the original after a regenerate.
-- **The three procedural generators are still not AI-selectable.** Each
-  director prompt names exactly one generator, so `flow_field`, `attractor`
-  and `ripples` can be driven by hand but never chosen by Claude.
 - **CHANGELOG has no entries for 0.31–0.70.** Not worth reconstructing.
 - **Surround / per-voice depth** is built — see **g)** above for what is done
   and what still needs a real 5.1 room.

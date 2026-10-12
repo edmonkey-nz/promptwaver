@@ -55,7 +55,7 @@ Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .v
 
 ## The packaged build has TWO roots, and using the wrong one is silent data loss
 
-> **`PACKAGING.md` is the portable version of this section** — the whole
+> **`docs/PACKAGING.md` is the portable version of this section** — the whole
 > "ship a Python server app as a double-clickable binary" recipe, written to be
 > copied to the other server-shaped tools rather than re-derived. Read that for
 > the pattern; what follows is what it means *here*.
@@ -64,7 +64,7 @@ Verify with `grep -rn "x\.y\.z" --include="*.py" --include="*.md" . | grep -v .v
 `promptwaver/paths.py` is the only thing that knows the difference:
 
 - `bundle_dir()` — `sys._MEIPASS`, PyInstaller's unpack directory. Read-only,
-  and **deleted when the process exits**. The web UI, `about.md`/`welcome.md`
+  and **deleted when the process exits**. The web UI, `promptwaver/content/` (About/Welcome markdown)
   and the starter scene library ship here.
 - `data_dir()` — beside the executable, the only place that survives a restart.
   `settings.json`, the scene library and the director cache go here, falling
@@ -155,7 +155,7 @@ Three assets, named `promptwaver-{linux-x86_64,macos-arm64,windows-x86_64.exe}`,
 
 ## Architecture
 
-Read `TECHNICAL.md` for the subsystem-level detail. What follows is the load-bearing structure that isn't obvious from any single file.
+Read `docs/TECHNICAL.md` for the subsystem-level detail. What follows is the load-bearing structure that isn't obvious from any single file.
 
 ### Everything is a `Path`
 
@@ -231,7 +231,7 @@ meaningful projection to test.
 the clip pipeline — the transform, the centroid distances, the z range, the
 lateral bounds — is done once over the concatenated frame with `reduceat`,
 and each stroke is then a view into that array. Same lesson as the audio
-module's batched note renderers (INSTRUMENTS.md §2): the win is making FEWER
+module's batched note renderers (docs/INSTRUMENTS.md §2): the win is making FEWER
 numpy calls, not cheaper ones. A stroke is ~24 points, so dispatch cost
 dominated the arithmetic — 2.302ms a frame for the transform alone against
 0.050ms batched.
@@ -291,9 +291,9 @@ The trade that move makes: the producer is a **plain Python thread**, so it lost
 
 **A starved callback is invisible to PortAudio.** It writes silence and returns in under a millisecond — on time, with data — so no underflow flag is set and `underruns`, `avg_duration_ms` and the budget percentages all stay green while the output gaps. That is how a badly dropping build shipped. `CallbackStats.starved`/`starved_pct` is the only counter that moves; keep it in any health judgement about the audio stream.
 
-### Synth voices have a formula — read `INSTRUMENTS.md` before adding one
+### Synth voices have a formula — read `docs/INSTRUMENTS.md` before adding one
 
-**`INSTRUMENTS.md` is the recipe for adding a voice type to `audio/dsp.py`**: the two rendering shapes and when each applies, the measured cost model (~0.6ms per note×partial row against a 186ms block budget, 120 rows the safe ceiling for one voice), the note-lifecycle guards and the assumptions a sustaining voice breaks, output-gain calibration, and the **five registration points** — `VOICE_TYPES`, the `render` dispatch, `_normalise`, `_SOUNDSCAPE_GUIDE`, and the `#voices` panel — none of which check each other, so missing one leaves the voice inaudible, unselectable, or invisible.
+**`docs/INSTRUMENTS.md` is the recipe for adding a voice type to `audio/dsp.py`**: the two rendering shapes and when each applies, the measured cost model (~0.6ms per note×partial row against a 186ms block budget, 120 rows the safe ceiling for one voice — both measured at the OLD 8192-frame block; at today's 1024 default the library runs 0.9–4.8ms p95 per 23.2ms block, small blocks cost proportionally ~1.3–1.6× more, and the row ceiling has not been re-measured), the note-lifecycle guards and the assumptions a sustaining voice breaks, output-gain calibration, and the **five registration points** — `VOICE_TYPES`, the `render` dispatch, `_normalise`, `_SOUNDSCAPE_GUIDE`, and the `#voices` panel — none of which check each other, so missing one leaves the voice inaudible, unselectable, or invisible.
 
 Two things from it that bite outside the audio module: `_normalise`'s output is what gets written to `scenes/<name>.json`, so defaulting a new field on every voice churns the whole tracked library on the next save — gate voice-specific fields on `v["type"]`. And **`set_param` bypasses `_normalise`**, so live UI/MIDI writes land in the spec unclamped and anything dangerous must also be clamped where it's read.
 
@@ -674,5 +674,3 @@ The director (`director/claude_director.py`) makes one cached Claude call per sc
 ### Known drift
 
 `CHANGELOG.md` jumps from `0.30.0` to `0.71.0` — the intervening releases were never logged. Don't try to reconstruct them.
-
-`scenes/painters_studio.json` is a single `flow_field` layer despite its name and despite the docs using "inside a painter's studio" as the shape-grammar example (now noted in `TECHNICAL.md`). Treat saved scenes, not the docs, as ground truth for what the format currently produces.

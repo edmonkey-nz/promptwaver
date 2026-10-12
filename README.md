@@ -18,7 +18,11 @@ Claude acts as an **scene creator**: give it a visual prompt ("water flowing fro
 
 Disclaimer: this has been coded almost completely with Claude Code, but with a person planning, orchestrating and UX testing to make this what it is, YMMV. 
 
-![Main UI](/promptwaver-snap.png)
+![Main UI](docs/images/promptwaver-snap.png)
+
+![Output scene](docs/images/promptwaver2.png)
+
+![Output scene 2](docs/images/promptwaver3.png)
 
 ## Why
 
@@ -59,21 +63,13 @@ hardware acceleration, and the browser console for a `[PromptWaver]` message.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt          # numpy + aiohttp (required)
-pip install pyo sounddevice anthropic    # optional: audio, mic reactivity, Claude
+pip install -r requirements.txt                          # numpy + aiohttp (required)
+pip install sounddevice anthropic mido python-rtmidi     # optional: audio, Claude, MIDI
+sudo apt install libportaudio2                           # the runtime sounddevice needs
 ```
 
-**pyo build fails with `portaudio.h: No such file or directory`**:
-```bash
-sudo apt install -y portaudio19-dev libsndfile1-dev libportmidi-dev liblo-dev build-essential
-pip install pyo
-```
-
-**pyo incompatible with GCC 14**: either use GCC 12, or skip pyo entirely (pure numpy/sounddevice backend works fine):
-```bash
-sudo apt install gcc-12 g++-12
-CC=gcc-12 CXX=g++-12 pip install --no-cache-dir pyo
-```
+`requirements.txt` lists what each optional package unlocks. Kiosk mode's
+speech-to-text additionally needs `faster-whisper`.
 
 ## Run
 
@@ -104,7 +100,7 @@ code .
 
 ## Documentation
 
-- **[TECHNICAL.md](TECHNICAL.md)** — Architecture, scene format, modulation matrix, audio subsystem, MIDI control details, performance tuning
+- **[TECHNICAL.md](docs/TECHNICAL.md)** — Architecture, scene format, modulation matrix, audio subsystem, MIDI control details, performance tuning
 - **[CHANGELOG.md](CHANGELOG.md)** — Version history and feature additions
 
 ## License

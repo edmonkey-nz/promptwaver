@@ -165,7 +165,7 @@ Shape ops: `line`, `polyline` (raw escape hatch), `circle`, `rect`, `box`, `arc`
 }}]
 ```
 
-Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Generate *"inside a painter's studio"* to see a full example — note that the shipped `scenes/painters_studio.json` is **not** one: it is a single layer of a since-removed `flow_field` generator, despite the name, so it now loads with that layer skipped.
+Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Generate *"inside a painter's studio"* to see a full example.
 
 ## The generator registry is self-describing
 
@@ -711,7 +711,7 @@ Two more hooks make it drawable on the GPU path: `gpu_pack` (pack the generator'
 
 ## About panel
 
-The **?** button beside the gear opens an About panel that renders [`about.md`](about.md) from the project root. It's read per request rather than cached at startup, so editing that file shows up on the next open with no restart. The renderer is a small markdown subset (headings, lists, rules, inline code / bold / italic / links) that escapes the source *before* adding any markup.
+The **?** button beside the gear opens an About panel that renders [`about.md`](../promptwaver/content/about.md) (beside the code that serves it, `promptwaver/content/`). It's read per request rather than cached at startup, so editing that file shows up on the next open with no restart. The renderer is a small markdown subset (headings, lists, rules, inline code / bold / italic / links) that escapes the source *before* adding any markup.
 
 ## Roadmap
 

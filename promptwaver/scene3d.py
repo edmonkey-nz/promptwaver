@@ -507,7 +507,7 @@ class Camera:
         # per-call dispatch cost dwarfed the arithmetic — benchmarked at
         # 2.302ms a frame for the transform alone against 0.050ms for the same
         # maths done once over the concatenated array. Same lesson as the audio
-        # module's batched note renderers (INSTRUMENTS.md §2): the win is
+        # module's batched note renderers (docs/INSTRUMENTS.md §2): the win is
         # making FEWER numpy calls, not cheaper ones.
         #
         # `reduceat` supplies every per-stroke reduction in one pass, and each

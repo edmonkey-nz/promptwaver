@@ -1,6 +1,6 @@
 [project]
 name = "promptwaver"
-description = "AI-composed 3D laser environments with a generative ambient soundscape, for the Helios Laser DAC."
+description = "An ambient light + synth instrument: AI-composed vector worlds drawn on the GPU in the browser, with a generative soundscape."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

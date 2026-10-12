@@ -13,7 +13,7 @@ aiohttp>=3.9
 #
 # pyo is NOT used — the synth is pure numpy + sounddevice (see promptwaver/audio/synth.py);
 # an old pyo-based build was dropped after its C extension repeatedly failed to
-# compile against current GCC (see README "Install" section for the history).
+# compile against current GCC.
 #
 # pip install sounddevice anthropic mido python-rtmidi
 #   sounddevice>=0.4.6
