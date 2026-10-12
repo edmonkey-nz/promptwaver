@@ -9,8 +9,8 @@ instead of guessed at:
 
   - `render_ms`  time spent building the frame (generators + camera projection
                  + crossfade compositing) — the part scene complexity affects.
-  - `output_ms`  time spent handing the frame to the output (DAC write, or the
-                 null-output's point-count pass).
+  - `output_ms`  kept for the panel's layout; always 0 since the laser output
+                 was removed (frames now go to the browser via the broadcaster).
   - `interval_ms` wall-clock time between one tick's start and the next —
                  if this runs well above the nominal frame period even though
                  render+output are comfortably under budget, something outside

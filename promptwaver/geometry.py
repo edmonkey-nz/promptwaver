@@ -2,8 +2,8 @@
 
 Everything the visual engine produces is a list of `Path`s. A Path is a
 polyline in normalized coordinates (x, y in [-1, 1]) plus an RGB colour in
-[0, 1]. The laser is a *vector* device — we draw strokes, never pixels — so
-this is the natural unit throughout PromptWaver.
+[0, 1]. PromptWaver is a *vector* instrument — strokes, never pixels or
+fills — so this is the natural unit throughout.
 """
 
 from __future__ import annotations
@@ -22,9 +22,7 @@ class Path:
         color:  (r, g, b) in [0, 1]. Applied to the whole stroke for now;
                 per-point colour is a later extension.
         closed: if True the renderer joins the last point back to the first.
-        glow:   0..1 per-stroke bloom, MONITOR ONLY. The laser has no such
-                control — its per-point intensity channel is on/off (see
-                output/ilda.py), so brightness there is carried by RGB. This
+        glow:   0..1 per-stroke bloom, drawn by the browser renderer. This
                 rides alongside the geometry rather than in the display-filter
                 block because it is authored per shape by the scene, unlike
                 the global glow slider which applies to the whole frame.
@@ -64,8 +62,8 @@ Frame = list[Path]  # what a Generator returns for a given instant
 
 
 def clamp_frame(frame: Frame) -> Frame:
-    """Clamp all coordinates into [-1, 1] so nothing drives the galvos past
-    their safe travel. Cheap insurance before the frame hits the DAC."""
+    """Clamp all coordinates into [-1, 1]. A no-op for anything already
+    clipped (the 3D camera, `scenes._clip_2d`); cheap insurance otherwise."""
     for p in frame:
         np.clip(p.points, -1.0, 1.0, out=p.points)
     return frame
@@ -80,18 +78,17 @@ def test_pattern_frame() -> Frame:
     whatever palette a scene happens to use.
 
     Deliberately independent of any generator/camera — this bypasses the
-    live scene entirely (see Engine._loop's test_pattern_on handling, which
-    substitutes this for BOTH the real output and self._last_frame, so
-    every viewer — laser, visualiser, output windows — gets the same
-    pattern through their normal rendering path, each with its own
-    keystone/flip already applied) so calibration doesn't depend on
+    live scene entirely (see Engine._loop's test_pattern_on handling, so
+    every output window gets the same pattern through its normal rendering
+    path, each with its own keystone/flip applied) so calibration doesn't
+    depend on
     picking a scene with the right geometry to see the effect clearly.
     """
     white = (1.0, 1.0, 1.0)
     cyan = (0.3, 0.9, 1.0)
     b = 0.96   # inset slightly from the exact [-1,1] edge: a border stroke
                # drawn exactly ON the edge gets half its width clipped by the
-               # canvas/DAC boundary, rendering as a near-invisible sliver
+               # canvas boundary, rendering as a near-invisible sliver
     return [
         Path(np.array([[-b, -b], [b, -b], [b, b], [-b, b], [-b, -b]], np.float32), white, closed=True),
         Path(np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]], np.float32),

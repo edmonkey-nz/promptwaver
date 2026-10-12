@@ -81,10 +81,6 @@ def _motion(node_motion: dict, t: float):
     return scale, rot, offset
 
 
-# Primitives whose local geometry genuinely depends on time (e.g. jellyfish's
-# tentacle wave) and so can't be cached like the rest of the kit below.
-_ANIMATED_PRIMITIVES = {"jellyfish"}
-
 # How much geometry to transform, as a multiple of the camera's stroke budget,
 # before stopping (see `render3d`). The camera keeps `max_strokes` strokes and
 # discards the rest, but it discards them for reasons this generator can't see
@@ -185,14 +181,7 @@ class World(Generator3D):
         prim = node.get("primitive")
         if prim is not None:
             params = dict(node.get("params", {}))
-            if prim in _ANIMATED_PRIMITIVES:
-                params.setdefault("t", t)      # time-aware primitives (jellyfish)
-                try:
-                    return _with_radius(primitives.build(prim, params))
-                except KeyError:
-                    return ([], 0.0)
-            # Every other primitive (planet/ring/ball/torus/crystal/starfield)
-            # ignores `t` entirely, so its local geometry is a pure function
+            # Every primitive's local geometry is a pure function
             # of its params — was being rebuilt from raw numpy (trig, RNG for
             # starfield) on EVERY frame regardless, the single biggest
             # avoidable render-loop cost in scenes that lean on the primitive

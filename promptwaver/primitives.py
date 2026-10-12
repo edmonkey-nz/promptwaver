@@ -1,8 +1,8 @@
 """Low-poly primitive kit — the vocabulary a scene graph is built from.
 
 Each builder returns a list of `Path3D` in LOCAL space: centred on the origin,
-roughly unit-scale, wireframe, and deliberately sparse so a laser can draw a
-whole sceneful. The scene graph (see generators/world.py) places, scales,
+roughly unit-scale, wireframe, and deliberately sparse — the low-poly line-art
+look. The scene graph (see generators/world.py) places, scales,
 colours and animates these. Claude composes scenes by choosing primitives and
 transforms — it never has to emit raw geometry, so every object stays clean and
 budget-safe.
@@ -109,8 +109,12 @@ def starfield(count=36, spread=8.0, seed=7, size=0.05, **_):
 
 @register("jellyfish")
 def jellyfish(tentacles=6, seg=16, t=0.0, **_):
-    """A drifting jellyfish: a domed bell + wavy trailing tentacles.
-    `t` (time) animates the tentacle wave — passed by the scene graph."""
+    """A jellyfish: a domed bell + wavy trailing tentacles.
+
+    Static: the scene graph no longer passes a time, so `t` stays 0 and the
+    tentacles hold their rest pose; give the node `bob`/`drift` motion for
+    life. Geometry that changed shape every frame could not be uploaded to
+    the GPU once, and this was its only user."""
     out = []
     # bell: two crossed arcs over the top
     a = np.linspace(0, np.pi, seg)

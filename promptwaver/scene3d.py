@@ -1,22 +1,21 @@
-"""3D for a vector laser — a camera and a projection pipeline, not a game engine.
+"""3D vector line-art — a camera and a projection pipeline, not a game engine.
 
 Keeps the world as 3D polylines, flies a slow camera through it, projects to the
-same normalized 2D `Path`s everything downstream already speaks. Because a laser
-can only draw a few hundred strokes per frame, the far plane does double duty:
-it culls distant geometry (performance) and *is* the fog.
+same normalized 2D `Path`s everything downstream already speaks. The far plane
+does double duty: it culls distant geometry and *is* the fog.
 
-Depth cueing for on/off lasers
-------------------------------
-Many units (e.g. TTL RGB) can't fade brightness — a beam is on or off. So depth
-is shown with COLOUR, not brightness. Configurable via the scene's `camera.depth`:
+Depth cueing
+------------
+Depth is shown with COLOUR, not brightness. Configurable via the scene's
+`camera.depth`:
 
     mode = "hue"  : lerp near_color -> far_color by distance (optionally snapped
-                    to TTL-clean primaries so channels are cleanly on/off)
+                    to pure primaries with `ttl_quantize`, a deliberately hard look)
     mode = "cull" : hard-drop anything past `far` (pure depth culling)
     mode = "both" : hue AND cull
 
 Near-plane clipping is mandatory: segments crossing behind the camera are cut,
-otherwise the perspective divide blows up (the classic laser-3D failure).
+otherwise the perspective divide blows up.
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ class DepthCue:
     mode: str = "hue"                 # "hue" | "cull" | "both"
     near_color: tuple = (0.4, 0.9, 1.0)
     far_color: tuple = (0.1, 0.2, 0.5)
-    ttl_quantize: bool = False        # snap channels to 0/1 for TTL RGB lasers
+    ttl_quantize: bool = False        # snap channels to 0/1 (pure primaries)
 
     def color_for(self, depth: float, near: float, far: float):
         t = min(1.0, max(0.0, (depth - near) / max(far - near, 1e-4)))
@@ -204,7 +203,7 @@ class Camera:
 
     def __init__(self, *, fov=60.0, near=0.4, far=14.0, speed=0.6,
                  height=1.0, sway=0.12, depth: DepthCue | None = None,
-                 max_strokes=90, laser_max_strokes=None, aspect=1.0, fit="fit", mode="fly",
+                 max_strokes=90, aspect=1.0, fit="fit", mode="fly",
                  target=(0.0, 0.0, 0.0), orbit_radius=9.0, orbit_height=1.5,
                  waypoints=None, look_at=None, lookahead=3.0, seed=0, wander=0.0):
         self.fov = fov
@@ -214,19 +213,8 @@ class Camera:
         self.height = height
         self.sway = sway
         self.depth = depth or DepthCue()
-        # Output detail profile. `max_strokes` is the LIVE value the projection
-        # reads; the two below are the settings it's derived from.
-        #
-        # A monitor and a laser want very different densities from the same
-        # scene — the canvas draws whatever it's given, while the DAC's PPS
-        # budget is spent mostly on the blanking jump between strokes, so a
-        # frame that looks rich on screen flickers on the beam. One render
-        # feeds both outputs, so they can't differ simultaneously; instead the
-        # engine switches profile when the laser is armed (Engine.set_laser).
-        # `laser_max_strokes = None` means "no separate laser setting", which
-        # is every pre-existing scene and behaves exactly as before.
-        self.monitor_max_strokes = max_strokes
-        self.laser_max_strokes = laser_max_strokes
+        # Density: how many strokes are drawn, nearest first. An authored part
+        # of a scene's look, not a hardware limit.
         self.max_strokes = max_strokes
         self.aspect = aspect
         # How a wide `aspect` is spent — see `_focal`. "fit" widens the field
@@ -314,7 +302,7 @@ class Camera:
             # tangent. On a closed circuit this is what decides whether
             # anything is on screen at all: a short lookahead stares into
             # whatever is directly in front (measured at ~14 strokes of a
-            # 110 budget, i.e. a nearly dark beam), while a lookahead of
+            # 110 budget, i.e. a nearly empty frame), while a lookahead of
             # roughly a third of a lap aims across the space and keeps the
             # scene's bulk in the cone (~100 strokes). Following the curve
             # also means the view leads into turns instead of swinging wide
@@ -591,19 +579,6 @@ class Camera:
                 out.append(Path(xy, col))
         return out
 
-    def apply_profile(self, laser_on: bool) -> int:
-        """Point `max_strokes` at the right output profile, returning the value
-        now in force.
-
-        Called on the transitions that can change which output is live —
-        arming the laser, loading a scene, editing either setting — rather than
-        per tick, so it never fights a slider mid-drag.
-        """
-        v = (self.laser_max_strokes if (laser_on and self.laser_max_strokes)
-             else self.monitor_max_strokes)
-        self.max_strokes = int(v)
-        return self.max_strokes
-
 
 def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     """Clip a polyline against the near plane, project surviving segments, and
@@ -613,7 +588,7 @@ def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     Was a per-point Python loop (`for i in range(n)`) calling a `proj(i)`
     closure once per point and accumulating into plain lists — profiled as
     the single hottest spot in the whole render path for a stroke-rich
-    scene, entirely from Python-level overhead (a laser stroke's point count
+    scene, entirely from Python-level overhead (a stroke's point count
     is small, so the *math* here is trivial; it's the interpreter overhead of
     doing it one point at a time, 45 times a second, across every stroke,
     that adds up). Visibility, run-finding, and projection are now batch
@@ -645,7 +620,7 @@ def _clip_and_project(x, y, z, f, near, far, aspect, depth, cull):
     px = x / zc * f / aspect
     py = y / zc * f
 
-    # A laser stroke's point count is small (a handful to a few dozen), so
+    # A stroke's point count is small (a handful to a few dozen), so
     # numpy's per-call dispatch overhead dominates any array method called
     # per run — confirmed by benchmark: plain Python min()/max() on a list
     # slice runs ~40% faster than the equivalent numpy calls at this size.
@@ -755,9 +730,8 @@ def make_camera(spec: dict) -> Camera:
         orbit_radius=spec.get("orbit_radius", 9.0),
         orbit_height=spec.get("orbit_height", 1.5),
         max_strokes=spec.get("max_strokes", 90),
-        # Optional per-scene laser override — see Camera.__init__. Absent on
-        # every scene authored before this existed, which is the no-op case.
-        laser_max_strokes=spec.get("laser_max_strokes"),
+        # A saved `laser_max_strokes` (scenes from when the laser existed) is
+        # simply not read.
         depth=depth,
         # Path mode (mode="path"): a closed circuit of >=3 waypoints. `look_at`
         # is a parallel list whose entries are either a point to watch while

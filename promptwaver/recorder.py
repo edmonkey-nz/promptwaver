@@ -12,7 +12,7 @@ THE CLOCK IS WALL TIME, deliberately, not `Engine._scene_t`. The scene clock
 is `real dt * motion_rate` accumulated, and `motion_rate` is itself a recorded
 parameter — so a Freeze during a take replays as a Freeze, and the accumulator
 sums to the same place over the same wall interval whatever frame rate the
-loop happens to be running (24 idle vs 45 with a beam armed). Recording
+loop happens to be running. Recording
 against the scene clock would have needed Freeze modelled as a special case.
 
 WHAT REPLAYS EXACTLY: every gesture, LFO phase (derived from the absolute
@@ -53,7 +53,9 @@ COALESCE_S = 0.02
 #: performance — audio device, MIDI port, model, cost cap, kiosk — and several
 #: write to the shared settings.json. Replaying those would silently
 #: reconfigure the machine when someone opened a take.
-COMMANDS = ("set", "set_audio", "active", "laser", "blank")
+#: "laser" was here until the laser was removed; old takes that carry it
+#: just have those events dropped on load (see `load`).
+COMMANDS = ("set", "set_audio", "active", "blank")
 
 
 def _safe(name: str) -> str:

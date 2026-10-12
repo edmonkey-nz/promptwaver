@@ -203,3 +203,25 @@ class Generator3D(Generator):
     def render3d(self, t: float, p: dict):  # pragma: no cover
         """Return a list[Path3D] for time `t`."""
         raise NotImplementedError
+
+
+class MissingGenerator(Generator):
+    """Stands in for a layer whose generator no longer exists — a scene saved
+    with one of the procedural generators removed in 0.90 (`flow_field`,
+    `attractor`, `ripples`, `forest`, `ground_grid`), or by a newer build.
+
+    Deliberately NOT registered, so it can never be authored or offered. It
+    draws nothing and has no knobs, and it keeps the layer's SLOT: layer
+    params are addressed by index (`layer<N>.<param>`), and dropping the layer
+    would silently re-point every later layer's controls at the wrong one."""
+
+    name = "missing"
+    description = "generator not available in this build"
+    authorable = False
+
+    def __init__(self, wanted: str = "", **params):
+        super().__init__()
+        self.wanted = wanted
+
+    def render(self, t: float, p: dict) -> Frame:
+        return []

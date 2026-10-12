@@ -8,27 +8,10 @@ upgrade to the director, never a hard dependency.
 from __future__ import annotations
 
 import hashlib
+import math
+import random
 
 from ..scenes import SceneSpec, Layer
-
-# keyword substrings -> (generator, params, palette, hue)
-_RULES = [
-    (("water", "flow", "river", "stream", "ocean", "sea"),
-     "flow_field", dict(turbulence=0.3, speed=0.18, hue=0.55),
-     ["#0a3d62", "#3c9dd0", "#c8f0ff"]),
-    (("cloud", "mist", "fog", "sky", "wind"),
-     "flow_field", dict(turbulence=0.15, speed=0.1, hue=0.6, particles=64),
-     ["#2c3e50", "#8fa8c0", "#e8eef5"]),
-    (("smoke", "drift", "nebula", "swirl", "aurora"),
-     "attractor", dict(drift=0.2, speed=0.08, hue=0.72),
-     ["#1a1a2e", "#7b6bd9", "#c8bfff"]),
-    (("drip", "rain", "pool", "pond", "ripple", "droplet"),
-     "ripples", dict(speed=0.22, rings=5, hue=0.58),
-     ["#06344a", "#2a8fb0", "#bff0ff"]),
-    (("forest", "leaf", "tree", "grove"),
-     "attractor", dict(a=1.7, b=-1.8, drift=0.1, speed=0.06, hue=0.33),
-     ["#0b3d0b", "#3f8f3f", "#bfe6a0"]),
-]
 
 _DEFAULT_PATCH = dict(engine="pad", waveform="triangle", voices=4,
                       attack=3.0, release=6.0, base_note=48, chord=[0, 7, 12, 16])
@@ -45,20 +28,51 @@ _SEA_KEYS = ("jellyfish", "underwater", "ocean", "reef", "coral", "deep", "sea",
              "aquatic", "abyss", "whale", "swim", "dolphin", "kelp", "lagoon")
 
 
+def _tree_def(seed: int) -> list:
+    """One tree as shape-grammar ops: a trunk and 3-5 short branches near the
+    top. A suggestion of a tree rather than a botanical one — the same
+    sparse look the old procedural `forest` generator drew, now authored as
+    `defs` so it is ordinary `world` geometry. Branches are lod 2, so they
+    are the first detail to go when far."""
+    rng = random.Random(seed)
+    height = rng.uniform(1.4, 2.6)
+    ops = [dict(op="line", a=[0, 0, 0], b=[0, round(height, 3), 0])]
+    for _ in range(rng.randint(3, 5)):
+        h = height * rng.uniform(0.55, 0.95)
+        ang = rng.uniform(0, 2 * math.pi)
+        ln = rng.uniform(0.25, 0.5)
+        tip = [math.cos(ang) * ln, h + rng.uniform(0.1, 0.3), math.sin(ang) * ln]
+        ops.append(dict(op="line", a=[0, round(h, 3), 0],
+                        b=[round(v, 3) for v in tip], lod=2))
+    return ops
+
+
 def _forest_3d(keyword: str) -> SceneSpec:
+    """A grove to walk through: trees either side of a corridor over a grid
+    floor, on a closed camera path. Rebuilt on `world` when the procedural
+    `forest`/`ground_grid` generators were removed; the layout (alternating
+    sides, a clear corridor, a fixed seed) and the colours follow them."""
+    rng = random.Random(1234)
+    defs = {f"tree{i}": _tree_def(i) for i in range(4)}
+    defs["floor"] = [dict(op="grid", w=12, h=20, nx=7, ny=16, plane="xz", c=[0, 0, 8], lod=1)]
+    nodes = [dict(shape="floor", pos=[0, 0, 0], color=[0.3, 0.7, 1.0])]
+    trees, spread, clearance, depth = 14, 5.0, 1.2, 18.0
+    for i in range(trees):
+        side = -1 if i % 2 == 0 else 1
+        x = side * (clearance + rng.uniform(0, spread))
+        z = (i / trees) * depth + rng.uniform(-0.4, 0.4)
+        nodes.append(dict(shape=f"tree{i % 4}", pos=[round(x, 3), 0, round(z, 3)],
+                          scale=round(rng.uniform(0.85, 1.2), 3), color=[0.2, 0.85, 0.45],
+                          motion=dict(type="bob", speed=0.25, amp=0.04)))
     return SceneSpec(
         name=keyword.strip()[:40] or "fly-through",
-        layers=[
-            Layer(generator="ground_grid", params=dict(rails=7, rungs=16)),
-            Layer(generator="forest", params=dict(trees=14, spread=5.0)),
-        ],
+        layers=[Layer(generator="world", params=dict(defs=defs, nodes=nodes))],
         palette=["#0b3d0b", "#2f8f4f", "#0a1f3a"],
         audio_patch=dict(_DEFAULT_PATCH, base_note=45, chord=[0, 7, 12, 19]),
-        # on/off laser: show depth with COLOUR, not brightness (near green ->
-        # far deep-blue). Switch mode to "cull" for hard depth culling instead,
-        # or set ttl_quantize: true to snap to clean TTL-RGB primaries.
-        camera=dict(fov=62, near=0.4, far=14.0, speed=0.6, height=1.0,
-                    max_strokes=90,
+        # Depth as COLOUR (near green -> far deep blue). Switch mode to "cull"
+        # for hard depth culling instead.
+        camera=dict(mode="path", fov=62, near=0.4, far=14.0, speed=0.6, max_strokes=90,
+                    waypoints=[[0, 1.0, -2], [0.6, 1.2, 6], [0, 1.0, 15], [-0.6, 1.2, 6]],
                     depth=dict(mode="hue", near_color=[0.3, 0.95, 0.5],
                                far_color=[0.08, 0.15, 0.5], ttl_quantize=False)),
         modulation=[
@@ -265,28 +279,8 @@ def local_scene(keyword: str, kind: str = "3d") -> SceneSpec:
         return _studio_world(keyword)
     if any(k in kw for k in _GENERIC3D_KEYS):
         return _space_world(keyword)     # nicest default immersive scene
-    for keys, generator, params, palette in _RULES:
-        if any(k in kw for k in keys):
-            gen, pr, pal = generator, params, palette
-            break
-    else:
-        gen, pr, pal = "flow_field", dict(hue=0.5), ["#222831", "#4a90a4", "#eeeeee"]
-
-    patch = dict(_DEFAULT_PATCH)
-    # slower, calmer envelope for calmer keywords
-    if any(w in kw for w in ("calm", "slow", "deep", "still")):
-        patch.update(attack=5.0, release=9.0)
-
-    return SceneSpec(
-        name=keyword.strip()[:40] or "scene",
-        layers=[Layer(generator=gen, params=pr)],
-        palette=pal,
-        audio_patch=patch,
-        modulation=[
-            # calm defaults: a slow LFO breathes the visuals + synth filter,
-            # and live audio level nudges turbulence (audio -> visual bridge)
-            dict(source="lfo_slow", dest="visual.speed", depth=0.05, bias=0.0),
-            dict(source="lfo_slow", dest="audio.cutoff", depth=400.0, bias=0.0),
-            dict(source="audio_level", dest="visual.turbulence", depth=0.4),
-        ],
-    )
+    # Everything else is a flat pattern seeded off the keyword. These keywords
+    # used to get the procedural flow_field/attractor/ripples generators
+    # (also flat, and removed in 0.90); pattern2d is the flat generator that
+    # remains, and seeding means different keywords still differ.
+    return _pattern_2d(keyword)

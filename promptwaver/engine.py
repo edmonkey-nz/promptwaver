@@ -1,10 +1,10 @@
 """The realtime engine.
 
 Owns the transport clock, the modulation matrix, the current scene, the synth,
-audio analysis, and the DAC output. Runs a fixed-rate loop on its own thread:
+and audio analysis. Runs a fixed-rate loop on its own thread:
 
     update matrix  ->  push audio level in  ->  render scene (modulated)
-                   ->  drive synth cutoff   ->  write frame to laser
+                   ->  publish the frame for the browser outputs
 
 All UI actions (set param, load/save/generate scene) are queued and applied at
 the top of the loop so the render thread never races the websocket thread.
@@ -27,7 +27,6 @@ from .director import SceneDirector
 from .director.claude_director import interpretation_directive
 from .audio import make_synth, AudioAnalysis
 from .geometry import test_pattern_frame
-from .output import make_output
 from .recorder import SessionStore, Recorder, Player
 from .perf import LoopStats
 
@@ -179,9 +178,7 @@ class MidiRouter:
         return float(cur) if isinstance(cur, (int, float)) else None
 
 
-#: Output viewport ratios offered in Settings, widest last. 1:1 is the laser's
-#: native shape (galvos scan a square field); the rest are for data projectors
-#: and monitors.
+#: Output viewport ratios offered in Settings, widest last.
 OUTPUT_RATIOS = ("1:1", "4:3", "16:10", "16:9", "21:9")
 
 #: How content whose own shape differs from the output surface is placed in it.
@@ -233,12 +230,9 @@ def _patch_to_soundscape(patch: dict) -> dict:
 
 
 class Engine:
-    def __init__(self, *, library_dir, cache_dir, fps=45, pps=11000,
-                 max_step=0.03, invert_x=False, keystone_h=0.0, keystone_v=0.0,
-                 enable_laser=False, enable_audio=True, model=None,
+    def __init__(self, *, library_dir, cache_dir, fps=45, enable_audio=True, model=None,
                  enable_diagnostics=False, midi_port=None):
         self.fps = fps
-        self.pps = pps
         self.crossfade = 2.0
         # Off by default — a small but real cost (measured ~2.5% of a frame,
         # plus a fixed instrumentation tax on the audio callback) that most
@@ -330,9 +324,6 @@ class Engine:
         # model and arms the mic. See promptwaver/kiosk.py.
         from .kiosk import KioskSession
         self.kiosk = KioskSession(self, archive_dir=os.path.join(library_dir, "kiosk"))
-        self.output = make_output(
-            enable_laser, max_step=max_step, invert_x=invert_x,
-            keystone_h=keystone_h, keystone_v=keystone_v)
 
         # MIDI control surface. Constructed unconditionally — with no mido
         # installed or no controller plugged in it simply reports itself as
@@ -362,28 +353,11 @@ class Engine:
         # fire before the render thread's first tick) is silent, not a pop.
         self.active = False
         self.synth.set_muted(True)
-        # Separate safety gate from `active`: even while the engine is
-        # running (visuals rendering, audio playing, browser preview live),
-        # the real DAC should not receive a non-blanked frame until this is
-        # explicitly turned on — off by default regardless of whether
-        # --laser was passed. Only matters for a real HeliosOutput; NullOutput
-        # (no hardware) always renders normally so the preview/point-counter
-        # stay accurate with no laser connected. See _loop's output-write step.
-        self.laser_on = False
-        # Keystone (Settings > Keystone) — physical rig alignment, not a
-        # scene setting: it stays fixed across scene switches for as long
-        # as this rig is mounted where it is. The actual values live on
-        # self.output.planner (see output/ilda.py's PathPlanner, set at
-        # construction from --keystone-h/-v); set_keystone below just makes
-        # them live-adjustable instead of launch-only.
-        #
         # Test pattern: a fixed calibration frame (geometry.py's
-        # test_pattern_frame) that _write_output substitutes for the live
-        # scene when this is on — lets keystone be tuned against a known
-        # shape (straight border, diagonals, crosshair) rather than
-        # whatever a scene happens to be showing. Output windows mirror
-        # this via state()'s test_pattern_on and draw their own client-side
-        # copy of the same pattern (see index.html/output.html).
+        # test_pattern_frame) substituted for the live scene when this is on —
+        # lets each output window's keystone (Settings > Output monitors) be
+        # tuned against a known shape (straight border, diagonals, crosshair)
+        # rather than whatever a scene happens to be showing.
         self.test_pattern_on = False
         # "Disable Audio"/"Disable Visuals" (Global section): independent,
         # gracefully-fadeable gates layered on top of the instant active/blank
@@ -402,9 +376,9 @@ class Engine:
         self.hue_override_on = False
         self.hue_value = 0.5
         # "Disable scene plane" (Camera controls) — hides floor/ground/grid/
-        # plane-named nodes from a 3D scene's own geometry, in both the
-        # laser and the browser/output display alike (it's applied in
-        # World.render3d, before the frame is built at all — see
+        # plane-named nodes from a 3D scene's own geometry, in every output
+        # alike (it's applied in World.render3d, before the frame is built
+        # at all — see
         # scenes.py's Scene.render — not a display-only filter).
         #
         # These five are per-scene display settings (Camera controls /
@@ -433,9 +407,8 @@ class Engine:
         # them through a spline (smooth); negative drops points (angular, the
         # faceted look the low-resolution in-page preview has). Centred on 0
         # rather than running 0..1 so the existing default keeps every scene's
-        # geometry untouched. MONITOR ONLY, like the filters above: the DAC
-        # still receives the authored path, so a laser looks angular where the
-        # screen looks curved.
+        # geometry untouched. Applied in the browser renderer, like the
+        # filters above.
         self.line_curve = 0.0
         self._mod_line_curve = 0.0
         # Stroke thickness, as a MULTIPLIER on whatever each surface already
@@ -450,10 +423,6 @@ class Engine:
         # one pixel of stroke the feather is wider than the line itself, alpha
         # never reaches 1.0 even at the centre, and every stroke goes
         # semi-transparent with brighter dots at the joints.
-        #
-        # MONITOR ONLY, like the filters above — the DAC's per-point intensity
-        # is written as a constant and a laser's beam width is a property of
-        # the optics, so there is nothing for this to mean on the hardware.
         self.line_width = 1.0
         self._mod_line_width = 1.0
         # Modulated versions (live values, updated every tick)
@@ -523,7 +492,6 @@ class Engine:
             self._thread.join(timeout=1.0)
         self.synth.stop()
         self.analysis.stop()
-        self.output.close()
         self.midi.close()
 
     # queued UI actions -----------------------------------------------------
@@ -585,24 +553,6 @@ class Engine:
             self.line_width = max(1.0, min(8.0, float(value)))
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
-        elif key == "pps":
-            self.pps = int(value)
-        elif key == "max_pps":
-            v = max(1000, int(value))
-            self.director.set_max_pps(v)
-            # only move the live default if this scene has no explicit override
-            if self.scenes.current is None or self.scenes.current.spec.pps is None:
-                self.pps = v
-        elif key == "scene.pps":
-            if self.scenes.current is None:
-                return
-            spec = self.scenes.current.spec
-            if value in (None, ""):
-                spec.pps = None
-                self.pps = self.director.max_pps
-            else:
-                spec.pps = max(1000, int(value))
-                self.pps = min(spec.pps, self.director.max_pps)
         elif key == "audio_link":
             v = max(0.0, float(value))
             self._set_audio_link(v)
@@ -689,15 +639,7 @@ class Engine:
                 elif attr == "far":
                     cam.far = float(value)
                 elif attr == "max_strokes":
-                    # Always the MONITOR value. Editing the live `max_strokes`
-                    # directly would mean the slider silently changed meaning
-                    # depending on whether the beam happened to be armed.
-                    cam.monitor_max_strokes = int(value)
-                    cam.apply_profile(self.laser_on)
-                elif attr == "laser_max_strokes":
-                    v = int(value)
-                    cam.laser_max_strokes = v if v > 0 else None   # 0 = no override
-                    cam.apply_profile(self.laser_on)
+                    cam.max_strokes = int(value)
         elif key.startswith("lfo_slow.") or key.startswith("lfo_mid."):
             name, attr = key.split(".", 1)
             setattr(self.matrix.sources[name], attr, float(value))
@@ -734,10 +676,9 @@ class Engine:
         def apply():
             # was previously a bespoke self.scenes.set_scene(...) call that
             # only crossfaded the *visuals* — it never reached _install_spec,
-            # so the synth's soundscape, the modulation routes, and the PPS
-            # ceiling all silently stayed on whatever the previously-loaded
-            # scene had. Routing through _install_spec (same as a fresh
-            # generation) fixes all three.
+            # so the synth's soundscape and the modulation routes silently
+            # stayed on whatever the previously-loaded scene had. Routing
+            # through _install_spec (same as a fresh generation) fixes both.
             self._install_spec(self.scenes.load_spec(name))
             self._current_library_name = name
         self._enqueue(apply)
@@ -818,15 +759,14 @@ class Engine:
     def set_active(self, value: bool):
         """Master Start/Stop. While inactive: scene time is frozen (not just
         stopped — resuming continues from where it left off, no time-jump),
-        the laser is sent an explicit blanked frame every tick, and audio is
-        faded down at the DSP level (the scene's own mix/levels are untouched,
-        so nothing needs re-tuning after Start).
+        nothing is drawn, and audio is faded down at the DSP level (the
+        scene's own mix/levels are untouched, so nothing needs re-tuning after
+        Start).
 
-        Both directions are faded, over `start_fade` seconds. Audio is not the
-        safety-critical part of a Stop — the BEAM is — so the two are handled
-        separately here: `output.blank()` still lands instantly on this very
-        tick, while the sound rides down. An audible hard cut was the only
-        thing the instant mute bought, and it cost a click/pop on every stop.
+        Both directions are faded, over `start_fade` seconds. The picture
+        clears on this very tick while the sound rides down; an audible hard
+        cut was the only thing an instant mute bought, and it cost a
+        click/pop on every stop. `blank()` is the instant version.
 
         The fade continues after `active` goes False because the synth renders
         on its own callback thread; the render loop's inactive branch only
@@ -844,9 +784,6 @@ class Engine:
         self.active = bool(value)
         self._sync_audio_mute(fade=self.start_fade)
         if not self.active:
-            # Beam first, and unfaded — see set_active's docstring. This is the
-            # one part of a Stop that must not wait for anything.
-            self.output.blank()
             self._last_frame = []
 
     def disable_audio(self, fade: float = 2.0):
@@ -887,55 +824,24 @@ class Engine:
         self._enqueue(apply)
 
     def blank(self):
-        """Immediate 'beam off' — stops playback (like set_active(False)) and
-        sends an explicit blanked frame to the DAC on this same tick, rather
-        than waiting for the next one. Safety action, not a toggle."""
+        """Immediate stop — like set_active(False), but the audio is cut
+        instantly instead of faded and the picture is cleared on this same
+        tick. A panic action, not a toggle."""
         def apply():
             self.active = False
             self.synth.set_muted(True)
-            self.output.blank()
             self._last_frame = []
         self._enqueue(apply)
 
     def _target_fps(self) -> int:
         """Frames a second to actually compute right now.
 
-        The full `fps` is only needed when a BEAM is being fed: a laser
-        re-draws the whole frame every tick and anything under ~40fps flickers.
-        The browser is a different consumer entirely — it receives the preview
-        over a websocket broadcast at a fixed ~20Hz (`web/server.py`), so with
-        no beam armed, more than half of every frame computed at 45fps is
-        thrown away before anything can see it.
-
-        Measured on `bikes`: 45fps against a 22.2ms budget gave 70% dropped
-        ticks; the same scene has 41.7ms at 24fps. This costs nothing visible
-        on screen — the browser could not show those frames — but it does mean
-        modulation sources tick at `idle_fps` rather than `fps`, so
-        audio-reactive movement is sampled a little more coarsely while the
-        beam is off. Snaps straight back the moment the laser is armed.
-        """
-        if self.output.name == "helios" and self.laser_on:
-            return self.fps
+        The browser receives the preview over a websocket broadcast at a
+        fixed ~20Hz (`web/server.py`), so computing more than `idle_fps`
+        frames a second only produces frames nothing can see. (The full
+        `fps` used to run whenever a laser beam was armed, which redraws the
+        whole frame every tick; there is no laser any more.)"""
         return max(1, min(self.fps, self.idle_fps))
-
-    def set_laser(self, value: bool):
-        """Independent gate for the real DAC only (see `laser_on` in
-        __init__) — deliberately does NOT touch `active`/audio/preview: the
-        point is that visuals+audio can keep running and the browser preview
-        keeps showing the live scene while the physical beam stays off, e.g.
-        while composing/previewing a scene before it's safe to send to the
-        rig. Turning it off blanks the real output immediately on this tick;
-        turning it on just stops that override on the next _loop tick."""
-        def apply():
-            self.laser_on = bool(value)
-            # Swap detail profile with the beam: a frame dense enough to look
-            # good on a monitor overruns the DAC's PPS budget and flickers.
-            cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
-            if cam is not None:
-                cam.apply_profile(self.laser_on)
-            if not self.laser_on:
-                self.output.blank()
-        self._enqueue(apply)
 
     def set_output_ratio(self, ratio: str):
         """Set the output viewport shape and push it at the live camera(s).
@@ -988,32 +894,10 @@ class Engine:
                 # leaves empty bands down the sides of a `world` scene. See
                 # Camera._focal.
                 cam.fit = self.output_fit
-        # The DAC needs it too — the galvo field is square, so content wider
-        # than it gets letterboxed there (see PathPlanner). Without this the
-        # beam would draw a stretched version of what the browser shows. It
-        # takes the CONTENT aspect, not the viewport's: a square 2D pattern on
-        # a 16:9 rig needs no squeeze at all.
-        planner = getattr(self.output, "planner", None)
-        if planner is not None:
-            planner.aspect = self.content_aspect()
-            planner.fit = self.output_fit
-
-    def set_keystone(self, h: float | None = None, v: float | None = None):
-        """Live horizontal/vertical keystone for the laser (Settings >
-        Keystone) — was launch-only (--keystone-h/-v); this makes it
-        adjustable while watching the beam (or the test pattern below)
-        without restarting. Applied in output/ilda.py's PathPlanner,
-        exactly the same as before, just settable at runtime now."""
-        def apply():
-            if h is not None:
-                self.output.planner.keystone_h = float(h)
-            if v is not None:
-                self.output.planner.keystone_v = float(v)
-        self._enqueue(apply)
 
     def set_test_pattern(self, value: bool):
-        """Show/hide the keystone calibration pattern (Settings > Keystone)
-        — see `test_pattern_on`'s docstring in __init__."""
+        """Show/hide the keystone calibration pattern — see `test_pattern_on`
+        in __init__."""
         def apply():
             self.test_pattern_on = bool(value)
         self._enqueue(apply)
@@ -1187,11 +1071,7 @@ class Engine:
                         "mode": cam.mode, "speed": round(cam.base_speed, 3),
                         "orbit_radius": cam.orbit_radius, "orbit_height": cam.orbit_height,
                         "fov": cam.fov, "near": cam.near, "far": cam.far,
-                        # The monitor value, not the live one — saving while the
-                        # beam is armed would otherwise persist the laser's
-                        # reduced density as the scene's normal detail.
-                        "max_strokes": cam.monitor_max_strokes,
-                        "laser_max_strokes": cam.laser_max_strokes,
+                        "max_strokes": cam.max_strokes,
                     })
                 # Display settings apply to every scene, 2D or 3D (a flat
                 # generator has no `cam` object above, but can still have
@@ -1251,15 +1131,7 @@ class Engine:
         # built camera has to be told about it or every scene load would
         # silently revert the viewport to square.
         self._apply_aspect()
-        # Same reason as the aspect call above: the camera is rebuilt per scene,
-        # so a freshly-built one starts on its monitor profile regardless of
-        # whether the beam is currently armed.
-        cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
-        if cam is not None:
-            cam.apply_profile(self.laser_on)
         self._apply_modulation(spec)
-        # per-scene PPS override if set, else the global hardware ceiling
-        self.pps = min(spec.pps, self.director.max_pps) if spec.pps else self.director.max_pps
         if getattr(self.synth, "online", False):
             scape = spec.soundscape or _patch_to_soundscape(spec.audio_patch)
             self.synth.set_soundscape(scape, fade=self.audio_fade)
@@ -1422,8 +1294,8 @@ class Engine:
                     _apply_scape_param(sc.spec.soundscape, key, value)
             elif cmd == "active":
                 self._set_active_now(bool(value))
-            elif cmd == "laser":
-                self.laser_on = bool(value)
+            # Takes recorded before the laser was removed may carry "laser"
+            # events; like any unknown command they are skipped.
         finally:
             self._injecting = False
 
@@ -1510,10 +1382,9 @@ class Engine:
     #: new generator param still reads sensibly with no edit here.
     #:
     #: Two entries exist purely to break a collision: on a 2D scene
-    #: `visual.glow` (pattern2d's authored per-stroke glow, which reaches a
-    #: laser through RGB) and `glow` (the monitor blur filter, which never
-    #: leaves the browser) both rendered as the single word "glow" in the same
-    #: dropdown. They are unrelated controls.
+    #: `visual.glow` (pattern2d's authored per-stroke glow) and `glow` (the
+    #: scene-wide monitor blur filter) both rendered as the single word
+    #: "glow" in the same dropdown. They are unrelated controls.
     DEST_LABELS = {
         "camera.speed": "speed",
         "camera.orbit_radius": "orbit radius",
@@ -1534,9 +1405,6 @@ class Engine:
     DEST_GROUPS = {
         "world": "Shapes",
         "pattern2d": "Pattern",
-        "flow_field": "Flow field",
-        "attractor": "Attractor",
-        "ripples": "Ripples",
     }
 
     def mod_destinations(self) -> list[dict]:
@@ -1580,10 +1448,8 @@ class Engine:
             if sc.is_3d:
                 for k in ("speed", "orbit_radius", "fov", "max_strokes"):
                     out.append(entry(f"camera.{k}", "Camera", k, *self.DEST_RANGES[f"camera.{k}"]))
-        # Flagged in the group name because it is a real behavioural
-        # difference, not a caveat: monitor filters are drawn in the browser
-        # and never touch the vector data sent to the DAC, so a route here
-        # does nothing at all on a laser.
+        # Monitor filters: drawn in the browser renderer over the finished
+        # frame rather than authored into the scene's geometry.
         for k in ("glow", "trail", "kaleidoscope_segments", "line_curve", "line_width"):
             out.append(entry(k, "Monitor · screen only", None, *self.DEST_RANGES[k]))
         return out
@@ -1696,23 +1562,10 @@ class Engine:
         # route sourced from live audio, independent of each route's own depth
         self._set_audio_link(float(getattr(spec, "audio_link", 1.0)))
 
-    def _write_output(self, frame):
-        """Real hardware only sends non-blanked frames once `laser_on` is
-        explicitly set — see `set_laser`'s docstring. NullOutput (no
-        hardware attached) always writes normally regardless, so the
-        browser preview and point-count stay accurate when there's no
-        physical beam to protect."""
-        if self.output.name == "helios" and not self.laser_on:
-            self.output.blank()
-        else:
-            self.output.write(frame, self.pps)
-
     # loop ------------------------------------------------------------------
     def _loop(self):
         prev = time.monotonic()
         while self._running:
-            # Re-evaluated every tick: the pace depends on whether the beam is
-            # live, and that can change at any moment from the UI.
             period = 1.0 / max(1, self._target_fps())
             self.perf.set_fps(round(1.0 / period))
             now = time.monotonic()
@@ -1752,7 +1605,6 @@ class Engine:
                 # an accumulator now, so it holds its value on its own. (It
                 # used to be `now - _t0`, which needed the epoch shifted by
                 # each paused tick to stop it jumping forward on resume.)
-                self.output.blank()
                 self._last_frame = []
                 sleep = period - (time.monotonic() - now)
                 if sleep > 0:
@@ -1849,24 +1701,17 @@ class Engine:
                     p.color = colorsys.hsv_to_rgb(hv, s, v)
 
             if self.test_pattern_on:
-                # Overrides whatever the scene rendered this tick, for BOTH
-                # the real laser (via _write_output below) and the preview/
-                # output-window broadcast (self._last_frame) — one pattern,
-                # shown everywhere, so keystone reads the same regardless of
-                # which output you're looking at while tuning it.
+                # Overrides whatever the scene rendered this tick for every
+                # output window at once, so keystone reads the same
+                # regardless of which output you're looking at while tuning.
                 frame = test_pattern_frame()
             self._last_frame = frame
             self.perf.tick()   # cheap interval/fps tracking — always on, see LoopStats.tick
             if self._diag_enabled:
                 render_dur = time.monotonic() - t_render0
-                t_out0 = time.monotonic()
-                self._write_output(frame)
-                output_dur = time.monotonic() - t_out0
                 total_dur = time.monotonic() - now
-                self.perf.record(render_s=render_dur, output_s=output_dur, total_s=total_dur,
+                self.perf.record(render_s=render_dur, output_s=0.0, total_s=total_dur,
                                  n_points=len(frame), crossfading=crossfading)
-            else:
-                self._write_output(frame)
 
             sleep = period - (time.monotonic() - now)
             if sleep > 0:
@@ -1910,12 +1755,7 @@ class Engine:
             camera = {"mode": cam.mode, "speed": round(cam.base_speed, 2),
                       "orbit_radius": cam.orbit_radius, "fov": cam.fov,
                       "far": cam.far,
-                      # `max_strokes` is the MONITOR setting (what the slider
-                      # edits); `max_strokes_live` is what the renderer is
-                      # actually using, which differs while the beam is armed.
-                      "max_strokes": cam.monitor_max_strokes,
-                      "max_strokes_live": cam.max_strokes,
-                      "laser_max_strokes": cam.laser_max_strokes or 0,
+                      "max_strokes": cam.max_strokes,
                       # The UI builds its mode dropdown from this rather than
                       # a fixed list — see Scene.camera_modes for why the
                       # available modes depend on the scene.
@@ -1923,9 +1763,6 @@ class Engine:
         return {
             "version": __import__("promptwaver").__version__,
             "active": self.active,
-            "laser_on": self.laser_on,
-            "keystone_h": getattr(self.output.planner, "keystone_h", 0.0),
-            "keystone_v": getattr(self.output.planner, "keystone_v", 0.0),
             "test_pattern_on": self.test_pattern_on,
             "audio_disabled": self.audio_disabled,
             "visuals_disabled": self.visuals_disabled,
@@ -1941,8 +1778,6 @@ class Engine:
             "generators": gen.catalog(),
             "layers": self.scenes.current.layer_schemas() if self.scenes.current else [],
             "scene_kind": self.scenes.current.kind if self.scenes.current else None,
-            "points": getattr(self.output, "last_points", 0),
-            "output": self.output.name,
             "audio": getattr(self.synth, "online", False),
             "director_online": self.director.online,
             "director_model": self.director.model,
@@ -1958,9 +1793,6 @@ class Engine:
             "director_last_cost": self.director.last_cost,
             "scene_3d": bool(self.scenes.current and getattr(self.scenes.current, "is_3d", False)),
             "camera": camera,
-            "pps": self.pps,
-            "max_pps": self.director.max_pps,
-            "scene_pps_override": self.scenes.current.spec.pps if self.scenes.current else None,
             "soundscape": self.synth.soundscape() if getattr(self.synth, "online", False) else (
                 self.scenes.current.spec.soundscape if self.scenes.current else None),
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],

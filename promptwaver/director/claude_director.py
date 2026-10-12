@@ -43,7 +43,7 @@ def _stable_seed(*parts) -> int:
 
 _DEFAULT_MODEL = os.environ.get("PROMPTWAVER_MODEL", "claude-haiku-4-5")
 
-_SYSTEM_3D_HEAD = """You are the scene director for PromptWaver, an ambient laser + synth
+_SYSTEM_3D_HEAD = """You are the scene director for PromptWaver, an ambient light + synth
 instrument that draws glowing wireframe VECTOR line-art (no fills, no shading —
 just strokes on black). Given a keyword, return ONE JSON object describing a
 calming, immersive 3D scene the viewer floats through. Output ONLY the JSON — no
@@ -275,8 +275,8 @@ what keeps one physical knob meaning "the low end" across every scene.
 """
 
 _SYSTEM_3D_TAIL = """
-Budget & feel: a laser draws only a few hundred strokes total, so keep the whole
-scene to roughly 6-12 objects and each object simple (a chair is a few boxes and
+Budget & feel: the look is sparse, low-poly line art with a few hundred strokes in
+view at once, so keep the whole scene to roughly 6-12 objects and each object simple (a chair is a few boxes and
 lines, not a mesh). Recognizable silhouette beats detail. Spread objects across
 positions about -8..8 so the camera can float among them. Gentle motion, long
 attack/release, colours matched to the mood. r,g,b are 0..1.
@@ -343,7 +343,7 @@ _SYSTEM = _SYSTEM_3D_HEAD + _SOUNDSCAPE_GUIDE + _SYSTEM_3D_TAIL
 # ENVIRONMENT to navigate inside, not a flat pattern", which is precisely what
 # this one must produce. They share only the soundscape guidance.
 
-_SYSTEM_2D_HEAD = """You are the pattern director for PromptWaver, an ambient laser +
+_SYSTEM_2D_HEAD = """You are the pattern director for PromptWaver, an ambient light +
 synth instrument that draws glowing VECTOR line-art (no fills, no shading — just
 strokes on black). Given a keyword, return ONE JSON object describing a FLAT 2D
 pattern: a mandala, kaleidoscope, rosette, or neon lattice that fills the frame
@@ -820,9 +820,9 @@ SCENE_SIZE = {
               "cramming more objects into the same small volume."),
     # Unlike the tiers above, this one raises object COUNT as well as extent,
     # and pairs the layout with a travelling camera. Those two go together:
-    # a big world with few objects is the worst case for a laser (measured —
-    # a drifting camera over route-shaped geometry got 1 stroke a frame and
-    # 89% dark frames), and route-following geometry only reads from a camera
+    # a big world with few objects is the worst case (measured — a drifting
+    # camera over route-shaped geometry got 1 stroke a frame and 89% dark
+    # frames), and route-following geometry only reads from a camera
     # that follows the same route.
     "massive": (
         "Scale: MASSIVE — a place to travel through for minutes, not a tableau.\n"
@@ -845,7 +845,7 @@ SCENE_SIZE = {
         "              \"max_strokes\":90, \"depth\":{\"mode\":\"cull\"}}\n\n"
         "Keep objects within about 3-8 units either side of the route, on both "
         "sides and overhead, so something is always in frame as the camera "
-        "moves. A stretch of route with nothing beside it is a dark laser."),
+        "moves. A stretch of route with nothing beside it is a dark, empty screen."),
 }
 
 # Token floor per size. `massive` asks for an order of magnitude more nodes
@@ -869,8 +869,7 @@ def _size_hint(nodes: int, path: bool = True) -> str:
     Extent grows as sqrt(nodes) so DENSITY stays roughly constant: a bigger
     world with the same geometry crammed into it would just be the same scene
     viewed from further away, and a bigger world with the spacing unchanged
-    would be mostly empty — which measured worst of all for a laser (a
-    drifting camera over sparse route geometry got 1 stroke a frame and 89%
+    would be mostly empty — which measured worst of all (a drifting camera over sparse route geometry got 1 stroke a frame and 89%
     dark frames). The constant is set so ~170 nodes reproduces the +-40 the
     hand-written `massive` tier asked for.
     """
@@ -928,7 +927,7 @@ def _size_hint(nodes: int, path: bool = True) -> str:
         f"              \"max_strokes\":90, \"depth\":{{\"mode\":\"cull\"}}}}\n\n"
         f"Keep objects within about 3-8 units either side of the route, on both "
         f"sides and overhead, so something is always in frame as the camera "
-        f"moves. A stretch of route with nothing beside it is a dark laser.")
+        f"moves. A stretch of route with nothing beside it is a dark, empty screen.")
 
 
 def _resolve_size(size, path: bool = True) -> tuple[int | None, str | None]:
@@ -1181,7 +1180,6 @@ class SceneDirector:
         self.model_choice = model or settings.get("model", "haiku")
         self.model = MODEL_PRESETS.get(self.model_choice, self.model_choice)
         self.effort = settings.get("effort", "med")
-        self.max_pps = int(settings.get("max_pps", 20000))
         settings.apply_env()          # pull a stored key into the env if present
         self._client = self._make_client()
 
@@ -1194,10 +1192,6 @@ class SceneDirector:
         cancel with nothing running just sets a flag that the next
         generate()/generate_audio() clears before it would matter."""
         self._cancel_event.set()
-
-    def set_max_pps(self, value: int):
-        self.max_pps = max(1000, int(value))
-        settings.set("max_pps", self.max_pps)
 
     def set_model(self, choice: str):
         self.model_choice = choice
@@ -1401,7 +1395,7 @@ class SceneDirector:
             tier = EFFORT.get(self.effort, EFFORT["med"])
             character_hint = _character_hints(warmth, energy)
             character_line = f"\n\n{character_hint}" if character_hint else ""
-            content = (f"The laser scene is: \"{context}\". Compose ONLY an ambient "
+            content = (f"The visual scene is: \"{context}\". Compose ONLY an ambient "
                       f"soundscape for it, matching this brief: \"{audio_prompt}\". "
                       f"Output ONLY a JSON object with this exact shape, no prose, no "
                       f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}\n\n{tier['hint']}" + character_line)
@@ -1503,15 +1497,12 @@ class SceneDirector:
         # The 3D hint counts OBJECTS; for a flat pattern the equivalent budget
         # is total strokes after repeat/symmetry expansion, which is a
         # different quantity, so the effort hint is dropped rather than
-        # mistranslated. A 2D pattern is also display-first (per-shape glow
-        # can't reach a laser at all), so it gets a stroke ceiling instead of
-        # the PPS lecture.
+        # mistranslated, and it gets a stroke ceiling instead.
         if kind == "2d":
             # A fixed range, not one derived from max_pps: `max_pps // 40` put
             # ~680 in the prompt on this rig — the largest stroke number the
             # model saw, and the one it filled (463 drawn against library
-            # patterns that draw 32-222). A laser can't draw that many anyway:
-            # each stroke costs ~8 blanking points before any geometry.
+            # patterns that draw 32-222).
             budget_line = ("Budget: the expanded pattern should draw 80-200 strokes, "
                            "never more than 250, with \"max_strokes\" about 1.2x that "
                            "count. A repeat crossed with a symmetry multiplies fast: "
@@ -1519,10 +1510,12 @@ class SceneDirector:
                            "line.")
             effort_line = ""
         else:
-            budget_line = (f"Hardware constraint: the laser draws at a maximum of "
-                           f"{self.max_pps} points per second. Keep total stroke length "
-                           f"and object count efficient for this budget — favour fewer, "
-                           f"cleaner strokes over dense detail.")
+            # Was a "the laser draws at most N points per second" hardware
+            # constraint. The laser is gone but the sparse low-poly look it
+            # forced is the house style, so the instruction stays as style.
+            budget_line = ("Style constraint: sparse, low-poly vector line art. Keep total "
+                           "stroke length and object count economical — favour fewer, "
+                           "cleaner strokes over dense detail.")
             effort_line = f"Effort: {self.effort}. {tier['hint']}\n\n"
         content = (f"Design a scene for the keyword: {keyword}\n\n"
                    + effort_line + budget_line + size_line + character_line + audio_line

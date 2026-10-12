@@ -6,9 +6,6 @@ Examples
     # preview in the browser, no hardware, local (offline) director (default)
     python run.py
 
-    # drive the Helios, tuned for the CLUB RGB1000 rig with web interface
-    python run.py --laser --pps 11000 --max-step 0.03 --invert-x
-
     # use Claude as the scene director
     ANTHROPIC_API_KEY=sk-... python run.py
 
@@ -186,7 +183,7 @@ def _resolve_port(host: str, requested: int | None) -> int:
 
 
 def parse_args():
-    ap = argparse.ArgumentParser(description="PromptWaver — immersive laser + synth instrument")
+    ap = argparse.ArgumentParser(description="PromptWaver — immersive light + synth instrument")
     ap.add_argument("--headless", action="store_true", help="run without the browser control surface")
     # default=None, not 8080, so `main` can tell "the user asked for this port"
     # from "nobody said" — see _resolve_port. Asking for a busy port is an
@@ -195,13 +192,7 @@ def parse_args():
                     help=f"web UI port (default {DEFAULT_WEB_PORT}; if that is "
                          f"taken and you did not ask for it, the next free one is used)")
     ap.add_argument("--host", default="0.0.0.0")
-    ap.add_argument("--laser", action="store_true", help="enable Helios DAC output")
     ap.add_argument("--no-audio", action="store_true", help="disable the synth")
-    ap.add_argument("--pps", type=int, default=11000, help="points per second to the DAC")
-    ap.add_argument("--max-step", type=float, default=0.03, help="max stroke step (normalized)")
-    ap.add_argument("--invert-x", action="store_true")
-    ap.add_argument("--keystone-h", type=float, default=0.0)
-    ap.add_argument("--keystone-v", type=float, default=0.0)
     ap.add_argument("--fps", type=int, default=45)
     ap.add_argument("--diag", action="store_true",
                     help="enable perf/audio diagnostics instrumentation at startup (off by "
@@ -256,14 +247,12 @@ def main():
     seeded = seed_scenes(library_dir)
     if seeded:
         print(f"[promptwaver] installed {seeded} scenes into {library_dir}")
-    _note(f"building engine (laser={args.laser} audio={not args.no_audio}) "
+    _note(f"building engine (audio={not args.no_audio}) "
           f"library={library_dir} seeded={seeded}")
     engine = Engine(
         library_dir=library_dir,
         cache_dir=os.path.join(library_dir, "generated"),
-        fps=args.fps, pps=args.pps, max_step=args.max_step,
-        invert_x=args.invert_x, keystone_h=args.keystone_h,
-        keystone_v=args.keystone_v, enable_laser=args.laser,
+        fps=args.fps,
         enable_audio=not args.no_audio, model=args.model,
         enable_diagnostics=args.diag, midi_port=args.midi,
     )
@@ -271,9 +260,9 @@ def main():
     engine._install_spec(local_scene(args.scene))
     _note("starting render thread")
     engine.start()
-    _note(f"engine running — output={engine.output.name} "
+    _note(f"engine running — "
           f"director={'claude' if engine.director.online else 'local'}")
-    print(f"[promptwaver] engine running — output={engine.output.name} "
+    print(f"[promptwaver] engine running — "
           f"director={'claude' if engine.director.online else 'local'}")
 
     # Kiosk: the CLI flag wins if given, otherwise whatever was last saved. Done

@@ -36,7 +36,9 @@ class SceneSpec:
     audio_patch: dict = field(default_factory=dict)      # see audio/synth.py
     modulation: list = field(default_factory=list)       # list of route dicts
     camera: dict = field(default_factory=dict)           # 3D camera/depth config
-    pps: int | None = None                                # per-scene PPS override
+    # Unused since the laser was removed; kept so saved scenes round-trip
+    # byte-for-byte instead of losing the key on their next save.
+    pps: int | None = None
     soundscape: dict = field(default_factory=dict)        # AI/GUI synth spec
     audio_link: float = 1.0                               # audio<->visual coupling level (the "level effect")
     # Per-scene MIDI pins: {"voice.shimmer_lead.pan": 47}. Name-based (not
@@ -97,7 +99,17 @@ class Scene:
         self.is_3d = False
         for layer in spec.layers:
             g = layer if isinstance(layer, Layer) else Layer(**layer)
-            generator = gen.create(g.generator)
+            try:
+                generator = gen.create(g.generator)
+            except KeyError:
+                # A removed generator (see MissingGenerator) must not stop the
+                # rest of the scene loading — the old behaviour was a
+                # KeyError out of scene load, i.e. a scene that could not be
+                # opened, edited or even deleted from the UI's point of view.
+                print(f"[promptwaver] scene {spec.name!r}: generator "
+                      f"{g.generator!r} is not available in this build — that "
+                      f"layer is skipped")
+                generator = gen.MissingGenerator(g.generator)
             self._gens.append((generator, dict(g.params)))
             if getattr(generator, "is_3d", False):
                 self.is_3d = True

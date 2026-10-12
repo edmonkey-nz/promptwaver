@@ -1,4 +1,4 @@
-"""aiohttp control surface — same shape as laserx3.
+"""aiohttp control surface.
 
 Serves the single-page UI and a websocket that (a) broadcasts engine state +
 a preview frame ~20 Hz, and (b) receives control messages:
@@ -57,9 +57,8 @@ def make_app(engine) -> web.Application:
     async def output_page(request):
         # A bare, chrome-less fullscreen canvas — meant to be opened as its
         # own window and dragged onto a projector or second screen. No
-        # controls, no laser/hardware dependency: it's just another websocket
-        # client watching the same state/preview broadcast the control UI
-        # does, so it works identically whether or not --laser is enabled.
+        # controls: it's just another websocket client watching the same
+        # state/preview broadcast the control UI does.
         return _no_cache(web.FileResponse(os.path.join(_STATIC, "output.html")))
 
     async def kiosk_page(request):
@@ -249,12 +248,8 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
         engine.set_active(bool(m.get("value")))
     elif t == "blank":
         engine.blank()
-    elif t == "set_laser":
-        engine.set_laser(bool(m.get("value")))
     elif t == "set_diagnostics":
         engine.set_diagnostics(bool(m.get("value")))
-    elif t == "set_keystone":
-        engine.set_keystone(h=m.get("h"), v=m.get("v"))
     elif t == "set_test_pattern":
         engine.set_test_pattern(bool(m.get("value")))
     elif t == "set_audio_disabled":
