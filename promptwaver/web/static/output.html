@@ -179,7 +179,9 @@ if (gpuView) gpuView.start();
 
 let ws = null;
 function connect(){
-  ws = new WebSocket(`ws://${location.host}/ws?hq=1${gpuView ? "&gpu=1" : ""}`);
+  // full=1 (CPU reference only): unthinned preview, for pixel comparisons.
+  const full = new URLSearchParams(location.search).get("full") === "1" ? "&full=1" : "";
+  ws = new WebSocket(`ws://${location.host}/ws?hq=1${gpuView ? "&gpu=1" : full}`);
   ws.binaryType = "arraybuffer";
   ws.onopen = () => statusEl.classList.remove("show");
   ws.onclose = () => { statusEl.classList.add("show"); setTimeout(connect, 1000); };

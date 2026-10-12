@@ -124,6 +124,9 @@ def make_app(engine) -> web.Application:
         request.app["clients"][ws] = {
             "hq": request.query.get("hq") == "1",
             "gpu": request.query.get("gpu") == "1",
+            # ?full=1 on a CPU-reference output: no preview thinning at all,
+            # so it can be compared pixel-for-pixel with the GPU path.
+            "full": request.query.get("full") == "1",
             "local": host in ("127.0.0.1", "::1", "::ffff:127.0.0.1"),
             # Last snapshot sent: start from the newest, not the buffered
             # backlog — a late joiner wants the present, not 0.5 s of replay.
@@ -199,6 +202,10 @@ def make_app(engine) -> web.Application:
                                 if payload_gpu is None:
                                     payload_gpu = json.dumps({"type": "state", "state": state})
                                 await ws.send_str(payload_gpu)
+                            elif meta.get("full"):
+                                await ws.send_str(json.dumps({
+                                    "type": "state", "state": state,
+                                    "preview": engine.preview(max_points=10 ** 9, stroke_thin=10 ** 9)}))
                             elif meta.get("hq"):
                                 if payload_hq is None:
                                     preview_hq = engine.preview(max_points=3000, stroke_thin=150)

@@ -102,15 +102,22 @@ class PromptWaverRenderer {
       this.rebuildGLResources();
     });
 
-    // Check for required extensions
-    const ext = this.gl.getExtension("EXT_color_buffer_float");
-    if (!ext) {
+    if (!this._initGLState()) {
       this.showWebGLError("EXT_color_buffer_float not supported (required for bloom)");
       return;
     }
+    this.buildGLResources();
+  }
 
-    // Set up initial GL state
+  /** Extensions and fixed GL state. Run on init AND after a context restore:
+   *  a lost context loses its extensions and state along with everything
+   *  else, and without EXT_color_buffer_float again every RGBA16F target
+   *  is incomplete — the page then drew nothing at all after a restore,
+   *  which the old handler (rebuilding only programs and buffers) never
+   *  noticed. */
+  _initGLState() {
     const gl = this.gl;
+    if (!gl.getExtension("EXT_color_buffer_float")) return false;
     gl.clearColor(0, 0, 0, 1);
     // ONE, ONE_MINUS_SRC_ALPHA — premultiplied alpha blending. Matches the
     // fragment shader's premultiplied output (see the line-shader comment);
@@ -119,8 +126,7 @@ class PromptWaverRenderer {
     // into visible seams.
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
-
-    this.buildGLResources();
+    return true;
   }
 
   buildGLResources() {
@@ -459,6 +465,7 @@ void main() {
   }
 
   rebuildGLResources() {
+    if (!this._initGLState()) return;
     this.buildGLResources();
   }
 

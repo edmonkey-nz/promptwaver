@@ -654,10 +654,12 @@
       <div class="field"><label>draw depth</label>
         <input type="range" id="c-far" min="6" max="40" step="1" value="30">
         <span class="val" id="v-cfar">30</span></div>
-      <!-- Ceiling is 400 because measurement says nothing above that renders in
-           budget — offering more would only offer settings that drop frames. -->
+      <!-- Ceiling was 400 while the CPU projected every frame. The GPU output
+           draws a whole 3000-stroke world at 60fps, so the slider now reaches
+           1000; MIDI and modulation keep their 20-400 range so existing
+           mappings behave exactly as before. -->
       <div class="field"><label>max strokes</label>
-        <input type="range" id="c-max" min="20" max="400" step="5" value="120">
+        <input type="range" id="c-max" min="20" max="1000" step="5" value="120">
         <span class="val" id="v-cmax">120</span></div>
       <div class="hint" style="margin:-4px 0 8px">how many strokes are drawn per frame, nearest first.</div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
