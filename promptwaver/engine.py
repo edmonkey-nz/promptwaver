@@ -21,7 +21,7 @@ import time
 import numpy as np
 
 from .modulation import ModMatrix, LFO, Value
-from .scenes import SceneManager, SceneSpec
+from .scenes import Layer, SceneManager, SceneSpec
 from . import generators as gen
 from .director import SceneDirector
 from .director.claude_director import interpretation_directive
@@ -1873,6 +1873,36 @@ class Engine:
                 time.sleep(sleep)
 
     # introspection for the UI ---------------------------------------------
+    def _scene_spec_view(self) -> dict | None:
+        """The slice of the live spec the control page actually reads: the
+        world layers' def NAMES (shape-modulation pickers), the two prompts
+        and the generation settings (the prompts panel).
+
+        This used to be `spec.to_dict()` — the whole scene, every def and
+        node, deep-copied by `asdict` and JSON-encoded 20 times a second for
+        every client, the projector windows included, which never read it.
+        Measured at 5-13 ms per broadcast tick (eniac: 13.1 ms, 84 kB),
+        100-260 ms of GIL a second taken from the render thread and the
+        audio producer. Building this view is microseconds, and it is
+        rebuilt each tick rather than cached so it can never go stale after
+        an edit. Same key and same shape for what is present, so the
+        page's three readers are untouched; anything else they need from
+        the spec must be added here deliberately."""
+        sc = self.scenes.current
+        if sc is None:
+            return None
+        spec = sc.spec
+        layers = []
+        for layer in spec.layers:
+            gen_name = layer.generator if isinstance(layer, Layer) else layer.get("generator")
+            params = layer.params if isinstance(layer, Layer) else layer.get("params", {})
+            defs = (params or {}).get("defs") or {}
+            layers.append({"generator": gen_name,
+                           "params": {"defs": {k: None for k in defs}}})
+        return {"name": spec.name, "layers": layers,
+                "image_prompt": spec.image_prompt, "audio_prompt": spec.audio_prompt,
+                "generation_settings": spec.generation_settings}
+
     def state(self) -> dict:
         cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None
         camera = None
@@ -1935,7 +1965,7 @@ class Engine:
                 self.scenes.current.spec.soundscape if self.scenes.current else None),
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
-            "scene_spec": self.scenes.current.spec.to_dict() if self.scenes.current else None,
+            "scene_spec": self._scene_spec_view(),
             "shape_modulation": self.scenes.current.spec.shape_modulation if self.scenes.current else [],
             "audio_diag": self.synth.diagnostics() if getattr(self.synth, "online", False) else None,
             "perf_diag": self.perf.summary(),
