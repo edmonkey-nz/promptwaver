@@ -14,8 +14,6 @@ Created with Claude AI, but with many many hours of planning, orchestrating, tes
 
 ## Credits
 
-Built originally to drive a laser through the Helios DAC — <https://bitlasers.com/helios-laser-dac/>. That output has since been removed; the visuals are now drawn by the browser's GPU.
-
 Audio is pure numpy and sounddevice; there
 is no DAW, no sample library and no game engine underneath any of this.
 
