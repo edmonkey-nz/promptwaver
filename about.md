@@ -2,7 +2,7 @@
 
 A realtime immersive audio/visual platform that uses prompts to generate low-res 3D wireframe scenes — or flat 2D patterns like mandalas and kaleidoscopes — and rich audio synthisizer soundscapes.
 
-It's developed for projection (data/laser), but still looks great on a monitor. You can control most pararmaters from a MIDI controller if you prefer and MIDI can be mapped while perfoming.
+It's developed for projection, drawn by the browser's GPU, but still looks great on a monitor. You can control most pararmaters from a MIDI controller if you prefer and MIDI can be mapped while perfoming.
 
 If you want to create new scenes, you'll need a paid Claude API account. Scene generation costs depends on model, scene size and complexity, but using the lowest settings with Haiku, a scene is ~$0.07. 
 
@@ -14,7 +14,7 @@ Created with Claude AI, but with many many hours of planning, orchestrating, tes
 
 ## Credits
 
-Built originally for the Helios DAC — <https://bitlasers.com/helios-laser-dac/>
+Built originally to drive a laser through the Helios DAC — <https://bitlasers.com/helios-laser-dac/>. That output has since been removed; the visuals are now drawn by the browser's GPU.
 
 Audio is pure numpy and sounddevice; there
 is no DAW, no sample library and no game engine underneath any of this.

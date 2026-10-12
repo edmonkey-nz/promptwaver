@@ -15,7 +15,7 @@ keyword ─▶ Scene director (Claude, async, ~1 call/scene, cached)
    voices · ADSR · filter ◀── shared params ──▶  generators · colour
         │                                               │
         ▼                                               ▼
-   Audio output                              PathPlanner ─▶ Helios DAC
+   Audio output                       snapshot + packed geometry ─▶ browser GPU
 ```
 
 The modulation matrix is the spine: sources (LFO, ADSR, audio level, MIDI CC) are sampled once per tick and routed to destinations (both visual and audio). Because destinations span both domains, an audio-level source can open visual turbulence while an LFO opens the synth filter — one instrument, not two apps.
@@ -24,13 +24,17 @@ The modulation matrix is the spine: sources (LFO, ADSR, audio level, MIDI CC) ar
 
 - `promptwaver/geometry.py` — `Path` (normalized polyline + colour + glow), the unit everything speaks
 - `promptwaver/modulation.py` — sources (LFO, ADSR `Envelope`, `Value`) + `ModMatrix` routing
-- `promptwaver/generators/` — `flow_field`, `attractor`, `ripples`, `pattern2d`; `@register` to add more
+- `promptwaver/generators/` — `world` (3D) and `pattern2d` (2D); `@register` to add more. The older procedural generators (`flow_field`, `attractor`, `ripples`, `forest`, `ground_grid`) were removed
 - `promptwaver/patterns2d.py` — flat pattern grammar (ops · cart/polar space · repeat/symmetry)
 - `promptwaver/color.py` — shared hue ramp + saturation-preserving `hue_shift`
 - `promptwaver/scenes.py` — `SceneSpec`, live `Scene`, `SceneManager` (library + crossfade)
 - `promptwaver/director/` — `SceneDirector` (Claude + cache) and local `fallback`
 - `promptwaver/audio/` — `PadSynth` (pyo) and `AudioAnalysis` (sounddevice)
-- `promptwaver/output/` — `PathPlanner` + `HeliosOutput` / `NullOutput`
+- `promptwaver/gpu_pack.py` — packs a scene's static geometry once into the binary websocket message the GPU path draws from
+- `promptwaver/web/static/scene-eval.js` — JS twin of the Python renderer: evaluates each frame from geometry + snapshot
+- `promptwaver/web/static/frame-clock.js` — interpolates between engine snapshots
+- `promptwaver/web/static/gpu-view.js` — the `requestAnimationFrame` draw loop for every browser surface
+- `promptwaver/web/static/renderer.js` — WebGL2 drawing (strokes, glow, bloom, trails, post pass)
 - `promptwaver/scene3d.py` — `Camera` + projection (near-clip, frame-clip, depth cueing) for 3D scenes
 - `promptwaver/primitives.py` — ready-made low-poly primitives (planet, ring, jellyfish, etc.)
 - `promptwaver/shapes.py` — shape-grammar interpreter that expands Claude-authored geometry `defs`
@@ -42,7 +46,7 @@ The modulation matrix is the spine: sources (LFO, ADSR, audio level, MIDI CC) ar
 
 Every scene is one or the other, and the distinction is **derived from its generators, never stored** — the same rule `Scene.is_3d` follows, so the two cannot drift apart. `SceneManager.library()` reports `{"name", "kind"}` per scene for the library badge, built on the same cache as the name list (rebuilt on save/delete, never per 20Hz poll).
 
-- **3D** — any layer uses a 3D generator (`world`, `ground_grid`, `forest`). A `Camera` exists and the camera panel is shown.
+- **3D** — any layer uses a 3D generator (`world`). A `Camera` exists and the camera panel is shown.
 - **2D** — no 3D generator. **There is no camera at all**; the frame is composed directly in normalized `[-1,1]`. The UI shows the layer panel instead.
 
 This is why 2D is not a fourth camera mode alongside orbit/drift/fly/path: those are properties of a `Camera`, and a flat scene doesn't have one.
@@ -102,13 +106,13 @@ Offline (no API key), `director/fallback.py` produces a seeded pattern: the keyw
 
 `Path.glow` (0–1) is authored per node and carried to the canvas alongside the geometry, distinct from the global glow slider that applies to the whole frame.
 
-It is **monitor-only**. The laser's per-point intensity channel is on/off (`output/ilda.py` writes a constant 255), so brightness there is carried by RGB, not blur — consistent with the existing rule that display filters never touch vector data. The value rides in the preview payload only when non-zero, so every scene that doesn't use it produces a byte-identical frame to before, and both the in-page preview and the output window apply it identically.
+It is **monitor-only**. It is carried to the renderer as a per-stroke value, and `renderer.js` scales the glow target by it. The value rides in the geometry only when non-zero, so every scene that doesn't use it is unchanged, and every browser surface applies it identically.
 
 ## 3D immersive scenes
 
-A scene is 3D when any layer uses a 3D generator (`ground_grid`, `forest`). The world stays as 3D polylines; a slow-drifting `Camera` projects them to the same 2D `Path`s everything downstream speaks, so laser output and browser preview are identical. Fly-through speed is a modulation destination (`camera.speed`), so audio or an LFO can steer your drift.
+A scene is 3D when any layer uses a 3D generator (`world`). The world stays as 3D polylines; a slow-drifting `Camera` projects them to 2D strokes (in Python for the CPU reference path, in `scene-eval.js` on the GPU path — the two are checked against each other). Fly-through speed is a modulation destination (`camera.speed`), so audio or an LFO can steer your drift.
 
-Because a laser draws only a few hundred strokes per frame, the camera's `far` plane culls distant geometry (and *is* the fog), with per-object LOD dropping detail strokes in the distance. Configure via the scene's `camera` block:
+The camera's `far` plane culls distant geometry (and *is* the fog), with per-object LOD dropping detail strokes in the distance. Configure via the scene's `camera` block:
 
 ```json
 "camera": {
@@ -118,11 +122,11 @@ Because a laser draws only a few hundred strokes per frame, the camera's `far` p
 }
 ```
 
-### Depth on an on/off (no-brightness) laser
+### Depth shown by colour
 
-Units that can't fade brightness show depth with **colour**, not intensity. `camera.depth.mode`:
+Depth is shown with **colour**, not intensity, so a far stroke changes hue instead of dimming. `camera.depth.mode`:
 
-- `"hue"` — lerp `near_color` → `far_color` by distance. Set `"ttl_quantize": true` to snap channels to clean 0/1 primaries for TTL RGB
+- `"hue"` — lerp `near_color` → `far_color` by distance. Set `"ttl_quantize": true` to snap channels to pure primaries (a hard, posterised look)
 - `"cull"` — hard-drop anything past `far` (pure depth culling, no colour change)
 - `"both"` — hue *and* cull
 
@@ -161,13 +165,13 @@ Shape ops: `line`, `polyline` (raw escape hatch), `circle`, `rect`, `box`, `arc`
 }}]
 ```
 
-Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Generate *"inside a painter's studio"* to see a full example — note that the shipped `scenes/painters_studio.json` is **not** one: it is a single `flow_field` layer from an older build, despite the name.
+Built geometry from defs is cached per object (defs are static; motion is applied via the node transform). Generate *"inside a painter's studio"* to see a full example — note that the shipped `scenes/painters_studio.json` is **not** one: it is a single layer of a since-removed `flow_field` generator, despite the name, so it now loads with that layer skipped.
 
 ## The generator registry is self-describing
 
 `generators/base.py` is the single source of truth for what generators exist, what kind each is, and what knobs each has. Each declares `description` and `param_meta` (explicit `(min, max[, step])`); `kind()` derives from `is_3d`; `schema()` and `catalog()` serve it.
 
-Read the catalog rather than adding another place that knows generator names. Two places used to hardcode instead, and between them they stranded most of the generator set: the director's prompt hardcoded `"generator":"world"` so Claude could never select another, and the UI hardcoded three param keys (`layer0.speed/turbulence/hue`) that matched no generator's actual param list — leaving `forest` and `ground_grid` with no reachable controls at all.
+Read the catalog rather than adding another place that knows generator names. Two places used to hardcode instead, and between them they stranded most of the generator set: the director's prompt hardcoded `"generator":"world"` so Claude could never select another, and the UI hardcoded three param keys (`layer0.speed/turbulence/hue`) that matched no generator's actual param list — leaving the other generators with no reachable controls at all.
 
 - `schema()` exposes only int/float/bool defaults as params, so a generator whose spec is authored *data* rather than knobs (`world`, with its `defs`/`nodes`) correctly reports none and gets no slider panel.
 - Ranges omitted from `param_meta` are inferred from the default's type and magnitude, so a new generator gets a usable panel immediately — but inference can't know that `step_len` wants a finer step than `turbulence`, so declaring it is what makes a control feel right.
@@ -175,22 +179,57 @@ Read the catalog rather than adding another place that knows generator names. Tw
 - The UI addresses any layer as `layer<N>.<param>` and renders one section per layer.
 - `catalog()` and `Scene.layer_schemas()` are memoized — both ride the ~20Hz state broadcast, and the catalog is fixed once imports settle.
 
-## Output detail profiles — monitor vs laser
+## GPU output path
 
-A monitor and a laser want very different densities from the same scene. The canvas draws whatever it is handed; the DAC spends most of its PPS budget on the blanking jump between strokes, so a frame that looks rich on screen flickers on the beam.
+The engine no longer draws. It ticks at 60 Hz (`--fps`, default 60), and each tick publishes a small JSON snapshot (~0.5 kB): camera pose, each layer's per-tick uniforms (`world`: its shape clock; `pattern2d`: scale/rotate/spread/glow/max_strokes), crossfade gains, the modulated monitor filters (glow, trail, kaleidoscope, line curve, line width), the hue override, the visuals-fade gain and the test-pattern flag. Everything else about a frame is a function of the scene's static geometry and that snapshot.
 
-One render feeds both outputs, so they cannot differ *simultaneously*. Instead the scene carries two settings and the engine swaps between them when the beam is armed:
+The geometry is packed **once** per scene (`promptwaver/gpu_pack.py`) and sent as a binary websocket message (eniac: 339 kB, packed in 15 ms). Clients opt in with `?gpu=1` on the websocket, and a late joiner is sent the geometry before its first frame so it never has a snapshot it cannot draw.
 
-- `camera.max_strokes` — the monitor value, and what the **max strokes** slider edits
-- `camera.laser_max_strokes` — optional; used only while the laser is on. Absent (or 0) means "one density for both", which is how every scene authored before this behaved
+In the browser:
 
-`Camera.apply_profile(laser_on)` sets the live `max_strokes` and is called on the transitions that can change which output is live — arming the laser, loading a scene, editing either setting — never per tick, so it can't fight a slider mid-drag. `state()` reports `max_strokes` (the monitor setting), `max_strokes_live` (what is actually rendering) and `laser_max_strokes`; the camera panel shows the live figure, in amber when the laser profile is in force.
+- `scene-eval.js` evaluates each frame from geometry + snapshot: node motion, the camera's nearest-first `max_strokes` budget, perspective projection, near/far visibility, frame clipping, depth colour, crossfade/fade gains and the hue override. It is a JS twin of the Python renderer (`generators/world.py`, `scene3d.py`, `pattern2d.py`, `scenes.py`) and was checked numerically against Python's own frames: the same strokes on all 25 library scenes plus 15 variants, max point error 2e-5.
+- `frame-clock.js` interpolates between snapshots with an adaptive delay: one engine tick plus the measured 95th-percentile jitter, typically ~18 ms.
+- `gpu-view.js` draws on `requestAnimationFrame`. It reschedules first and wraps each frame in try/catch, so one bad frame cannot stop the loop.
+- `renderer.js` is unchanged in what it draws (WebGL2: capsule-SDF line quads, MRT glow, separable bloom, trails, a mirror/kaleidoscope/flip/keystone post pass) but takes typed arrays and refills its GPU buffers in place.
 
-Saving writes the *monitor* value to `max_strokes` — saving while the beam is armed would otherwise persist the laser's reduced density as the scene's normal detail.
+The control-page preview, the output windows and the kiosk page all use it. `?renderer=cpu` on any page selects the old CPU reference path instead: the engine's 20 Hz preview frames. Python only draws CPU frames while such a client is connected, and then at `idle_fps` (24). `output?renderer=cpu&full=1` is an unthinned reference for pixel comparisons.
 
-### How dense can a monitor scene actually be?
+It is plain WebGL2 and plain JS files, with no Three.js and no bundler, so the PyInstaller build ships `promptwaver/web/static` through its existing `--add-data` with no Node step.
 
-Measured with `tools/bench_scene.py` on `pottery` (161 nodes) against a 22.2ms budget at 45fps:
+Before this, the projector window was capped at ~19.5 fps by the 20 Hz JSON broadcast, and Python spent 8-18 ms a frame projecting strokes.
+
+### Measured
+
+Headless Chrome on the real GPUs of a hybrid laptop:
+
+| GPU | canvas | result |
+|---|---|---|
+| GTX 1650 | 1920x1080 | 60 fps on eniac, Mandala, hot lava, crop circles; 0.4-2.2 ms JS per frame |
+| GTX 1650 | 3840x2160 | 60 fps on eniac, Mandala, crop circles |
+| AMD Radeon iGPU | 1920x1080 | 60 fps |
+| AMD Radeon iGPU | 3840x2160 | 38-42 fps on eniac/Mandala (fill-bound: five full-screen float post passes every frame) |
+
+### Which GPU the browser gets matters
+
+On a hybrid laptop the browser often lands on the integrated GPU, which is the difference between the last two rows above. The control page's Performance panel lists every GPU output window with its fps, draw cost, interpolation delay, canvas size and the GPU it got (from `WEBGL_debug_renderer_info`). To force the discrete GPU:
+
+- **Linux (NVIDIA PRIME)** — launch Chrome with `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia` in the environment. On Wayland sessions `--ozone-platform=x11` may also be needed.
+- **Windows** — Settings > System > Display > Graphics, set Chrome to "High performance".
+- **macOS** — Apple silicon has one GPU, so there is nothing to choose.
+
+Chrome/Chromium remains required.
+
+### Audio sync
+
+Audio-driven visuals are held back by the audio output latency so they land with the sound (`mod_delay_auto`). That compensation now also subtracts the GPU outputs' measured visual latency (the interpolation delay plus one refresh), since those frames are already late by that much.
+
+### max_strokes is the density control
+
+`camera.max_strokes` is each 3D scene's density control: strokes drawn per frame, nearest first. The slider now reaches 1000 (it was 400, because the CPU could not render more in budget). MIDI and modulation ranges stay 20-400, so existing mappings are unchanged. Saved scenes still carry `laser_max_strokes` (and `pps`); they are read and ignored.
+
+### CPU reference path: how dense can a scene be?
+
+The figures from here to the end of this section were measured on the Python projection (the `?renderer=cpu` path), not on the GPU path. Measured with `tools/bench_scene.py` on `pottery` (161 nodes) against a 22.2ms budget at 45fps:
 
 | nodes | max_strokes | drawn | avg ms | peak ms | verdict |
 |---|---|---|---|---|---|
@@ -201,7 +240,7 @@ Measured with `tools/bench_scene.py` on `pottery` (161 nodes) against a 22.2ms b
 | 805 (5×) | 120 | 115 | 18.1 | 20.2 | ok |
 | 805 (5×) | 300 | 300 | 42.1 | 57.0 | over |
 
-**A drawn stroke costs ~0.12ms; a culled node is now close to free.** Stroke count dominates completely — that asymmetry is `World._render_budgeted`'s node-level culling doing its job. The practical ceiling is roughly **150–175 drawn strokes at 45fps**, and the slider's ceiling of 400 exists so a sparse scene with a near `far` plane can use it, not because a dense one can.
+**A drawn stroke costs ~0.12ms; a culled node is now close to free.** Stroke count dominates completely — that asymmetry is `World._render_budgeted`'s node-level culling doing its job. The practical ceiling is roughly **150–175 drawn strokes at 45fps**, on the CPU path. The GPU path does not have that limit, which is why the slider now reaches 1000.
 
 ### Big explorable worlds
 
@@ -229,11 +268,9 @@ Motion is now evaluated only for nodes that will actually be drawn, after the so
 
 Two smaller wins came with it: `_motion` returns a shared read-only identity matrix instead of allocating one per call, and `_emit` skips the matmul entirely when the rotation is that identity. Net effect on the same scene: 43.9ms → 18.5ms.
 
-Since the browser only updates at ~20Hz anyway (below), running the engine at `--fps 30` for a monitor-only big scene costs the display nothing and buys ~50% more frame budget.
-
 Profiling now puts the remaining heavy frame time in `Camera.project` / `_clip_and_project` — that is where to look if this ceiling ever needs raising again.
 
-**Engine fps is not monitor fps.** The websocket broadcasts at ~20Hz (`web/server.py`) and the canvas paints on message arrival, with no `requestAnimationFrame`. That 20Hz is the real ceiling for what a screen shows: the broadcaster sleeps the remainder of a 50ms budget after building each payload, so the monitor's rate falls below 20 only when `state()` + `preview()` + serialisation exceed that budget — which is a server-side cost, not a drawing one. Rendering above ~20fps only benefits the laser; raising `--fps` toward a 60Hz monitor's refresh would tighten the frame budget without the monitor ever seeing the extra frames.
+**The Python projection no longer sits on the display path.** On the GPU path the engine tick only publishes a snapshot, so the costs above apply to the CPU reference path, which draws at `idle_fps` (24) and only while a `?renderer=cpu` client is connected.
 
 ### Asking for a big world: the node slider
 
@@ -289,16 +326,9 @@ Three, in the order they can save money:
 2. **`timeout`** (default 240s, `set_timeout`) — `_stream_or_call` breaks out of the stream loop and lets the `with` block close the connection, which stops generation. Tokens already produced are still billed; the rest never happen. The browser's own safety restore in `startGen` is deliberately *longer* (300s) so the server-side stop is the one that fires.
 3. **Cost is recorded on failure.** `self.last_cost = estimate_cost(...)` now runs *before* the truncation and timeout checks. It previously ran after, so the only generations reporting no cost were the ones that had cost the most. On an aborted stream the usage block is reconstructed by `_EstimatedUsage` and flagged as `estimated: true`, since the API's own figures never arrive.
 
-## PPS (points per second) control
-
-Two settings govern draw rate, in the **Output** group:
-
-- **max PPS** — the hardware ceiling. Persists in `settings.json` and is sent to Claude with every generation, so scenes are authored within your rig's real budget
-- **scene PPS** — an optional per-scene override, blank by default. Saved into the scene JSON as `"pps"`, so it round-trips through the library
-
 ## Monitor filters — bloom / trails / kaleidoscope / line curve
 
-**Display-only effects** — they never touch the vector data sent to the laser, only how it's drawn on screen:
+**Display-only effects** — they change how the strokes are drawn, never the strokes themselves:
 
 - **glow** — per-stroke bloom intensity, floored by the scene-wide slider
 - **bloom shape** — `bloom_spread` (halo width, as a fraction of the smaller screen dimension) and `bloom_intensity` (how hard the blurred layer is added back). Collapsed under *Bloom shape* since they're set once while authoring; 0 intensity disables bloom
@@ -311,15 +341,15 @@ All are **per-scene settings**: they save into the scene's JSON via **Save Camer
 
 ### How they're rendered
 
-Everything above runs in **WebGL2** (`web/static/renderer.js`, shared by the control page and the output window — there is no Canvas2D path, and no fallback). One pass draws the strokes as capsule-SDF quads into a half-float buffer with a second target scaled by each stroke's glow; that target is blurred with a separable Gaussian at half resolution and added back; the result composites over the previous frame scaled by `trail`; a final pass applies kaleidoscope, mirror and flip as composed source lookups.
+Everything above runs in **WebGL2** (`web/static/renderer.js`, drawn on every surface: the control page, the output windows and the kiosk page — there is no Canvas2D path, and no fallback). One pass draws the strokes as capsule-SDF quads into a half-float buffer with a second target scaled by each stroke's glow; that target is blurred with a separable Gaussian at half resolution and added back; the result composites over the previous frame scaled by `trail`; a final pass applies kaleidoscope, mirror and flip as composed source lookups.
 
-A full-HD frame with bloom costs about **0.5ms**, so drawing is nowhere near the limiting factor — see the note on engine fps vs monitor fps above.
+A full-HD frame with bloom costs about **0.5ms**, so drawing is nowhere near the limiting factor; see the GPU output path section for what limits a large canvas.
 
 ## Keystone correction & dual output windows
 
-**Output 1** and **Output 2** (header buttons) each open a chrome-less window on the same live feed — for driving two screens/projectors from one session. Each has its own independent **flip** (a plain whole-image reverse — distinct from mirror) and its own independent **keystone**. Both are configured per-window in **Settings > Output monitors**; purely display-side, nothing sent anywhere.
+**Output 1** and **Output 2** (header buttons) each open a chrome-less window on the same live feed — for driving two screens/projectors from one session. Each has its own independent **flip** (a plain whole-image reverse — distinct from mirror) and its own independent **keystone**. Both are configured per-window in **Settings > Output monitors**.
 
-The laser's own keystone (previously launch-only) is now live-adjustable in **Settings > Keystone** — tune while the laser's running, no restart needed. The in-page visualiser mirrors the laser's keystone so it can be dialled in without turning the beam on. A **test pattern** toggle (border, diagonals, crosshair, inner box) overrides the live scene *everywhere at once*.
+Flip and keystone are stored per window in the browser, not in `settings.json`. Dual output means two browser windows, `/output?out=1` and `/output?out=2`. A **test pattern** toggle (border, diagonals, crosshair, inner box) overrides the live scene *everywhere at once*; it is how you calibrate each window's keystone against its screen.
 
 ## Prompt-composed 3D worlds (scene graph)
 
@@ -340,7 +370,7 @@ Camera `mode`: `"orbit"` circles a scene, `"drift"` wanders inside it, `"fly"` m
 
 ## Disable scene plane (v0.30.0)
 
-A checkbox under **max strokes** (Camera controls) that hides a scene's floor/ground/backdrop geometry — applied in the `World` generator before the frame is built, so laser and every display are affected identically. It matches on the node's authored *name*: anything with `floor`, `ground`, `plane`, or `grid` in its name (e.g. `floor`, `cave_floor`, `ocean_grid`) — with a guard so `plane` doesn't catch `planet`.
+A checkbox under **max strokes** (Camera controls) that hides a scene's floor/ground/backdrop geometry — applied in the `World` generator before the frame is built, so every display is affected identically. It matches on the node's authored *name*: anything with `floor`, `ground`, `plane`, or `grid` in its name (e.g. `floor`, `cave_floor`, `ocean_grid`) — with a guard so `plane` doesn't catch `planet`.
 
 ## Soundscape (AI audio + mixer)
 
@@ -479,10 +509,10 @@ They are now a single **Modulation** panel with four sections: *Global* (audio d
 
 Destination and source names are plain English with the underlying key on hover, both supplied by the engine (`Engine.DEST_LABELS`, `DEST_GROUPS`, `SOURCE_LABELS`, exposed via `mod_destinations()` and `mod_source_labels`) so the browser carries no naming of its own. Two labels exist purely to break collisions that made the list ambiguous:
 
-- `visual.glow` → **pattern glow** vs `glow` → **screen glow**. On a 2D scene both appeared as the single word "glow" in the same dropdown; they are unrelated — one is pattern2d's authored per-stroke brightness (which reaches a laser through RGB), the other the browser blur filter (which never leaves the monitor).
+- `visual.glow` → **pattern glow** vs `glow` → **screen glow**. On a 2D scene both appeared as the single word "glow" in the same dropdown; they are unrelated — one is pattern2d's authored per-stroke brightness , the other the browser blur filter (which never leaves the monitor).
 - `lfo_slow` → **LFO · slow**, not plain "LFO", which sat beside "lfo mid" reading as though one were *the* LFO.
 
-The monitor group is labelled **Monitor · screen only** because that is a behavioural fact, not a caveat: those filters are drawn in the browser and never touch the vector data sent to the DAC, so a mapping there does nothing at all on a laser.
+The monitor group is labelled **Monitor · screen only** because that is a behavioural fact, not a caveat: those filters are drawn in the browser and never change the strokes themselves.
 
 ### Freeze
 
@@ -492,7 +522,7 @@ The matrix still receives real `dt` while `t` is frozen, so `audio_level` keeps 
 
 ### Shape speed — slowing the scene without slowing the walk
 
-Freeze and `motion_rate` scale the whole scene clock, which is usually what you want and sometimes exactly what you don't: generated scenes routinely author node motion at `speed` 2.5–4.0, so the objects thrash while the camera's walk is already at the right pace. **Shape speed** (`world`'s only generator param, 0–1, on the layer panel) scales node motion alone — spin, bob, drift and pulse, plus time-aware primitives like `jellyfish` — and leaves the camera untouched.
+Freeze and `motion_rate` scale the whole scene clock, which is usually what you want and sometimes exactly what you don't: generated scenes routinely author node motion at `speed` 2.5–4.0, so the objects thrash while the camera's walk is already at the right pace. **Shape speed** (`world`'s only generator param, 0–1, on the layer panel) scales node motion alone — spin, bob, drift and pulse. The `jellyfish` primitive is static, so give it bob/drift motion to make it move. It leaves the camera untouched.
 
 The mechanism is a one-line substitution in `World.render3d`: `t` is replaced by a shape clock before anything downstream sees it, and downstream uses `t` for exactly two things (animated primitives and `_motion`). The camera is advanced separately in `Scene.render` off the unscaled clock, which is what makes the separation exact rather than approximate.
 
@@ -525,7 +555,7 @@ Every slider has a small `midi` tag at the end of its label. Click it, move a kn
 
 ### Generator params take their range from the registry
 
-`layer<N>.<param>` bindings (a 2D pattern's `scale`/`rotate`/`spread`/`glow`, a forest's `trees`) can't have a fixed range table: which params exist, and over what bounds, is a property of whichever generator the loaded scene uses. `midi.DYNAMIC_RANGES` is refreshed on every scene load from the registry's own `param_meta`, so a hardware knob and the on-screen slider cover the same range by construction. Soft takeover reads the current value out of the layer schema, so a knob doesn't jump the pattern when first touched.
+`layer<N>.<param>` bindings (a 2D pattern's `scale`/`rotate`/`spread`/`glow`) can't have a fixed range table: which params exist, and over what bounds, is a property of whichever generator the loaded scene uses. `midi.DYNAMIC_RANGES` is refreshed on every scene load from the registry's own `param_meta`, so a hardware knob and the on-screen slider cover the same range by construction. Soft takeover reads the current value out of the layer schema, so a knob doesn't jump the pattern when first touched.
 
 ### Sliders follow the hardware
 
@@ -559,7 +589,7 @@ Two levels of storage:
 ```json
 {
   "name": "water_flowing",
-  "layers": [{"generator": "flow_field", "params": {"turbulence": 0.3, "speed": 0.18}}],
+  "layers": [{"generator": "pattern2d", "params": {"scale": 1.0, "rotate": 0.1}}],
   "camera": {"fov": 62, "far": 14.0, "max_strokes": 90},
   "soundscape": {
     "master": 0.8, "tempo": 60,
@@ -635,9 +665,9 @@ The `pluck` voice scheduler had no floor on onset spacing and no cap on simultan
 
 ### Per-sample delay loops starving the audio thread (v0.15.0 fixed)
 
-`PathPlanner.plan()` resampled every stroke with a **pure Python loop, one point at a time**, calling numpy on individual scalars and constructing a ctypes struct per point. Measured on a rich scene: **431ms per frame against a 22ms budget — 1941% over.** This starved the audio thread by continuously holding the GIL.
+The laser path planner (since removed) resampled every stroke with a **pure Python loop, one point at a time**, calling numpy on individual scalars and constructing a ctypes struct per point. Measured on a rich scene: **431ms per frame against a 22ms budget — 1941% over.** This starved the audio thread by continuously holding the GIL.
 
-Rewritten fully vectorised: arc-length resampling per stroke via `np.interp` instead of a nested Python loop, the whole frame's coordinates batched into **one** DAC transform instead of one per stroke, and the result handed to ctypes as a zero-copy buffer view. Measured: **431ms → ~20ms per tick — about 21x**, moving from wildly over budget to mostly within it.
+Rewritten fully vectorised: arc-length resampling per stroke via `np.interp` instead of a nested Python loop, the whole frame's coordinates batched into one transform instead of one per stroke. Measured: **431ms → ~20ms per tick — about 21x**, moving from wildly over budget to mostly within it.
 
 ### Device enumeration breaking broadcast loop (v0.11.2 fixed)
 
@@ -673,7 +703,9 @@ class Lissajous(Generator):
         return [Path(pts, (1, 1, 1))]
 ```
 
-It's now available to the director and the `layer0.*` UI sliders.
+It's now available to the `layer0.*` UI sliders (the director's prompts still name `world` or `pattern2d` only).
+
+Two more hooks make it drawable on the GPU path: `gpu_pack` (pack the generator's static geometry into the binary message) and `gpu_tick` (its per-tick uniforms for the snapshot). `scene-eval.js` needs a matching evaluator, since it is a JS twin of the Python renderer; a generator without one is only visible on the `?renderer=cpu` path.
 
 ## About panel
 

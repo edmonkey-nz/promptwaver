@@ -2,7 +2,7 @@
 
 Notes from packaging PromptWaver with PyInstaller, written to be **portable to
 the other server-shaped tools** (laser-laser-laser, lightsaber). Nothing here is
-specific to lasers — it applies to any Python app whose interface is a local web
+specific to PromptWaver — it applies to any Python app whose interface is a local web
 page and whose user is not going to open a terminal.
 
 Every number below was measured, not estimated. PromptWaver file references are
@@ -103,6 +103,27 @@ A missing window must never be the reason the tool won't start.
 Verify it actually bundled — check the build's `Analysis-00.toc` for `_tkinter`
 (the C extension, not just the Python package) and check
 `warn-<name>.txt` for missing-module warnings.
+
+### GPU output needs no extra bundling
+
+PromptWaver draws in the browser's GPU (WebGL2), not in the binary. The renderer is
+plain JS files in `promptwaver/web/static` (`renderer.js`, `scene-eval.js`,
+`frame-clock.js`, `gpu-view.js`), with no Three.js and no bundler, so the existing
+`--add-data` for `web/static` already ships it and the build has no Node step. The
+binary bundles no graphics library and no hardware driver.
+
+**Which GPU the browser uses is out of the app's hands.** A double-clicked binary
+opens the default browser (`gui.py` calls `webbrowser.open`), so there is nowhere to
+pass GPU flags. On a hybrid laptop that browser often lands on the integrated GPU,
+which is fine at 1920x1080 but measured 38-42 fps against 60 on a 3840x2160 canvas.
+The control page's Performance panel shows which GPU each output window got. To force
+the discrete one, set it for the browser, not the app:
+
+- **Linux (NVIDIA PRIME)** — start Chrome with `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia` in the environment (on Wayland sessions `--ozone-platform=x11` may also be needed), then open the URL the window shows.
+- **Windows** — Settings > System > Display > Graphics, set Chrome to "High performance".
+- **macOS** — Apple silicon has one GPU, so there is nothing to choose.
+
+Chrome/Chromium remains required.
 
 ---
 

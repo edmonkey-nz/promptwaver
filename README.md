@@ -10,7 +10,7 @@
 > scene JSON shape and internal APIs may still change between minor versions.
 > See [CHANGELOG.md](CHANGELOG.md) for what's landed.
 
-A realtime **immersive audio/visual instrument** ambient scene and soundscape explorer. Procedural vector visuals stream to a laser (ILDA) or second monitor, and a polyphonic synth provides the sound, it's recomended you use a MIDI controller for a better experience.
+A realtime **immersive audio/visual instrument**: an ambient light + synth instrument and soundscape explorer. Glowing vector line-art (strokes only, no fills) drawn by the browser's GPU on a projector or screen, with a polyphonic synth providing the sound, it's recomended you use a MIDI controller for a better experience.
 
 Claude acts as an **scene creator**: give it a visual prompt ("water flowing from a blocked sieve", "aurora over a still lake at full moon") and an audio prompt ("scurrying beetles over a wet log with bees buzzing", "dripping water from stalactites in a cave with footsteps and fish") and it composes a scene spec. The local engine then renders at full framerate with no further API calls. Scenes are saved as JSON and can be loaded, tweaked, and re-rendered.
 
@@ -24,7 +24,7 @@ Disclaimer: this has been coded almost completely with Claude Code, but with a p
 
 Theres a lack of integrated ambient AV tools out there, this came from a desire to have a portable and instant solution that doesn't require lugging around synths, midi gear and trying to organise onscreen DAWs and projection software at the same time.
 
-This scene idea was from the frustration of seeing visuals at events that were being repeated multiple times in a performance. So making a stack of scenes to perform against, rather than mixin was the concept. Visually, I enjoy low polygon scene, which could be run without internet access (once generated online) and be projected via laser or projection.
+This scene idea was from the frustration of seeing visuals at events that were being repeated multiple times in a performance. So making a stack of scenes to perform against, rather than mixin was the concept. Visually, I enjoy low polygon scene, which could be run without internet access (once generated online) and be projected.
 
 Note: the roots of this reflected on a exploratory game on PS1 called 'Fluid' (1999) where you could build soundscapes while navigating a undersea psychedelic world (as a dolphin!).
 
@@ -33,12 +33,12 @@ Note: the roots of this reflected on a exploratory game on PS1 called 'Fluid' (1
 
 - **AI-composed scenes** — Claude authors both visuals (3D geometry) and audio (synth patches)
 - **Live mixer** — tweak camera, soundscape, effects in real time; save settings back to scenes
-- **Procedural visuals** — flow fields, attractors, ripples, hand-authored geometry via shape grammar
+- **Authored visuals** — 3D worlds from a shape grammar, and flat symmetric 2D patterns (mandalas, lattices)
 - **2D pattern scenes** — flat mandalas/kaleidoscopes composed in the frame, with per-shape glow
 - **Full-featured synth** — pad/pluck/osc/noise voices, ADSR envelopes, arpeggiator, per-voice LFO, EQ, delay, distortion
 - **MIDI control** — learn any control to a hardware knob; slots persist across scene changes
-- **Dual output** — laser + data projector simultaneously with independent keystone/flip per screen
-- **Monitor effects** — GPU bloom, trails, mirror, kaleidoscope, and an angular↔smooth line curve (display-only, laser unaffected)
+- **Dual output** — two browser output windows (`/output?out=1` and `?out=2`), each with its own keystone/flip
+- **Monitor effects** — GPU bloom, trails, mirror, kaleidoscope, and an angular↔smooth line curve
 - **3D immersive scenes** — orbit/drift/fly camera modes through composed worlds
 - **Scene types** — every scene is 2D (flat, no camera) or 3D (navigable), badged in the library
 - **Scene library** — save, load, crossfade, regenerate audio for existing visuals
@@ -75,29 +75,6 @@ sudo apt install gcc-12 g++-12
 CC=gcc-12 CXX=g++-12 pip install --no-cache-dir pyo
 ```
 
-### Helios DAC (optional, for laser hardware)
-
-```bash
-sudo apt install -y libusb-1.0-0-dev build-essential git
-git clone https://github.com/Grix/helios_dac.git
-cd helios_dac/sdk/cpp
-g++ -Wall -std=c++14 -fPIC -O2 -c HeliosDacAPI.cpp HeliosDac.cpp
-g++ -shared -o libHeliosDacAPI.so *.o -lusb-1.0
-```
-
-Install system-wide:
-```bash
-sudo cp libHeliosDacAPI.so /usr/local/lib/ && sudo ldconfig
-```
-
-udev permission:
-```bash
-sudo tee /etc/udev/rules.d/60-heliosdac.rules <<'EOF'
-SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="e500", MODE="0666"
-EOF
-sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
 ## Run
 
 ```bash
@@ -106,9 +83,6 @@ python run.py
 
 # With Claude API key (set ANTHROPIC_API_KEY env var first)
 ANTHROPIC_API_KEY=sk-... python run.py
-
-# With laser hardware
-python run.py --laser --pps 11000 --max-step 0.03 --invert-x
 
 # Headless mode (no web interface)
 python run.py --headless
@@ -124,7 +98,7 @@ Open <http://localhost:8080>, type a scene prompt, hit **Generate**. Tweak the l
 code .
 ```
 
-`.vscode/settings.json` configures the environment; `.vscode/launch.json` has presets for web-only (no audio/laser needed), web+laser, and web+diagnostics. `.vscode/extensions.json` recommends Pylance and Ruff.
+`.vscode/settings.json` configures the environment; `.vscode/launch.json` has presets for web-only (no audio hardware needed) and web+diagnostics. `.vscode/extensions.json` recommends Pylance and Ruff.
 
 `pyproject.toml` holds Ruff/Black config (line length 100).
 

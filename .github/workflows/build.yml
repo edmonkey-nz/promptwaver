@@ -155,8 +155,6 @@ jobs:
             ./promptwaver
             # different port, no audio:
             ./promptwaver --web-port 8097 --no-audio
-            # with Helios laser hardware:
-            ./promptwaver --laser --pps 11000
             # no browser UI:
             ./promptwaver --headless
             ```
