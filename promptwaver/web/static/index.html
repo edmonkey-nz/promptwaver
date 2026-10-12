@@ -585,6 +585,9 @@
   .vu-clip.hot{background:var(--red);box-shadow:0 0 8px var(--red)}
 </style>
 <script src="/static/renderer.js"></script>
+<script src="/static/scene-eval.js"></script>
+<script src="/static/frame-clock.js"></script>
+<script src="/static/gpu-view.js"></script>
 </head>
 <body>
 <header>
@@ -960,6 +963,8 @@
         <div class="diagrid" id="perfstats"></div>
 
         <div class="underruns" id="perf-drops"></div>
+        <!-- What each GPU output window reports about itself (client_stats). -->
+        <div class="hint" id="perf-outputs" style="margin-top:8px;white-space:pre-wrap"></div>
         <div class="row"><button id="perf-copy">Copy diagnostics</button></div>
       </div>
     </details>
@@ -1322,7 +1327,10 @@
 </div>
 
 <script>
-const ws = new WebSocket(`ws://${location.host}/ws`);
+// The preview draws on the GPU path unless the page was opened with
+// ?renderer=cpu (then it gets the engine's CPU preview frames, as before).
+const ws = new WebSocket(`ws://${location.host}/ws${PWGpuView.gpuWanted() ? "?gpu=1" : ""}`);
+ws.binaryType = "arraybuffer";
 const $ = id => document.getElementById(id);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
 // MIDI port names come from the OS (ALSA/CoreMIDI), not from this app, and go
@@ -1428,7 +1436,9 @@ function showGenDone(m){
   }
 }
 ws.onmessage = e => {
+  if (e.data instanceof ArrayBuffer) { const v = gpuPreview(); if (v) v.handleBinary(e.data); return; }
   const m = JSON.parse(e.data);
+  if (m.type === "frame") { const v = gpuPreview(); if (v) v.handleFrame(m); return; }
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
   else if (m.type === "rec_takes") { paintTakes(m.takes || []); }
   else if (m.type === "generation_estimate") { paintSizeEstimate(m); }
@@ -1880,6 +1890,7 @@ function renderPerf(s){
   const d = s.perf_diag;
   const fpsEl = $("r-fps");
   const status = $("perf-status");
+  paintOutputs(s.outputs || []);
   // The FPS readout comes from LoopStats.tick(), which runs every frame
   // regardless of the diagnostics toggle (see perf.py) — only the fuller
   // per-stage breakdown below needs the heavier instrumentation on.
@@ -1910,8 +1921,7 @@ function renderPerf(s){
   status.style.color = short ? "var(--amber)" : "var(--dim)";
   const g = $("perfstats");
   g.innerHTML = `
-    <span>render (avg/max)</span><b>${d.avg_render_ms} / ${d.max_render_ms} ms</b>
-    <span>output (avg/max)</span><b>${d.avg_output_ms} / ${d.max_output_ms} ms</b>
+    <span>engine tick (avg/max)</span><b>${d.avg_render_ms} / ${d.max_render_ms} ms</b>
     <span>frame budget</span><b>${d.budget_ms} ms</b>
     <span>tick interval (avg/max)</span><b class="${d.max_interval_ms > d.budget_ms*1.5 ? 'bad':''}">${d.avg_interval_ms} / ${d.max_interval_ms} ms</b>
     <span>strokes (avg/max)</span><b>${d.avg_points} / ${d.max_points}</b>
@@ -1924,6 +1934,22 @@ function renderPerf(s){
   } else {
     u.innerHTML = "no dropped ticks yet";
   }
+}
+
+// One line per open GPU view: its own frame rate (requestAnimationFrame, so
+// the display's refresh is the ceiling), what evaluating + drawing a frame
+// costs it, its interpolation delay, its canvas size, and the GPU the browser
+// actually gave it — on a hybrid laptop that is often the integrated one,
+// which is the first thing to rule out when an output reads slow.
+function paintOutputs(list){
+  const el = $("perf-outputs");
+  if (!el) return;
+  if (!list.length) { el.textContent = ""; return; }
+  const name = r => r === "preview" ? "this preview" : r === "kiosk" ? "kiosk" : (r || "output").replace(/^output/, "output ");
+  el.textContent = "GPU outputs:\n" + list.map(o =>
+    `${name(o.role)}: ${o.fps} fps · draw ${o.draw_ms} ms (max ${o.draw_max_ms}) · ` +
+    `${o.strokes} strokes · delay ${o.delay_ms} ms · ${o.w}x${o.h}` +
+    (o.errors ? ` · ${o.errors} frame errors` : "") + (o.gpu ? `\n    ${o.gpu}` : "")).join("\n");
 }
 
 // audioCfgDirty: set the instant the user changes either <select>, cleared
@@ -3800,7 +3826,24 @@ function initPreviewRenderer() {
   }
 }
 
+// The GPU-path preview, created on first use — from the websocket handler,
+// which can run before anything else here has touched the renderer, and must
+// not drop the geometry that arrives first. `false` means the CPU path.
+let _gpuPreview = null;
+function gpuPreview(){
+  if (_gpuPreview === null) {
+    initPreviewRenderer();
+    _gpuPreview = (PWGpuView.gpuWanted() && previewRenderer && previewRenderer.gl)
+      ? new PWGpuView({ canvas: cv, renderer: previewRenderer, filters: monitorFilters,
+                        role: "preview", send })
+      : false;
+    if (_gpuPreview) _gpuPreview.start();
+  }
+  return _gpuPreview;
+}
+
 function paintPreview(scene){
+  if (gpuPreview()) return;        // drawn on requestAnimationFrame instead
   if (!previewRenderer) initPreviewRenderer();
   if (previewRenderer) {
     previewRenderer.render(scene, monitorFilters, { width: cv.width, height: cv.height });

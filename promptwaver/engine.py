@@ -232,7 +232,7 @@ def _patch_to_soundscape(patch: dict) -> dict:
 
 
 class Engine:
-    def __init__(self, *, library_dir, cache_dir, fps=45, enable_audio=True, model=None,
+    def __init__(self, *, library_dir, cache_dir, fps=60, enable_audio=True, model=None,
                  enable_diagnostics=False, midi_port=None):
         self.fps = fps
         self.crossfade = 2.0
@@ -368,6 +368,10 @@ class Engine:
         self._snap_seq = 0
         self.on_snapshot = None
         self.cpu_clients = 0
+        # Latest client_stats from each GPU view, keyed by socket (server).
+        self.client_stats: dict = {}
+        self._last_cpu_draw = 0.0
+        self._mod_delay_checked = 0.0
         self._gpu_blobs: dict[int, bytes] = {}
         self._test_pattern_blob = pack_test_pattern()
         # "Disable Audio"/"Disable Visuals" (Global section): independent,
@@ -845,14 +849,26 @@ class Engine:
         self._enqueue(apply)
 
     def _target_fps(self) -> int:
-        """Frames a second to actually compute right now.
+        """Ticks a second. A tick no longer draws anything (the GPU outputs
+        evaluate geometry themselves from the snapshot each tick publishes),
+        so it is cheap and runs at the full `fps` — 60 by default, which is
+        what the outputs interpolate between and what modulation sources are
+        sampled at. CPU reference frames, when anyone wants them, are drawn
+        at `idle_fps` instead: see `_cpu_frame_due`."""
+        return max(1, self.fps)
 
-        The browser receives the preview over a websocket broadcast at a
-        fixed ~20Hz (`web/server.py`), so computing more than `idle_fps`
-        frames a second only produces frames nothing can see. (The full
-        `fps` used to run whenever a laser beam was armed, which redraws the
-        whole frame every tick; there is no laser any more.)"""
-        return max(1, min(self.fps, self.idle_fps))
+    def _cpu_frame_due(self, now: float) -> bool:
+        """Whether to draw a CPU frame this tick: only while a CPU-reference
+        client is connected, and no more often than `idle_fps` — that path is
+        shown over the ~20Hz preview broadcast, so drawing it at the tick rate
+        would spend 8-13 ms of render-thread GIL per tick on frames nobody can
+        see, which is exactly the contention the GPU path removes."""
+        if self.cpu_clients <= 0:
+            return False
+        if now - self._last_cpu_draw >= 1.0 / max(1, self.idle_fps):
+            self._last_cpu_draw = now
+            return True
+        return False
 
     def set_output_ratio(self, ratio: str):
         """Set the output viewport shape and push it at the live camera(s).
@@ -1214,6 +1230,11 @@ class Engine:
           whose group delay is roughly its time constant and which is already
           pulling in the corrective direction.
 
+        * minus the VISUAL pipeline's own latency (`visual_latency`): the
+          picture is drawn this much after the tick that computed it, so
+          holding the modulation back by the full audio lead would land it
+          late by exactly that much.
+
         Clamped at zero: at small blocksizes the existing smoothing already
         overshoots the correction, and adding delay there would make visuals
         late rather than early.
@@ -1222,7 +1243,26 @@ class Engine:
             return 0.0
         lead = self.synth.output_latency + (self.synth.blocksize / float(self.synth.sr)) * 0.5
         slew = 0.08          # the smooth= constant the synth sources are built with
-        return max(0.0, lead - slew)
+        return max(0.0, lead - slew - self.visual_latency())
+
+    #: One refresh at 60Hz: from the frame being drawn to it reaching the
+    #: screen. A fixed allowance rather than a measurement — browsers do not
+    #: expose presentation time.
+    VISUAL_PRESENT_S = 1.0 / 60
+
+    def visual_latency(self) -> float:
+        """Seconds from an engine tick to its picture being on screen, as the
+        GPU outputs report it: their interpolation delay (FrameClock, which
+        already includes delivery jitter) plus one refresh. The worst output
+        or kiosk window counts — that is what the audience watches; the
+        control page's preview only counts when it is the only view. 0 with
+        no GPU view connected."""
+        outs = list(self.client_stats.values())
+        shown = [o for o in outs if str(o.get("role") or "").startswith(("output", "kiosk"))]
+        outs = shown or outs
+        if not outs:
+            return 0.0
+        return max(float(o.get("delay_ms") or 0.0) for o in outs) / 1000.0 + self.VISUAL_PRESENT_S
 
     def _apply_mod_delay(self):
         """Push the configured compensation onto the synth-derived sources."""
@@ -1675,6 +1715,14 @@ class Engine:
             # the toggle is off.
             self.kiosk.tick()
 
+            # The outputs' measured delay feeds the audio-sync compensation
+            # (mod_delay_auto); it moves slowly, so re-applying every couple
+            # of seconds is plenty, and it runs here because the matrix is
+            # render-thread state.
+            if self.mod_delay_mode == "auto" and now - self._mod_delay_checked > 2.0:
+                self._mod_delay_checked = now
+                self._apply_mod_delay()
+
             if not self.active:
                 # The scene clock simply doesn't advance while paused — it's
                 # an accumulator now, so it holds its value on its own. (It
@@ -1758,7 +1806,8 @@ class Engine:
             # (`cpu_clients`, kept by the server). GPU outputs evaluate the
             # geometry themselves from the snapshot published below.
             self.scenes.tick(t, eff_dt, self.matrix, disable_plane=self.disable_plane, synth=self.synth)
-            frame = self.scenes.draw() if self.cpu_clients > 0 else []
+            cpu_due = self._cpu_frame_due(now)
+            frame = self.scenes.draw() if cpu_due else None
 
             # "Disable Visuals" fade — dims every point's colour toward black
             # over _visual_fade_dur seconds, the same per-point scaling trick
@@ -1770,7 +1819,7 @@ class Engine:
                 self._visual_gain = self._visual_from + (self._visual_to - self._visual_from) * prog
             else:
                 self._visual_gain = self._visual_to
-            if self._visual_gain < 1.0:
+            if frame is not None and self._visual_gain < 1.0:
                 g = self._visual_gain
                 for p in frame:
                     p.color = tuple(c * g for c in p.color)
@@ -1778,7 +1827,7 @@ class Engine:
             # Global "hue override" — recolour every stroke to one hue,
             # keeping each point's own saturation/value (so depth cueing and
             # relative brightness still read, just under a single colour).
-            if self.hue_override_on:
+            if frame is not None and self.hue_override_on:
                 hv = self.hue_value
                 for p in frame:
                     _, s, v = colorsys.rgb_to_hsv(*p.color)
@@ -1788,15 +1837,18 @@ class Engine:
                 # Overrides whatever the scene rendered this tick for every
                 # output window at once, so keystone reads the same
                 # regardless of which output you're looking at while tuning.
-                frame = test_pattern_frame() if self.cpu_clients > 0 else []
-            self._last_frame = frame
+                frame = test_pattern_frame() if cpu_due else None
+            if frame is not None:
+                self._last_frame = frame       # held between CPU draws for the preview
+            elif self.cpu_clients <= 0:
+                self._last_frame = []
             self._publish_snapshot(now, live=True)
             self.perf.tick()   # cheap interval/fps tracking — always on, see LoopStats.tick
             if self._diag_enabled:
                 render_dur = time.monotonic() - t_render0
                 total_dur = time.monotonic() - now
                 self.perf.record(render_s=render_dur, output_s=0.0, total_s=total_dur,
-                                 n_points=len(frame), crossfading=crossfading)
+                                 n_points=len(self._last_frame), crossfading=crossfading)
 
             sleep = period - (time.monotonic() - now)
             if sleep > 0:
@@ -1883,6 +1935,9 @@ class Engine:
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
             "scene_spec": self._scene_spec_view(),
+            # What each GPU output window reports about itself: rAF fps, draw
+            # cost, interpolation delay, canvas size and which GPU it got.
+            "outputs": list(self.client_stats.values()),
             "shape_modulation": self.scenes.current.spec.shape_modulation if self.scenes.current else [],
             "audio_diag": self.synth.diagnostics() if getattr(self.synth, "online", False) else None,
             "perf_diag": self.perf.summary(),

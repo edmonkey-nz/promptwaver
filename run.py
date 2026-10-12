@@ -193,7 +193,7 @@ def parse_args():
                          f"taken and you did not ask for it, the next free one is used)")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--no-audio", action="store_true", help="disable the synth")
-    ap.add_argument("--fps", type=int, default=45)
+    ap.add_argument("--fps", type=int, default=60, help="engine tick rate")
     ap.add_argument("--diag", action="store_true",
                     help="enable perf/audio diagnostics instrumentation at startup (off by "
                          "default; also toggleable live in Settings)")

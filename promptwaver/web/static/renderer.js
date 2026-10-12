@@ -128,6 +128,8 @@ class PromptWaverRenderer {
     this.programs = {};
     this.fbos = {};
     this.buffers = {};
+    // Fresh GL buffers after a context restore must be sized again.
+    this._gpuCap = 0;
 
     // Phase 1: line rendering with capsule-SDF
     const gl = this.gl;
@@ -475,16 +477,149 @@ void main() {
     (this.canvas.parentNode || document.body).appendChild(el);
   }
 
+  /** Draw a list of `{p:[[x,y],...], c:[r,g,b], g}` strokes — the engine's
+   *  CPU preview format (CPU reference mode). */
   render(scene, filters, canvasSize) {
-    if (!this.gl || this.contextLost || !this.programs.line) return;
+    if (!this._ready(canvasSize)) return;
+    this._segBegin();
+    const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
+    if (scene && scene.length) {
+      for (const stroke of scene) {
+        const pts = stroke.p;
+        if (!pts || pts.length < 2) continue;
+        const n = this._loadStroke(pts.length);
+        for (let q = 0; q < n; q++) { this._sx[q] = pts[q][0]; this._sy[q] = pts[q][1]; }
+        this._emitStroke(n, stroke.c[0], stroke.c[1], stroke.c[2], stroke.g || 0, curve);
+      }
+    }
+    this._frame(filters, canvasSize.width, canvasSize.height);
+  }
 
-    const gl = this.gl;
+  /** Draw a scene-eval.js StrokeList (the GPU output path). Same pipeline as
+   *  render(), fed from typed arrays: nothing is allocated per frame once the
+   *  buffers have grown to the scene's size. */
+  renderList(list, filters, canvasSize) {
+    if (!this._ready(canvasSize)) return;
+    this._segBegin();
+    const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
+    for (let k = 0; k < list.count; k++) {
+      const s0 = list.start[k], n = list.len[k];
+      if (n < 2) continue;
+      this._loadStroke(n);
+      for (let q = 0; q < n; q++) { this._sx[q] = list.pts[(s0 + q) * 2]; this._sy[q] = list.pts[(s0 + q) * 2 + 1]; }
+      this._emitStroke(n, list.col[k * 3], list.col[k * 3 + 1], list.col[k * 3 + 2], list.glow[k], curve);
+    }
+    this._frame(filters, canvasSize.width, canvasSize.height);
+  }
+
+  _ready(canvasSize) {
+    if (!this.gl || this.contextLost || !this.programs.line) return false;
     const w = canvasSize.width, h = canvasSize.height;
-    if (w < 1 || h < 1) return;
+    if (w < 1 || h < 1) return false;
+    return this._ensureTargets(w, h);
+  }
 
-    if (!this._ensureTargets(w, h)) return;
+  // --- segment building (typed, reused) -------------------------------------
 
-    const segments = (scene && scene.length) ? this._buildSegments(scene, filters) : [];
+  _segBegin() {
+    if (!this._seg) {
+      this._segCap = 4096;
+      this._seg = { p0: new Float32Array(8192), p1: new Float32Array(8192),
+                    col: new Float32Array(12288), glow: new Float32Array(4096) };
+      this._sx = new Float64Array(1024); this._sy = new Float64Array(1024);
+      this._tx = new Float64Array(1024); this._ty = new Float64Array(1024);
+    }
+    this._segN = 0;
+  }
+
+  /** Make sure the stroke scratch holds n points; returns n. */
+  _loadStroke(n) {
+    if (n > this._sx.length) {
+      let m = this._sx.length; while (m < n) m *= 2;
+      this._sx = new Float64Array(m); this._sy = new Float64Array(m);
+    }
+    return n;
+  }
+
+  _pushSeg(x0, y0, x1, y1, r, g, b, glow) {
+    if (this._segN >= this._segCap) {
+      const cap = this._segCap * 2, o = this._seg;
+      const grow = (a, k) => { const z = new Float32Array(cap * k); z.set(a); return z; };
+      this._seg = { p0: grow(o.p0, 2), p1: grow(o.p1, 2), col: grow(o.col, 3), glow: grow(o.glow, 1) };
+      this._segCap = cap;
+    }
+    const i = this._segN++, S = this._seg;
+    S.p0[i * 2] = x0; S.p0[i * 2 + 1] = y0; S.p1[i * 2] = x1; S.p1[i * 2 + 1] = y1;
+    S.col[i * 3] = r; S.col[i * 3 + 1] = g; S.col[i * 3 + 2] = b; S.glow[i] = glow;
+  }
+
+  /** One stroke (points in _sx/_sy[0..n)) through the line-curve filter and
+   *  into segments. Bipolar curve: positive resamples through a spline
+   *  (smooth), negative drops points (angular). At 0 neither runs, so the
+   *  geometry is untouched and the control costs nothing when centred. */
+  _emitStroke(n, r, g, b, glow, curve) {
+    let xs = this._sx, ys = this._sy, m = n;
+    if (curve > 0) {
+      m = this._splineTyped(n, curve, 1 + Math.round(curve * 5));
+      xs = this._tx; ys = this._ty;
+    } else if (curve < 0) {
+      m = this._decimateTyped(n, -curve);
+      if (m > 0) { xs = this._tx; ys = this._ty; } else m = n;
+    }
+    for (let q = 0; q < m - 1; q++) this._pushSeg(xs[q], ys[q], xs[q + 1], ys[q + 1], r, g, b, glow);
+  }
+
+  _ensureTmp(n) {
+    if (n > this._tx.length) {
+      let m = this._tx.length; while (m < n) m *= 2;
+      this._tx = new Float64Array(m); this._ty = new Float64Array(m);
+    }
+  }
+
+  /** _spline over the typed scratch; same maths. Returns the point count. */
+  _splineTyped(n, amount, steps) {
+    const a = amount * 0.5, xs = this._sx, ys = this._sy;
+    this._ensureTmp((n - 1) * steps + 1);
+    const ox = this._tx, oy = this._ty;
+    let k = 0;
+    const at = (i) => (i < 0 ? 0 : (i > n - 1 ? n - 1 : i));
+    for (let i = 0; i < n - 1; i++) {
+      const i0 = at(i - 1), i3 = at(i + 2);
+      const m1x = a * (xs[i + 1] - xs[i0]), m1y = a * (ys[i + 1] - ys[i0]);
+      const m2x = a * (xs[i3] - xs[i]), m2y = a * (ys[i3] - ys[i]);
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps, t2 = t * t, t3 = t2 * t;
+        const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+        ox[k] = h00 * xs[i] + h10 * m1x + h01 * xs[i + 1] + h11 * m2x;
+        oy[k] = h00 * ys[i] + h10 * m1y + h01 * ys[i + 1] + h11 * m2y;
+        k++;
+      }
+    }
+    ox[k] = xs[n - 1]; oy[k] = ys[n - 1];
+    return k + 1;
+  }
+
+  /** _decimate over the typed scratch. Returns the point count, or 0 for
+   *  "use the stroke unchanged" (which is what _decimate returning `pts` meant). */
+  _decimateTyped(n, amount) {
+    const target = Math.max(3, Math.round(n * (1 - amount * 0.85)));
+    if (target >= n) return 0;
+    this._ensureTmp(target + 1);
+    const xs = this._sx, ys = this._sy, ox = this._tx, oy = this._ty;
+    const step = n / target;
+    let k = 0, prev = -1;
+    for (let i = 0; i < target; i++) {
+      const idx = Math.min(n - 1, Math.round(i * step));
+      if (idx !== prev) { ox[k] = xs[idx]; oy[k] = ys[idx]; k++; prev = idx; }
+    }
+    if (prev !== n - 1) { ox[k] = xs[n - 1]; oy[k] = ys[n - 1]; k++; }
+    return k >= 2 ? k : 0;
+  }
+
+  /** Upload the built segments and run every pass to the screen. */
+  _frame(filters, w, h) {
+    const gl = this.gl;
+    const nseg = this._segN;
 
     // --- pass 1: geometry into the offscreen scene buffer (sharp + glow) ---
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.scene.fb);
@@ -493,8 +628,9 @@ void main() {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    if (segments.length) {
-      this._uploadSegments(segments);
+    if (nseg) {
+      this._uploadSegments(nseg);
+
 
       // Letterbox scale in PIXELS. This is also "pixels per normalized-space
       // unit", which is exactly the conversion factor needed to turn a desired
@@ -544,7 +680,7 @@ void main() {
       gl.uniform1f(gl.getUniformLocation(prog, 'globalGlow'), filters.glow || 0);
 
       gl.drawElementsInstanced(gl.TRIANGLES, this.buffers.quadIndexCount,
-                               gl.UNSIGNED_SHORT, 0, segments.length);
+                               gl.UNSIGNED_SHORT, 0, nseg);
     }
 
     // --- passes 2 & 3: separable blur of the glow target, at half res ---
@@ -691,182 +827,26 @@ void main() {
     this.fbos = {};
   }
 
-  _buildSegments(scene, filters) {
-    const segments = [];
-    // Bipolar: positive resamples through a spline (smooth), negative drops
-    // points (angular). At 0 neither runs, so the geometry is bit-identical
-    // to an unprocessed frame and the control costs nothing when centred.
-    const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
-    const steps = 1 + Math.round(Math.max(0, curve) * 5);
-
-    for (const stroke of scene) {
-      let pts = stroke.p;
-      if (!pts || pts.length < 2) continue;
-      if (curve > 0) pts = PromptWaverRenderer._spline(pts, curve, steps);
-      else if (curve < 0) pts = PromptWaverRenderer._decimate(pts, -curve);
-
-      // Absent "g" means no per-stroke glow; the scene-wide glow still
-      // applies as a floor, but that's done in the shader so the global
-      // slider doesn't require re-uploading every segment.
-      const glow = stroke.g || 0;
-
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i];
-        const p1 = pts[i + 1];
-        const capStart = i === 0 ? 0.0 : 1.0;  // 0 = butt (flat), 1 = round
-        const capEnd = i === pts.length - 2 ? 0.0 : 1.0;
-
-        segments.push({
-          p0: [p0[0], p0[1]],
-          p1: [p1[0], p1[1]],
-          color: stroke.c,
-          capStart, capEnd, glow
-        });
-      }
-    }
-    return segments;
-  }
-
-  // Drop points from a polyline to make it visibly faceted — the same kind
-  // of coarseness the low-resolution in-page preview shows, but as a
-  // deliberate look rather than a budget. Endpoints are always kept, so a
-  // stroke never shortens as it coarsens; at full amount a stroke collapses
-  // to about three points, which turns a circle into a triangle.
-  static _decimate(pts, amount) {
-    const n = pts.length;
-    const target = Math.max(3, Math.round(n * (1 - amount * 0.85)));
-    if (target >= n) return pts;
-    // Fractional spacing, rounded to the nearest ORIGINAL vertex. A plain
-    // integer stride only reaches n/1, n/2, n/3… so the slider jumped
-    // between a handful of point counts instead of sweeping; sampling at
-    // fractional positions makes the count continuous. Rounding to real
-    // vertices rather than interpolating along the chords keeps any
-    // deliberate sharp corner a corner, which is the point of this end of
-    // the control.
-    const out = [];
-    const step = n / target;
-    let prev = -1;
-    for (let i = 0; i < target; i++) {
-      const idx = Math.min(n - 1, Math.round(i * step));
-      if (idx !== prev) { out.push(pts[idx]); prev = idx; }
-    }
-    if (prev !== n - 1) out.push(pts[n - 1]);
-    return out.length >= 2 ? out : pts;
-  }
-
-  // Cardinal-spline resample of a polyline, passing through every original
-  // point. `amount` scales the tangents: 0 leaves the path straight between
-  // points (the shape as authored), 0.5 is standard Catmull-Rom. Anything
-  // above that overshoots into loops at sharp corners, which is why the
-  // slider's top end maps to 0.5 rather than 1.
-  //
-  // Interpolating here rather than asking the engine for denser strokes is
-  // deliberate: this is a look, not extra fidelity, and the points arrive
-  // already thinned for the wire. It is also why this is monitor-only — the
-  // DAC still gets the authored path.
-  static _spline(pts, amount, steps) {
-    const n = pts.length;
-    const a = amount * 0.5;
-    // Clamped at both ends, so the first and last spans get a tangent
-    // without inventing points beyond the stroke.
-    const at = (i) => pts[i < 0 ? 0 : (i > n - 1 ? n - 1 : i)];
-    const out = [];
-    for (let i = 0; i < n - 1; i++) {
-      const p0 = at(i - 1), p1 = pts[i], p2 = pts[i + 1], p3 = at(i + 2);
-      const m1x = a * (p2[0] - p0[0]), m1y = a * (p2[1] - p0[1]);
-      const m2x = a * (p3[0] - p1[0]), m2y = a * (p3[1] - p1[1]);
-      for (let s = 0; s < steps; s++) {
-        const t = s / steps, t2 = t * t, t3 = t2 * t;
-        const h00 = 2 * t3 - 3 * t2 + 1;
-        const h10 = t3 - 2 * t2 + t;
-        const h01 = -2 * t3 + 3 * t2;
-        const h11 = t3 - t2;
-        out.push([
-          h00 * p1[0] + h10 * m1x + h01 * p2[0] + h11 * m2x,
-          h00 * p1[1] + h10 * m1y + h01 * p2[1] + h11 * m2y,
-        ]);
-      }
-    }
-    out.push(pts[n - 1]);
-    return out;
-  }
-
-  _uploadSegments(segments) {
-    const gl = this.gl;
-    const count = segments.length;
-
-    const p0Data = new Float32Array(count * 2);
-    const p1Data = new Float32Array(count * 2);
-    const colorData = new Float32Array(count * 3);
-    const capData = new Float32Array(count * 2);
-    const glowData = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      const seg = segments[i];
-      p0Data[i * 2] = seg.p0[0];
-      p0Data[i * 2 + 1] = seg.p0[1];
-      p1Data[i * 2] = seg.p1[0];
-      p1Data[i * 2 + 1] = seg.p1[1];
-      colorData[i * 3] = seg.color[0];
-      colorData[i * 3 + 1] = seg.color[1];
-      colorData[i * 3 + 2] = seg.color[2];
-      capData[i * 2] = seg.capStart;
-      capData[i * 2 + 1] = seg.capEnd;
-      glowData[i] = seg.glow;
-    }
-
+  /** Push the first n built segments to the GPU. The buffers are sized once
+   *  per growth (bufferData) and refilled in place (bufferSubData) every
+   *  frame after that, instead of being reallocated each frame. */
+  _uploadSegments(n) {
+    const gl = this.gl, B = this.buffers.instanceBuffers, S = this._seg;
     gl.bindVertexArray(this.buffers.instanceVao);
-
-    // p0
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.p0.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, p0Data, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.p0.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.p0.loc, 2, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.p0.loc, 1);
-
-    // p1
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.p1.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, p1Data, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.p1.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.p1.loc, 2, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.p1.loc, 1);
-
-    // color
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.color.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.color.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.color.loc, 3, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.color.loc, 1);
-
-    // glow
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.glow.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, glowData, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.buffers.instanceBuffers.glow.loc);
-    gl.vertexAttribPointer(this.buffers.instanceBuffers.glow.loc, 1, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(this.buffers.instanceBuffers.glow.loc, 1);
-
-    // Cap flags — uploaded even though the current shader doesn't read them
-    // yet (every join renders round for now; butt-vs-round endpoint capping
-    // is a Phase 1 refinement). GLSL strips unused attributes at compile
-    // time, so their location is legitimately -1 until the shader actually
-    // references them — guard rather than assume they're always bound.
-    const capStartLoc = this.buffers.instanceBuffers.capStart.loc;
-    const capEndLoc = this.buffers.instanceBuffers.capEnd.loc;
-    if (capStartLoc !== -1 || capEndLoc !== -1) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.instanceBuffers.capStart.vbo);
-      gl.bufferData(gl.ARRAY_BUFFER, capData, gl.DYNAMIC_DRAW);
-      if (capStartLoc !== -1) {
-        gl.enableVertexAttribArray(capStartLoc);
-        gl.vertexAttribPointer(capStartLoc, 1, gl.FLOAT, false, 8, 0);
-        gl.vertexAttribDivisor(capStartLoc, 1);
-      }
-      if (capEndLoc !== -1) {
-        gl.enableVertexAttribArray(capEndLoc);
-        gl.vertexAttribPointer(capEndLoc, 1, gl.FLOAT, false, 8, 4);
-        gl.vertexAttribDivisor(capEndLoc, 1);
-      }
-    }
-
+    const grow = this._gpuCap !== this._segCap;
+    const put = (e, data, size) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, e.vbo);
+      if (grow) gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * size);
+      gl.enableVertexAttribArray(e.loc);
+      gl.vertexAttribPointer(e.loc, size, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(e.loc, 1);
+    };
+    put(B.p0, S.p0, 2);
+    put(B.p1, S.p1, 2);
+    put(B.color, S.col, 3);
+    put(B.glow, S.glow, 1);
+    this._gpuCap = this._segCap;
     gl.bindVertexArray(null);
   }
 
@@ -997,23 +977,6 @@ void main() {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return fbo;
-  }
-
-  // Flatten JSON scene to typed arrays (Phase 1+)
-  flattenScene(scene) {
-    if (!scene || !scene.length) return { strokes: [], count: 0 };
-
-    const strokes = [];
-    for (const st of scene) {
-      const stroke = {
-        color: new Float32Array(st.c),
-        points: new Float32Array(st.p.flat()),
-        glow: st.g || 0.0,
-        pointCount: st.p.length
-      };
-      strokes.push(stroke);
-    }
-    return { strokes, count: strokes.length };
   }
 
   // Clean up resources

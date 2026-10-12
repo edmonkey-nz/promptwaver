@@ -29,6 +29,9 @@
   #fps .warn{color:#f2a623}
 </style>
 <script src="/static/renderer.js"></script>
+<script src="/static/scene-eval.js"></script>
+<script src="/static/frame-clock.js"></script>
+<script src="/static/gpu-view.js"></script>
 </head>
 <body>
 <canvas id="out"></canvas>
@@ -60,8 +63,8 @@ const outputId = new URLSearchParams(location.search).get("out") || "1";
 document.title = `PromptWaver — Output ${outputId}`;
 hintEl.textContent = `PromptWaver output ${outputId} — drag this window to your projector/second screen, then press F11 for fullscreen`;
 
-// Monitor-only visual filters — pure canvas rendering, no effect on the
-// vector data sent to the laser DAC. glow/trail/mirror are per-scene now
+// Monitor filters — applied by the renderer over the finished frame.
+// glow/trail/mirror are per-scene now
 // (saved via Save Camera settings / Save all scene settings on the main
 // control page, loaded with whatever scene is live) — read straight off
 // this window's own copy of the same state broadcast the control page
@@ -109,16 +112,19 @@ window.addEventListener("storage", e => {
 // --- frame-rate meter -------------------------------------------------------
 //
 // Measures the REAL paint rate of THIS window, which is none of the numbers
-// already on the control page: not the engine's render fps, and not the ~20Hz
-// state broadcast either. `paint()` runs synchronously inside ws.onmessage,
-// so once a full-HD canvas costs more to draw than the gap between messages,
-// this is the only place that shows up.
+// already on the control page.
 //
-// Paint cost in ms is reported next to it deliberately — "12 fps" alone
-// doesn't tell you whether the fix is fewer strokes, less glow, or a smaller
-// window, whereas "12 fps · 68ms · 210 strokes" points straight at it. 20 fps
-// is the ceiling by design (the broadcast rate), so the meter compares against
-// that rather than 60 and only warns when paint cost is genuinely the limit.
+// GPU path (the default): frames are drawn on requestAnimationFrame from the
+// engine's per-tick snapshots, so the ceiling is the display's own refresh
+// (60 on a 60Hz projector). The meter shows the rAF rate, the evaluate+draw
+// cost, and the interpolation delay — the visual pipeline's added latency.
+//
+// CPU reference path (?renderer=cpu): `paint()` runs synchronously inside
+// ws.onmessage and the ceiling is the ~20Hz broadcast, as it always was.
+//
+// Paint cost in ms is reported next to the rate deliberately — "12 fps"
+// alone doesn't tell you whether the fix is fewer strokes, less glow, or a
+// smaller window, whereas "12 fps · 68ms · 210 strokes" points straight at it.
 const fpsEl = document.getElementById("fps");
 let _frames = 0, _paintMs = 0, _paintMax = 0, _strokes = 0, _lastFpsT = performance.now();
 
@@ -133,6 +139,17 @@ setFpsVisible(showFps);
 
 function updateFpsReadout(){
   if (!showFps) return;
+  if (gpuView) {
+    const s = gpuView.stats();
+    // Budget is the refresh interval: warn only when drawing itself eats most of it.
+    const slow = s.draw_ms > 12;
+    fpsEl.innerHTML =
+      `<b${slow ? ' class="warn"' : ''}>${s.fps.toFixed(1)} fps</b>  `
+      + `<span${slow ? ' class="warn"' : ''}>draw ${s.draw_ms.toFixed(1)}ms (max ${s.draw_max_ms.toFixed(1)})</span>  `
+      + `${s.strokes} strokes  ${cv.width}x${cv.height}  delay ${s.delay_ms.toFixed(0)}ms`
+      + (gpuView.gpuName() ? `\n${gpuView.gpuName()}` : "");
+    return;
+  }
   const now = performance.now(), dt = now - _lastFpsT;
   if (dt < 500) return;                      // ~2 updates/sec; the overlay
   const fps = _frames * 1000 / dt;           // must not itself cost anything
@@ -152,27 +169,43 @@ setInterval(updateFpsReadout, 500);
 const titleEl = document.getElementById("title");
 let titleTimeout = null;
 
+// The GPU path unless ?renderer=cpu. Created once; it survives reconnects
+// (geometry is re-sent to every new socket).
+const gpuView = PWGpuView.gpuWanted() && renderer && renderer.gl
+  ? new PWGpuView({ canvas: cv, renderer, filters, role: `output${outputId}`,
+                    send: (m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); } })
+  : null;
+if (gpuView) gpuView.start();
+
 let ws = null;
 function connect(){
-  ws = new WebSocket(`ws://${location.host}/ws?hq=1`);
+  ws = new WebSocket(`ws://${location.host}/ws?hq=1${gpuView ? "&gpu=1" : ""}`);
+  ws.binaryType = "arraybuffer";
   ws.onopen = () => statusEl.classList.remove("show");
   ws.onclose = () => { statusEl.classList.add("show"); setTimeout(connect, 1000); };
   ws.onerror = () => ws.close();
   ws.onmessage = e => {
+    if (e.data instanceof ArrayBuffer) { if (gpuView) gpuView.handleBinary(e.data); return; }
     const m = JSON.parse(e.data);
+    if (m.type === "frame") { if (gpuView) gpuView.handleFrame(m); return; }
     if (m.type === "state") {
       const s = m.state || {};
-      filters.glow = s.glow ?? 0;
-      filters.trail = s.trail ?? 0;
+      // glow/trail/kaleidoscope/line curve/width are modulatable, so on the
+      // GPU path they come from the 60Hz snapshot instead (PWGpuView).
+      if (!gpuView) {
+        filters.glow = s.glow ?? 0;
+        filters.trail = s.trail ?? 0;
+        filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
+        filters.lineCurve = s.line_curve;
+        filters.lineWidth = s.line_width ?? 1;
+      }
       filters.mirrorX = !!s.mirror_x;
       filters.mirrorY = !!s.mirror_y;
-      filters.kaleidoscopeSegments = s.kaleidoscope_segments ?? 0;
       filters.bloomSpread = s.bloom_spread;
       filters.bloomIntensity = s.bloom_intensity;
-      filters.lineCurve = s.line_curve;
-      filters.lineWidth = s.line_width ?? 1;
       filters.contentAspect = s.content_aspect || 1;
       filters.fit = s.output_fit || "fit";
+      if (gpuView) return;           // drawn on rAF, not here
       if (showFps) {
         // Timed around the real thing, filters and all — a number that
         // excluded the glow/mirror/keystone passes would miss the usual cause.

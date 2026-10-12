@@ -136,7 +136,17 @@ def make_app(engine) -> web.Application:
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    reply = await _handle(engine, json.loads(msg.data), request.app, ws,
+                    m = json.loads(msg.data)
+                    if m.get("type") == "client_stats":
+                        # Read-only telemetry from a GPU view (fps, draw cost,
+                        # GPU name). Handled before _handle so the kiosk's
+                        # loopback gate doesn't refuse it from a venue screen.
+                        engine.client_stats[id(ws)] = {
+                            k: m.get(k) for k in ("role", "gpu", "w", "h", "fps", "draw_ms",
+                                                  "draw_max_ms", "strokes", "delay_ms",
+                                                  "age_ms", "errors")}
+                        continue
+                    reply = await _handle(engine, m, request.app, ws,
                                           request.app["clients"].get(ws))
                     if reply is not None:
                         await ws.send_str(json.dumps(reply))
@@ -144,6 +154,7 @@ def make_app(engine) -> web.Application:
             pass
         finally:
             request.app["clients"].pop(ws, None)
+            engine.client_stats.pop(id(ws), None)
             _count_cpu_clients(request.app)
         return ws
 
