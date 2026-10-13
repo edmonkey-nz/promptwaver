@@ -1146,12 +1146,19 @@ class Engine:
 
     # adding / removing instruments ----------------------------------------
 
-    def add_voice(self, vtype: str):
+    def add_voice(self, vtype: str, name: str | None = None):
         """Add a ready-to-play instrument of `vtype` to the current scene, in
         its key (audio/templates.py), without an API call and without
         disturbing the voices already playing. Mirrored into the scene spec,
         so Save keeps it. Appended LAST: MIDI knobs bind to voice positions,
-        and inserting mid-list would re-point every knob after it."""
+        and inserting mid-list would re-point every knob after it.
+
+        `name` is what the user typed, if anything (else the type's name). It
+        is stripped to letters, digits, space, _ and -: a "." would split
+        the `voice.<name>.<field>` param paths, and the result is a name
+        other code keys on. A clash with an existing voice gets a suffix."""
+        name = " ".join("".join(c for c in str(name or "")
+                                if c.isalnum() or c in " _-").split())[:32]
         def apply():
             sc = self.scenes.current
             if sc is None:
@@ -1168,6 +1175,8 @@ class Engine:
             except ValueError as e:
                 print(f"[promptwaver] add instrument: {e}")
                 return
+            if name:
+                v["name"] = name
             if getattr(self.synth, "online", False):
                 v = self.synth.add_voice(v)
             else:

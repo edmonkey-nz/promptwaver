@@ -459,7 +459,7 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
     elif t == "play_map_clear":
         engine.set_play_map(str(m.get("voice", "")), None)
     elif t == "voice_add":
-        engine.add_voice(str(m.get("vtype", "")))
+        engine.add_voice(str(m.get("vtype", "")), m.get("name"))
     elif t == "voice_remove":
         engine.remove_voice(str(m.get("name", "")))
     elif t == "play_note":

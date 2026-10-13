@@ -1380,8 +1380,10 @@
       <h2>Add an instrument</h2>
       <button class="modal-close" id="addvoice-close">&times;</button>
     </div>
+    <label class="flabel" for="addvoice-name">name <span style="color:var(--dim);text-transform:none;letter-spacing:0">(optional: the type's name if left empty)</span></label>
+    <input type="text" id="addvoice-name" maxlength="32" placeholder="e.g. shimmer, glass keys, low hum" autocomplete="off">
     <div class="vtypes" id="vtypes"></div>
-    <div class="hint">Joins the playing scene in its key, at the end of the list. Nothing is sent to Claude. Save the scene to keep it.</div>
+    <div class="hint">Pick a type to add it. It joins the playing scene in its key, at the end of the list. Nothing is sent to Claude. Save the scene to keep it.</div>
   </div>
 </div>
 
@@ -3622,8 +3624,11 @@ function renderSoundscape(s){
     const el = document.createElement("div");
     el.className = "voice" + (v.mute ? " muted":"");
     const head = document.createElement("div"); head.className="vhead";
-    head.innerHTML = `<span class="vname">${v.name}</span>`;
-    head.querySelector(".vname").title = v.name;
+    // Text, not innerHTML: a voice name is typed by the user (or written by
+    // the model), and must never be parsed as markup.
+    const vn = document.createElement("span");
+    vn.className = "vname"; vn.textContent = v.name; vn.title = v.name;
+    head.appendChild(vn);
     const mb = document.createElement("button");
     mb.className = "mutebtn" + (v.mute?" on":"");
     setMuteIcon(mb, !!v.mute);
@@ -4862,12 +4867,18 @@ $("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
     const b = document.createElement("button");
     b.dataset.vtype = vt;
     b.innerHTML = `<b>${vt}</b><span>${desc}</span>`;
-    b.onclick = () => { send({type:"voice_add", vtype: vt}); closeModal("modal-addvoice"); };
+    b.onclick = () => {
+      const name = $("addvoice-name").value.trim();
+      send({type:"voice_add", vtype: vt, ...(name ? {name} : {})});
+      closeModal("modal-addvoice");
+    };
     $("vtypes").appendChild(b);
   });
 $("voice-add-open").addEventListener("click", e => {
   e.preventDefault(); e.stopPropagation();
+  $("addvoice-name").value = "";
   openModal("modal-addvoice");
+  $("addvoice-name").focus();
 });
 $("addvoice-close").onclick = () => closeModal("modal-addvoice");
 

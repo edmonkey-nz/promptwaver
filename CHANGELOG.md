@@ -10,7 +10,10 @@ and APIs between minor versions until a 1.0 release.
 ## [0.95.1]
 
 - **+ add** now sits in the Instruments header and opens a small picker,
-  instead of an add-instrument column taking a whole strip's width.
+  instead of an add-instrument column taking a whole strip's width. The
+  picker has an optional **name** field: the instrument is added under that
+  name, or under its type's name if left empty. Names keep letters, digits,
+  spaces, `_` and `-`; a name already in the scene gets a `_2`.
 - Each instrument's footer reads **type · map · ✕**. The header keeps just
   the name and mute, so names have room. Remove is a ✕ like the other
   remove buttons, and still asks first.
