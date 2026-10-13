@@ -283,15 +283,26 @@ class MidiInput:
             print("[midi] no MIDI input ports found")
 
     # ---- ports -----------------------------------------------------------
+    _backend_error_logged = False
+
     @staticmethod
     def list_ports():
         try:
             import mido
-            return mido.get_input_names()
         except ImportError:
-            return []
+            return []                 # MIDI simply not installed: say nothing
+        try:
+            return mido.get_input_names()
         except Exception as e:
-            print(f"[midi] backend unavailable ({e}) — MIDI disabled")
+            # Includes the backend module itself being missing — mido imports
+            # `mido.backends.rtmidi` BY NAME only here, so a packaged build
+            # PyInstaller wasn't told about imports mido fine and then fails
+            # with "No module named ...". That used to be swallowed as "no
+            # ports", indistinguishable from an unplugged controller. Logged
+            # once: this is polled every couple of seconds.
+            if not MidiInput._backend_error_logged:
+                MidiInput._backend_error_logged = True
+                print(f"[midi] backend unavailable ({e}) — MIDI disabled")
             return []
 
     def ports_cached(self, ttl=2.0):

@@ -128,6 +128,15 @@ else in kiosk mode works in a packaged build — only the microphone-to-text ste
 is missing. Revisit by adding `pip install faster-whisper` to the workflow's
 install step and accepting the download size.
 
+**MIDI needs `--hidden-import=mido.backends.rtmidi`, and CI must install
+`mido python-rtmidi`.** mido loads its backend by name, which PyInstaller can't
+see; and every release up to 0.91.0 shipped without MIDI on all platforms
+because CI never installed it. **`.github/scripts/smoke_test.py` runs every
+built binary in CI** (pages, GPU scripts, About text, MIDI backend, scene
+geometry + frames over the websocket) and fails the build on any of it — it is
+the only thing that ever runs the Windows and macOS binaries. Run it locally
+against a build: `.venv/bin/python .github/scripts/smoke_test.py dist/promptwaver`.
+
 **`error.txt` is the field diagnostic.** `run.py` writes a breadcrumb per
 startup step beside the executable, the full traceback on any unhandled
 exception, and holds the console open on a frozen build. Written per-line and

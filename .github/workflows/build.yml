@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -44,7 +44,8 @@ jobs:
           # window (promptwaver/gui.py). Windows and macOS ship Tk with
           # Python; only Linux splits it into a separate package, and without
           # it the Linux binary silently falls back to console-only.
-          sudo apt-get install -y portaudio19-dev libsndfile1-dev python3-tk
+          # libasound2-dev: python-rtmidi's ALSA backend (MIDI) on Linux.
+          sudo apt-get install -y portaudio19-dev libsndfile1-dev python3-tk libasound2-dev
 
       - name: Install dependencies
         run: |
@@ -52,7 +53,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller anthropic
           pip install sounddevice || echo "sounddevice skipped"
-          pip install pyo || echo "pyo skipped"
+          # MIDI: the control surface, and since 0.91 playing a scene's
+          # instruments from a MIDI keyboard or pads. Every release up to
+          # 0.91.0 shipped without these, so MIDI never worked in a download.
+          # Not optional — the smoke test below fails the build without them.
+          pip install mido python-rtmidi
 
       - name: Verify PyInstaller
         run: pyinstaller --version
@@ -69,6 +74,7 @@ jobs:
         run: |
           pyinstaller --onefile --name promptwaver \
             --collect-all aiohttp --collect-all numpy --hidden-import=anthropic \
+            --hidden-import=mido.backends.rtmidi \
             --hidden-import=tkinter --hidden-import=tkinter.ttk \
             --add-data "promptwaver/web/static:promptwaver/web/static" \
             --add-data "scenes:scenes" \
@@ -80,11 +86,26 @@ jobs:
         run: >
           pyinstaller --onefile --name promptwaver
           --collect-all aiohttp --collect-all numpy --hidden-import=anthropic
+          --hidden-import=mido.backends.rtmidi
           --hidden-import=tkinter --hidden-import=tkinter.ttk
           --add-data "promptwaver/web/static;promptwaver/web/static"
           --add-data "scenes;scenes"
           --add-data "promptwaver/content;promptwaver/content"
           run.py
+
+      # mido loads its MIDI backend BY NAME (`mido.backends.rtmidi`), so
+      # PyInstaller cannot see it and the --hidden-import above is what puts it
+      # in the bundle. Without it MIDI imports fine and then silently lists no
+      # ports.
+
+      # Start the binary that was just built and check it really works — web
+      # UI and GPU renderer files served, About text bundled, MIDI backend
+      # present, a scene's geometry and frames arriving. "The build passed" has
+      # meant a binary that could not start (no --add-data) and one with no
+      # MIDI (no mido); this catches both, on every platform including Windows.
+      - name: Smoke test the executable
+        shell: bash
+        run: python .github/scripts/smoke_test.py "dist/${{ matrix.artifact_name }}"
 
       # PyInstaller names every platform's binary `promptwaver` (or
       # `promptwaver.exe`), and only the ARTIFACT was platform-specific.
@@ -128,7 +149,7 @@ jobs:
           path: artifacts
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
           body: |

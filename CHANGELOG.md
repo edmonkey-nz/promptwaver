@@ -6,6 +6,15 @@ and APIs between minor versions until a 1.0 release.
 
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
+- **MIDI now works in the downloadable builds** (Linux, macOS, Windows). Every
+  release up to 0.91.0 shipped without it: CI never installed `mido` /
+  `python-rtmidi`, and PyInstaller can't see mido's backend, which it loads by
+  name. A packaged build used to show an empty MIDI port list with no error;
+  a missing backend is now reported.
+- **CI smoke-tests every binary** before releasing it: starts it, loads the
+  pages and GPU scripts, checks MIDI and that a scene's geometry and frames
+  arrive. The Windows and macOS binaries had never been run by anything.
+- CI no longer installs `pyo` (unused); `setup-python` v5, `action-gh-release` v2.
 
 ## [0.91.0]
 

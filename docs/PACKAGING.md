@@ -154,6 +154,34 @@ paths if you set `--specpath` explicitly.
 Mirror the source tree in the destination so code that finds files relative to
 its own package keeps working unchanged.
 
+### …and no module it can't see being imported
+
+The same blindness applies to code. PyInstaller follows `import` statements; a
+library that loads a module **by name at runtime** is invisible to it.
+PromptWaver hit this with MIDI: `mido` picks its backend with
+`importlib.import_module("mido.backends.rtmidi")` the first time a port is
+listed, so a bundle imports `mido` fine and then has no backend.
+
+```bash
+--hidden-import=mido.backends.rtmidi     # pulls in python-rtmidi's extension too
+```
+
+Worse, the app used to swallow that `ImportError` as "no ports", so the
+symptom was an empty MIDI port list — indistinguishable from an unplugged
+controller. And CI never installed `mido` at all, so **every release up to
+0.91.0 shipped with no MIDI**, on every platform, while every build "passed".
+
+### Smoke-test the binary in CI, not the build
+
+`.github/scripts/smoke_test.py` runs after PyInstaller on all three platforms:
+it starts the executable (`--no-audio --no-gui`, since runners have neither),
+fetches the pages and the GPU renderer's scripts, checks the About text was
+bundled, reads MIDI availability from the engine's own state and fails on a
+missing-backend message, and waits for a scene's packed geometry and frames
+over the websocket. A binary that cannot start, or starts without part of
+itself, now fails the release instead of reaching it. It is the only test of
+the Windows and macOS binaries this project has — nothing else ever runs them.
+
 ---
 
 ## 3. A frozen app has TWO roots, and mixing them is silent data loss
@@ -246,6 +274,7 @@ Build locally first — CI is a slow way to discover any of this.
 
 - [ ] Runs from a **clean directory** (not the repo), double-clicked, not just from a shell
 - [ ] Every route/page loads, including static assets
+- [ ] Anything imported **by name** (plugin backends like `mido.backends.rtmidi`) is a `--hidden-import`, and the smoke test exercises it
 - [ ] Writable data lands **beside the exe** and survives a restart
 - [ ] Starter data seeds on first run; a second run doesn't clobber user edits
 - [ ] The window opens, the link works, **Quit actually stops the server and the worker threads** (assert the socket refuses afterwards and the threads are dead)
