@@ -105,7 +105,10 @@ jobs:
       # MIDI (no mido); this catches both, on every platform including Windows.
       - name: Smoke test the executable
         shell: bash
-        run: python .github/scripts/smoke_test.py "dist/${{ matrix.artifact_name }}"
+        # A hung test must never hold a job for hours (GitHub's default limit
+        # is 6h); a healthy run takes seconds.
+        timeout-minutes: 5
+        run: python -u .github/scripts/smoke_test.py "dist/${{ matrix.artifact_name }}"
 
       # PyInstaller names every platform's binary `promptwaver` (or
       # `promptwaver.exe`), and only the ARTIFACT was platform-specific.

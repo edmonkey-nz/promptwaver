@@ -36,6 +36,9 @@ import urllib.request
 
 import aiohttp
 
+# Results must reach the CI log as they happen, not when (if) the process exits.
+sys.stdout.reconfigure(line_buffering=True)
+
 PORT = 8765
 BASE = f"http://127.0.0.1:{PORT}"
 
@@ -84,11 +87,39 @@ async def ws_checks() -> dict:
     return out
 
 
+def stop(proc):
+    """Stop the binary AND everything it started.
+
+    A one-file PyInstaller executable is a bootloader that unpacks the app and
+    runs it as a CHILD process. On Linux/macOS the bootloader forwards the
+    signal; on Windows `terminate()` kills only the bootloader and the child
+    server keeps running — which is what hung the first Windows run of this
+    test for an hour. So on Windows the whole tree goes, via taskkill /T."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass                                # never block the job on this
+
+
 def main() -> int:
     exe = os.path.abspath(sys.argv[1])
+    # The binary's output goes to a FILE, not a pipe: a pipe stays open for as
+    # long as any process holding it lives, so reading it to EOF could block on
+    # a stray child forever. A file can always be read back.
+    log_path = os.path.join(os.path.dirname(exe), "smoke-output.log")
+    log = open(log_path, "wb")
     proc = subprocess.Popen(
         [exe, "--web-port", str(PORT), "--no-gui", "--no-kiosk"],
-        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
         cwd=os.path.dirname(exe))
     fails: list[str] = []
     out: dict = {}
@@ -124,12 +155,10 @@ def main() -> int:
     except Exception as e:                       # noqa: BLE001 — report, don't hide
         fails.append(f"{type(e).__name__}: {e}")
     finally:
-        proc.terminate()
-        try:
-            output = proc.communicate(timeout=15)[0].decode("utf-8", "replace")
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            output = proc.communicate()[0].decode("utf-8", "replace")
+        stop(proc)
+        log.close()
+        with open(log_path, "rb") as f:
+            output = f.read().decode("utf-8", "replace")
 
     # `available` only means `import mido` worked. mido loads its rtmidi
     # backend BY NAME when a port is listed, so PyInstaller misses it unless
