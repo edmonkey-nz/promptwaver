@@ -458,6 +458,10 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
         engine.set_play_map(str(m.get("voice", "")), m.get("binding"))
     elif t == "play_map_clear":
         engine.set_play_map(str(m.get("voice", "")), None)
+    elif t == "voice_add":
+        engine.add_voice(str(m.get("vtype", "")))
+    elif t == "voice_remove":
+        engine.remove_voice(str(m.get("name", "")))
     elif t == "play_note":
         # A mapped computer key, pressed or released. Straight to the engine,
         # NOT through _enqueue — see Engine.play_note.

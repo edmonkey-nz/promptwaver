@@ -7,6 +7,24 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.95.0]
+
+- **Add an instrument to any scene**, with no API call. Under the instruments,
+  pick a type and press **+ add instrument**. Any type can be added: pad,
+  osc, sub, pluck, bell, harp, fm, granular or noise.
+  - It joins in the scene's key, read from the scene's own voices. Each type
+    starts from a sound worth hearing: a celesta bell, an fm e-piano, an
+    octave-up granular shimmer.
+  - The voices already playing are not disturbed: nothing fades out, and
+    nothing restarts.
+  - It goes at the end of the list, so your MIDI knobs keep their places. It
+    gets its own swell, knobs, MIDI slot and modulation source like any
+    other voice.
+- **remove instrument** at the foot of each voice takes it out. It asks first,
+  and a sustained voice fades out over its release rather than cutting off.
+- Adds and removes are scene edits: **Save** keeps them, reloading the scene
+  undoes them.
+
 ## [0.94.0]
 
 - **Opens with no scene.** It used to open on a built-in "water flowing"

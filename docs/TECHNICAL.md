@@ -432,6 +432,10 @@ Any `pad` or `osc` voice now has a real ADSR (attack/decay/sustain/release), exp
 
 All of these are optional keys, so scenes that don't use them render and save exactly as before. Costs, and the reasoning that keeps them inside the no-recursion rule, are in `docs/INSTRUMENTS.md` §8.
 
+### Adding and removing instruments (0.95)
+
+Under the instruments there is an **add an instrument** card: pick any type and **+ add instrument** joins the playing scene without an API call and without disturbing the voices already there. Its key comes from the scene's own voices (`audio/templates.py`): the root and scale of a voice that plays a scale, else a pentatonic built on the pads' chord. Everything else a voice relates to (swell, envelope, its `voice.<name>` modulation source, a MIDI knob slot, reverb send) sets itself up. It goes last in the list so no existing MIDI knob moves. **remove instrument** at the foot of each strip takes one out, and a sustained voice fades over its own release. Both are edits to the scene like any knob: **Save** to keep them, reload the scene to undo.
+
 ### Oscillators and the arpeggiator
 
 - **`osc` voice type** — a classic unison multi-oscillator, distinct from `pad`: stacks detuned copies of the same waveform for thickness (`unison` 1–7, `detune` spread), with an optional one-octave-down `sub` layer mixed in. Good for a lead or bass texture

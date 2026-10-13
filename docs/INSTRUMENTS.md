@@ -350,8 +350,9 @@ pluck and reads as broken).
 
 ## 6. The registration points
 
-Seven places, none of which check each other. Missing any one leaves the voice
-inaudible, unselectable, invisible, or unplayable from a key or keyboard.
+Eight places, none of which check each other. Missing any one leaves the voice
+inaudible, unselectable, invisible, unplayable from a key or keyboard, or
+impossible to add to a scene by hand.
 
 | where | what |
 |---|---|
@@ -362,6 +363,7 @@ inaudible, unselectable, invisible, or unplayable from a key or keyboard.
 | `claude_director.py` `_SOUNDSCAPE_GUIDE` | so the director can select it |
 | `web/static/index.html` (`#voices` panel) | knobs for the new params |
 | `dsp.py` `Soundscape.play` + `trigger_pitches` | how a PLAYED note sounds: struck (joins `_active_notes`, decays) or held (`_held`, gated by the voice's `env`) — and what one trigger plays |
+| `audio/templates.py` `ADDABLE_TYPES` / `_TEMPLATES` / `_REGISTER`, and the add card's list in `index.html` | its starting sound for "+ add instrument", and which octave its root goes in |
 
 `_coerce` is the one that bites, because it only fails on a LIVE edit — the
 voice renders fine from a saved scene and then throws `could not convert string
@@ -519,6 +521,10 @@ shifts another voice's random stream. Loudness divides by
 level 0.4 a scene cloud measures 0.38-0.40 of its (saw) source, flat across
 density 16-80 and grain 0.15-0.5s; only a very sparse cloud of a pure sine
 reads higher (0.47), from grain-on-grain interference.
+
+A starting template is chosen to be heard straight away. The harp's omits
+`gap`: a gap aligns the first roll to a (beat + gap) grid, so a harp added
+with one sat silent for up to ~14s and the add looked broken.
 
 A granular voice is in `ENVELOPED_TYPES` (mute fades it, like `noise`) but
 plays no notes: `play` ignores it and `trigger_pitches` is empty, so the

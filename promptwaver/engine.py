@@ -13,6 +13,7 @@ the top of the loop so the render thread never races the websocket thread.
 from __future__ import annotations
 
 import colorsys
+import copy
 import json
 import os
 import threading
@@ -1142,6 +1143,59 @@ class Engine:
         else:
             for p in self._trigger_held.pop(voice, []):
                 self.play_note(voice, p, 0, False)
+
+    # adding / removing instruments ----------------------------------------
+
+    def add_voice(self, vtype: str):
+        """Add a ready-to-play instrument of `vtype` to the current scene, in
+        its key (audio/templates.py), without an API call and without
+        disturbing the voices already playing. Mirrored into the scene spec,
+        so Save keeps it. Appended LAST: MIDI knobs bind to voice positions,
+        and inserting mid-list would re-point every knob after it."""
+        def apply():
+            sc = self.scenes.current
+            if sc is None:
+                return
+            from .audio.templates import new_voice
+            if not sc.spec.soundscape:
+                # A legacy scene playing a soundscape built from its old
+                # audio_patch: adopt that, so the added voice joins it.
+                live = self.synth.soundscape() if getattr(self.synth, "online", False) else None
+                sc.spec.soundscape = copy.deepcopy(live) if live else {"voices": []}
+            voices = sc.spec.soundscape.setdefault("voices", [])
+            try:
+                v = new_voice(vtype, voices)
+            except ValueError as e:
+                print(f"[promptwaver] add instrument: {e}")
+                return
+            if getattr(self.synth, "online", False):
+                v = self.synth.add_voice(v)
+            else:
+                from .audio.dsp import _normalise
+                taken = {x.get("name") for x in voices}
+                base, k = v["name"], 2
+                while v["name"] in taken:
+                    v["name"], k = f"{base}_{k}", k + 1
+                v = _normalise({"voices": [v]})["voices"][0]
+            voices.append(copy.deepcopy(v))
+            print(f"[promptwaver] added instrument {v['name']!r} ({vtype})")
+        self._enqueue(apply)
+
+    def remove_voice(self, name: str):
+        """Remove an instrument from the current scene. An enveloped voice
+        fades out over its own release; Save makes it permanent."""
+        def apply():
+            sc = self.scenes.current
+            if sc is None or not sc.spec.soundscape:
+                return
+            if getattr(self.synth, "online", False):
+                self.synth.remove_voice(name)
+            sc.spec.soundscape["voices"] = [v for v in sc.spec.soundscape.get("voices", [])
+                                            if v.get("name") != name]
+            if sc.spec.play_map:
+                sc.spec.play_map.pop(name, None)
+            self._trigger_held.pop(name, None)
+        self._enqueue(apply)
 
     def set_play_map(self, voice: str, binding: dict | None):
         """Bind (or with None, clear) what plays `voice` in the current scene.

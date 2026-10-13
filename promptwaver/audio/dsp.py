@@ -913,22 +913,73 @@ class Soundscape:
         self._gran.clear()
         self._voice_env = {}
         self._voice_env_on = {}
+        self._departing = []
         for v in self.spec["voices"]:
-            if v.get("type") in self.ENVELOPED_TYPES:
-                e = v.get("env", {})
-                self._voice_env[v["name"]] = Envelope(
-                    attack=e.get("attack", 3.0), decay=e.get("decay", 1.2),
-                    sustain=e.get("sustain", 0.85), release=e.get("release", 2.5))
-                self._voice_env_on[v["name"]] = False
-            # assign each voice its own random phase/period once, the first
-            # time its name is seen — preserved across live param tweaks
-            # (which don't call set_spec) so the swell keeps its place
-            # instead of jumping every time a knob moves.
-            name = v["name"]
-            if name not in self._swell_phase:
-                self._swell_phase[name] = random.uniform(0.0, 2 * math.pi)
-                base_period = float(self.spec.get("swell_period", 24.0))
-                self._swell_period[name] = base_period * random.uniform(0.7, 1.3)
+            self._init_voice(v)
+
+    def _init_voice(self, v: dict):
+        """Per-voice runtime state for a voice joining the soundscape: its
+        ADSR (enveloped types — it starts released, so the first block
+        triggers a fresh attack) and its swell phase/period."""
+        if v.get("type") in self.ENVELOPED_TYPES:
+            e = v.get("env", {})
+            self._voice_env[v["name"]] = Envelope(
+                attack=e.get("attack", 3.0), decay=e.get("decay", 1.2),
+                sustain=e.get("sustain", 0.85), release=e.get("release", 2.5))
+            self._voice_env_on[v["name"]] = False
+        # assign each voice its own random phase/period once, the first
+        # time its name is seen — preserved across live param tweaks
+        # (which don't call set_spec) so the swell keeps its place
+        # instead of jumping every time a knob moves.
+        name = v["name"]
+        if name not in self._swell_phase:
+            self._swell_phase[name] = random.uniform(0.0, 2 * math.pi)
+            base_period = float(self.spec.get("swell_period", 24.0))
+            self._swell_period[name] = base_period * random.uniform(0.7, 1.3)
+
+    def add_voice(self, voice: dict) -> dict:
+        """Add one voice to the PLAYING soundscape, touching nothing else.
+
+        Not `set_spec` with the voice appended: that rebuilds every voice's
+        envelope, so every pad in the scene would fade out and back in over
+        its attack (often 10s+), and it drops every ringing note. Here the
+        new voice is normalised exactly as a loaded one would be, gets its
+        own envelope and swell, and comes in over its own attack.
+
+        Returns the voice as stored (normalised, with a unique name)."""
+        taken = {v["name"] for v in self.spec["voices"]} | {v["name"] for v in self._departing}
+        v = dict(voice)
+        base = str(v.get("name") or v.get("type") or "voice").replace(".", "_").strip() or "voice"
+        name, k = base, 2
+        while name in taken:
+            name, k = f"{base}_{k}", k + 1
+        v["name"] = name
+        v = _normalise({"voices": [v]})["voices"][0]
+        self.spec["voices"].append(v)
+        self._init_voice(v)
+        return v
+
+    def remove_voice(self, name: str) -> bool:
+        """Take a voice out of the soundscape. It leaves the spec at once (so
+        the panel and a Save no longer show it), but an enveloped voice keeps
+        sounding through its own release, as muting it would, and is dropped
+        when that has run out. A struck voice stops at once, the same as a
+        mute does today."""
+        for i, v in enumerate(self.spec["voices"]):
+            if v["name"] == name:
+                del self.spec["voices"][i]
+                if v.get("type") in self.ENVELOPED_TYPES:
+                    self._departing.append(dict(v, mute=True))
+                else:
+                    self._forget_voice(name)
+                return True
+        return False
+
+    def _forget_voice(self, name: str):
+        self._active_notes = [n for n in self._active_notes if n.get("voice") != name]
+        for d in (self._held, self._chorus, self._gran, self._voice_env,
+                  self._voice_env_on, self._lfo_eff):
+            d.pop(name, None)
 
     def set_param(self, path: str, value):
         """Live update. Paths: 'master', 'tempo', 'distortion', 'swell_amount',
@@ -1213,7 +1264,11 @@ class Soundscape:
                            and v.get("source", "scene") == "scene"
                            for v in self.spec["voices"]) else None)
 
-        for v in self.spec["voices"]:
+        # Voices removed live keep rendering (muted) until their release has
+        # run out — see remove_voice. Empty for every ordinary block.
+        gone = []
+        for v in (self.spec["voices"] + self._departing if self._departing
+                  else self.spec["voices"]):
             vt = v.get("type", "pad")
             name = v["name"]
             is_sustained = vt in self.ENVELOPED_TYPES
@@ -1230,6 +1285,8 @@ class Soundscape:
                     self._voice_env_on[name] = on
                 gain = env.sample(block_t, block_dt)
                 if gain <= 1e-4 and not on:
+                    if self._departing and any(d is v for d in self._departing):
+                        gone.append(v)
                     continue          # fully released and off — nothing to render
             elif v.get("mute"):
                 continue
@@ -1412,6 +1469,9 @@ class Soundscape:
         # everything else: it is the room the instruments are in, not an
         # effect on the end of the chain.
         self._write_gran_history(gran_bus, n0, frames)
+        for v in gone:
+            self._departing = [d for d in self._departing if d is not v]
+            self._forget_voice(v["name"])
 
         if send_bus is not None:
             mix += rvb_mix * self._reverb.process(
@@ -2853,6 +2913,22 @@ class SoundscapeMixer:
 
     def set_param(self, path: str, value):
         self.current.set_param(path, value)   # live tweaks always target the incoming/current one
+
+    def add_voice(self, voice: dict) -> dict:
+        v = self.current.add_voice(voice)
+        if self._pending_spec is not None:
+            # Mid scene-change: the incoming soundscape gets it too, or the
+            # add would vanish when the swap lands.
+            self._pending_spec = dict(self._pending_spec)
+            self._pending_spec["voices"] = list(self._pending_spec.get("voices") or []) + [v]
+        return v
+
+    def remove_voice(self, name: str) -> bool:
+        if self._pending_spec is not None:
+            self._pending_spec = dict(self._pending_spec)
+            self._pending_spec["voices"] = [x for x in self._pending_spec.get("voices") or []
+                                            if x.get("name") != name]
+        return self.current.remove_voice(name)
 
     # Played notes go to the soundscape rendering right now. A note played
     # during the fade-out half of a scene switch dies with that soundscape at

@@ -85,6 +85,8 @@ class NullSynth:
     def start(self): pass
     def stop(self): pass
     def set_soundscape(self, spec, fade=0.0, fresh=False): pass
+    def add_voice(self, voice): return voice
+    def remove_voice(self, name): return False
     def set_audio_param(self, path, value): pass
     def set_muted(self, muted, fade=0.0): pass
     def soundscape(self): return None
@@ -456,6 +458,17 @@ class SoundscapeSynth:
                 self._scape.set_muted(muted)
             else:
                 self._scape.set_spec(spec, fade=fade)
+
+    def add_voice(self, voice):
+        """Add one voice to the playing soundscape without disturbing the
+        others (dsp.Soundscape.add_voice). Returns it as stored — normalised,
+        and renamed if its name was taken."""
+        with self._lock:
+            return self._scape.add_voice(voice)
+
+    def remove_voice(self, name):
+        with self._lock:
+            return self._scape.remove_voice(name)
 
     def set_audio_param(self, path, value):
         with self._lock:

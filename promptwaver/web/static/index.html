@@ -500,6 +500,12 @@
      collapses that class to zero width. */
   .voices .noscene{flex:1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
   .voices .noscene b{color:var(--ink);font-weight:500}
+  .voice .vremove{margin-top:auto;align-self:flex-start;padding:2px 8px;font-size:10px;
+                  color:var(--dim);background:none;border:1px dashed var(--line);opacity:.7}
+  .voice .vremove:hover{opacity:1;color:var(--red);border-color:var(--red)}
+  .voice.addvoice{border-style:dashed;justify-content:center;gap:8px;flex:0 1 180px;opacity:.85}
+  .voice.addvoice:hover{opacity:1}
+  .voice.addvoice .addlabel{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
   /* Map: what PLAYS this voice — a computer key, a MIDI pad (CC) or a MIDI
      keyboard channel. Shows the binding once there is one. */
   .voice .mapbtn{padding:3px 8px;font-size:11px;border-radius:6px;min-width:34px}
@@ -4007,9 +4013,42 @@ function renderSoundscape(s){
       }
       el.appendChild(w);
     }
+    // Remove, at the foot of the strip rather than in its crowded header,
+    // and confirmed: it takes the instrument out of the playing scene (an
+    // enveloped one fades over its release). Save makes it permanent.
+    const rm = document.createElement("button");
+    rm.className = "vremove"; rm.textContent = "remove instrument";
+    rm.onclick = () => {
+      if (confirm(`Remove "${v.name}" from this scene?\n\nSave the scene to make it permanent; reload it to undo.`))
+        send({type:"voice_remove", name: v.name});
+    };
+    el.appendChild(rm);
     vc.appendChild(el);
   });
+
+  // "+ instrument": any voice type, built locally in the scene's key
+  // (audio/templates.py) — no API call. Appended after the last voice, so
+  // the MIDI knob slots of the existing ones don't move.
+  const add = document.createElement("div");
+  add.className = "voice addvoice";
+  const pick = document.createElement("select");
+  [["pad","pad · sustained chord"],["osc","osc · unison synth"],["sub","sub · low drone"],
+   ["pluck","pluck · plucked notes"],["bell","bell · struck chimes"],["harp","harp · ringing strings"],
+   ["fm","fm · e-piano, glass"],["granular","granular · shimmer cloud"],["noise","noise · air, wind"]]
+    .forEach(([val, txt]) => { const o = document.createElement("option"); o.value = val; o.textContent = txt; pick.appendChild(o); });
+  pick.value = _addVoicePick;
+  pick.onchange = () => { _addVoicePick = pick.value; };
+  const go = document.createElement("button");
+  go.textContent = "+ add instrument";
+  go.title = "Adds a playable instrument of this type to the scene, in its key. Nothing is sent to Claude. "
+           + "Save the scene to keep it.";
+  go.onclick = () => send({type:"voice_add", vtype: pick.value});
+  const lab = document.createElement("div");
+  lab.className = "addlabel"; lab.textContent = "add an instrument";
+  add.appendChild(lab); add.appendChild(pick); add.appendChild(go);
+  vc.appendChild(add);
 }
+let _addVoicePick = "granular";
 
 // Monitor-only visual filters (glow/trails) — a pure canvas-rendering
 // effect applied here and in output.html; never touches the vector data
