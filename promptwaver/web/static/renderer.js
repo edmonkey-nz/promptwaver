@@ -235,6 +235,12 @@ in float vRadius;
 in float vEdge;
 in float vGlow;
 
+// Edge shaping (see the uniform setup in render()): coverageGamma is 1.0 for
+// plain coverage or 1/2.2 for gamma-correct edges; softNorm switches on the
+// soft-beam normalisation when the feather has been widened.
+uniform float coverageGamma;
+uniform float softNorm;
+
 // Two targets in one geometry pass: the crisp strokes, and the same strokes
 // scaled by their glow to seed the bloom blur. Drawing the geometry twice
 // instead would double the vertex work for no benefit.
@@ -251,6 +257,19 @@ void main() {
   float d = sdfCapsule(vPos, vLineStart, vLineEnd, vRadius);
   float alpha = 1.0 - smoothstep(-vEdge, vEdge, d);
   if (alpha < 0.01) discard;
+  // Soft lines: the feather is wider than the line, so coverage at the
+  // centreline (d = -radius) is below 1. Dividing by it keeps the centre at
+  // full brightness and turns the edge into a beam-like falloff. With the
+  // default half-pixel feather that value is exactly 1, and this is skipped.
+  if (softNorm > 0.5) {
+    float centre = 1.0 - smoothstep(-vEdge, vEdge, -vRadius);
+    alpha = min(1.0, alpha / max(centre, 1e-3));
+  }
+  // Gamma-correct edges. Over black (nearly all of this frame) blending a
+  // coverage a in linear light and encoding for display is exactly
+  // a^(1/2.2) with the colour unchanged; plain coverage makes antialiased
+  // edges of bright lines look thin and stepped. 1.0 leaves alpha as is.
+  alpha = pow(alpha, coverageGamma);
   // Premultiplied alpha: adjacent segments' quads deliberately overlap at
   // joints (see the margin comment in the vertex shader) so round joins have
   // geometry to rasterize into. Un-premultiplied SRC_ALPHA blending double-
@@ -358,6 +377,20 @@ uniform float uSegments;   // 0 = off, otherwise 3..12
 uniform vec2 uMirror;      // x, y as 0/1
 uniform vec2 uFlip;        // x, y as 0/1
 uniform float uAspect;     // canvas w/h, so wedges stay circular
+uniform float uSS;         // drawn size / canvas size: 1, or the supersampling factor
+uniform vec2 uTexel;       // one texel of uSrc, in UV
+
+// The frame at uv, filtered down from the supersampled size: four bilinear
+// taps a quarter of a screen pixel either side, which tile the pixel's
+// footprint in the drawn image. At exactly 2x each tap lands on a texel
+// centre, so this is an exact 2x2 box average; at 1.5x the bilinear blends
+// cover the 1.5 x 1.5 footprint closely. At 1x it is one plain tap.
+vec3 src(vec2 uv) {
+  if (uSS <= 1.0) return texture(uSrc, uv).rgb;
+  vec2 o = uTexel * (0.25 * uSS);
+  return 0.25 * (texture(uSrc, uv + vec2(-o.x, -o.y)).rgb + texture(uSrc, uv + vec2(o.x, -o.y)).rgb
+               + texture(uSrc, uv + vec2(-o.x,  o.y)).rgb + texture(uSrc, uv + vec2(o.x,  o.y)).rgb);
+}
 out vec4 outColor;
 
 const float PI = 3.14159265359;
@@ -392,7 +425,7 @@ void main() {
     uv = p + 0.5;
   }
 
-  outColor = vec4(texture(uSrc, uv).rgb, 1.0);
+  outColor = vec4(src(uv), 1.0);
 }
 `;
 
@@ -487,7 +520,8 @@ void main() {
   /** Draw a list of `{p:[[x,y],...], c:[r,g,b], g}` strokes — the engine's
    *  CPU preview format (CPU reference mode). */
   render(scene, filters, canvasSize) {
-    if (!this._ready(canvasSize)) return;
+    const inner = this._innerSize(canvasSize, filters);
+    if (!this._ready(inner)) return;
     this._segBegin();
     const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
     if (scene && scene.length) {
@@ -499,14 +533,15 @@ void main() {
         this._emitStroke(n, stroke.c[0], stroke.c[1], stroke.c[2], stroke.g || 0, curve);
       }
     }
-    this._frame(filters, canvasSize.width, canvasSize.height);
+    this._frame(filters, inner.width, inner.height, canvasSize.width, canvasSize.height);
   }
 
   /** Draw a scene-eval.js StrokeList (the GPU output path). Same pipeline as
    *  render(), fed from typed arrays: nothing is allocated per frame once the
    *  buffers have grown to the scene's size. */
   renderList(list, filters, canvasSize) {
-    if (!this._ready(canvasSize)) return;
+    const inner = this._innerSize(canvasSize, filters);
+    if (!this._ready(inner)) return;
     this._segBegin();
     const curve = Math.max(-1, Math.min(1, filters.lineCurve || 0));
     for (let k = 0; k < list.count; k++) {
@@ -516,7 +551,21 @@ void main() {
       for (let q = 0; q < n; q++) { this._sx[q] = list.pts[(s0 + q) * 2]; this._sy[q] = list.pts[(s0 + q) * 2 + 1]; }
       this._emitStroke(n, list.col[k * 3], list.col[k * 3 + 1], list.col[k * 3 + 2], list.glow[k], curve);
     }
-    this._frame(filters, canvasSize.width, canvasSize.height);
+    this._frame(filters, inner.width, inner.height, canvasSize.width, canvasSize.height);
+  }
+
+  /** The size the frame is DRAWN at: the canvas, times the supersampling
+   *  factor (`filters.supersample`, 1 / 1.5 / 2). Everything up to the
+   *  composite is rendered at this size and pass 5 filters it down to the
+   *  canvas. Done here rather than by enlarging the canvas and letting the
+   *  browser scale it, because the compositor's downscale was measured
+   *  point-sampling at exactly 2x: every other pixel, i.e. the 1x image
+   *  back again, with none of the smoothing. Line width, bloom spread and
+   *  trails are all expressed relative to the drawn size, so they look the
+   *  same at any factor. */
+  _innerSize(canvasSize, filters) {
+    const ss = filters && [1.5, 2].includes(filters.supersample) ? filters.supersample : 1;
+    return { width: Math.round(canvasSize.width * ss), height: Math.round(canvasSize.height * ss) };
   }
 
   _ready(canvasSize) {
@@ -624,7 +673,7 @@ void main() {
   }
 
   /** Upload the built segments and run every pass to the screen. */
-  _frame(filters, w, h) {
+  _frame(filters, w, h, cw = w, ch = h) {
     const gl = this.gl;
     const nseg = this._segN;
 
@@ -681,13 +730,30 @@ void main() {
       // means alpha never reaches 1.0 even at the stroke's centre, leaving
       // every line semi-transparent and every overlapping joint visibly
       // brighter than the line it joins (reads as dots along the stroke).
-      gl.uniform1f(gl.getUniformLocation(prog, 'aaEdge'), 0.5 / scale);
+      //
+      // `lineSoftness` (0..1, a monitor filter) widens it on purpose, into a
+      // beam-like falloff; the shader renormalises so the centre stays at
+      // full brightness. 0 is exactly the half pixel above.
+      const soft = Math.max(0, Math.min(1, filters.lineSoftness || 0));
+      const featherPx = 0.5 + soft * (pixelWidth / 2 + 1.5);
+      gl.uniform1f(gl.getUniformLocation(prog, 'aaEdge'), featherPx / scale);
+      gl.uniform1f(gl.getUniformLocation(prog, 'softNorm'), soft > 0 ? 1 : 0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'coverageGamma'),
+                   filters.gammaEdges === false ? 1.0 : 1 / 2.2);
       gl.uniform2f(gl.getUniformLocation(prog, 'keystoneHV'),
                    filters.keystoneH || 0, filters.keystoneV || 0);
       gl.uniform1f(gl.getUniformLocation(prog, 'globalGlow'), filters.glow || 0);
 
+      // Soft lines blend with MAX: consecutive segments of one stroke
+      // overlap at the joint, and with a wide feather OVER-blending those
+      // two semi-transparent edges brightens every joint into a visible
+      // bead (why the feather used to be clamped at half a pixel). MAX
+      // composites the overlap as the brighter of the two instead. Hard
+      // lines keep OVER, exactly as before.
+      if (soft > 0) gl.blendEquation(gl.MAX);
       gl.drawElementsInstanced(gl.TRIANGLES, this.buffers.quadIndexCount,
                                gl.UNSIGNED_SHORT, 0, nseg);
+      if (soft > 0) gl.blendEquation(gl.FUNC_ADD);
     }
 
     // --- passes 2 & 3: separable blur of the glow target, at half res ---
@@ -746,8 +812,10 @@ void main() {
     this._trailFlip = !this._trailFlip;
 
     // --- pass 5: monitor post-effects, to the screen ---
+    // At the CANVAS size (cw x ch), reading the frame drawn at w x h: when
+    // supersampling, this pass is also the downsample (see uSS in postFS).
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, w, h);
+    gl.viewport(0, 0, cw, ch);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -762,7 +830,9 @@ void main() {
                  filters.mirrorX ? 1 : 0, filters.mirrorY ? 1 : 0);
     gl.uniform2f(gl.getUniformLocation(post, 'uFlip'),
                  filters.flipX ? 1 : 0, filters.flipY ? 1 : 0);
-    gl.uniform1f(gl.getUniformLocation(post, 'uAspect'), w / h);
+    gl.uniform1f(gl.getUniformLocation(post, 'uAspect'), cw / ch);
+    gl.uniform1f(gl.getUniformLocation(post, 'uSS'), w / cw);
+    gl.uniform2f(gl.getUniformLocation(post, 'uTexel'), 1 / w, 1 / h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindVertexArray(null);

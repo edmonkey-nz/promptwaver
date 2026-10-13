@@ -7,6 +7,28 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.97.0]
+
+### Smoother lines
+
+- **Gamma-correct line edges** (Settings › Output, on by default). A line's
+  antialiased edge is now blended the way light adds up, so bright lines on
+  black look smooth and solid instead of thin and stepped. Free. Turn it off
+  to get the old edges back.
+- **Line softness** (Monitor filters, saved per scene): from crisp (0, as
+  before) to a soft, beam-like falloff, like a laser or a vector display.
+  The centre of each line stays at full brightness, and soft lines don't
+  bead at their joints.
+- **Supersampled output** (Settings › Output › line quality: standard /
+  1.5× / 2×). The output and kiosk windows draw at a higher resolution and
+  average down, which smooths the stair-steps on fine lines and their
+  shimmer in motion. Measured on a real scene against a 4× reference, the
+  edge error falls by 36% at 1.5× and 62% at 2×.
+  - It costs GPU. The GTX 1650 held 60 fps at 1080p on every setting.
+  - The AMD integrated GPU dropped from 50 to 41 to 31 fps, so check for the
+    green GPU dot in the header before turning it up.
+  - The control-page preview is never supersampled.
+
 ## [0.96.0]
 
 - **Note order** for pluck, bell and fm: **up** (as before), **down**,

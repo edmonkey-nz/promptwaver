@@ -207,6 +207,12 @@ function connect(){
       filters.bloomIntensity = s.bloom_intensity;
       filters.contentAspect = s.content_aspect || 1;
       filters.fit = s.output_fit || "fit";
+      filters.lineSoftness = s.line_softness ?? 0;
+      filters.gammaEdges = s.aa_gamma !== false;
+      // Supersampling (Settings > Output): the renderer draws at this many
+      // times the canvas size and filters it down itself (renderer.js
+      // _innerSize). The canvas stays at display size.
+      filters.supersample = s.supersample || 1;
       if (gpuView) return;           // drawn on rAF, not here
       if (showFps) {
         // Timed around the real thing, filters and all — a number that

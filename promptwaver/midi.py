@@ -82,6 +82,8 @@ ENGINE_RANGES = {
     "trail": (0.0, 0.95),
     # Matches the Monitor filters slider. Monitor-only, like glow/trail.
     "line_width": (1.0, 8.0),
+    # Edge softness, 0 hard .. 1 beam-like. Monitor-only, like line_width.
+    "line_softness": (0.0, 1.0),
     "hue_value": (0.0, 1.0),
     "audio_link": (0.0, 2.0),
     "lfo_slow.rate": (0.01, 0.4),

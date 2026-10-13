@@ -755,6 +755,9 @@
       <div class="field"><label title="Thickens the drawn strokes on screen. A multiplier on each surface's own width, so the preview and the output window both widen from where they already are. Applies to the preview and output windows only.">line width</label>
         <input type="range" id="mf-width" min="1" max="8" step="0.1" value="1">
         <span class="val" id="v-mfwidth">1.0</span></div>
+      <div class="field"><label title="Softens the edges of the drawn strokes into a beam-like falloff, like a laser or a vector display. 0 is crisp, as authored. Saved with the scene; applies to the preview and output windows only.">line softness</label>
+        <input type="range" id="mf-soft" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="v-mfsoft">0.00</span></div>
       <details class="accordion nested" id="acc-bloom" closed>
         <summary>Bloom shape<span class="help" data-help="Shapes the <i>glow</i> slider above. No effect where glow is 0.">?</span></summary>
         <div class="accordion-body">
@@ -1245,6 +1248,21 @@
         reaches the left and right edges.
         <br><b>2D</b> patterns are composed in a square and can't be re-framed,
         so letterbox gives real black bars.</div>
+      <div class="field" style="margin-top:12px"><label>line quality</label>
+        <select id="o-ss" style="flex:1">
+          <option value="1">standard</option>
+          <option value="1.5">supersampled 1.5×</option>
+          <option value="2">supersampled 2×</option>
+        </select></div>
+      <div class="hint">smooths the stair-steps on fine lines by drawing each output
+        window at a higher resolution and scaling it down. It costs GPU: 2× at
+        1080p is as much work as 4K. Fine on a dedicated GPU; on an integrated
+        one (amber <b>GPU</b> dot in the header) expect dropped frames.</div>
+      <label class="field" style="margin-top:8px;gap:8px;cursor:pointer">
+        <input type="checkbox" id="o-gamma"> gamma-correct line edges</label>
+      <div class="hint">blends each line's antialiased edge the way light actually
+        adds up, so bright lines on black look smooth instead of thin and
+        stepped. Free; on by default.</div>
     </div>
 
     <div class="group">
@@ -1750,6 +1768,7 @@ function paintState(s){
   }
   syncOutputRatio(s);
   syncOutputFit(s);
+  syncLineQuality(s);
   if (document.activeElement !== $("diag-enabled-toggle") && typeof s.diagnostics_enabled === "boolean") {
     $("diag-enabled-toggle").checked = s.diagnostics_enabled;
   }
@@ -4139,6 +4158,12 @@ function syncMonitorFilters(s){
     $("mf-width").value = monitorFilters.lineWidth;
     $("v-mfwidth").textContent = monitorFilters.lineWidth.toFixed(1);
   }
+  monitorFilters.lineSoftness = s.line_softness ?? 0;
+  monitorFilters.gammaEdges = s.aa_gamma !== false;
+  if (document.activeElement !== $("mf-soft")) {
+    $("mf-soft").value = monitorFilters.lineSoftness;
+    $("v-mfsoft").textContent = monitorFilters.lineSoftness.toFixed(2);
+  }
   monitorFilters.bloomSpread = s.bloom_spread ?? 0.005;
   monitorFilters.bloomIntensity = s.bloom_intensity ?? 2.5;
   if (document.activeElement !== $("mf-bloomspread")) {
@@ -4209,6 +4234,15 @@ function syncOutputFit(s){
 $("o-fit").onchange = () =>
   send({type:"set", key:"output_fit", value:$("o-fit").value});
 
+// Line quality: rig settings, persisted like the ratio and fit.
+function syncLineQuality(s){
+  if (document.activeElement !== $("o-ss") && s.supersample != null)
+    $("o-ss").value = String(s.supersample === 1 ? 1 : s.supersample);
+  if (document.activeElement !== $("o-gamma")) $("o-gamma").checked = s.aa_gamma !== false;
+}
+$("o-ss").onchange = () => send({type:"set", key:"supersample", value: +$("o-ss").value});
+$("o-gamma").onchange = () => send({type:"set", key:"aa_gamma", value: $("o-gamma").checked});
+
 const cv = $("view");
 let previewRenderer = null;
 
@@ -4270,6 +4304,7 @@ slider("mf-kaleidoscope", "kaleidoscope_segments", "mfkaleidoscope", (v)=>v==="0
 // glow slider above is the MIDI-bindable one, and it drives the same bloom.
 slider("mf-curve", "line_curve", "mfcurve");
 slider("mf-width", "line_width", "mfwidth", v => (+v).toFixed(1));
+slider("mf-soft", "line_softness", "mfsoft", v => (+v).toFixed(2));
 slider("mf-bloomspread", "bloom_spread", "mfbloomspread", (v)=>(+v).toFixed(3), null);
 slider("mf-bloomint", "bloom_intensity", "mfbloomint", (v)=>(+v).toFixed(1), null);
 // The three layer0.* sliders that stood here are gone — they hardcoded

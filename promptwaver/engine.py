@@ -228,6 +228,9 @@ class MidiRouter:
 #: Output viewport ratios offered in Settings, widest last.
 OUTPUT_RATIOS = ("1:1", "4:3", "16:10", "16:9", "21:9")
 
+#: Output-window supersampling factors offered in Settings > Output.
+SUPERSAMPLE_LEVELS = (1.0, 1.5, 2.0)
+
 #: How content whose own shape differs from the output surface is placed in it.
 #: Only 2D scenes can differ: a 3D camera divides x by the viewport aspect, so
 #: its [-1,1] box IS the viewport's shape by construction, while `pattern2d`
@@ -355,6 +358,16 @@ class Engine:
         # content's own shape isn't the surface's (see OUTPUT_FITS).
         _fit = str(_settings.get("output_fit", "fit"))
         self.output_fit = _fit if _fit in OUTPUT_FITS else "fit"
+        # Line quality, also rig settings: they depend on the display and the
+        # GPU driving it, not on the scene. Gamma-correct edges on by default
+        # (free); supersampling off (it costs fill rate: 2x at 1080p is the
+        # pixel load of 4K, which the iGPU on the dev laptop can't hold).
+        self.aa_gamma = bool(_settings.get("aa_gamma", True))
+        try:
+            _ss = float(_settings.get("supersample", 1))
+        except (TypeError, ValueError):
+            _ss = 1.0
+        self.supersample = _ss if _ss in SUPERSAMPLE_LEVELS else 1.0
         self._audio_cfg = {
             "device": _settings.get("audio_device"),
             # 1024 (~46 ms to the ear) since 0.90. It used to be 8192 (~372 ms)
@@ -499,6 +512,10 @@ class Engine:
         # semi-transparent with brighter dots at the joints.
         self.line_width = 1.0
         self._mod_line_width = 1.0
+        # Monitor-only edge softness, 0 (hard, as authored) .. 1 (a soft,
+        # beam-like falloff). Per scene, like line_width; not a modulation
+        # destination — it reaches the outputs on the 20Hz state.
+        self.line_softness = 0.0
         # Modulated versions (live values, updated every tick)
         # Live post-LFO voice params, refreshed from the synth each tick. See
         # state()'s "lfo_values" — declared here so state() can be called
@@ -625,6 +642,17 @@ class Engine:
             self.line_curve = max(-1.0, min(1.0, float(value)))
         elif key == "line_width":
             self.line_width = max(1.0, min(8.0, float(value)))
+        elif key == "line_softness":
+            self.line_softness = max(0.0, min(1.0, float(value)))
+        elif key == "aa_gamma":
+            from . import settings as _settings
+            self.aa_gamma = bool(value)
+            _settings.set("aa_gamma", self.aa_gamma)
+        elif key == "supersample":
+            from . import settings as _settings
+            ss = float(value)
+            self.supersample = ss if ss in SUPERSAMPLE_LEVELS else 1.0
+            _settings.set("supersample", self.supersample)
         elif key == "hue_value":
             self.hue_value = max(0.0, min(1.0, float(value)))
         elif key == "audio_link":
@@ -1299,6 +1327,7 @@ class Engine:
                     "bloom_intensity": self.bloom_intensity,
                     "line_curve": self.line_curve,
                     "line_width": self.line_width,
+                    "line_softness": self.line_softness,
                     "hue_override": self.hue_override_on,
                     "hue_value": self.hue_value,
                 })
@@ -1377,6 +1406,8 @@ class Engine:
         self.line_curve = float(cam_cfg.get("line_curve", 0.0))
         # 1.0 (unchanged) for every scene authored before this existed.
         self.line_width = float(cam_cfg.get("line_width", 1.0))
+        # 0 (hard edges, unchanged) for every scene authored before it.
+        self.line_softness = float(cam_cfg.get("line_softness", 0.0))
         # Hue override. This block's whole point is that a per-scene visual
         # setting loads as OFF rather than carrying over — and hue was the one
         # that never made it in, so it stayed live across a scene load and
@@ -2167,6 +2198,9 @@ class Engine:
             # each page so they can't drift.
             "output_fit": self.output_fit,
             "output_fits": list(OUTPUT_FITS),
+            "line_softness": self.line_softness,
+            "aa_gamma": self.aa_gamma,
+            "supersample": self.supersample,
             "content_aspect": round(self.content_aspect(), 4),
             "hue_override": self.hue_override_on,
             "disable_plane": self.disable_plane,

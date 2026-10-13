@@ -330,6 +330,11 @@ function applyStateFilters(s){
   filters.bloomIntensity = s.bloom_intensity;
   filters.contentAspect = s.content_aspect || 1;
   filters.fit = s.output_fit || "fit";
+  filters.lineSoftness = s.line_softness ?? 0;
+  filters.gammaEdges = s.aa_gamma !== false;
+  // Supersampling, as in output.html: the renderer draws larger and filters
+  // down itself. The kiosk is an output surface too.
+  filters.supersample = s.supersample || 1;
 }
 
 // Phase is entirely the server's. This page never decides what it is — which
