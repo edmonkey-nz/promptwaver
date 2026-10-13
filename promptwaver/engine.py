@@ -753,14 +753,14 @@ class Engine:
             # stayed on whatever the previously-loaded scene had. Routing
             # through _install_spec (same as a fresh generation) fixes both.
             self._install_spec(self.scenes.load_spec(name))
-            self._current_library_name = name
+            self._current_library_name = self.scenes.key_for(name)
         self._enqueue(apply)
 
     def save_scene(self, name: str):
         def apply():
             if self.scenes.current:
                 self.scenes.save(name, self.scenes.current.spec)
-                self._current_library_name = name
+                self._current_library_name = self.scenes.key_for(name)
         self._enqueue(apply)
 
     def generate_scene(self, keyword: str, name: str | None = None, audio: str | None = None,
@@ -819,7 +819,11 @@ class Engine:
             # from the old scene into one nobody has asked to hear yet.
             self._set_active_now(False)
             self._install_spec(spec)
-            self._current_library_name = name
+            # The KEY it was saved under, not the name asked for: a name with
+            # punctuation ("a fox's den") is listed as "a foxs den", and the
+            # library highlight and the audio-regenerate dropdown both match
+            # against the list.
+            self._current_library_name = self.scenes.key_for(name)
         self._enqueue(apply)
 
     def _sync_audio_mute(self, fade: float = 0.0):
@@ -827,7 +831,10 @@ class Engine:
         the independent "Disable Audio" gate (Global section) is on — this is
         the single place that combines the two into the one mute call the
         synth actually takes."""
-        self.synth.set_muted(self.audio_disabled or not self.active, fade)
+        # No scene, no sound: with nothing loaded the synth still holds its
+        # built-in default soundscape, and Start would otherwise play it.
+        self.synth.set_muted(self.audio_disabled or not self.active
+                             or self.scenes.current is None, fade)
 
     def set_active(self, value: bool):
         """Master Start/Stop. While inactive: scene time is frozen (not just
@@ -1261,6 +1268,11 @@ class Engine:
         # it moves anything — otherwise the first knob touched after a scene
         # change snaps that parameter to wherever the hardware happens to be.
         self.midi.rearm_takeover()
+        # The app starts with no scene, and the mute gate holds the synth
+        # silent until there is one (`_sync_audio_mute`). Re-evaluated only
+        # on that first install: calling it on every load would snap any
+        # Stop fade-out in progress.
+        first_scene = self.scenes.current is None
         # A crossfade only advances as frames are rendered, and the loop skips
         # rendering entirely while stopped — so a scene loaded before pressing
         # Start would sit as a pending transition and look like it simply
@@ -1274,7 +1286,12 @@ class Engine:
         self._apply_modulation(spec)
         if getattr(self.synth, "online", False):
             scape = spec.soundscape or _patch_to_soundscape(spec.audio_patch)
-            self.synth.set_soundscape(scape, fade=self.audio_fade)
+            # The first scene starts from a fresh mixer: a fade, or even a
+            # plain swap, would let the built-in default soundscape the synth
+            # was rendering (muted) play out through the delay.
+            self.synth.set_soundscape(scape, fade=self.audio_fade, fresh=first_scene)
+        if first_scene:
+            self._sync_audio_mute()
         # Per-scene display settings (Camera controls / Monitor filters) —
         # bundled into spec.camera (see update_current_scene). `.get(key,
         # default)` means any scene that has never had these saved (every
@@ -2050,8 +2067,12 @@ class Engine:
             "director_last_cost": self.director.last_cost,
             "scene_3d": bool(self.scenes.current and getattr(self.scenes.current, "is_3d", False)),
             "camera": camera,
-            "soundscape": self.synth.soundscape() if getattr(self.synth, "online", False) else (
-                self.scenes.current.spec.soundscape if self.scenes.current else None),
+            # None with no scene loaded, even though the synth always holds a
+            # soundscape (its built-in default): the page shows "choose a
+            # scene" rather than instruments that belong to nothing.
+            "soundscape": None if self.scenes.current is None else (
+                self.synth.soundscape() if getattr(self.synth, "online", False)
+                else self.scenes.current.spec.soundscape),
             "modulation": self.scenes.current.spec.modulation if self.scenes.current else [],
             "audio_link": self.scenes.current.spec.audio_link if self.scenes.current else 1.0,
             "scene_spec": self._scene_spec_view(),

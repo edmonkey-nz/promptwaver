@@ -7,6 +7,25 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.94.0]
+
+- **Opens with no scene.** It used to open on a built-in "water flowing"
+  scene that isn't in the library, with its instruments showing. Now nothing
+  is loaded until you pick a scene or generate one, and the instruments pane
+  says so. Start with nothing loaded plays nothing. (`--scene "<keyword>"`
+  still opens on a keyword's offline scene.)
+- **Regenerate audio defaults to the scene that's loaded.** With no library
+  scene loaded it now asks you to choose, instead of quietly targeting the
+  alphabetically-first scene (LionsMane) and overwriting its audio. A
+  generated scene whose name has punctuation ("a fox's den", saved as
+  "a foxs den") is now matched too, in the dropdown and the library
+  highlight.
+- **GPU in the header**, next to Engine / Claude API / MIDI: which GPU the
+  output is drawn on, by model name ("NVIDIA GeForce GTX 1650"). The dot is
+  green for a dedicated GPU, amber for an integrated one (on a two-GPU
+  laptop, the browser is on the weaker one) and red for software rendering.
+  It follows what the output windows report; hover for details.
+
 ## [0.93.0]
 
 ### A granular voice, two new LFO targets, a leaner audio regenerate

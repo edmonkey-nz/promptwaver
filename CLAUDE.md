@@ -12,6 +12,8 @@ The venv is at `.venv` and is not activated automatically — invoke it explicit
 .venv/bin/python run.py --list-midi                      # enumerate MIDI ports
 ```
 
+**The app opens with NO scene** (since 0.94): the instruments pane asks for one and the mute gate holds the synth silent, even after Start, until a scene is loaded (`Engine._sync_audio_mute`). `--scene "<keyword>"` opens on that keyword's offline fallback scene instead (no API call). Anything that drives the app from cold — the CI smoke test, a browser check — must `scene_load` a library scene before Start.
+
 **There is no `--web` flag**, despite README, CI release notes, and older transcripts using one. The web UI is on by default; `--headless` disables it. Passing `--web` makes argparse exit with an error.
 
 Lint/format (config in `pyproject.toml`, line length 100, `E501` deliberately ignored):

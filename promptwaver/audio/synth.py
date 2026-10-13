@@ -84,7 +84,7 @@ class NullSynth:
 
     def start(self): pass
     def stop(self): pass
-    def set_soundscape(self, spec, fade=0.0): pass
+    def set_soundscape(self, spec, fade=0.0, fresh=False): pass
     def set_audio_param(self, path, value): pass
     def set_muted(self, muted, fade=0.0): pass
     def soundscape(self): return None
@@ -440,11 +440,22 @@ class SoundscapeSynth:
         with self._lock:
             self._scape.set_channels(self.channels)
 
-    def set_soundscape(self, spec, fade=0.0):
+    def set_soundscape(self, spec, fade=0.0, fresh=False):
+        """`fresh` replaces the mixer outright — no delay or reverb tail, no
+        swell phase carried over — for the app's FIRST scene: until then the
+        synth has been rendering its built-in default soundscape behind the
+        mute gate, and a plain swap would let that default's echo play over
+        the first real scene. The mute state is carried across inside the
+        lock, so the producer can never render an unmuted block in between."""
         if not spec:
             return
         with self._lock:
-            self._scape.set_spec(spec, fade=fade)
+            if fresh:
+                muted = self._scape.muted
+                self._scape = SoundscapeMixer(spec, sr=self.sr, channels=self.channels)
+                self._scape.set_muted(muted)
+            else:
+                self._scape.set_spec(spec, fade=fade)
 
     def set_audio_param(self, path, value):
         with self._lock:

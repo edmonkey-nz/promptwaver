@@ -203,7 +203,12 @@ def parse_args():
                          "device, is picked automatically; change it live in Settings.")
     ap.add_argument("--list-midi", action="store_true", help="list MIDI input ports and exit")
     ap.add_argument("--model", default=None, help="override director model id")
-    ap.add_argument("--scene", default="water flowing", help="initial keyword")
+    # Off by default: the app opens with no scene and the page asks for one.
+    # A keyword here builds that scene offline at startup (the local
+    # fallback director — no API call), the way the app used to always open
+    # on "water flowing".
+    ap.add_argument("--scene", default=None,
+                    help="open on this keyword's offline scene instead of no scene")
     # Kiosk mode is a runtime toggle (Settings > Kiosk) persisted in
     # settings.json; these only override it at startup, for an installation
     # that should boot straight into it.
@@ -256,8 +261,9 @@ def main():
         enable_audio=not args.no_audio, model=args.model,
         enable_diagnostics=args.diag, midi_port=args.midi,
     )
-    _note("engine built; installing the initial scene")
-    engine._install_spec(local_scene(args.scene))
+    if args.scene:
+        _note("engine built; installing the initial scene")
+        engine._install_spec(local_scene(args.scene))
     _note("starting render thread")
     engine.start()
     _note(f"engine running — "

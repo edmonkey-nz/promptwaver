@@ -110,6 +110,7 @@ Symptom first — that's what you'll actually observe.
 | An element you targeted is nowhere on screen | Name doesn't imply location — `#apistatus` is **not** in the header | Grep the markup for the id before targeting it; the header's visible text is `#meta` |
 | Transient UI captured as blank | It auto-hides on a timer that expired during the wait | Freeze it: `await pg.evaluate("()=>clearTimeout(_costTimer)")` before the shot |
 | Canvas screenshot empty or wrong element | The preview canvas is `#view` | — |
+| Canvas is black, instruments pane says "No scene loaded" | The app opens with **no scene** (since 0.94) | Send `{type:"scene_load", name:"rose"}` (any library scene) before Start, or launch with `--scene "<keyword>"` |
 | Canvas is black even though a scene is loaded | The engine starts **paused** and publishes empty snapshots until Start | Click `#master-toggle`, or send `{type:"set_active", value:true}` |
 | Two screenshots of a "frozen" scene differ | A route from `mic_level` (coffee, honeycomb) — the mic is live even with `--no-audio` | Compare against itself first; pick a scene without mic routes |
 | State read after a `sleep` is stale | The websocket broadcasts ~20Hz, so a 6s sleep leaves ~120 buffered messages and the *first* one you read is 6s old | Drain to the newest before asserting |

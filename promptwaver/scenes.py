@@ -538,9 +538,16 @@ class SceneManager:
     def names(self) -> list[str]:
         return [e["name"] for e in self.library()]
 
+    @staticmethod
+    def key_for(name: str) -> str:
+        """The library key a scene called `name` is saved under — its filename
+        stem, stripped to alnum/space/_/- so a name can't escape the
+        directory. "a fox's den" is saved, listed and loaded as "a foxs den",
+        so anything matched against the library list must use this."""
+        return "".join(c for c in name if c.isalnum() or c in " _-").strip() or "untitled"
+
     def path_for(self, name: str) -> str:
-        safe = "".join(c for c in name if c.isalnum() or c in " _-").strip()
-        return os.path.join(self.library_dir, f"{safe or 'untitled'}.json")
+        return os.path.join(self.library_dir, f"{self.key_for(name)}.json")
 
     def save(self, name: str, spec: SceneSpec):
         spec.name = name

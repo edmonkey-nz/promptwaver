@@ -496,6 +496,10 @@
   .voice .mutebtn svg{width:15px;height:15px;vertical-align:middle}
   .voice .mutebtn.on{border-color:var(--amber);color:var(--amber)}
   .voice .vbtns{display:flex;gap:6px;align-items:center;flex-shrink:0}
+  /* Instruments pane with no scene loaded. Deliberately NOT .val: hide-values
+     collapses that class to zero width. */
+  .voices .noscene{flex:1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
+  .voices .noscene b{color:var(--ink);font-weight:500}
   /* Map: what PLAYS this voice — a computer key, a MIDI pad (CC) or a MIDI
      keyboard channel. Shows the binding once there is one. */
   .voice .mapbtn{padding:3px 8px;font-size:11px;border-radius:6px;min-width:34px}
@@ -572,6 +576,10 @@
   .statusdot{transition:background .25s ease-out,box-shadow .25s ease-out}
   .statusdot.midi-act{transition:none}
   .statushead{display:flex;align-items:center;gap:8px}
+  .statusdot.warn{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .statusdot.unknown{background:var(--dim);box-shadow:none}
+  .gpuname{color:var(--ink);font-family:var(--mono);font-size:11px;max-width:32ch;
+           overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   .vmeters-row{display:flex;gap:8px;align-items:center;padding:0 0 12px 0;flex-direction:column;width:100%;border-bottom:1px solid var(--line);margin-bottom:12px}
   .vmeters{display:flex;gap:0;align-items:stretch;width:100%;flex-direction:column}
@@ -627,6 +635,10 @@
          parameter move. -->
     <span class="statusdot" id="midi-dot" title="MIDI input"></span>
     <span>MIDI in</span>
+    <!-- Which GPU draws the output: green discrete/Apple, amber integrated
+         (the hybrid-laptop trap: the browser on the iGPU), red software. -->
+    <span class="statusdot" id="gpu-dot" title="GPU"></span>
+    <span>GPU:</span><span class="gpuname" id="gpu-name">…</span>
   </div>
   <span class="meta" id="meta">connecting…</span>
   <span style="flex:1"></span>
@@ -1914,6 +1926,7 @@ function renderPerf(s){
   const fpsEl = $("r-fps");
   const status = $("perf-status");
   paintOutputs(s.outputs || []);
+  paintGpu(s.outputs || []);
   // The FPS readout comes from LoopStats.tick(), which runs every frame
   // regardless of the diagnostics toggle (see perf.py) — only the fuller
   // per-stage breakdown below needs the heavier instrumentation on.
@@ -1964,6 +1977,90 @@ function renderPerf(s){
 // costs it, its interpolation delay, its canvas size, and the GPU the browser
 // actually gave it — on a hybrid laptop that is often the integrated one,
 // which is the first thing to rule out when an output reads slow.
+// --- GPU in the header ------------------------------------------------------
+// The renderer string WebGL reports is ANGLE's, e.g. "ANGLE (NVIDIA
+// Corporation, NVIDIA GeForce GTX 1650/PCIe/SSE2, OpenGL 4.5.0 ...)". These
+// pull the readable model out of it and say what kind of GPU it is.
+function gpuPretty(raw){
+  let s = String(raw || "").trim();
+  if (!s) return "";
+  const m = s.match(/^ANGLE \((.*)\)$/);
+  if (m) {
+    // ANGLE (vendor, renderer, backend): the renderer is the middle part,
+    // which may itself contain commas inside parentheses.
+    const parts = []; let depth = 0, cur = "";
+    for (const ch of m[1]) {
+      if (ch === "(") depth++;
+      if (ch === ")") depth--;
+      if (ch === "," && depth === 0) { parts.push(cur.trim()); cur = ""; } else cur += ch;
+    }
+    parts.push(cur.trim());
+    s = parts.length >= 2 ? parts[1] : parts[0];
+  }
+  s = s.replace(/^ANGLE Metal Renderer:\s*/i, "")
+       .replace(/^Mesa\s+/i, "")
+       .replace(/\/PCIe.*$/i, "")
+       .replace(/\s*\(0x[0-9a-f]+\)/ig, "")
+       .replace(/\s+Direct3D.*$/i, "")
+       .replace(/\s*\((?:[^()]*\b(?:LLVM|radeonsi|ACO|DRM)\b[^()]*|[A-Z]{2,4}\s+GT\d)\)/g, "")
+       .replace(/\((?:R|TM)\)/gi, "")
+       .replace(/\s+(?:Corporation|Inc\.?)\b/gi, "")
+       .replace(/\s{2,}/g, " ").trim();
+  return s;
+}
+function gpuClass(raw){
+  const s = String(raw || "");
+  if (!s) return "unknown";
+  if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(s)) return "software";
+  if (/nvidia|geforce|quadro|rtx|radeon\s+(rx|pro)|\barc\s+a\d|apple\s+m\d/i.test(s)) return "discrete";
+  return "integrated";
+}
+
+// This page's own GPU, from a throwaway WebGL context released straight
+// away. Every window of one browser shares its GPU process, so it is what
+// an output window opened from here will use, until one reports.
+let _ownGpu = null;
+function ownGpu(){
+  if (_ownGpu !== null) return _ownGpu;
+  try {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    const ext = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    _ownGpu = gl ? (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : "";
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch (e) { _ownGpu = ""; }
+  return _ownGpu;
+}
+let _gpuSig = null;
+function paintGpu(outputs){
+  // What the OUTPUTS report wins: they are what drives the projector, and
+  // one on another machine's browser can be a different GPU entirely.
+  const outs = (outputs || []).filter(o => o.gpu && o.role !== "preview");
+  const raws = outs.length ? [...new Set(outs.map(o => o.gpu))] : [ownGpu()];
+  const sig = raws.join("|") + "|" + outs.map(o => o.role).join(",");
+  if (sig === _gpuSig) return;
+  _gpuSig = sig;
+  const main = raws[0] || "";
+  const cls = gpuClass(main);
+  const label = cls === "software" ? "software rendering" : (gpuPretty(main) || "unknown");
+  $("gpu-name").textContent = label + (raws.length > 1 ? ` +${raws.length - 1}` : "");
+  const dot = $("gpu-dot");
+  dot.classList.toggle("on", cls === "discrete");
+  dot.classList.toggle("warn", cls === "integrated");
+  dot.classList.toggle("unknown", cls === "unknown");
+  const why = {
+    discrete: "dedicated GPU",
+    integrated: "integrated GPU. On a laptop with two GPUs, run the browser on the dedicated one "
+      + "(NVIDIA Control Panel / Windows Graphics settings / Linux PRIME offload) for full-rate 4K.",
+    software: "NO hardware acceleration: the browser is drawing on the CPU. "
+      + "Check chrome://gpu and that hardware acceleration is on.",
+    unknown: "the browser did not say which GPU it is using",
+  }[cls];
+  const who = outs.length
+    ? outs.map(o => `${o.role}: ${gpuPretty(o.gpu)}`).join("\n")
+    : "this window (no output window open yet)";
+  $("gpu-name").title = dot.title = `${label}: ${why}\n\n${who}\n\n${main}`;
+}
+
 function paintOutputs(list){
   const el = $("perf-outputs");
   if (!el) return;
@@ -2521,6 +2618,11 @@ let _audioRegenTarget = null;
 $("apply-audio-regen").onclick = () => {
   const scene = $("audiotarget-regen").value;
   const audio = $("audiokw-regen").value.trim();
+  if (!scene && !applyingAudio) {
+    $("audio-regen-hint").textContent = "Choose which scene's audio to regenerate.";
+    $("audio-regen-hint").style.display = "block";
+    return;
+  }
   if (!scene || !audio || applyingAudio || generating) return;
   applyingAudio = true;
   _audioRegenTarget = scene;
@@ -3417,7 +3519,16 @@ function renderSoundscape(s){
     const el = $(id);
     if (el) el.style.opacity = dim;
   }
-  if (!sc) { $("synthglobals").innerHTML=""; $("voices").innerHTML=""; return; }
+  if (!sc) {
+    // No scene loaded (how the app now opens). Reset the signature too, or
+    // reloading the scene that was showing before would match it and leave
+    // this message in place of its instruments.
+    _scapeSig = "";
+    $("synthglobals").innerHTML = "";
+    $("voices").innerHTML = `<div class="noscene">No scene loaded. Choose one from the
+      <b>Scene library</b>, or <b>Generate scene…</b> to make a new one.</div>`;
+    return;
+  }
   // The running channel count is part of the signature: the depth controls
   // are built only when surround is actually open, so switching the speakers
   // setting has to rebuild this panel. Without it the knobs wouldn't show up
@@ -4666,6 +4777,15 @@ $("audio-regen-open").onclick = () => {
   const cur = _lastState?.library_name;
   const sel = $("audiotarget-regen");
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  else {
+    // Nothing from the library is loaded (no scene yet, or an unsaved one).
+    // Ask, rather than defaulting to whatever sorts first — that silently
+    // targeted the alphabetically-first scene, and regenerating overwrites
+    // that scene's audio.
+    const o = document.createElement("option");
+    o.value = ""; o.textContent = "— choose a scene —"; o.disabled = true;
+    sel.prepend(o); sel.value = "";
+  }
   // Start from an empty prompt rather than the last one: this modal is
   // reopened to try something different, not to repeat the previous run.
   $("audiokw-regen").value = "";

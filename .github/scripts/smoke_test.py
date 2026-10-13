@@ -11,8 +11,9 @@ because CI never installed it — neither was visible from "the build passed".
 Checks, against the running binary:
   - the web UI, the GPU renderer's scripts and the About text are served
   - the engine reports its version, and MIDI is importable (mido + rtmidi)
-  - once started, a scene's packed geometry arrives over the websocket (the
-    GPU output path) followed by per-tick frames
+  - the starter scene library is there, and once one of its scenes is loaded
+    and started, its packed geometry arrives over the websocket (the GPU
+    output path) followed by per-tick frames
 
   - sounddevice and its PortAudio library load (the engine reports an
     `audio_error` if not). Runners have no sound device, so the stream itself
@@ -73,6 +74,13 @@ async def ws_checks() -> dict:
                     if d.get("type") == "state":
                         out["state"] = d["state"]
             await ws.send_str(json.dumps({"type": "set_audio_disabled", "value": True, "fade": 0}))
+            # The app opens with NO scene (0.94), so load one from the seeded
+            # library first — that also checks the starter library shipped.
+            lib = out["state"].get("library") or []
+            out["library"] = len(lib)
+            if lib:
+                await ws.send_str(json.dumps({"type": "scene_load", "name": lib[0]}))
+                await asyncio.sleep(2.0)
             await ws.send_str(json.dumps({"type": "set_active", "value": True}))
             frames = 0
             end = time.monotonic() + 30
@@ -148,6 +156,8 @@ def main() -> int:
             if not midi.get("available"):
                 fails.append("MIDI not available — mido / python-rtmidi missing from the bundle")
             out["ports"] = midi.get("ports")
+            if not r.get("library"):
+                fails.append("the scene library is empty — the starter scenes were not bundled")
             if not r.get("geometry"):
                 fails.append("no scene geometry arrived (GPU output path)")
             if r.get("frames", 0) < 10:
