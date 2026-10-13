@@ -323,22 +323,31 @@ rule below, and what each costs, is in `docs/INSTRUMENTS.md` §8.
   path to recurse. 0.14ms a voice.
 - **`fm`** is a struck two-operator voice: e-piano, glass bells, mallets.
 
-Still open, measured or reasoned at the time:
+Then in 0.93:
 
-- **Granular** texture voice — 24 grains measured 1.28ms a block, so cost is
-  not the obstacle; designing a source material that isn't just noise is.
+- **`granular`**, a grain-cloud voice. The "what does it granulate?" problem
+  this list used to raise was answered twice: `source: "scene"` granulates
+  the OTHER voices' last few seconds (pitched up an octave by default, the
+  shimmer halo), and `source: "tone"` makes grains of its own waveform at its
+  scale's notes. 1.7ms a block at its worst case.
+- **`index` and `density` LFO destinations**, for fm brightness and cloud
+  thickness.
+- **The audio-only Regenerate call got its own system prompt.** The note that
+  stood here claimed it never saw `_SOUNDSCAPE_GUIDE`. That was wrong: it sent
+  the whole 3D scene prompt, guide included. The real problem was the
+  opposite. ~1.8k of its ~5.2k tokens were geometry rules that contradict an
+  audio-only request. It now sends `_SYSTEM_AUDIO` (a framing line plus the
+  guide).
+
+Still open:
+
 - **Feedback effects stay out**: true resonant filters, a phaser, a flanger
   with feedback and Karplus-Strong strings are all per-sample recursions.
   `scipy.signal.lfilter` would make them cheap, but scipy is not a
   dependency, and adding it grows every release binary.
-- **An `index` LFO destination for `fm`.** Notes snapshot their FM fields at
-  the strike, so an LFO would shape each new note's brightness, a natural fit
-  for the stepped destinations.
-- **The audio-only Regenerate prompt** (`generate_audio`) sends only the
-  soundscape schema, not `_SOUNDSCAPE_GUIDE`, so it learns that reverb and
-  chorus exist from the example but has never been told about `fm`, `harp`
-  or bell characters. Adding the guide costs ~3.3k input tokens a call
-  (13.4k characters).
+- **Playing a granular voice.** It has no map button, because a cloud has no
+  note. A natural design: while a key is held, a `tone` cloud draws its grain
+  pitches from the held notes instead of its scale.
 
 ### The general rule for anything added here
 

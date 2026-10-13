@@ -134,7 +134,7 @@ did not match itself and a regression check reported a false difference.
 Every voice is one of these. Pick deliberately — this is the decision the rest
 of the work follows from.
 
-**Continuous** (`pad`, `sub`, `osc`, `noise`) — the voice always sounds; there
+**Continuous** (`pad`, `sub`, `osc`, `noise`, `granular`) — the voice always sounds; there
 are no note events. Phase comes from the absolute sample clock, so tones stay
 continuous across block boundaries with no stored per-oscillator phase. These
 belong in `ENVELOPED_TYPES` so muting fades via ADSR instead of cutting.
@@ -486,4 +486,41 @@ across the amount range.
 Measured together on `hot lava` (the heaviest library scene): reverb at 6s,
 chorus on every voice and an added `fm` voice took the block from 2.9ms to
 6.2ms, with zero starved callbacks.
+
+### `granular` — a voice that is half an effect (0.93)
+
+A grain cloud: short Hann-windowed grains, Poisson onsets at `density` per
+second, every live grain one row of a `(G, frames)` matrix (the batched
+shape of §2), capped at `MAX_GRAINS = 64`. Worst case (80/s of 0.5s grains,
+57 alive) measured 1.7ms a block. Two sources:
+
+- **`scene`** reads the OTHER voices' recent output from a 6s history ring.
+  Each voice's finished mono (post level, distortion and chorus, pre-pan)
+  is summed into a bus after it renders, and the bus is written to the ring
+  after the voice loop. Two rules keep this out of feedback territory, and
+  both are load-bearing:
+  - **Granular voices never feed the bus.** A cloud with nothing else
+    playing is exactly silent, and two clouds can't build on each other.
+  - **A grain never reads the block being rendered.** That block isn't in
+    the ring yet. The read starts at least `(ratio - 1) * length + frames`
+    back, because an upward-pitched grain's read head gains on the present
+    as it plays. Measured at +24 semitones with 0.5s grains: the cloud's
+    first sample came 4,398 samples after its source started, never before.
+  Reads before the ring's continuous history began (or past its length)
+  return silence, not stale audio from before a gap.
+- **`tone`** grains are the voice's own waveform at random degrees of its
+  `scale` over two octaves. 97% of the 200-900Hz energy measured within
+  ±12Hz of a scale degree, which is a 0.2s Hann grain's own main-lobe width.
+
+**Each voice's grains come from its own generator, seeded from its NAME.**
+So a scene's cloud is the same every time it plays, and adding a cloud never
+shifts another voice's random stream. Loudness divides by
+`sqrt(density * grain)` (the average overlap), then a calibration gain. At
+level 0.4 a scene cloud measures 0.38-0.40 of its (saw) source, flat across
+density 16-80 and grain 0.15-0.5s; only a very sparse cloud of a pure sine
+reads higher (0.47), from grain-on-grain interference.
+
+A granular voice is in `ENVELOPED_TYPES` (mute fades it, like `noise`) but
+plays no notes: `play` ignores it and `trigger_pitches` is empty, so the
+panel gives it no map button.
 

@@ -227,6 +227,26 @@ Voice types:
                    marimba ratio 4, index 1.5, index_decay 0.08, decay 0.8.
           Reach for it when the brief wants something electric, glassy,
           crystalline or retro-digital, where "bell" would sound too church-like.
+  "granular" a continuous CLOUD of tiny overlapping grains (params: source,
+          density, grain, jitter, pitch, scatter).
+            "source":"scene" (the default) granulates the OTHER voices' last
+                    few seconds, so the cloud is made of the scene's own
+                    instruments and is always in key with them. "pitch" (in
+                    semitones, -24..24) transposes it: 12 is the classic
+                    octave-up SHIMMER halo, 0 smears the scene in place, -12 a
+                    dark undertow. "scatter" 0.1-4 seconds is how far back a
+                    grain may reach; long scatter turns a melody into a wash.
+            "source":"tone" makes grains of its own "waveform" at random notes
+                    of its "note" + "scale" over two octaves instead: glitter,
+                    rain on glass, starlight. "tone" sets its brightness.
+            "density" 1-80 grains per second: 4-10 sparse glints, 15-30 a
+                    cloud, 50+ a continuous haze. "grain" 0.02-0.5 seconds:
+                    short is glittery, long is smooth. "jitter" 0-1 detunes
+                    each grain at random; 0.1-0.3 softens it.
+          A "scene" cloud needs other voices to granulate, and a granular
+          voice plays no notes of its own: list it in the AIR tier at level
+          0.2-0.4. Reach for it on shimmering, ethereal, dreamy, celestial,
+          underwater, memory or echo briefs. At most one per scene.
   "noise" wind/air texture (params: tone)
 
 "tone" (0-1) is the brightness of every voice type but "fm" (whose brightness
@@ -259,7 +279,7 @@ SPACE AND WIDTH — two effects nearly every ambient scene should use:
     not all of them — a chorused bass loses its weight.
 
 Any voice can carry an LFO that modulates ONE of its own parameters:
-"lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate|decay|gap|play",
+"lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate|decay|gap|play|index|density",
         "shape":"sine|triangle|saw|square|random", "rate":<Hz>, "depth":0-1}
   dest "level"  tremolo — pulsing, breathing, heartbeat
        "pan"    auto-pan — movement across the stereo field
@@ -271,6 +291,8 @@ Any voice can carry an LFO that modulates ONE of its own parameters:
        "decay"  how long each note rings, swelling and dying back
        "gap"    the silence between strikes opening and closing
        "play"   the length of each phrase growing and shrinking
+       "index"  "fm" only: each new note brighter or softer than the last
+       "density" "granular" only: the cloud thinning to glints and back
      The last three only do anything on "pluck", "bell", "fm" and "harp" —
      the voices that schedule notes. "gap" and "play" additionally need the voice
      to be using them (see the "gap"/"play" params above); an LFO on "gap" is
@@ -303,7 +325,7 @@ VOICE ORDER MATTERS — always list "voices" in this fixed priority order:
   2. body: mid-register pads and harmonic texture
   3. lead: whatever carries the melody or the most movement
   4. detail: plucks, bells, fm, harps, sequences, arps
-  5. air: noise/atmosphere beds
+  5. air: noise/atmosphere beds, granular clouds
 Omit any tier the scene doesn't need, but never reorder the ones you do use.
 Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
 names change with every scene, the positions must not — so a stable order is
@@ -599,6 +621,19 @@ def interpretation_directive(value, kind: str = "3d") -> str:
                 "silhouettes and correct proportions over abstraction.")
     return ""
 
+
+# The audio-only "Regenerate audio" call. It used to send the whole 3D scene
+# prompt (_SYSTEM, ~5.2k tokens), whose head and tail are geometry rules — "the
+# generator MUST be world", "build a full ENVIRONMENT" — that contradict the
+# request's "output ONLY a soundscape" (generate_audio tolerates a full scene
+# coming back for exactly that reason). This is the part it needs: a framing
+# line and the shared guide. ~1.8k fewer input tokens a call.
+_SYSTEM_AUDIO = """You compose the SOUNDSCAPE for a scene in PromptWaver, a realtime
+audiovisual instrument that draws glowing vector line-art and plays an ambient
+synth alongside it, the two moving together. The visuals already exist; you
+write ONLY the audio. Answer with one JSON object and nothing else — no prose,
+no markdown fences. Its exact shape is given in the request.
+""" + _SOUNDSCAPE_GUIDE
 
 _SOUNDSCAPE_SCHEMA = """{
   "soundscape": {
@@ -1433,17 +1468,21 @@ class SceneDirector:
             tier = EFFORT.get(self.effort, EFFORT["med"])
             character_hint = _character_hints(warmth, energy)
             character_line = f"\n\n{character_hint}" if character_hint else ""
+            # No effort `hint` here: those describe how many OBJECTS to build,
+            # which means nothing to an audio-only call. Effort still sets the
+            # output budget below.
             content = (f"The visual scene is: \"{context}\". Compose ONLY an ambient "
                       f"soundscape for it, matching this brief: \"{audio_prompt}\". "
                       f"Output ONLY a JSON object with this exact shape, no prose, no "
-                      f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}\n\n{tier['hint']}" + character_line)
+                      f"markdown fences:\n{_SOUNDSCAPE_SCHEMA}" + character_line)
             budget_chars = min(tier["max_tokens"], 3000) * 4
             # Retry once on a malformed response before falling back to the
             # generic default soundscape — same mitigation and reasoning as
             # _from_claude's identical retry loop.
             last_parse_error = None
             for attempt in range(2):
-                text, stop_reason = self._stream_or_call(content, budget_chars)
+                text, stop_reason = self._stream_or_call(content, budget_chars,
+                                                         system=_SYSTEM_AUDIO)
                 attempt_cost = estimate_cost(self.model, self._last_usage)
                 self.last_cost = _sum_cost(self.last_cost, attempt_cost) if attempt else attempt_cost
                 if stop_reason == "cancelled":
@@ -1697,8 +1736,8 @@ class SceneDirector:
         the SDK supports it; otherwise fall back to a plain blocking call with no
         progress signal. Returns (text, stop_reason).
 
-        `system` defaults to the 3D prompt, which is what the audio-only call
-        has always used — its soundscape guidance is the part that call needs.
+        `system` defaults to the 3D prompt. The audio-only call passes
+        `_SYSTEM_AUDIO` instead (see there for why).
         """
         system = system or _SYSTEM
         # Usage rides back on an attribute rather than a third return value:

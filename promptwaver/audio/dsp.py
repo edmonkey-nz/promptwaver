@@ -44,13 +44,14 @@ from __future__ import annotations
 
 import math
 import random
+import zlib
 
 import numpy as np
 
 from ..modulation import Envelope
 
 SR = 44100
-VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell", "harp", "fm")
+VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell", "harp", "fm", "granular")
 WAVEFORMS = ("sine", "saw", "square", "triangle")
 
 # Fixed inharmonic partial bank for `bell` — ratios are NOT integer multiples
@@ -226,6 +227,34 @@ FM_DEFAULTS = {"ratio": 1.0, "index": 2.0, "index_decay": 0.4}
 #: Same flat trim as pluck/bell: at index 0 an fm note is exactly a sine
 #: pluck, and only a handful of notes overlap at struck densities.
 FM_OUTPUT_GAIN = 0.6
+
+# `granular`: a continuous cloud of short windowed grains. Two sources:
+#   "scene" — grains of the OTHER voices' recent output, read back from a
+#             history ring, pitch-shifted by `pitch` semitones (12, an octave
+#             up, is the classic "shimmer"). The cloud is made of the scene's
+#             own instruments, so it is always in key with them.
+#   "tone"  — synthetic grains: the voice's own waveform at random degrees of
+#             its `scale` over two octaves. Glitter, rain on glass.
+# `density` is grains per second, `grain` their length, `jitter` a random
+# per-grain detune (up to +/-50 cents) and `scatter` how far back in the
+# scene's history a grain may reach. Output is divided by sqrt(average
+# overlap) so loudness holds as density and grain length move.
+GRANULAR_SOURCES = ("scene", "tone")
+GRANULAR_DEFAULTS = {"source": "scene", "density": 16.0, "grain": 0.15,
+                     "jitter": 0.2, "pitch": 12.0, "scatter": 1.5}
+GRANULAR_RANGES = {"density": (1.0, 80.0), "grain": (0.02, 0.5), "jitter": (0.0, 1.0),
+                   "pitch": (-24.0, 24.0), "scatter": (0.1, 4.0)}
+#: Seconds of scene history kept: the longest reach (`scatter` 4s) plus the
+#: read-ahead an upward-pitched grain needs ((ratio - 1) * grain, 1.5s at
+#: +24 semitones and 0.5s grains), plus margin.
+GRANULAR_HISTORY_S = 6.0
+#: Calibrated so `level` reads as a fraction of the source: at level 0.4 a
+#: scene cloud measured 0.39-0.43 of the voices it granulates once grains
+#: overlap (sparser clouds are quieter, as they should be), and a tone cloud
+#: 0.87-1.01 of a pluck at the same level. Without them the Hann window and
+#: grain amplitudes leave a cloud at ~half that.
+GRANULAR_SCENE_GAIN = 2.0
+GRANULAR_TONE_GAIN = 1.25
 
 #: Ceiling on a per-voice LFO's rate, in Hz. Shared by the DSP clamp, the MIDI
 #: range table and the UI knob so all three agree on what the control means —
@@ -787,6 +816,11 @@ class Soundscape:
         # Per-voice chorus state — delay-line history and LFO phase. See
         # `_chorus_voice`; absent for every voice that has no chorus.
         self._chorus: dict[str, dict] = {}
+        # Per-granular-voice grain state, and the scene history ring the
+        # "scene" source reads from (allocated only when such a voice exists).
+        self._gran: dict[str, dict] = {}
+        self._gran_hist = None
+        self._gran_valid_from = None     # first absolute sample continuously written
         # Pitch-drift walk position per voice, and its generator. Seeded rather
         # than global so two Soundscapes rendering side by side (the mixer
         # crossfades two) don't share a stream and correlate their wobble.
@@ -876,6 +910,7 @@ class Soundscape:
         self._active_notes.clear()
         self._held.clear()
         self._chorus.clear()
+        self._gran.clear()
         self._voice_env = {}
         self._voice_env_on = {}
         for v in self.spec["voices"]:
@@ -948,7 +983,7 @@ class Soundscape:
     #: moment that scene was saved.
     LFO_DESTS_SMOOTH = ("level", "pan", "depth", "distortion")
     LFO_DESTS_STEPPED = ("tone", "detune", "sub", "waveform", "rate",
-                         "decay", "gap", "play")
+                         "decay", "gap", "play", "index", "density")
     LFO_DESTS = LFO_DESTS_SMOOTH + LFO_DESTS_STEPPED
     LFO_SHAPES = ("sine", "triangle", "saw", "square", "random")
 
@@ -1074,6 +1109,25 @@ class Soundscape:
                 base = 0.0
             ev[dest] = float(min(cap, max(0.0,
                 base + depth * LFO_TIME_RANGE_S * mid)))
+        elif dest == "index":
+            # fm brightness. ADDITIVE, like gap/play: 0 is a legitimate
+            # authored index (a pure sine) and a multiplicative swing would be
+            # pinned there. +/-4 at full depth covers soft to clangy. Each note
+            # takes its index at the strike, so this shapes successive notes.
+            try:
+                base = float(v.get("index", FM_DEFAULTS["index"]))
+            except (TypeError, ValueError):
+                base = FM_DEFAULTS["index"]
+            ev["index"] = float(min(FM_INDEX_MAX, max(0.0, base + depth * 4.0 * mid)))
+        elif dest == "density":
+            # granular grains per second. Multiplicative, like rate: the cloud
+            # thins and thickens around its authored density.
+            lo, hi = GRANULAR_RANGES["density"]
+            try:
+                base = float(v.get("density", GRANULAR_DEFAULTS["density"]))
+            except (TypeError, ValueError):
+                base = GRANULAR_DEFAULTS["density"]
+            ev["density"] = float(min(hi, max(lo, base * (1.0 + depth * 0.75 * mid))))
         elif dest == "waveform":
             # The "osc type" destination: step through the waveform list.
             # Deliberately quantised — the point is switching timbre, and a
@@ -1150,6 +1204,14 @@ class Soundscape:
         rvb = self.spec.get("reverb") or {}
         rvb_mix = min(1.0, max(0.0, float(rvb.get("mix", 0.0) or 0.0)))
         send_bus = np.zeros(frames, np.float64) if rvb_mix > 0 else None
+        # Source bus for "scene" granular voices: every OTHER voice's finished
+        # mono, written to the history ring after the loop. Grains only ever
+        # read PAST blocks of it and granular voices never feed it, so there
+        # is no feedback path. Not allocated unless such a voice exists.
+        gran_bus = (np.zeros(frames, np.float64)
+                    if any(v.get("type") == "granular"
+                           and v.get("source", "scene") == "scene"
+                           for v in self.spec["voices"]) else None)
 
         for v in self.spec["voices"]:
             vt = v.get("type", "pad")
@@ -1250,6 +1312,8 @@ class Soundscape:
                 mono = self._render_harp(rv, n0, frames)
             elif vt == "fm":
                 mono = self._render_fm(rv, n0, frames)
+            elif vt == "granular":
+                mono = self._render_granular(rv, n0, frames)
             elif vt == "noise":
                 mono = self._render_noise(rv, frames)
             else:
@@ -1319,6 +1383,8 @@ class Soundscape:
                 snd = min(1.0, max(0.0, float(v.get("reverb", 1.0))))
                 if snd > 0.0:
                     send_bus += mono * snd
+            if gran_bus is not None and vt != "granular":
+                gran_bus += mono
 
             pan = float(v.get("pan", 0.0))
             lfo = lfos.get("pan")
@@ -1345,6 +1411,8 @@ class Soundscape:
         # Before the EQ and delay, so the return is shaped and echoed with
         # everything else: it is the room the instruments are in, not an
         # effect on the end of the chain.
+        self._write_gran_history(gran_bus, n0, frames)
+
         if send_bus is not None:
             mix += rvb_mix * self._reverb.process(
                 send_bus, rvb.get("size", REVERB_DEFAULT["size"]),
@@ -1449,7 +1517,7 @@ class Soundscape:
     #: happen) is an instant hard cut, and on a wind/air texture that reads as
     #: a click. `pluck` stays out — each of its notes already has its own
     #: decay envelope, and gating the scheduler would fight that.
-    ENVELOPED_TYPES = ("pad", "sub", "osc", "noise")
+    ENVELOPED_TYPES = ("pad", "sub", "osc", "noise", "granular")
 
     # Band edges in Hz. Low is the drone/sub weight, mid the body of the pads
     # and plucks, high the air and bell transients.
@@ -2358,7 +2426,7 @@ class Soundscape:
         the voice as authored — its `chord` on pad/osc/sub, its root `note`
         on the struck voices, one gated burst on noise."""
         v = self._voice(name)
-        if v is None:
+        if v is None or v.get("type") == "granular":
             return []
         root = int(v.get("note", 60))
         if v.get("type") in ("pad", "osc", "sub"):
@@ -2405,8 +2473,8 @@ class Soundscape:
             if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
                 self._active_notes = self._active_notes[-self.MAX_ACTIVE_NOTES:]
             return
-        if vt not in self.ENVELOPED_TYPES:
-            return
+        if vt not in self.ENVELOPED_TYPES or vt == "granular":
+            return            # a cloud has no note to play; see trigger_pitches
         held = self._held.setdefault(name, [])
         if on:
             held.append(dict(pitch=int(pitch), freq=freq, start=start, off=None, amp=amp))
@@ -2583,6 +2651,142 @@ class Soundscape:
         alive = (n0 + frames - 1 - starts) / self.sr <= decays * 6
         self._active_notes = other + [n for n, a in zip(mine, alive) if a]
         return (out * self.ARP_OUTPUT_GAIN).astype(np.float32)
+
+    #: Grains alive at once per voice. 80/s of 0.5s grains is 40 on average,
+    #: so this only clips Poisson bursts; ~1.5ms a block at the cap.
+    MAX_GRAINS = 64
+
+    def _granular_params(self, v):
+        """The voice's granular fields, clamped on read (set_param bypasses
+        _normalise, and `source` is a string from the UI)."""
+        out = {}
+        for k, (lo, hi) in GRANULAR_RANGES.items():
+            try:
+                x = float(v.get(k, GRANULAR_DEFAULTS[k]))
+            except (TypeError, ValueError):
+                x = GRANULAR_DEFAULTS[k]
+            out[k] = min(hi, max(lo, x)) if x == x else GRANULAR_DEFAULTS[k]
+        src = v.get("source", "scene")
+        out["source"] = src if src in GRANULAR_SOURCES else "scene"
+        return out
+
+    def _write_gran_history(self, bus, n0, frames):
+        """Append this block of the scene bus to the history ring. A block
+        that wasn't written (no scene-source voice) breaks continuity, so
+        reads before the next written block return silence instead of
+        whatever was left in the ring from before."""
+        if bus is None:
+            self._gran_valid_from = None
+            return
+        H = int(GRANULAR_HISTORY_S * self.sr)
+        if self._gran_hist is None or len(self._gran_hist) != H:
+            self._gran_hist = np.zeros(H, np.float32)
+            self._gran_valid_from = None
+        if self._gran_valid_from is None:
+            self._gran_valid_from = n0
+        i = (n0 + np.arange(frames)) % H
+        self._gran_hist[i] = bus
+
+    def _render_granular(self, v, n0, frames):
+        """One block of a grain cloud.
+
+        Scheduling: a Poisson count of new onsets per block at `density`,
+        placed uniformly inside it, from a per-voice generator seeded by the
+        voice's NAME — so a scene's cloud is the same every time it plays,
+        and adding a granular voice never shifts any other voice's random
+        stream.
+
+        Rendering: every live grain as one row of a (G, frames) matrix, a
+        Hann window times its source, summed — the batched shape of
+        docs/INSTRUMENTS.md §2. A "scene" grain reads the history ring by
+        linear interpolation at `ratio` samples per sample, starting far
+        enough back that its read head never reaches the block being
+        rendered (which isn't in the ring yet): `(ratio - 1) * length +
+        frames` at least, plus a random reach of up to `scatter`."""
+        name = v["name"]
+        P = self._granular_params(v)
+        st = self._gran.get(name)
+        if st is None:
+            st = {"rng": np.random.default_rng(zlib.crc32(name.encode())),
+                  "start": np.zeros(0, np.int64), "length": np.zeros(0, np.int64),
+                  "freq": np.zeros(0), "src": np.zeros(0), "ratio": np.zeros(0),
+                  "amp": np.zeros(0), "kind": P["source"]}
+            self._gran[name] = st
+        if st["kind"] != P["source"]:
+            # Switched source live: the grains in flight belong to the other
+            # one (a "tone" grain has no read position). Let them go.
+            for k in ("start", "length", "freq", "src", "ratio", "amp"):
+                st[k] = st[k][:0]
+            st["kind"] = P["source"]
+        rng = st["rng"]
+        sr = self.sr
+
+        k = int(rng.poisson(P["density"] * frames / sr))
+        if k:
+            start = n0 + np.sort(rng.integers(0, frames, k))
+            length = np.maximum(16, (P["grain"] * sr *
+                                     (1.0 + 0.25 * rng.uniform(-1, 1, k))).astype(np.int64))
+            cents = P["jitter"] * 50.0 * rng.uniform(-1, 1, k)
+            amp = rng.uniform(0.6, 1.0, k)
+            if P["source"] == "tone":
+                scale = [int(x) for x in (v.get("scale") or [0, 3, 7, 10])] or [0]
+                steps = rng.integers(0, 2 * len(scale), k)
+                semis = np.array([scale[s_ % len(scale)] + 12 * (s_ // len(scale))
+                                  for s_ in steps], dtype=np.float64)
+                freq = np.array([midi_to_hz(float(v.get("note", 72)))]) * \
+                    2.0 ** ((semis * 100.0 + cents) / 1200.0)
+                src = np.zeros(k)
+                ratio = np.ones(k)
+            else:
+                ratio = 2.0 ** ((P["pitch"] * 100.0 + cents) / 1200.0)
+                back = (np.maximum(0.0, ratio - 1.0) * length + frames + 2
+                        + rng.uniform(0.0, P["scatter"] * sr, k))
+                src = start - back
+                freq = np.zeros(k)
+            for key, val in (("start", start), ("length", length), ("freq", freq),
+                             ("src", src), ("ratio", ratio), ("amp", amp)):
+                st[key] = np.concatenate([st[key], val])
+            if len(st["start"]) > self.MAX_GRAINS:
+                for key in ("start", "length", "freq", "src", "ratio", "amp"):
+                    st[key] = st[key][-self.MAX_GRAINS:]
+
+        out = np.zeros(frames)
+        if len(st["start"]):
+            idx = np.arange(n0, n0 + frames)
+            age = idx[None, :] - st["start"][:, None]                  # (G, frames)
+            x = age / st["length"][:, None]
+            live = (x >= 0.0) & (x < 1.0)
+            win = np.where(live, 0.5 - 0.5 * np.cos(2.0 * np.pi * x), 0.0)
+            if P["source"] == "tone":
+                f = st["freq"][:, None]
+                ph = f * (np.maximum(age, 0) / sr)
+                sig = _osc(ph, str(v.get("waveform", "sine")),
+                           float(min(1.0, max(0.0, v.get("tone", 0.5)))),
+                           float(st["freq"].max()), sr)
+                gain = GRANULAR_TONE_GAIN
+            else:
+                hist, vf = self._gran_hist, self._gran_valid_from
+                if hist is None or vf is None:
+                    sig = np.zeros_like(win)
+                else:
+                    pos = st["src"][:, None] + st["ratio"][:, None] * np.maximum(age, 0)
+                    p0 = np.floor(pos).astype(np.int64)
+                    fr = pos - p0
+                    H = len(hist)
+                    sig = hist[p0 % H] * (1.0 - fr) + hist[(p0 + 1) % H] * fr
+                    # Before the history began, or so far back the ring has
+                    # overwritten it: silence, not stale audio.
+                    sig = np.where((p0 >= vf) & (p0 > n0 - H), sig, 0.0)
+                gain = GRANULAR_SCENE_GAIN
+            out = (st["amp"][:, None] * win * sig).sum(axis=0)
+            overlap = max(1.0, P["density"] * P["grain"])
+            out *= gain / math.sqrt(overlap)
+            done = st["start"] + st["length"] <= n0 + frames
+            if done.any():
+                keep = ~done
+                for key in ("start", "length", "freq", "src", "ratio", "amp"):
+                    st[key] = st[key][keep]
+        return out.astype(np.float32)
 
     def _render_noise(self, v, frames):
         tone = float(v.get("tone", 0.5))
@@ -2764,6 +2968,10 @@ def _coerce(field, value):
         # MIDI write lands straight in the spec and then gets SAVED there.
         c = str(value)
         return c if c in BELL_CHARACTERS else "bell"
+    if field == "source":
+        # granular's string field — see `character` above for why here too.
+        src = str(value)
+        return src if src in GRANULAR_SOURCES else "scene"
     if field == "tempo":
         return float(value)
     if field in ("arp", "chord", "scale", "env", "lfo", "lfos", "compress"):
@@ -2916,6 +3124,15 @@ def _normalise(spec: dict) -> dict:
                                       FM_DEFAULTS["index_decay"])
         else:
             for k in FM_DEFAULTS:
+                v.pop(k, None)
+        if v["type"] == "granular":
+            # Written whole, like fm's: they are the instrument.
+            src = str(v.get("source", GRANULAR_DEFAULTS["source"]))
+            v["source"] = src if src in GRANULAR_SOURCES else "scene"
+            for k, (lo, hi) in GRANULAR_RANGES.items():
+                v[k] = _clamp(v.get(k), lo, hi, GRANULAR_DEFAULTS[k])
+        else:
+            for k in GRANULAR_DEFAULTS:
                 v.pop(k, None)
         if v["type"] == "bell":
             ch = str(v.get("character", "bell"))

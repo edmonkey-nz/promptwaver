@@ -376,7 +376,7 @@ A checkbox under **max strokes** (Camera controls) that hides a scene's floor/gr
 
 Every scene carries a **soundscape** — an ambient synth patch generated alongside the visuals. Give the "audio prompt" box a brief ("slow deep drones, distant whale calls") and Claude composes it into the scene's `soundscape`; leave it blank and it composes something that fits the scene.
 
-The synth is **pure numpy + sounddevice** (no C build). Voices: `pad` (sustained drone chord), `osc` (unison multi-oscillator), `sub` (low drone), `pluck` (sparse scale notes), `bell` (struck inharmonic partials, six characters), `harp` (long-ringing plucked string), `fm` (struck two-operator FM) and `noise` (air/wind texture). Global effects: tempo, master, soft distortion (waveshaping), a delay (time/feedback/mix), a convolution reverb (mix/size/damp) and a 3-band EQ; per voice, distortion, chorus and a reverb send. How to add a voice or an effect is `docs/INSTRUMENTS.md`.
+The synth is **pure numpy + sounddevice** (no C build). Voices: `pad` (sustained drone chord), `osc` (unison multi-oscillator), `sub` (low drone), `pluck` (sparse scale notes), `bell` (struck inharmonic partials, six characters), `harp` (long-ringing plucked string), `fm` (struck two-operator FM), `granular` (a grain cloud, of the scene's own voices or of its own tone) and `noise` (air/wind texture). Global effects: tempo, master, soft distortion (waveshaping), a delay (time/feedback/mix), a convolution reverb (mix/size/damp) and a 3-band EQ; per voice, distortion, chorus and a reverb send. How to add a voice or an effect is `docs/INSTRUMENTS.md`.
 
 The **Soundscape mixer** sits beside the preview: master/tempo/distortion, delay, and a 3-band EQ (low/mid/high, ±24dB) up top, then a strip per voice with level, waveform, tone/rate, pan, and mute. A VU meter under the global knobs shows the actual post-master, post-limiter output level, with a clipping LED that lights if a block's peak nears digital full-scale.
 
@@ -422,13 +422,15 @@ A `level` LFO is unipolar and downward-only — the authored level stays the cei
 
 Any `pad` or `osc` voice now has a real ADSR (attack/decay/sustain/release), exposed as four knobs in the mixer under that voice. This replaced a fixed 3-second linear fade-in with no release. Muting a pad/osc voice now fades out gradually over its `release` time; unmuting re-triggers a clean attack.
 
-### Reverb, chorus and FM (0.92)
+### Reverb, chorus, FM and granular (0.92–0.93)
 
 - **Reverb** (`reverb: {mix, size, damp}` on the soundscape) puts every voice in one room: a convolution of the mono sum of each voice's send against a synthesised decaying-noise impulse, `size` 0.3-6s to silence, `damp` darkening the tail as it decays. Each voice sends fully unless its own `reverb` (0-1) is turned down, which is what to do on a bass. Absent means off.
 - **Chorus** (`chorus` 0-1, `chorus_rate` Hz, on any voice) thickens a voice into an ensemble: three copies swept a third of a cycle apart.
 - **`fm`** is a struck voice like `pluck`, whose brightness (`index`) falls away faster than its volume, over `index_decay` seconds; `ratio` picks harmonic (whole numbers: e-piano, woody) or inharmonic (3.5: bell, metal).
 
-All three are optional keys, so scenes that don't use them render and save exactly as before. Costs, and the reasoning that keeps them inside the no-recursion rule, are in `docs/INSTRUMENTS.md` §8.
+- **`granular`** (0.93) is a cloud of short grains. With `source: "scene"` they are the other voices' last few seconds, pitched by `pitch` semitones (12 is the octave-up shimmer). With `source: "tone"` they are its own waveform at its scale's notes. `density` (grains/s), `grain` (length), `jitter` and `scatter` shape it. `index` and `density` are also LFO targets.
+
+All of these are optional keys, so scenes that don't use them render and save exactly as before. Costs, and the reasoning that keeps them inside the no-recursion rule, are in `docs/INSTRUMENTS.md` §8.
 
 ### Oscillators and the arpeggiator
 

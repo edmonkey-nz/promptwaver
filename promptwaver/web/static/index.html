@@ -472,10 +472,17 @@
   /* The name gives way, not the buttons: a flex item will not shrink below
      its content by default, so a long voice name pushed map and mute out of
      the strip and under the next one. */
-  .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+  .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px;
+                min-width:0;overflow:hidden}
+  /* The type label gives way entirely before the name loses a letter: a
+     strip that reads "r… PAD" says less than "root_bl…". Done as a strict
+     order (the name never shrinks, only caps at the header's width) because
+     weighted shrinking still takes a fraction of a pixel off the name, and
+     that alone is enough to trigger its ellipsis. */
   .voice .vname{font-family:var(--mono);font-size:12px;color:var(--ink);
-                min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .voice .vtype{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+                flex-shrink:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .voice .vtype{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+                min-width:0;overflow:hidden;white-space:nowrap}
   /* Live output level per instrument, fed from that voice's `voice.<name>`
      modulation source. Deliberately dimmer than the master VU's flat --cyan:
      one of these sits above every voice in the strip, and at full brightness
@@ -3421,7 +3428,7 @@ function renderSoundscape(s){
   // stale one is worse than none. Same reasoning as lfo.on/lfo.dest, which
   // are already here for the same kind of conditional markup.
   const sig = s.scene + "|" + (surround ? "q" : "s") + "|" + (sc.voices||[]).map(v =>
-    [v.name, v.type, v.waveform || "", v.character || "", (v.lfo||{}).on ? 1 : 0,
+    [v.name, v.type, v.waveform || "", v.character || "", v.source || "", (v.lfo||{}).on ? 1 : 0,
      (v.lfo||{}).dest || "",
      (v.lfos||[]).map(l => (l.on?1:0) + (l.dest||"")).join("/")].join(":")).join(",");
   if (sig === _scapeSig) return;
@@ -3482,7 +3489,10 @@ function renderSoundscape(s){
     pb.oncontextmenu = (e) => { e.preventDefault(); send({type:"play_map_clear", voice:v.name}); };
     paintMapBtn(pb, v.name);
     const btns = document.createElement("div"); btns.className = "vbtns";
-    btns.appendChild(pb); btns.appendChild(mb);
+    // A granular cloud has no note to play (dsp trigger_pitches is empty for
+    // it), so it gets no map button rather than one that does nothing.
+    if (v.type !== "granular") btns.appendChild(pb);
+    btns.appendChild(mb);
     const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center"; hrow.style.gap="6px";
     hrow.appendChild(head); hrow.appendChild(btns);
     el.appendChild(hrow);
@@ -3507,7 +3517,10 @@ function renderSoundscape(s){
     // `v.get("x")` to a renderer, it belongs in one of the rows below — same
     // discipline as docs/INSTRUMENTS.md's registration points.
     const isType = (...t) => t.includes(v.type);
-    if (isType("pad","sub","pluck","osc")){
+    // granular's "tone" source is an oscillator (wave + tone apply); its
+    // "scene" source resamples the other voices (they don't).
+    const granTone = v.type === "granular" && v.source === "tone";
+    if (isType("pad","sub","pluck","osc") || granTone){
       const sel = document.createElement("select");
       ["sine","saw","square","triangle"].forEach(w=>{
         const o=document.createElement("option"); o.value=w; o.textContent=w;
@@ -3518,7 +3531,7 @@ function renderSoundscape(s){
     // `sub` is dispatched to _render_pad, so it takes pad's parameters too.
     // `harp` reads tone as well but builds its own row block further down,
     // where decay has a range of its own.
-    if (isType("pad","sub","osc","pluck","bell","noise")){
+    if (isType("pad","sub","osc","pluck","bell","noise") || granTone){
       const toneKnob = knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")});
       // tone rolls off a waveform's upper harmonics, so on a SINE it does
       // nothing — _wavetable builds one partial for a sine and there is
@@ -3573,6 +3586,28 @@ function renderSoundscape(s){
         if ((v.character||"bell")===c) o.selected=true; cs.appendChild(o); });
       cs.onchange = () => sendAudio(`voice.${v.name}.character`, cs.value);
       el.appendChild(selectRow("character", cs));
+    }
+    if (v.type==="granular"){
+      // dsp._render_granular. `source` is a discrete choice like `character`,
+      // and is in the panel signature so switching it rebuilds the strip.
+      const ss = document.createElement("select");
+      [["scene","the scene"],["tone","its own tone"]].forEach(([val, txt])=>{
+        const o=document.createElement("option"); o.value=val; o.textContent=txt;
+        if ((v.source||"scene")===val) o.selected=true; ss.appendChild(o); });
+      ss.onchange = () => sendAudio(`voice.${v.name}.source`, ss.value);
+      ss.title = "the scene: grains of every other voice's last few seconds, pitch-shifted. its own tone: grains of this voice's waveform at its scale's notes.";
+      el.appendChild(selectRow("grains of", ss));
+      const gk = (label, field, lo, hi, step, def, fmt, title) => {
+        const k = knob(label,`voice.${v.name}.${field}`,lo,hi,step, v[field] ?? def, fmt, {midi: mk(field)});
+        k.title = title; el.appendChild(k);
+      };
+      gk("density","density",1,80,0.5,16, x=>x.toFixed(1)+"/s", "Grains per second. Low is sparse glints; high is a continuous cloud.");
+      gk("grain","grain",0.02,0.5,0.005,0.15, x=>Math.round(x*1000)+"ms", "Length of each grain. Short is granular and glittery; long is smooth and smeared.");
+      gk("jitter","jitter",0,1,0.01,0.2, x=>x.toFixed(2), "Random detune per grain, up to ±50 cents. A little blurs the cloud into a chorus.");
+      if (!granTone){
+        gk("pitch","pitch",-24,24,1,12, x=>(x>0?"+":"")+x.toFixed(0)+" st", "Transposition of the grains, in semitones. +12 (an octave up) is the classic shimmer; 0 smears the scene in place; -12 is a dark undertow.");
+        gk("scatter","scatter",0.1,4,0.05,1.5, x=>x.toFixed(2)+"s", "How far back in the scene's last few seconds a grain may reach. Long scatter turns melody into a wash.");
+      }
     }
     if (v.type==="fm"){
       // Two-operator FM (dsp._render_fm_notes). Each note takes these at its
@@ -3633,7 +3668,8 @@ function renderSoundscape(s){
     // be scaled per instrument; this is the per-instrument half, on the same
     // phase. Put both up and they move as one gesture.
     // Not on fm: the sweep swings `tone`, and fm's brightness is its index.
-    if (!isType("fm"))
+    // Not on a scene-source cloud either, which has no tone of its own.
+    if (!isType("fm") && !(v.type === "granular" && !granTone))
       el.appendChild(knob("sweep",`voice.${v.name}.sweep`,0,1,0.01, v.sweep ?? 0, x=>x.toFixed(2), {midi: mk("sweep")}));
     // Every voice, like distortion: both process the voice's finished signal.
     // The send defaults to FULL — the scene's room applies to every voice
@@ -3756,7 +3792,8 @@ function renderSoundscape(s){
         + "throughout. Every other target is set once per audio block, so it granulates "
         + "near the top of the dial."
         + "<br><br><i>decay</i>, <i>gap</i> and <i>play</i> only do anything on a struck "
-        + "voice (pluck, bell, harp)."
+        + "voice (pluck, bell, harp, fm). <i>index</i> is fm's brightness, and moves each new "
+        + "note; <i>density</i> thins and thickens a granular cloud."
         + (surround ? "" : "<br><br><i>depth</i> needs a quad/5.1 output — see Settings &gt; Audio.")));
       w.appendChild(head);
 
@@ -3778,7 +3815,7 @@ function renderSoundscape(s){
         fields.appendChild(selectRow(label, s));
         return s;
       };
-      mkSel("target", "dest", ["level", "pan", "depth", "distortion", "tone", "detune", "sub", "waveform", "rate", "decay", "gap", "play"]);
+      mkSel("target", "dest", ["level", "pan", "depth", "distortion", "tone", "detune", "sub", "waveform", "rate", "decay", "gap", "play", "index", "density"]);
       mkSel("shape", "shape", ["sine", "triangle", "saw", "square", "random"]);
 
       const mkKnob = (label, key, min, max, step, dflt, fmt) =>
@@ -3801,7 +3838,7 @@ function renderSoundscape(s){
       // capped at MAX_VOICE_LFOS.
       const extras = Array.isArray(v.lfos) ? v.lfos : [];
       const pushList = (list) => sendAudio(`voice.${v.name}.lfos`, list);
-      const DESTS = ["level","pan","depth","distortion","tone","detune","sub","waveform","rate","decay","gap","play"];
+      const DESTS = ["level","pan","depth","distortion","tone","detune","sub","waveform","rate","decay","gap","play","index","density"];
 
       extras.forEach((cfg, i) => {
         const row = document.createElement("div");

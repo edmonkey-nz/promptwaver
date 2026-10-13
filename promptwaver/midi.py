@@ -149,6 +149,12 @@ VOICE_RANGES = {
     "ratio": (0.25, 8.0),
     "index": (0.0, 10.0),
     "index_decay": (0.02, 6.0),
+    # granular only. pitch is semitones; scatter seconds of scene history.
+    "density": (1.0, 80.0),
+    "grain": (0.02, 0.5),
+    "jitter": (0.0, 1.0),
+    "pitch": (-24.0, 24.0),
+    "scatter": (0.1, 4.0),
     "env.attack": (0.01, 15.0),
     "env.decay": (0.01, 8.0),
     "env.sustain": (0.0, 1.0),

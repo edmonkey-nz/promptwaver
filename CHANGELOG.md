@@ -7,6 +7,35 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.93.0]
+
+### A granular voice, two new LFO targets, a leaner audio regenerate
+
+- **`granular` voice**: a cloud of tiny overlapping grains. Two kinds:
+  - **grains of the scene** (the default) are made from the other voices'
+    last few seconds, so the cloud is always in key with them. **pitch**
+    shifts it: +12 is the octave-up shimmer halo, 0 smears the scene in
+    place, −12 is a dark undertow. **scatter** is how far back grains reach.
+  - **grains of its own tone** are its own waveform at random notes of its
+    scale: glitter, rain on glass.
+  - Both have **density** (grains per second), **grain** (length) and
+    **jitter** (random detune). The level knob reads as a share of the scene:
+    at 0.4 the cloud is about 0.4 as loud as what it granulates. A cloud
+    sounds the same every time the scene plays. It plays no notes, so it has
+    no map button.
+- **LFO targets `index` and `density`**: fm brightness swinging from note to
+  note, and a granular cloud thinning to glints and back.
+- **Regenerate audio sends ~1.8k fewer tokens and no contradictory
+  instructions.** It used to send the whole 3D scene prompt, rules about
+  building geometry included, while asking for audio only. It now sends the
+  soundscape guide on its own.
+- Generated scenes can use granular (one at most, in the air tier) and the
+  new LFO targets.
+- When voice strips get narrow, the type label now gives way before the
+  voice name loses a letter.
+
+Scenes without granular voices render bit-identical, as in 0.92.
+
 ## [0.92.0]
 
 ### Reverb, chorus and an FM voice
