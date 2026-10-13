@@ -227,6 +227,20 @@ FM_DEFAULTS = {"ratio": 1.0, "index": 2.0, "index_decay": 0.4}
 #: Same flat trim as pluck/bell: at index 0 an fm note is exactly a sine
 #: pluck, and only a handful of notes overlap at struck densities.
 FM_OUTPUT_GAIN = 0.6
+#: fm-only: a swell instead of a strike, and a ring as long as the harp's.
+#: Both decays (the note's and its brightness's) start when the attack ends,
+#: so a slow swell arrives bright and THEN mellows.
+FM_MAX_ATTACK = 8.0
+FM_MAX_DECAY = HARP_MAX_DECAY
+#: Seconds a note fades over when the voice is over its polyphony cap. A
+#: 20s-decay note evicted outright at the cap was still audible: a click.
+FM_RETIRE_FADE_S = 0.35
+
+#: The order a struck voice (pluck, bell, fm) walks its scale in. "up" — two
+#: octaves upward then back to the bottom — is the original and the default,
+#: and reads as "always climbing" on a sparse voice. "random" is hashed from
+#: the voice name and the step, so a scene plays the same every time.
+NOTE_ORDERS = ("up", "down", "updown", "random")
 
 # `granular`: a continuous cloud of short windowed grains. Two sources:
 #   "scene" — grains of the OTHER voices' recent output, read back from a
@@ -1888,6 +1902,27 @@ class Soundscape:
         play = max(play, beat)
         return int(self.sr * beat), int(self.sr * play), int(self.sr * (play + gap))
 
+    @staticmethod
+    def _scale_semi(v, scale, step):
+        """Semitones above the root for onset `step` of a struck voice's scale
+        walk, over two octaves, in the voice's `order`. "up" is exactly the
+        original walk: k = step mod 2n gives scale[step % n] + 12 *
+        ((step // n) % 2)."""
+        n = len(scale)
+        span = 2 * n
+        order = v.get("order", "up")
+        if order == "down":
+            k = span - 1 - (step % span)
+        elif order == "updown":
+            cyc = max(1, 2 * span - 2)
+            p = step % cyc
+            k = p if p < span else cyc - p
+        elif order == "random":
+            k = zlib.crc32(f"{v.get('name', '')}:{step}".encode()) % span
+        else:
+            k = step % span
+        return scale[k % n] + 12 * (k // n)
+
     def _render_pluck(self, v, n0, frames):
         rate = float(v.get("rate", 1.0))          # notes per beat
         interval, play_n, cycle_n = self._onset_cycle(v, rate)
@@ -1902,8 +1937,7 @@ class Soundscape:
         tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
 
         def freq_fn(step):
-            semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
-            return midi_to_hz(root + semi)
+            return midi_to_hz(root + self._scale_semi(v, scale, step))
 
         # `.get` with defaults, because this line is shared by _render_pluck
         # and _render_arp — and an arp runs on a pad/osc voice, which carries
@@ -1932,8 +1966,7 @@ class Soundscape:
         tone = float(min(1.0, max(0.0, v.get("tone", 1.0))))
 
         def freq_fn(step):
-            semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
-            return midi_to_hz(root + semi)
+            return midi_to_hz(root + self._scale_semi(v, scale, step))
 
         character = str(v.get("character", "bell"))
         self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay, tone,
@@ -2015,9 +2048,14 @@ class Soundscape:
             except (TypeError, ValueError):
                 x = FM_DEFAULTS[key]
             return min(hi, max(lo, x)) if x == x else FM_DEFAULTS[key]
+        try:
+            attack = min(FM_MAX_ATTACK, max(0.0, float(v.get("attack", 0.0) or 0.0)))
+        except (TypeError, ValueError):
+            attack = 0.0
         return {"ratio": f("ratio", *FM_RATIO_RANGE),
                 "index": f("index", 0.0, FM_INDEX_MAX),
-                "index_decay": f("index_decay", *FM_INDEX_DECAY_RANGE)}
+                "index_decay": f("index_decay", *FM_INDEX_DECAY_RANGE),
+                "attack": attack if attack == attack else 0.0}
 
     def _render_fm(self, v, n0, frames):
         """Struck two-operator FM. Scheduled exactly like `pluck`/`bell` —
@@ -2027,13 +2065,18 @@ class Soundscape:
         interval, play_n, cycle_n = self._onset_cycle(v, rate)
         scale = v.get("scale") or [0, 3, 7, 10]
         root = v.get("note", 72)
-        decay = float(v.get("decay", 1.2))
+        # Clamped on read too: set_param bypasses _normalise.
+        decay = min(FM_MAX_DECAY, max(0.05, float(v.get("decay", 1.2))))
+        wf = str(v.get("waveform", "sine"))
+        wf = wf if wf in WAVEFORMS else "sine"
+        tone = float(min(1.0, max(0.0, v.get("tone", 0.4))))
 
         def freq_fn(step):
-            semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
-            return midi_to_hz(root + semi)
+            return midi_to_hz(root + self._scale_semi(v, scale, step))
 
-        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay,
+        # Waveform and tone ride on the note like ratio/index: changing the
+        # carrier's shape under a ringing note would step its waveform.
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, wf, decay, tone,
                              drift=float(v.get("drift", 0.0)),
                              play_n=play_n, cycle_n=cycle_n, extra=self._fm_fields(v))
         return self._render_fm_notes(v["name"], n0, frames)
@@ -2058,8 +2101,15 @@ class Soundscape:
             (mine if note["voice"] == voice_name else other).append(note)
         if not mine:
             return np.zeros(frames, np.float32)
-        if len(mine) > self.MAX_ACTIVE_FM_NOTES:
-            mine = mine[-self.MAX_ACTIVE_FM_NOTES:]
+        # Over the cap, the oldest ringing notes FADE out over
+        # FM_RETIRE_FADE_S rather than vanish (the harp's rule, see
+        # _retire_excess): with decays up to 20s an evicted note is still
+        # sounding. A hard ceiling a little above the cap bounds the cost.
+        ringing = [n for n in mine if n.get("retire") is None]
+        for n in ringing[:max(0, len(ringing) - self.MAX_ACTIVE_FM_NOTES)]:
+            n["retire"] = n0
+        if len(mine) > self.MAX_ACTIVE_FM_NOTES + 8:
+            mine = mine[-(self.MAX_ACTIVE_FM_NOTES + 8):]
         idx = np.arange(n0, n0 + frames)
         col = lambda k, d: np.array([n.get(k, d) for n in mine], dtype=np.float64)[:, None]
         starts = np.array([n["start"] for n in mine], dtype=np.int64)
@@ -2069,15 +2119,49 @@ class Soundscape:
                            np.maximum(0.0, (0.45 * self.sr - fc) / fm - 1.0))
         tau_i = col("index_decay", FM_DEFAULTS["index_decay"])
         amp = col("amp", 1.0)
+        att = col("attack", 0.0)
 
         age = (idx[None, :] - starts[:, None]) / self.sr            # (N, frames)
         a = np.maximum(age, 0.0)
-        env = np.where(age >= 0, np.exp(-a / decay), 0.0) * amp
+        # Both decays run from the END of the attack (0 for a strike, which
+        # leaves `a` exactly as it was), so a slow swell arrives bright.
+        d = np.maximum(a - att, 0.0)
+        env = np.where(age >= 0, np.exp(-d / decay), 0.0) * amp
+        if np.any(att > 0):
+            # Raised-cosine swell: no corner at either end of the attack.
+            x = np.where(att > 0, np.minimum(1.0, a / np.maximum(att, 1e-9)), 1.0)
+            env = env * (0.5 - 0.5 * np.cos(math.pi * x))
+        retire = np.array([n.get("retire") if n.get("retire") is not None else -1
+                           for n in mine], dtype=np.int64)[:, None]
+        if np.any(retire >= 0):
+            fade = np.clip(1.0 - (idx[None, :] - retire) / (FM_RETIRE_FADE_S * self.sr), 0.0, 1.0)
+            env = env * np.where(retire >= 0, fade, 1.0)
         mod = np.sin((2 * math.pi) * fm * a)
-        car = np.sin((2 * math.pi) * fc * a + index * np.exp(-a / tau_i) * mod)
+        phase_mod = index * np.exp(-d / tau_i) * mod
+        wfs = [n.get("wf", "sine") for n in mine]
+        if all(w == "sine" for w in wfs):
+            car = np.sin((2 * math.pi) * fc * a + phase_mod)
+        else:
+            # Non-sine carrier: the voice's bandlimited table read at the
+            # modulated phase. Harmonic k swings to k * (fc + I * fm), so the
+            # table is sized for that peak rather than the bare carrier, or
+            # its upper harmonics would alias. One table per (shape, tone).
+            car = np.empty_like(a)
+            peak = fc[:, 0] + (index[:, 0] + 1.0) * fm[:, 0]
+            groups = {}
+            for i, n in enumerate(mine):
+                groups.setdefault((wfs[i], round(float(n.get("tone", 0.4)), 2)), []).append(i)
+            for (w, tn), rows in groups.items():
+                rows = np.array(rows)
+                if w == "sine":
+                    car[rows] = np.sin((2 * math.pi) * fc[rows] * a[rows] + phase_mod[rows])
+                else:
+                    ph = fc[rows] * a[rows] + phase_mod[rows] / (2 * math.pi)
+                    car[rows] = _osc(ph, w, tn, float(peak[rows].max()), self.sr)
         out = (env * car).sum(axis=0) * FM_OUTPUT_GAIN
 
-        alive = age[:, -1] <= decay[:, 0] * 6
+        alive = (age[:, -1] <= att[:, 0] + decay[:, 0] * 6) & ~(
+            (retire[:, 0] >= 0) & (idx[-1] - retire[:, 0] >= FM_RETIRE_FADE_S * self.sr))
         self._active_notes = other + [n for n, keep in zip(mine, alive) if keep]
         return out.astype(np.float32)
 
@@ -2521,9 +2605,11 @@ class Soundscape:
                 note = dict(start=start, freq=freq, wf="sine",
                             decay=float(v.get("decay", 1.2)), voice=name, amp=amp)
             elif vt == "fm":
-                note = dict(start=start, freq=freq, wf="sine",
-                            decay=float(v.get("decay", 1.2)), voice=name, amp=amp,
-                            **self._fm_fields(v))
+                wf = str(v.get("waveform", "sine"))
+                note = dict(start=start, freq=freq, wf=wf if wf in WAVEFORMS else "sine",
+                            tone=float(min(1.0, max(0.0, v.get("tone", 0.4)))),
+                            decay=float(min(FM_MAX_DECAY, max(0.05, v.get("decay", 1.2)))),
+                            voice=name, amp=amp, **self._fm_fields(v))
             else:   # harp — same decay clamp _schedule_harp applies
                 note = dict(start=start, freq=freq, wf="sine", voice=name,
                             decay=float(min(HARP_MAX_DECAY, max(0.05, v.get("decay", 6.0)))),
@@ -3044,6 +3130,9 @@ def _coerce(field, value):
         # MIDI write lands straight in the spec and then gets SAVED there.
         c = str(value)
         return c if c in BELL_CHARACTERS else "bell"
+    if field == "order":
+        o = str(value)
+        return o if o in NOTE_ORDERS else "up"
     if field == "source":
         # granular's string field — see `character` above for why here too.
         src = str(value)
@@ -3164,6 +3253,10 @@ def _normalise(spec: dict) -> dict:
         # voice — so it gets its own ceiling rather than raising the shared
         # one, which would let a runaway pluck schedule notes that never age
         # out. See HARP_MAX_DECAY.
+        if v["type"] == "fm":
+            # As long a ring as the harp's — the drawn-out end of the voice.
+            v["decay"] = _clamp(v.get("decay"), 0.05, FM_MAX_DECAY, 1.2)
+            _optional_clamp(v, "attack", 0.0, FM_MAX_ATTACK, 0.0)
         if v["type"] == "harp":
             v["decay"] = _clamp(v.get("decay"), 0.05, HARP_MAX_DECAY, 6.0)
             # Harp-only fields, set only on harp voices: `_normalise`'s output
@@ -3173,7 +3266,7 @@ def _normalise(spec: dict) -> dict:
             v["damp"] = _clamp(v.get("damp"), 0.0, 1.5, HARP_DAMP_DEFAULT)
             v["roll"] = int(_clamp(v.get("roll"), 1, 12, HARP_ROLL_DEFAULT))
             v["roll_spread"] = _clamp(v.get("roll_spread"), 0.03, 0.4, 0.07)
-        else:
+        elif v["type"] != "fm":
             v["decay"] = _clamp(v.get("decay"), 0.05, 6.0, 1.2)
         # Bell-only, and gated for the same library-churn reason as harp's
         # fields above. An unknown name falls back to the original bell rather
@@ -3218,6 +3311,13 @@ def _normalise(spec: dict) -> dict:
         # mid-stream without a click (see _drift_factor).
         if v["type"] in ("pluck", "bell", "harp", "fm"):
             v["drift"] = _clamp(v.get("drift"), 0.0, 1.0, 0.0)
+        # Scale-walk order: the three voices that walk a scale. Written only
+        # when not the default "up", so no existing scene gains a key.
+        o = v.get("order")
+        if v["type"] in ("pluck", "bell", "fm") and o in NOTE_ORDERS and o != "up":
+            v["order"] = o
+        else:
+            v.pop("order", None)
         # Added silence between notes. Only the three voices that schedule
         # onsets read it; on `harp` the unit is a whole roll rather than a
         # single note, since that voice's gesture is the roll. Gated so a pad

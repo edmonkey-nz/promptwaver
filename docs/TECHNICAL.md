@@ -426,7 +426,7 @@ Any `pad` or `osc` voice now has a real ADSR (attack/decay/sustain/release), exp
 
 - **Reverb** (`reverb: {mix, size, damp}` on the soundscape) puts every voice in one room: a convolution of the mono sum of each voice's send against a synthesised decaying-noise impulse, `size` 0.3-6s to silence, `damp` darkening the tail as it decays. Each voice sends fully unless its own `reverb` (0-1) is turned down, which is what to do on a bass. Absent means off.
 - **Chorus** (`chorus` 0-1, `chorus_rate` Hz, on any voice) thickens a voice into an ensemble: three copies swept a third of a cycle apart.
-- **`fm`** is a struck voice like `pluck`, whose brightness (`index`) falls away faster than its volume, over `index_decay` seconds; `ratio` picks harmonic (whole numbers: e-piano, woody) or inharmonic (3.5: bell, metal).
+- **`fm`** is a struck voice like `pluck`, whose brightness (`index`) falls away faster than its volume, over `index_decay` seconds; `ratio` picks harmonic (whole numbers: e-piano, woody) or inharmonic (3.5: bell, metal). Since 0.96 it can also swell in (`attack`, 0-8s), ring up to 20s, and use a triangle, square or saw carrier (`waveform`, brightness from `tone`). Pluck, bell and fm walk their scale in an `order`: up (the original), down, up & down, or random.
 
 - **`granular`** (0.93) is a cloud of short grains. With `source: "scene"` they are the other voices' last few seconds, pitched by `pitch` semitones (12 is the octave-up shimmer). With `source: "tone"` they are its own waveform at its scale's notes. `density` (grains/s), `grain` (length), `jitter` and `scatter` shape it. `index` and `density` are also LFO targets.
 

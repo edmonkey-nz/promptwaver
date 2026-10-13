@@ -149,6 +149,7 @@ VOICE_RANGES = {
     "ratio": (0.25, 8.0),
     "index": (0.0, 10.0),
     "index_decay": (0.02, 6.0),
+    "attack": (0.0, 8.0),       # fm swell-in, seconds
     # granular only. pitch is semitones; scatter seconds of scene history.
     "density": (1.0, 80.0),
     "grain": (0.02, 0.5),

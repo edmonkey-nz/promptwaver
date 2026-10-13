@@ -3674,7 +3674,7 @@ function renderSoundscape(s){
     // granular's "tone" source is an oscillator (wave + tone apply); its
     // "scene" source resamples the other voices (they don't).
     const granTone = v.type === "granular" && v.source === "tone";
-    if (isType("pad","sub","pluck","osc") || granTone){
+    if (isType("pad","sub","pluck","osc","fm") || granTone){
       const sel = document.createElement("select");
       ["sine","saw","square","triangle"].forEach(w=>{
         const o=document.createElement("option"); o.value=w; o.textContent=w;
@@ -3685,7 +3685,7 @@ function renderSoundscape(s){
     // `sub` is dispatched to _render_pad, so it takes pad's parameters too.
     // `harp` reads tone as well but builds its own row block further down,
     // where decay has a range of its own.
-    if (isType("pad","sub","osc","pluck","bell","noise") || granTone){
+    if (isType("pad","sub","osc","pluck","bell","noise","fm") || granTone){
       const toneKnob = knob("tone",`voice.${v.name}.tone`,0,1,0.01, v.tone ?? 0.4, x=>x.toFixed(2), {midi: mk("tone")});
       // tone rolls off a waveform's upper harmonics, so on a SINE it does
       // nothing — _wavetable builds one partial for a sine and there is
@@ -3694,7 +3694,7 @@ function renderSoundscape(s){
       // knob that is working correctly doesn't read as a broken one. `bell`
       // is exempt: it ignores `waveform` entirely and shapes its own
       // five-partial inharmonic bank instead.
-      if (isType("pad","sub","osc","pluck") && (v.waveform || "sine") === "sine")
+      if (isType("pad","sub","osc","pluck","fm") && (v.waveform || "sine") === "sine")
         toneKnob.title = "No effect on a sine — it has no upper harmonics to roll off. "
                        + "Pick saw, square or triangle above to hear this.";
       el.appendChild(toneKnob);
@@ -3714,7 +3714,19 @@ function renderSoundscape(s){
     // voice's whole character.
     if (isType("pluck","bell","fm")){
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
-      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
+      // fm rings up to 20s, like the harp; pluck and bell stop at 6.
+      const dMax = v.type === "fm" ? 20 : 6;
+      el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,dMax,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
+      // The order the voice walks its scale in. "up" is the original: two
+      // octaves upward, then back to the bottom — which on a sparse voice
+      // reads as always climbing. Random is seeded, so it plays the same
+      // every time the scene does.
+      const os_ = document.createElement("select");
+      [["up","up"],["down","down"],["updown","up & down"],["random","random"]].forEach(([val, txt])=>{
+        const o=document.createElement("option"); o.value=val; o.textContent=txt;
+        if ((v.order||"up")===val) o.selected=true; os_.appendChild(o); });
+      os_.onchange = () => sendAudio(`voice.${v.name}.order`, os_.value);
+      el.appendChild(selectRow("order", os_));
       // `play` and `gap` are one cycle and read in that order: play for N
       // seconds, then go quiet for M. Both are SECONDS of wall time, so the
       // phrase keeps its shape when the tempo changes — unlike `rate` above,
@@ -3772,6 +3784,9 @@ function renderSoundscape(s){
       const iK = knob("index",`voice.${v.name}.index`,0,10,0.05, v.index ?? 2, x=>x.toFixed(2), {midi: mk("index")});
       iK.title = "Brightness of the strike — how hard the modulator drives the note. 0 is a pure sine.";
       el.appendChild(iK);
+      const aK = knob("attack",`voice.${v.name}.attack`,0,8,0.05, v.attack ?? 0, x=>x ? x.toFixed(2)+"s" : "strike", {midi: mk("attack")});
+      aK.title = "0 strikes. Above 0, each note swells in over this long, arriving bright, then mellows and decays. With a long decay this is the drawn-out fm.";
+      el.appendChild(aK);
       const dK = knob("index decay",`voice.${v.name}.index_decay`,0.02,6,0.01, v.index_decay ?? 0.4, x=>x.toFixed(2)+"s", {midi: mk("index_decay")});
       dK.title = "How fast the brightness falls away after each strike, separately from the note's own decay. Short = a clangy attack that mellows to a sine.";
       el.appendChild(dK);
@@ -3821,9 +3836,10 @@ function renderSoundscape(s){
     // globals above — that one is one EQ curve over the summed mix and can't
     // be scaled per instrument; this is the per-instrument half, on the same
     // phase. Put both up and they move as one gesture.
-    // Not on fm: the sweep swings `tone`, and fm's brightness is its index.
-    // Not on a scene-source cloud either, which has no tone of its own.
-    if (!isType("fm") && !(v.type === "granular" && !granTone))
+    // Not on a scene-source cloud, which has no tone of its own. (fm has one
+    // since its carrier gained a waveform; on a sine carrier, like any sine,
+    // tone and the sweep do nothing.)
+    if (!(v.type === "granular" && !granTone))
       el.appendChild(knob("sweep",`voice.${v.name}.sweep`,0,1,0.01, v.sweep ?? 0, x=>x.toFixed(2), {midi: mk("sweep")}));
     // Every voice, like distortion: both process the voice's finished signal.
     // The send defaults to FULL — the scene's room applies to every voice

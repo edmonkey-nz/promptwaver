@@ -181,6 +181,12 @@ Voice types:
                     quiet. Try "roll":7, "decay":10, "gap":12.
                   Both: a voice this sparse only works against a sustained pad
                     or noise bed; do not leave the scene silent.
+          "order" up | down | updown | random: the order a "pluck", "bell"
+                    or "fm" walks its scale (two octaves). "up" (the default)
+                    climbs then jumps back to the bottom, which on a sparse
+                    voice sounds like it is always rising; "random" is the
+                    natural choice for generative, wandering melody, "updown"
+                    for something that breathes.
           "drift" 0-1, slow random detune applied as each note is struck, so
                     the instrument wanders very slightly out of tune with
                     itself. 0 is exact; 0.2-0.4 is the tape-ish instability
@@ -222,6 +228,13 @@ Voice types:
                     clangy, 0 a pure sine.
             "index_decay" 0.02-6 seconds for that brightness to fall away.
                     0.1-0.5 is the classic struck FM sound.
+            "attack" 0-8 seconds: 0 strikes; above 0 each note SWELLS in, arriving
+                    bright, then mellows. "decay" runs up to 20s on fm (6 on
+                    the others), so attack 2-5 with decay 10-20 and a low
+                    "rate" (0.05-0.2) is a slow, drawn-out, breathing texture.
+            "waveform" sine (default, the pure DX sound) | triangle | square |
+                    saw for the carrier: rougher, reedier, more synthetic;
+                    "tone" then sets its brightness.
           Recipes: e-piano ratio 1, index 2.5, index_decay 0.4, decay 2.
                    glass bell ratio 3.5, index 4, index_decay 1.5, decay 4.
                    marimba ratio 4, index 1.5, index_decay 0.08, decay 0.8.

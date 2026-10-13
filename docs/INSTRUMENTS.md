@@ -119,6 +119,21 @@ and no existing renderer has a phase input to feed. Three decisions shaped it:
   at MIDI 100 with ratio 8 and index 10 puts 0.0000 of its energy below the
   carrier, where aliasing would land.
 
+Added in 0.96, all off by default so existing fm voices are bit-identical
+(checked against the committed code on a saved scene): an `attack` swell
+(0-8s), from whose end BOTH decays run, so a swell arrives bright and then
+mellows. Measured centroid 538Hz at the peak of a 3s swell, 264Hz 2s later.
+`decay` up to 20s like the harp. A carrier `waveform` read from the
+bandlimited table at the modulated phase, sized for each harmonic's peak
+instantaneous frequency `k * (fc + I * fm)`: at MIDI 96 with index 6, under
+1% of the energy is off the harmonic grid. The cap retires notes with a
+0.35s fade rather than dropping them, because a 20s note dropped at the cap
+was still sounding.
+
+The scale walk's `order` (up / down / updown / random, `_scale_semi`) is
+shared by pluck, bell and fm. "up" is arithmetically the original walk, so
+it is the default and absent from saved files.
+
 At `index` 0 it is a pure sine at exactly a sine `pluck`'s level (peak ratio
 1.000), which is why `FM_OUTPUT_GAIN` is pluck's 0.6 rather than a calibrated
 constant. Measured spectral centroid on a strike with `index_decay` 0.3:

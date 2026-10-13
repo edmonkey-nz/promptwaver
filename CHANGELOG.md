@@ -7,6 +7,27 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.96.0]
+
+- **Note order** for pluck, bell and fm: **up** (as before), **down**,
+  **up & down**, or **random**. "Up" climbs two octaves and jumps back to the
+  bottom, which on a sparse voice sounds like it is always rising. Random is
+  seeded, so a scene plays the same each time.
+- **Long, drawn-out fm:**
+  - **attack** (0–8 s): each note swells in instead of striking. It arrives
+    bright, then mellows.
+  - **decay** now reaches 20 s on fm, like the harp.
+  - A slow swell, a long decay and a low rate make a breathing, drawn-out
+    texture.
+- **fm wave shape:** sine (as before), triangle, square or saw for the
+  carrier, with **tone** as its brightness (and the filter sweep now acts on
+  it). It's kept free of aliasing even at high notes and index.
+- Long fm notes over the polyphony cap now fade out instead of cutting off.
+
+All of it is off by default: existing fm voices sound exactly the same
+(checked against the previous code on a saved scene), as do the library's
+pluck and bell voices.
+
 ## [0.95.1]
 
 - **+ add** now sits in the Instruments header and opens a small picker,
