@@ -466,10 +466,13 @@
         margin-right:5px;transition:background .1s}
   .mdot.on{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
   /* A grid, not a wrapping flex row: with flex, a voice that wrapped onto a
-     row of its own stretched across the whole pane. Here every strip keeps
-     the column width, and strips in a row share a height so their footers
-     line up. */
-  .voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+     row of its own stretched across the whole pane. auto-FIT, not auto-fill:
+     fill keeps empty column slots, so five voices sat at fixed width with a
+     gap beside them; fit collapses the unused slots and the voices stretch
+     to fill the row. Once a row is full the column count comes from the
+     pane width, so a wrapped voice still keeps the column width. Strips in a
+     row share a height, so their footers line up. */
+  .voices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
   .voice{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;
          padding:10px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
   .voice.muted{opacity:.45}

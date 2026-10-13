@@ -14,9 +14,10 @@ and APIs between minor versions until a 1.0 release.
 - Each instrument's footer reads **type · map · ✕**. The header keeps just
   the name and mute, so names have room. Remove is a ✕ like the other
   remove buttons, and still asks first.
-- Instrument strips are laid out on a grid. A voice that wraps onto a new
-  row keeps the same width as the rest instead of stretching across the
-  pane, and footers line up across a row.
+- Instrument strips are laid out on a grid that fills the pane: a few
+  voices stretch to the full width, and a voice that wraps onto a new row
+  keeps the same width as the rest instead of stretching across the pane.
+  Footers line up across a row.
 
 ## [0.95.0]
 
