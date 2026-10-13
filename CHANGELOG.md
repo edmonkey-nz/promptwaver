@@ -7,6 +7,17 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.95.1]
+
+- **+ add** now sits in the Instruments header and opens a small picker,
+  instead of an add-instrument column taking a whole strip's width.
+- Each instrument's footer reads **type · map · ✕**. The header keeps just
+  the name and mute, so names have room. Remove is a ✕ like the other
+  remove buttons, and still asks first.
+- Instrument strips are laid out on a grid. A voice that wraps onto a new
+  row keeps the same width as the rest instead of stretching across the
+  pane, and footers line up across a row.
+
 ## [0.95.0]
 
 - **Add an instrument to any scene**, with no API call. Under the instruments,

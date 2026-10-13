@@ -7,4 +7,4 @@ together. Claude acts as an offline *scene
 director* (keyword -> scene spec); the local engine renders at full framerate.
 """
 
-__version__ = "0.95.0"
+__version__ = "0.95.1"

@@ -465,7 +465,11 @@
   .mdot{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block;
         margin-right:5px;transition:background .1s}
   .mdot.on{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
-  .voices{display:flex;gap:10px;flex-wrap:wrap}
+  /* A grid, not a wrapping flex row: with flex, a voice that wrapped onto a
+     row of its own stretched across the whole pane. Here every strip keeps
+     the column width, and strips in a row share a height so their footers
+     line up. */
+  .voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
   .voice{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;
          padding:10px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
   .voice.muted{opacity:.45}
@@ -498,14 +502,28 @@
   .voice .vbtns{display:flex;gap:6px;align-items:center;flex-shrink:0}
   /* Instruments pane with no scene loaded. Deliberately NOT .val: hide-values
      collapses that class to zero width. */
-  .voices .noscene{flex:1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
+  .voices .noscene{grid-column:1/-1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
   .voices .noscene b{color:var(--ink);font-weight:500}
-  .voice .vremove{margin-top:auto;align-self:flex-start;padding:2px 8px;font-size:10px;
-                  color:var(--dim);background:none;border:1px dashed var(--line);opacity:.7}
-  .voice .vremove:hover{opacity:1;color:var(--red);border-color:var(--red)}
-  .voice.addvoice{border-style:dashed;justify-content:center;gap:8px;flex:0 1 180px;opacity:.85}
-  .voice.addvoice:hover{opacity:1}
-  .voice.addvoice .addlabel{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  /* Strip footer: type + map on the left, remove on the right. margin-top
+     auto pins it to the bottom, so footers line up across strips of
+     different heights. */
+  .voice .vfoot{margin-top:auto;display:flex;align-items:center;gap:8px;
+                padding-top:8px;border-top:1px solid var(--line)}
+  .voice .vfoot .del{margin-left:auto;background:none;border:none;color:var(--dim);
+                     cursor:pointer;padding:0 4px;font-size:14px;line-height:1}
+  .voice .vfoot .del:hover{color:var(--amber)}
+  /* "+ add" in the Instruments header, and its type picker. */
+  .sumbtn{margin-left:auto;background:none;border:1px solid var(--line);border-radius:6px;
+          color:var(--dim);font-size:11px;padding:2px 9px;cursor:pointer;text-transform:none;letter-spacing:0}
+  .sumbtn:hover{color:var(--cyan);border-color:var(--cyan)}
+  .modal.small{max-width:520px;padding:28px;gap:16px}
+  .vtypes{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .vtypes button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;
+                 padding:10px 12px;border-radius:8px}
+  .vtypes button b{font-family:var(--mono);font-size:12px;color:var(--ink);font-weight:500}
+  .vtypes button span{font-size:11px;color:var(--dim);line-height:1.35}
+  .vtypes button:hover{border-color:var(--cyan)}
+  .vtypes button:hover b{color:var(--cyan)}
   /* Map: what PLAYS this voice — a computer key, a MIDI pad (CC) or a MIDI
      keyboard channel. Shows the binding once there is one. */
   .voice .mapbtn{padding:3px 8px;font-size:11px;border-radius:6px;min-width:34px}
@@ -851,7 +869,7 @@
     </details>
 
     <details class="accordion" id="acc-instruments" open>
-      <summary>Instruments</summary>
+      <summary>Instruments<button class="sumbtn" id="voice-add-open" title="Add an instrument to this scene" style="display:none">+ add</button></summary>
       <div class="accordion-body">
         <div class="voices" id="voices"></div>
       </div>
@@ -1350,6 +1368,17 @@
     </div>
     <div class="about-body" id="welcome-body">loading…</div>
     <button class="go" id="welcome-start" style="margin-top:12px">Click to begin</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-addvoice">
+  <div class="modal small">
+    <div class="modal-head">
+      <h2>Add an instrument</h2>
+      <button class="modal-close" id="addvoice-close">&times;</button>
+    </div>
+    <div class="vtypes" id="vtypes"></div>
+    <div class="hint">Joins the playing scene in its key, at the end of the list. Nothing is sent to Claude. Save the scene to keep it.</div>
   </div>
 </div>
 
@@ -3525,6 +3554,7 @@ function renderSoundscape(s){
     const el = $(id);
     if (el) el.style.opacity = dim;
   }
+  $("voice-add-open").style.display = sc ? "" : "none";
   if (!sc) {
     // No scene loaded (how the app now opens). Reset the signature too, or
     // reloading the scene that was showing before would match it and leave
@@ -3589,7 +3619,7 @@ function renderSoundscape(s){
     const el = document.createElement("div");
     el.className = "voice" + (v.mute ? " muted":"");
     const head = document.createElement("div"); head.className="vhead";
-    head.innerHTML = `<span class="vname">${v.name}</span><span class="vtype">${v.type}</span>`;
+    head.innerHTML = `<span class="vname">${v.name}</span>`;
     head.querySelector(".vname").title = v.name;
     const mb = document.createElement("button");
     mb.className = "mutebtn" + (v.mute?" on":"");
@@ -3605,10 +3635,9 @@ function renderSoundscape(s){
     };
     pb.oncontextmenu = (e) => { e.preventDefault(); send({type:"play_map_clear", voice:v.name}); };
     paintMapBtn(pb, v.name);
+    // Only the name and mute up top: mute is the control reached for
+    // mid-set. Type, map and remove live in the footer (below).
     const btns = document.createElement("div"); btns.className = "vbtns";
-    // A granular cloud has no note to play (dsp trigger_pitches is empty for
-    // it), so it gets no map button rather than one that does nothing.
-    if (v.type !== "granular") btns.appendChild(pb);
     btns.appendChild(mb);
     const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center"; hrow.style.gap="6px";
     hrow.appendChild(head); hrow.appendChild(btns);
@@ -4013,42 +4042,27 @@ function renderSoundscape(s){
       }
       el.appendChild(w);
     }
-    // Remove, at the foot of the strip rather than in its crowded header,
-    // and confirmed: it takes the instrument out of the playing scene (an
-    // enveloped one fades over its release). Save makes it permanent.
+    // Footer: type and map on the left, remove on the right. A granular
+    // cloud has no note to play (dsp trigger_pitches is empty for it), so it
+    // gets no map button rather than one that does nothing. Remove is
+    // confirmed: it takes the instrument out of the playing scene (an
+    // enveloped one fades over its release); Save makes it permanent.
+    const foot = document.createElement("div"); foot.className = "vfoot";
+    const ty = document.createElement("span"); ty.className = "vtype"; ty.textContent = v.type;
+    foot.appendChild(ty);
+    if (v.type !== "granular") foot.appendChild(pb);
     const rm = document.createElement("button");
-    rm.className = "vremove"; rm.textContent = "remove instrument";
+    rm.className = "del"; rm.textContent = "\u2715"; rm.title = `remove ${v.name} from this scene`;
     rm.onclick = () => {
       if (confirm(`Remove "${v.name}" from this scene?\n\nSave the scene to make it permanent; reload it to undo.`))
         send({type:"voice_remove", name: v.name});
     };
-    el.appendChild(rm);
+    foot.appendChild(rm);
+    el.appendChild(foot);
     vc.appendChild(el);
   });
 
-  // "+ instrument": any voice type, built locally in the scene's key
-  // (audio/templates.py) — no API call. Appended after the last voice, so
-  // the MIDI knob slots of the existing ones don't move.
-  const add = document.createElement("div");
-  add.className = "voice addvoice";
-  const pick = document.createElement("select");
-  [["pad","pad · sustained chord"],["osc","osc · unison synth"],["sub","sub · low drone"],
-   ["pluck","pluck · plucked notes"],["bell","bell · struck chimes"],["harp","harp · ringing strings"],
-   ["fm","fm · e-piano, glass"],["granular","granular · shimmer cloud"],["noise","noise · air, wind"]]
-    .forEach(([val, txt]) => { const o = document.createElement("option"); o.value = val; o.textContent = txt; pick.appendChild(o); });
-  pick.value = _addVoicePick;
-  pick.onchange = () => { _addVoicePick = pick.value; };
-  const go = document.createElement("button");
-  go.textContent = "+ add instrument";
-  go.title = "Adds a playable instrument of this type to the scene, in its key. Nothing is sent to Claude. "
-           + "Save the scene to keep it.";
-  go.onclick = () => send({type:"voice_add", vtype: pick.value});
-  const lab = document.createElement("div");
-  lab.className = "addlabel"; lab.textContent = "add an instrument";
-  add.appendChild(lab); add.appendChild(pick); add.appendChild(go);
-  vc.appendChild(add);
 }
-let _addVoicePick = "granular";
 
 // Monitor-only visual filters (glow/trails) — a pure canvas-rendering
 // effect applied here and in output.html; never touches the vector data
@@ -4834,6 +4848,25 @@ $("audio-regen-open").onclick = () => {
   $("audio-regen-hint").textContent = "";
 };
 $("audio-regen-close").onclick = () => closeModal("modal-audio-regen");
+
+// "+ add" instrument: any voice type, built locally in the scene's key
+// (audio/templates.py) — no API call. The button sits in the summary, so
+// its click must not also fold the accordion.
+[["pad","sustained chord"],["osc","unison synth, lead or bass"],["sub","low drone"],
+ ["pluck","plucked notes"],["bell","struck chimes"],["harp","long-ringing strings"],
+ ["fm","e-piano, glass bells"],["granular","shimmer cloud of the scene"],["noise","air, wind"]]
+  .forEach(([vt, desc]) => {
+    const b = document.createElement("button");
+    b.dataset.vtype = vt;
+    b.innerHTML = `<b>${vt}</b><span>${desc}</span>`;
+    b.onclick = () => { send({type:"voice_add", vtype: vt}); closeModal("modal-addvoice"); };
+    $("vtypes").appendChild(b);
+  });
+$("voice-add-open").addEventListener("click", e => {
+  e.preventDefault(); e.stopPropagation();
+  openModal("modal-addvoice");
+});
+$("addvoice-close").onclick = () => closeModal("modal-addvoice");
 
 // Scene prompts modal
 // Three distinct states for cost, and they mean different things:
