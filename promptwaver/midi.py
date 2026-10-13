@@ -86,7 +86,6 @@ ENGINE_RANGES = {
     "audio_link": (0.0, 2.0),
     "lfo_slow.rate": (0.01, 0.4),
     "lfo_mid.rate": (0.05, 2.0),
-    "lfo_mid.rate": (0.01, 0.8),
 }
 
 # `layer<N>.<param>` ranges, refreshed by the engine on every scene load from
@@ -111,6 +110,9 @@ AUDIO_RANGES = {
     "delay.time": (0.05, 1.2),
     "delay.feedback": (0.0, 0.9),
     "delay.mix": (0.0, 0.9),
+    "reverb.mix": (0.0, 1.0),
+    "reverb.size": (0.3, 6.0),
+    "reverb.damp": (0.0, 1.0),
     "eq.low": (-10.0, 10.0),
     "eq.mid": (-10.0, 10.0),
     "eq.high": (-10.0, 10.0),
@@ -139,6 +141,14 @@ VOICE_RANGES = {
     "gap": (0.0, 30.0),
     "play": (0.0, 30.0),
     "unison": (1.0, 7.0),
+    "reverb": (0.0, 1.0),       # this voice's send into the scene's reverb
+    "chorus": (0.0, 1.0),
+    "chorus_rate": (0.05, 3.0),
+    # fm only — modulator/carrier ratio, modulation index, and how fast the
+    # index falls away after each strike.
+    "ratio": (0.25, 8.0),
+    "index": (0.0, 10.0),
+    "index_decay": (0.02, 6.0),
     "env.attack": (0.01, 15.0),
     "env.decay": (0.01, 8.0),
     "env.sustain": (0.0, 1.0),

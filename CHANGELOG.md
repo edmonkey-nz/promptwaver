@@ -6,6 +6,48 @@ and APIs between minor versions until a 1.0 release.
 
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
+
+## [0.92.0]
+
+### Reverb, chorus and an FM voice
+
+- **Reverb.** Soundscape › reverb mix / size / damp puts every voice in one
+  room. It is a real convolution reverb, size 0.3–6 s to silence; damp makes
+  the tail darker as it fades. Each voice has a **reverb** send, full by
+  default: turn it down on a bass so the low end stays clear. Changing size
+  or damp while it plays never interrupts the audio. The new room takes over
+  from the old one within half a second.
+- **Chorus** on every voice: three slowly drifting copies of the voice, the
+  lush string-machine ensemble. Set the amount with **chorus** and the sweep
+  speed with **chorus rate**. Loudness stays the same at any amount.
+- **`fm` voice**, a struck two-operator FM instrument: electric piano, glass
+  bells, mallets. Each strike starts bright and mellows as it rings.
+  - **ratio** picks harmonic (1 is an e-piano, 2 woody) or inharmonic (3.5 is
+    a bell).
+  - **index** is how bright the strike is.
+  - **index decay** is how fast the brightness fades.
+  - It also takes rate, decay, drift, gap and play like pluck, and plays
+    from a mapped key or MIDI keyboard.
+- Generated scenes now use all three. The director is told when to reach
+  for reverb (and to keep it off the bass), chorus and fm.
+
+Scenes without these settings sound exactly as before. All 26 library
+soundscapes render bit-identical, and saving a scene adds no new keys.
+
+Cost at the 1024 default blocksize, against a ~23 ms block:
+- Reverb: 1–2 ms (stereo), up to 4 ms (quad).
+- Chorus: 0.14 ms per voice.
+- fm: 1.2 ms with 24 notes ringing.
+- The heaviest library scene with all three at their worst case: 2.9 → 6.2 ms
+  a block, with no audio dropouts.
+
+### Fixes
+
+- A voice with a long name pushed its map and mute buttons out of its strip
+  and under the next one. The name now shortens with "…" (hover it for the
+  full name).
+- A MIDI knob on the medium LFO's rate only reached 0.8 Hz; it now covers
+  the slider's full 0.05–2 Hz.
 - **MIDI now works in the downloadable builds** (Linux, macOS, Windows). Every
   release up to 0.91.0 shipped without it: CI never installed `mido` /
   `python-rtmidi`, and PyInstaller can't see mido's backend, which it loads by

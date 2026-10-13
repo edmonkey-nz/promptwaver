@@ -254,6 +254,11 @@ def _apply_scape_param(scape: dict, path: str, value):
         scape[parts[0]] = value
     elif parts[0] == "delay" and len(parts) == 2:
         scape.setdefault("delay", {})[parts[1]] = value
+    elif parts[0] == "reverb" and len(parts) == 2:
+        # Same default the synth fills in (dsp.REVERB_DEFAULT), so a scene
+        # that only ever had its size touched saves the room the synth played.
+        from .audio.dsp import REVERB_DEFAULT
+        scape.setdefault("reverb", dict(REVERB_DEFAULT))[parts[1]] = value
     elif parts[0] == "eq" and len(parts) == 2:
         scape.setdefault("eq", {})[parts[1]] = value
     elif parts[0] == "voice" and len(parts) == 3:

@@ -85,12 +85,14 @@ Schema:
   "soundscape": {
      "tempo": 60, "master": 0.8, "distortion": 0.0,
      "delay": {"time":0.4, "feedback":0.35, "mix":0.3},
+     "reverb": {"mix":0.25, "size":3.5, "damp":0.5},
      "voices": [
        {"name":"drone","type":"pad","waveform":"sine|saw|square|triangle","note":36,
         "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
         "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
        {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
         "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0,
+        "chorus":0.4,
         "lfo":{"on":true,"dest":"tone","shape":"sine","rate":0.05,"depth":0.5}},
        {"name":"bells","type":"pluck","waveform":"sine","note":72,
         "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},
@@ -157,7 +159,7 @@ Voice types:
                     particular suit gentle, melodic, childlike or nostalgic
                     briefs far better than the default bell does.
           "gap"   SECONDS of silence between strikes, 0-30, on "bell",
-                    "pluck" and "harp". "rate" is notes per BEAT, so it is tied to
+                    "pluck", "fm" and "harp". "rate" is notes per BEAT, so it is tied to
                     tempo and cannot space notes more than a few seconds
                     apart; "gap" is absolute wall time. Use it whenever the
                     brief wants something occasional rather than rhythmic — a
@@ -184,8 +186,8 @@ Voice types:
                     itself. 0 is exact; 0.2-0.4 is the tape-ish instability
                     that makes an ambient patch sound played rather than
                     computed; 0.8+ is audibly seasick. Also available on
-                    "pluck" and "harp". Use it — a little is almost always
-                    sweeter than none.
+                    "pluck", "fm" and "harp". Use it — a little is almost
+                    always sweeter than none.
   "harp"  long-ringing plucked STRING. Harmonic partials that each decay at
           their own rate, so the note darkens as it rings — the sound keeps
           blooming and overlapping into itself long after it was played.
@@ -207,9 +209,28 @@ Voice types:
           A high rate plus a big roll is a continuous glissando, which drowns
           the scene and defeats the long decay (the oldest notes get cut to
           stay in budget). Sparse and ringing, not busy.
+  "fm"    two-operator FM: struck notes whose BRIGHTNESS decays faster than
+          their volume — a bright, clangy strike that mellows to a near-sine
+          as it rings. The DX7 family: electric piano, glassy bells, mallets,
+          metallic plucks. Scheduled exactly like "pluck" (params: scale,
+          rate, decay, drift, gap, play), plus:
+            "ratio" 0.25-8, the modulator's pitch over the note's. WHOLE
+                    numbers are harmonic: 1 electric piano, 2 hollow/woody,
+                    3 reedy. In between is inharmonic: 3.5 or 1.41 is a bell
+                    or struck metal.
+            "index" 0-10, how bright the strike is: 1-3 soft, 4-7 bright and
+                    clangy, 0 a pure sine.
+            "index_decay" 0.02-6 seconds for that brightness to fall away.
+                    0.1-0.5 is the classic struck FM sound.
+          Recipes: e-piano ratio 1, index 2.5, index_decay 0.4, decay 2.
+                   glass bell ratio 3.5, index 4, index_decay 1.5, decay 4.
+                   marimba ratio 4, index 1.5, index_decay 0.08, decay 0.8.
+          Reach for it when the brief wants something electric, glassy,
+          crystalline or retro-digital, where "bell" would sound too church-like.
   "noise" wind/air texture (params: tone)
 
-"tone" (0-1) is the brightness of EVERY voice type — it behaves like a filter
+"tone" (0-1) is the brightness of every voice type but "fm" (whose brightness
+is its "index") — it behaves like a filter
 cutoff, so it is the main control over whether a soundscape sounds warm and
 round or thin and buzzy. Use it deliberately:
   0.1-0.3   dark, mellow, felt more than heard — deep basses, soft pads
@@ -221,6 +242,21 @@ soundscape at 0.9 is the classic mistake: it sounds cheap and fatiguing.
 For DEEP, HEAVY bass: an "osc" voice at note 24-36, tone 0.15-0.3, unison 2-3
 with detune 0.005-0.01, and "sub": 0.4-0.8 for the octave below. Give it a
 long attack (2-6s) so it swells rather than thuds.
+
+SPACE AND WIDTH — two effects nearly every ambient scene should use:
+  "reverb": {"mix", "size", "damp"} at the soundscape level, beside "delay",
+    puts every voice in ONE room. "size" is the tail in seconds, 0.3-6;
+    "damp" 0-1 is how dark the tail turns (low: bright stone hall, high: soft
+    felted room). "mix" 0-1 is the room's level. 0.2-0.3 with size 3-4 suits
+    most scenes; 0.35-0.5 with size 5-6 for vast, cathedral, cave, space or
+    underwater briefs; 0.1 with size 1-2 for close and intimate. Each voice
+    sends to it fully unless it says otherwise: give the FOUNDATION/bass voice
+    "reverb": 0-0.2 (its send, 0-1) so the low end stays clear, not muddy.
+  "chorus" 0-1 on any voice thickens it into an ENSEMBLE — three slowly
+    drifting copies of itself. 0.3-0.6 on a pad or osc is the lush
+    string-machine sound; 0.2-0.4 on a pluck, bell or fm adds shimmer.
+    "chorus_rate" in Hz, default 0.5 (0.2-1.0 useful). One or two voices,
+    not all of them — a chorused bass loses its weight.
 
 Any voice can carry an LFO that modulates ONE of its own parameters:
 "lfo": {"on":true, "dest":"level|pan|tone|detune|sub|waveform|rate|decay|gap|play",
@@ -235,8 +271,8 @@ Any voice can carry an LFO that modulates ONE of its own parameters:
        "decay"  how long each note rings, swelling and dying back
        "gap"    the silence between strikes opening and closing
        "play"   the length of each phrase growing and shrinking
-     The last three only do anything on "pluck", "bell" and "harp" — the
-     voices that schedule notes. "gap" and "play" additionally need the voice
+     The last three only do anything on "pluck", "bell", "fm" and "harp" —
+     the voices that schedule notes. "gap" and "play" additionally need the voice
      to be using them (see the "gap"/"play" params above); an LFO on "gap" is
      the way to make a sparse voice drift between busy and almost silent.
 RATE: 0 to 0.2 Hz, and values outside that are clamped. Even 0.2 is brisk for
@@ -266,7 +302,7 @@ VOICE ORDER MATTERS — always list "voices" in this fixed priority order:
   1. foundation: the lowest, most sustained voice (bass/sub/drone pad)
   2. body: mid-register pads and harmonic texture
   3. lead: whatever carries the melody or the most movement
-  4. detail: plucks, bells, harps, sequences, arps
+  4. detail: plucks, bells, fm, harps, sequences, arps
   5. air: noise/atmosphere beds
 Omit any tier the scene doesn't need, but never reorder the ones you do use.
 Hardware MIDI controllers bind knobs to voice POSITIONS, not names — the
@@ -568,12 +604,14 @@ _SOUNDSCAPE_SCHEMA = """{
   "soundscape": {
     "tempo": 60, "master": 0.8, "distortion": 0.0,
     "delay": {"time":0.4, "feedback":0.35, "mix":0.3},
+    "reverb": {"mix":0.25, "size":3.5, "damp":0.5},
     "voices": [
       {"name":"drone","type":"pad","waveform":"sine|saw|square|triangle","note":36,
        "chord":[0,7,12],"level":0.5,"tone":0.4,"detune":0.01,"pan":0.0,
        "env":{"attack":3.0,"decay":1.2,"sustain":0.85,"release":2.5}},
       {"name":"lead","type":"osc","waveform":"saw","note":48,"chord":[0,7],
        "unison":3,"detune":0.015,"sub":0.2,"tone":0.55,"level":0.4,"pan":0.0,
+       "chorus":0.4,
         "lfo":{"on":true,"dest":"tone","shape":"sine","rate":0.05,"depth":0.5}},
       {"name":"bells","type":"bell","note":72,
        "scale":[0,3,7,10],"level":0.3,"rate":0.5,"decay":1.4,"tone":0.7,"pan":0.2},

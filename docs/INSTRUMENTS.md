@@ -98,6 +98,32 @@ note is its own pitch, at ~16ms. `ARP_OUTPUT_GAIN = 0.8` recentres the 23 arp
 voices in the library at a median -0.2dB (range -2.6..+4.4) against the old
 sound; no full mix peaks higher (0.773 vs 0.768). Pluck output is bit-identical.
 
+**Worked example 4 — `fm`, a type that had to be one (2026-10).** FM fails
+the "is it a param?" test cleanly: its sound comes from one oscillator's
+output being fed into another's *phase*, `sin(2pi fc t + I(t) sin(2pi r fc t))`,
+and no existing renderer has a phase input to feed. Three decisions shaped it:
+
+- **Phase from the note's onset, not the absolute clock.** Every other voice
+  derives phase from the sample clock so rows dedupe across notes (§3). FM
+  can't use that: the attack of a struck FM sound IS the starting relationship
+  between carrier and modulator, and a clock-derived phase gives every strike
+  a different transient. So each note is its own row, cost scales with note
+  count rather than distinct pitches, and `MAX_ACTIVE_FM_NOTES = 24` is a real
+  cost cap: four transcendentals a note-sample, 1.2ms a block at the cap.
+- **`ratio`/`index`/`index_decay` are snapshotted onto the note at its
+  strike**, like `drift`, through `_schedule_notes(extra=)`. Retuning `ratio`
+  under a ringing note would jump its modulator phase; a knob shapes the next
+  note instead.
+- **The index is capped per note so the sidebands stay under Nyquist**
+  (Carson: most energy within `(I+1) * fm` of the carrier). Measured: a note
+  at MIDI 100 with ratio 8 and index 10 puts 0.0000 of its energy below the
+  carrier, where aliasing would land.
+
+At `index` 0 it is a pure sine at exactly a sine `pluck`'s level (peak ratio
+1.000), which is why `FM_OUTPUT_GAIN` is pluck's 0.6 rather than a calibrated
+constant. Measured spectral centroid on a strike with `index_decay` 0.3:
+1147Hz at the attack, 446Hz 1.5s in. That fall IS the voice.
+
 A testing trap found on the way: a render is only reproducible with **three**
 seeds — `np.random.seed`, `random.seed` (swell phase and period), and the
 Soundscape's own `self._rng` (drift). Without the second, the committed code
@@ -113,7 +139,7 @@ are no note events. Phase comes from the absolute sample clock, so tones stay
 continuous across block boundaries with no stored per-oscillator phase. These
 belong in `ENVELOPED_TYPES` so muting fades via ADSR instead of cutting.
 
-**Note-scheduling** (`pluck`, `arp`, `bell`, `harp`) — onsets are appended to
+**Note-scheduling** (`pluck`, `arp`, `bell`, `harp`, `fm`) — onsets are appended to
 the shared `_active_notes` pool and each note carries its own envelope. These
 stay *out* of `ENVELOPED_TYPES`: each note already has a decay, and gating the
 scheduler fights it.
@@ -123,8 +149,8 @@ lives:
 
 | | per-note loop | batched matrix |
 |---|---|---|
-| used by | `pluck` | `bell`, `harp`, `arp` |
-| method | `_render_note_events` | `_render_bell_notes` / `_render_harp_notes` / `_render_arp_notes` |
+| used by | `pluck` | `bell`, `harp`, `arp`, `fm` |
+| method | `_render_note_events` | `_render_bell_notes` / `_render_harp_notes` / `_render_arp_notes` / `_render_fm_notes` |
 | cost | one `_osc()` call **per note** | one `_osc()` call **total** |
 | shape | 1 fundamental per note | flatten (note × partial) into one 2D matrix |
 
@@ -380,3 +406,84 @@ Then run it in the app (`verify-in-app` skill) and confirm the panel renders.
 Note that a machine with no audio output device will report `callbacks: 0` and
 `device: None` in `audio_diag` — the VU still moves because the engine renders
 for the modulation sources, so you can verify *signal* but not *sound*.
+
+## 8. Effects — the same rules, applied after the voice
+
+An effect is a voice-shaped problem with the oscillator removed: it must be
+pure numpy, block-granular, and never a per-sample recursion. What that
+rules in and out is the useful part.
+
+**What the rule allows.** Anything whose output depends on past *input* but
+not on its own past *output*. Convolution (reverb) and a modulated
+multi-tap delay reading history (chorus) are both in. A delay *with
+feedback* is only in because `Delay` clamps its time to at least one block,
+so the feedback read never touches samples written in the same block. True
+resonant filters, a phaser, a flanger with feedback and Karplus-Strong are
+all out: each needs `y[n-1]` to compute `y[n]`. `scipy.signal.lfilter`
+would make them cheap, and scipy is deliberately not a dependency.
+
+**Where effects sit in `Soundscape.render`:**
+
+```
+per voice:  render -> played notes -> envelope gain -> level/tremolo -> swell
+            -> distortion -> CHORUS -> voice meter -> REVERB SEND -> pan
+whole mix:  sum -> + REVERB RETURN -> EQ / filter sweep -> delay
+            -> master distortion -> master/mute -> tanh limiter
+```
+
+Chorus is after distortion so the copies are of the voice as it finally
+sounds. The reverb send is pre-pan (the room is the whole space, not a place
+beside the voice) and the return goes in before the EQ and delay, so it is
+shaped and echoed with everything else.
+
+**Absent means off, and off costs nothing.** `reverb` (soundscape),
+`reverb`/`chorus`/`chorus_rate` (per voice) are all optional: absent keys
+skip the code path entirely, and the whole library renders bit-identical
+to before they existed (26 soundscapes, 60 blocks, seeded). `_normalise`
+keeps them absent on save (`_optional_clamp`), so no scene file churns.
+
+**`ConvReverb`** is uniform-partitioned convolution (overlap-save, FFT of
+twice the block) over a synthesised impulse: seeded decaying noise, -60dB at
+`size`, with high frequencies dying faster by `damp`. Measured at 1024
+frames, a ~23ms block (the slower of two runs: the CPU clock moves these by
+up to 2x):
+
+| size | stereo | quad |
+|---|---|---|
+| 1s | 0.42ms | 0.70ms |
+| 2.5s | 0.85ms | 1.56ms |
+| 4s | 1.32ms | 3.02ms |
+| 6s (max) | 1.92ms | 4.12ms |
+
+Three things about it that are easy to undo:
+
+- **The impulse is built incrementally.** A full build is 40-70ms, two to
+  three whole blocks, so a size/damp drag would starve the audio. It builds
+  `BUILD_PER_BLOCK` partition-channels per block while the old response keeps
+  playing, then crossfades over one block: at most 6.2ms a block in stereo
+  and 8.8ms in quad, and a 6s tail is ready in 8 blocks (0.2s) in stereo or
+  16 (0.4s) in quad. Measured with size dragged every 100ms on `hot lava`:
+  8.7ms a block on average, zero starved callbacks.
+- **The input history is sized for the longest tail**, so a size change
+  keeps what is ringing instead of resetting it.
+- **Each output channel gets its own noise**, so the tail is decorrelated
+  (L/R correlation 0.01) and wraps the listener. On 5.1 it spreads over the
+  four corners and never the centre or LFE.
+
+A steady pure tone can come out slightly *quieter* with reverb (`hot lava`
+-0.4dB at mix 0.3): a static impulse has a fixed, random gain and phase at
+each frequency, so a drone partly cancels against its own tail. That is what
+a real room does to a sine; it is not a bug.
+
+**Chorus** is three taps at 9/13/17ms swept by one LFO a third of a cycle
+apart, read from the voice's last ~21ms by linear interpolation. 0.14ms a
+voice. Its LFO phase **accumulates** so a live rate change bends the sweep
+rather than jumping all three copies' pitch at once. The history is emptied
+when a block was skipped (a muted voice), or unmuting would replay its old
+tail. Output is divided by `sqrt(1 + 3w^2)` so loudness holds within ~1dB
+across the amount range.
+
+Measured together on `hot lava` (the heaviest library scene): reverb at 6s,
+chorus on every voice and an added `fm` voice took the block from 2.9ms to
+6.2ms, with zero starved callbacks.
+

@@ -305,37 +305,40 @@ strikes) rather than routing it through the existing per-note
 reference the same way the pad rewrite did (docstring claims max abs diff
 ~6e-7) before landing it.
 
-### Reverb
+### Reverb, chorus and an FM voice — BUILT in 0.92
 
-Delay already exists (`Delay` class, dsp.py ~225) but a room reverb is not
-"another Delay instance" — worth writing down why before someone tries that.
-`Delay.process()` is block-granular specifically because delay time is
-clamped to `>= one block` (dsp.py ~240-241), which guarantees read/write
-ranges never overlap within a block and lets the whole thing be vectorised
-with zero per-sample Python recursion. That's free for an echo effect, which
-wants delay times of tens to thousands of ms anyway. A convincing *room*
-reverb wants early reflections/comb filters in the 5–80ms range — shorter
-than one block at the default blocksize (8192 frames ≈ 186ms) entirely, and
-still coarse at the lowest practical setting (1024 ≈ 23ms). The Delay
-pattern can't express that.
+All three became affordable once audio moved to 1024-frame blocks rendered
+ahead of the callback (0.90). How each fits the "no per-sample recursion"
+rule below, and what each costs, is in `docs/INSTRUMENTS.md` §8.
 
-Two ways forward that respect the constraint instead of fighting it:
+- **Reverb** took option 2 of the two this section used to weigh:
+  uniform-partitioned **convolution** (`dsp.ConvReverb`) over a synthesised
+  decaying-noise impulse, `size` 0.3–6s, `damp` darkening the tail as it
+  decays. Option 1 (parallel long delay lines) was never needed: convolution
+  has no recursion at all, so the block-length limit that made a delay-based
+  room impossible doesn't apply. 1–2.4ms a block in stereo.
+- **Chorus** is per voice, a three-tap ensemble swept a third of a cycle
+  apart. The "short modulated delay vs blocksize" worry didn't apply either:
+  the taps read history, never this block's output, so there is no feedback
+  path to recurse. 0.14ms a voice.
+- **`fm`** is a struck two-operator voice: e-piano, glass bells, mallets.
 
-1. **Lean into it — a long, washy ambient reverb** built from several
-   parallel long delay lines (each independently legal under the same `>=
-   one block` rule), detuned/modulated slightly against each other. Less
-   "small room," more "cathedral" — which arguably suits this app's ambient
-   character better than a tight room sim would anyway.
-2. **Block-granular convolution.** `_apply_eq()` (dsp.py ~190) already does
-   one rFFT/irFFT per block for the 3-band EQ — that's precedent and
-   existing infrastructure for frequency-domain block processing. A fixed
-   impulse response applied via FFT overlap-add is the standard efficient
-   convolution reverb approach and, done right, needs no per-sample loop
-   either. More work than (1), but it's the "real" reverb if that's wanted
-   later.
+Still open, measured or reasoned at the time:
 
-Chorus/phaser carry a milder version of the same constraint (short modulated
-delay), worth checking against blocksize before promising either.
+- **Granular** texture voice — 24 grains measured 1.28ms a block, so cost is
+  not the obstacle; designing a source material that isn't just noise is.
+- **Feedback effects stay out**: true resonant filters, a phaser, a flanger
+  with feedback and Karplus-Strong strings are all per-sample recursions.
+  `scipy.signal.lfilter` would make them cheap, but scipy is not a
+  dependency, and adding it grows every release binary.
+- **An `index` LFO destination for `fm`.** Notes snapshot their FM fields at
+  the strike, so an LFO would shape each new note's brightness, a natural fit
+  for the stepped destinations.
+- **The audio-only Regenerate prompt** (`generate_audio`) sends only the
+  soundscape schema, not `_SOUNDSCAPE_GUIDE`, so it learns that reverb and
+  chorus exist from the example but has never been told about `fm`, `harp`
+  or bell characters. Adding the guide costs ~3.3k input tokens a call
+  (13.4k characters).
 
 ### The general rule for anything added here
 

@@ -13,11 +13,14 @@ Design choices that keep it fast and click-free in pure Python:
   block boundaries with no stored per-oscillator phase.
 - A block-granular delay line (delay >= one block) so feedback needs no
   per-sample recursion.
+- Reverb by partitioned FFT convolution and chorus by interpolated reads of
+  history — neither has a feedback path, so neither needs one either.
 
 A soundscape spec (JSON, stored in the scene):
 {
   "tempo": 60, "master": 0.8, "distortion": 0.0,
   "delay": {"time": 0.4, "feedback": 0.35, "mix": 0.3},
+  "reverb": {"mix": 0.25, "size": 3.5, "damp": 0.5},      (optional: absent = off)
   "eq": {"low": 0.0, "mid": 0.0, "high": 0.0},
   "swell_amount": 0.0, "swell_period": 24.0,
   "voices": [
@@ -28,6 +31,9 @@ A soundscape spec (JSON, stored in the scene):
     {"name":"bells","type":"bell","note":72,
      "scale":[0,3,7,10],"level":0.3,"rate":1.0,"decay":1.2,"tone":0.7,"pan":0.2,
      "mute":false,"distortion":0.0},
+    {"name":"keys","type":"fm","note":60,"scale":[0,4,7],"rate":0.5,"decay":2.0,
+     "ratio":1.0,"index":2.5,"index_decay":0.4,"level":0.3,
+     "chorus":0.3,"reverb":0.8},
     {"name":"air","type":"noise","level":0.15,"tone":0.5,"pan":0.0,"mute":false,
      "distortion":0.0}
   ]
@@ -44,7 +50,7 @@ import numpy as np
 from ..modulation import Envelope
 
 SR = 44100
-VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell", "harp")
+VOICE_TYPES = ("pad", "pluck", "noise", "sub", "osc", "bell", "harp", "fm")
 WAVEFORMS = ("sine", "saw", "square", "triangle")
 
 # Fixed inharmonic partial bank for `bell` — ratios are NOT integer multiples
@@ -204,6 +210,22 @@ HARP_ROLL_DEFAULT = 6
 #: exists to play. Sparse settings (roll=1) come out quiet by design and want
 #: their "level" raised.
 HARP_OUTPUT_GAIN = 0.17
+
+# `fm`: two-operator phase modulation, one modulator into one carrier per
+# note — the DX7's electric piano, bells and mallets. `ratio` is the
+# modulator's frequency over the carrier's: integers are harmonic (e-piano,
+# brass), non-integers inharmonic (bells, metal). `index` is how far the
+# modulator swings the carrier's phase, i.e. how many sidebands — the
+# brightness — and it decays over `index_decay` seconds independently of the
+# note's own `decay`, which is the whole character of a struck FM sound: a
+# bright, clangy attack that mellows to almost a sine as it rings.
+FM_RATIO_RANGE = (0.25, 8.0)
+FM_INDEX_MAX = 10.0
+FM_INDEX_DECAY_RANGE = (0.02, 6.0)
+FM_DEFAULTS = {"ratio": 1.0, "index": 2.0, "index_decay": 0.4}
+#: Same flat trim as pluck/bell: at index 0 an fm note is exactly a sine
+#: pluck, and only a handful of notes overlap at struck densities.
+FM_OUTPUT_GAIN = 0.6
 
 #: Ceiling on a per-voice LFO's rate, in Hz. Shared by the DSP clamp, the MIDI
 #: range table and the UI knob so all three agree on what the control means —
@@ -563,6 +585,190 @@ class Delay:
         return out
 
 
+#: Reverb tail ceiling, seconds to -60dB. Steady cost is linear in it (one
+#: complex multiply-add per partition per block): 6s measures ~2.4ms a block
+#: in stereo at 1024 frames, ~4.5ms in quad.
+REVERB_MAX_SIZE = 6.0
+
+#: What a soundscape with no `reverb` key gets when one of its fields is set
+#: live — mix 0, so touching size or damp alone doesn't switch it on. Shared
+#: with the engine's copy of the spec (`engine._apply_scape_param`) so the
+#: saved scene and the running synth agree.
+REVERB_DEFAULT = {"mix": 0.0, "size": 3.0, "damp": 0.5}
+
+#: Per-voice chorus: three delayed copies of the voice, each swept by the same
+#: slow LFO a third of a cycle apart — the string-machine "ensemble" shape, so
+#: there is always one copy rising in pitch, one falling and one turning. Base
+#: delays are staggered so the copies never line up into a single flanged one.
+CHORUS_BASE_MS = (9.0, 13.0, 17.0)
+#: Sweep depth in ms at `chorus` 0 and the extra at 1. Pitch wobble is
+#: 2*pi*rate*depth: ~1.3% (~20 cents) at full depth and the default rate.
+CHORUS_DEPTH_MS = (1.0, 3.0)
+CHORUS_RATE_DEFAULT = 0.5       # Hz
+CHORUS_RATE_MAX = 3.0
+
+
+class ConvReverb:
+    """Uniform-partitioned convolution reverb over a synthesised impulse.
+
+    A classic reverb (comb/allpass networks, an FDN) is a per-SAMPLE
+    recursion, which numpy cannot vectorise and Python cannot afford — the
+    same wall that rules out feedback filters elsewhere in this module
+    (docs/INSTRUMENTS.md). Convolution has no recursion: each block is one
+    rfft of the input, a multiply-add against every partition of the impulse
+    response held in the frequency domain, and one irfft per channel.
+    Overlap-save with an FFT twice the block, so it adds no latency and costs
+    the same every block whatever is playing.
+
+    The impulse is exponentially decaying noise — the statistical shape of a
+    diffuse room tail — reaching -60dB at `size` seconds, with high
+    frequencies dying faster by `damp` (applied per partition in the
+    frequency domain, so the tail darkens as it decays, as air and soft
+    surfaces make a real one do). Each output channel gets its own noise, so
+    the tail is decorrelated across the speakers and surrounds the listener
+    rather than sitting in the middle. The input is the mono sum of every
+    voice's send.
+
+    Building a response is ~0.12ms a partition per channel pair — 40-70ms for
+    a long tail, two to three whole 1024-frame blocks — so it is built
+    INCREMENTALLY, `BUILD_PER_BLOCK` partitions per block, while the previous
+    response keeps playing; the switch is crossfaded over one block. A slider
+    drag therefore lands ~0.1-0.4s late instead of starving the audio. The
+    noise is seeded and shared by every build, so a size or damp change only
+    reshapes the envelope over the same grain.
+    """
+
+    SEED = 0x5EED
+    ATTACK_S = 0.012            # onset ramp: a hard-edged first reflection clicks
+    BUILD_PER_BLOCK = 64        # partition-channels built per block, ~4ms
+
+    def __init__(self, sr=SR, channels: int = 2):
+        self.sr = sr
+        self.channels = int(channels)
+        self.targets = [c for c in SURROUND_LAYOUTS.get(self.channels, (0, 1))
+                        if c is not None]
+        # Output channels the tail spreads over: the front pair, plus the
+        # rears when there are any. Never 5.1's centre or LFE.
+        n_max = int(REVERB_MAX_SIZE * sr) + 1
+        self.noise = np.random.default_rng(self.SEED).standard_normal(
+            (len(self.targets), n_max)).astype(np.float32)
+        self.frames = 0           # block size the buffers below are built for
+        self.key = None           # (size, damp) of self.H
+        self.H = None             # (P, C, bins) partition spectra, or None
+        self.pending = None       # an incremental build in progress
+        self.fdl = None           # (ring, bins) input spectra, newest at self.k
+        self.ring = 0
+        self.k = 0
+        self.prev = None          # last block's input: overlap-save's first half
+        self.idle = True          # set by the caller while the reverb is off
+
+    def _start_build(self, size, damp):
+        B = self.frames
+        P = max(1, int(math.ceil(size * self.sr / B)))
+        self.pending = dict(key=(size, damp), P=P, done=0,
+                            H=np.empty((P, len(self.targets), B + 1), np.complex64),
+                            energy=np.zeros((len(self.targets), 1), np.float64))
+
+    def _build_step(self):
+        """Build the next BUILD_PER_BLOCK partitions; True once complete."""
+        b = self.pending
+        B, sr = self.frames, self.sr
+        size, damp = b["key"]
+        p0 = b["done"]
+        p1 = min(b["P"], p0 + max(1, self.BUILD_PER_BLOCK // len(self.targets)))
+        t = np.arange(p0 * B, p1 * B) / sr
+        avail = max(0, min(len(t), self.noise.shape[1] - p0 * B))
+        noise = np.zeros((len(self.targets), len(t)), np.float32)
+        noise[:, :avail] = self.noise[:, p0 * B:p0 * B + avail]
+        # Broadband decay in the time domain (smooth), to -60dB at `size`.
+        env = np.exp(-6.9078 * t / size) * np.minimum(1.0, t / self.ATTACK_S)
+        ir = (noise * env).reshape(len(self.targets), p1 - p0, B).transpose(1, 0, 2)
+        spec = np.fft.rfft(ir, n=2 * B, axis=-1)
+        # Extra high-frequency decay, stepped per partition: T60 at f falls to
+        # size / (1 + 6 * damp * f/10kHz). A partition is ~23ms, so the step
+        # in the tail's colour is far below anything audible.
+        f = np.fft.rfftfreq(2 * B, 1 / sr)
+        tp = (np.arange(p0, p1) * B / sr)[:, None]
+        spec *= np.exp(-6.9078 * tp * (6.0 * damp / 10000.0) * f[None, :] / size)[:, None, :]
+        # That gain smears each partition past its B samples; truncate back to
+        # B so overlap-save's circular wrap stays clean.
+        seg = np.fft.irfft(spec, n=2 * B, axis=-1)[..., :B]
+        b["energy"] += np.sum(seg ** 2, axis=(0, 2))[:, None]
+        b["H"][p0:p1] = np.fft.rfft(seg, n=2 * B, axis=-1)
+        b["done"] = p1
+        if p1 < b["P"]:
+            return False
+        # Energy-normalised per channel: white noise in comes out at the same
+        # RMS, so `mix` reads as the wet level relative to the dry.
+        b["H"] /= (np.sqrt(b["energy"]) + 1e-12).astype(np.float32)[None]
+        return True
+
+    def process(self, send, size, damp):
+        """Return the (frames, channels) wet signal for one block of mono
+        `send`. `size`/`damp` are clamped here as well as in `_normalise`:
+        set_param writes live values straight into the spec."""
+        frames = len(send)
+        size = min(REVERB_MAX_SIZE, max(0.3, float(size)))
+        damp = min(1.0, max(0.0, float(damp)))
+        if frames != self.frames:
+            # The input history is sized for the LONGEST tail, so a live size
+            # change keeps what is already ringing; only a new block size
+            # (a stream reconfigure, which is a gap anyway) starts afresh.
+            self.frames = frames
+            self.ring = int(math.ceil(REVERB_MAX_SIZE * self.sr / frames))
+            self.fdl = np.zeros((self.ring, frames + 1), np.complex64)
+            self.prev = np.zeros(frames, np.float32)
+            self.k = 0
+            self.H = self.key = self.pending = None
+        if self.idle:
+            # Re-enabled after being off: whatever was in flight is stale.
+            self.fdl[:] = 0
+            self.prev[:] = 0
+            self.idle = False
+        # Quantised so a slider drag starts a build per 0.1s / 0.05 step at
+        # most. A newer setting waits for the build in flight to finish
+        # rather than restarting it, so a long drag still updates as it goes.
+        key = (round(size, 1), round(damp * 20) / 20)
+        if self.pending is None and key != self.key:
+            self._start_build(*key)
+        old_H = None
+        swapped = False
+        if self.pending is not None and self._build_step():
+            old_H, self.H, self.key = self.H, self.pending["H"], self.pending["key"]
+            self.pending, swapped = None, True
+
+        self.k = (self.k - 1) % self.ring
+        x = np.concatenate([self.prev, send.astype(np.float32)])
+        self.fdl[self.k] = np.fft.rfft(x)
+        self.prev = x[frames:]
+
+        out = np.zeros((frames, self.channels), np.float32)
+        if self.H is None:
+            return out            # first build still in progress
+
+        def conv(H):
+            # Partition p pairs with the input spectrum p blocks old, at
+            # fdl[(k + p) % ring]: at most two contiguous runs, no copy.
+            k, P = self.k, len(H)
+            n1 = min(P, self.ring - k)
+            y = np.einsum("pb,pcb->cb", self.fdl[k:k + n1], H[:n1])
+            if n1 < P:
+                y += np.einsum("pb,pcb->cb", self.fdl[:P - n1], H[n1:])
+            return np.fft.irfft(y, n=2 * frames, axis=-1)[:, frames:]
+
+        wet = conv(self.H)
+        if swapped:
+            # A new response under a ringing tail: one block's crossfade from
+            # the old to the new rather than a step. The very first one fades
+            # in from nothing, which is what the tail of the blocks sent while
+            # it was building should do anyway.
+            ramp = np.linspace(0.0, 1.0, frames)
+            before = conv(old_H) if old_H is not None else 0.0
+            wet = before * (1.0 - ramp) + wet * ramp
+        out[:, self.targets] = wet.T
+        return out
+
+
 class Soundscape:
     def __init__(self, spec: dict | None = None, sr: int = SR, channels: int = 2):
         self.sr = sr
@@ -572,11 +778,15 @@ class Soundscape:
         self.channels = channels if channels in SURROUND_LAYOUTS else 2
         self._clock = 0                          # absolute sample index
         self._delay = Delay(sr, channels=self.channels)
+        self._reverb = ConvReverb(sr, channels=self.channels)
         self._active_notes: list[dict] = []      # for pluck/arp voices
         # Notes PLAYED on a held voice (pad/osc/sub/noise) from a key, pad or
         # MIDI keyboard — see `play` and `_render_held`. Struck voices' played
         # notes go into `_active_notes` instead, beside their own.
         self._held: dict[str, list[dict]] = {}
+        # Per-voice chorus state — delay-line history and LFO phase. See
+        # `_chorus_voice`; absent for every voice that has no chorus.
+        self._chorus: dict[str, dict] = {}
         # Pitch-drift walk position per voice, and its generator. Seeded rather
         # than global so two Soundscapes rendering side by side (the mixer
         # crossfades two) don't share a stream and correlate their wobble.
@@ -638,6 +848,7 @@ class Soundscape:
             return
         self.channels = channels
         self._delay = Delay(self.sr, channels=channels)
+        self._reverb = ConvReverb(self.sr, channels=channels)
 
     def set_muted(self, muted: bool, fade: float = 0.0):
         """Mute/unmute, optionally ramped over `fade` seconds (e.g. a "Disable
@@ -664,6 +875,7 @@ class Soundscape:
         self.spec = _normalise(spec)
         self._active_notes.clear()
         self._held.clear()
+        self._chorus.clear()
         self._voice_env = {}
         self._voice_env_on = {}
         for v in self.spec["voices"]:
@@ -686,7 +898,8 @@ class Soundscape:
     def set_param(self, path: str, value):
         """Live update. Paths: 'master', 'tempo', 'distortion', 'swell_amount',
         'swell_period', 'filter_sweep_amount', 'filter_sweep_period',
-        'delay.time|feedback|mix', 'eq.low|mid|high', 'voice.<name>.<field>'."""
+        'delay.time|feedback|mix', 'reverb.mix|size|damp', 'eq.low|mid|high',
+        'voice.<name>.<field>'."""
         s = self.spec
         parts = path.split(".")
         if len(parts) == 1 and parts[0] in ("master", "tempo", "distortion",
@@ -696,6 +909,8 @@ class Soundscape:
             s[parts[0]] = _coerce(parts[0], value)
         elif parts[0] == "delay" and len(parts) == 2:
             s["delay"][parts[1]] = float(value)
+        elif parts[0] == "reverb" and len(parts) == 2:
+            s.setdefault("reverb", dict(REVERB_DEFAULT))[parts[1]] = float(value)
         elif parts[0] == "eq" and len(parts) == 2:
             s.setdefault("eq", {})[parts[1]] = float(value)
         elif parts[0] == "voice" and len(parts) == 3:
@@ -929,6 +1144,13 @@ class Soundscape:
         sweep_period = max(1.0, float(self.spec.get("filter_sweep_period", 30.0)))
         sweep_swing = math.sin(2 * math.pi * block_t / sweep_period)
 
+        # Reverb send bus: the mono sum of every voice's send, convolved once
+        # after the loop. Absent or at mix 0 it is never allocated, so a scene
+        # without reverb renders exactly as it did before reverb existed.
+        rvb = self.spec.get("reverb") or {}
+        rvb_mix = min(1.0, max(0.0, float(rvb.get("mix", 0.0) or 0.0)))
+        send_bus = np.zeros(frames, np.float64) if rvb_mix > 0 else None
+
         for v in self.spec["voices"]:
             vt = v.get("type", "pad")
             name = v["name"]
@@ -1026,6 +1248,8 @@ class Soundscape:
                 mono = self._render_bell(rv, n0, frames)
             elif vt == "harp":
                 mono = self._render_harp(rv, n0, frames)
+            elif vt == "fm":
+                mono = self._render_fm(rv, n0, frames)
             elif vt == "noise":
                 mono = self._render_noise(rv, frames)
             else:
@@ -1062,6 +1286,16 @@ class Soundscape:
                 g = 1.0 + distortion * 8.0
                 mono = np.tanh(mono * g) / np.tanh(g if g > 1 else 1)
 
+            # Chorus, after distortion so the copies are of the voice as it
+            # finally sounds (an overdriven pad chorused, not three clean
+            # copies overdriven together). Absent skips this entirely.
+            ch = min(1.0, max(0.0, float(v.get("chorus", 0.0) or 0.0)))
+            if ch > 0.0:
+                mono = self._chorus_voice(name, mono, ch,
+                                          v.get("chorus_rate", CHORUS_RATE_DEFAULT))
+            elif name in self._chorus:
+                del self._chorus[name]
+
             # Per-voice compressor (disabled for now — needs fixing)
             # comp = v.get("compress") or {}
             # if comp.get("on"):
@@ -1077,6 +1311,14 @@ class Soundscape:
             # the arp's rhythm for free.
             if mono.size:
                 voice_peaks[name] = float(np.max(np.abs(mono)))
+
+            # Reverb send, pre-pan: the room is the whole space, not a place
+            # beside the voice. Absent means full send; 0 keeps a voice dry
+            # (a sub, usually — reverb on the lowest octave is mud).
+            if send_bus is not None:
+                snd = min(1.0, max(0.0, float(v.get("reverb", 1.0))))
+                if snd > 0.0:
+                    send_bus += mono * snd
 
             pan = float(v.get("pan", 0.0))
             lfo = lfos.get("pan")
@@ -1099,6 +1341,16 @@ class Soundscape:
             # the rears instead of reappearing at the front.
             depth = np.clip(depth, 0.0, 1.0)
             mix += mono[:, None] * _pan_gains(pan, depth, self.channels)
+
+        # Before the EQ and delay, so the return is shaped and echoed with
+        # everything else: it is the room the instruments are in, not an
+        # effect on the end of the chain.
+        if send_bus is not None:
+            mix += rvb_mix * self._reverb.process(
+                send_bus, rvb.get("size", REVERB_DEFAULT["size"]),
+                rvb.get("damp", REVERB_DEFAULT["damp"]))
+        else:
+            self._reverb.idle = True
 
         eq = self.spec.get("eq")
         if sweep_amount > 0:
@@ -1141,6 +1393,55 @@ class Soundscape:
         self.voice_peaks = voice_peaks
         self._update_bands(mix)
         return mix
+
+    def _chorus_voice(self, name, mono, amount, rate):
+        """Three-tap modulated delay on one voice's mono signal.
+
+        Vectorised over the block like everything else here: each tap's delay
+        is a per-sample array from the LFO, read from the voice's last
+        ~21ms of samples plus this block by linear interpolation — no
+        recursion, so no per-sample Python. The sweep is far slower than a
+        block, so interpolation error is inaudible.
+
+        The LFO phase ACCUMULATES rather than deriving from the clock, so a
+        live rate change bends the sweep instead of jumping its phase (which
+        would be a pitch glitch on all three copies at once). A block the
+        voice skipped (muted) empties the history, so unmuting doesn't replay
+        the tail of what it was playing before."""
+        frames = len(mono)
+        # History: the longest tap at this rate, plus room to interpolate.
+        H = int(math.ceil((max(CHORUS_BASE_MS) + sum(CHORUS_DEPTH_MS)) * self.sr / 1000.0)) + 4
+        st = self._chorus.get(name)
+        if st is None or st["clock"] != self._clock:
+            st = {"hist": np.zeros(H), "phase": st["phase"] if st else 0.0}
+            self._chorus[name] = st
+        # Clamped on read: set_param bypasses _normalise.
+        try:
+            rate = min(CHORUS_RATE_MAX, max(0.05, float(rate)))
+        except (TypeError, ValueError):
+            rate = CHORUS_RATE_DEFAULT
+        depth = CHORUS_DEPTH_MS[0] + CHORUS_DEPTH_MS[1] * amount
+        buf = np.concatenate([st["hist"], mono])
+        i = np.arange(frames)
+        ph = st["phase"] + (2 * math.pi * rate / self.sr) * i
+        acc = np.zeros(frames)
+        for k, base in enumerate(CHORUS_BASE_MS):
+            d = (base + depth * np.sin(ph + k * (2 * math.pi / 3))) * (self.sr / 1000.0)
+            pos = (H + i) - d
+            p0 = pos.astype(np.int64)
+            fr = pos - p0
+            acc += buf[p0] * (1.0 - fr) + buf[p0 + 1] * fr
+        st["phase"] = (st["phase"] + 2 * math.pi * rate * frames / self.sr) % (2 * math.pi)
+        st["hist"] = buf[-H:]
+        st["clock"] = self._clock + frames
+        # The copies are near-uncorrelated with the dry and each other once
+        # they drift, so the sum's power is 1 + 3w^2; dividing it out keeps a
+        # voice at the loudness it was mixed at whatever the amount.
+        w = self.CHORUS_WET * amount
+        return (mono + w * acc) / math.sqrt(1.0 + 3.0 * w * w)
+
+    #: Wet weight per copy at `chorus` 1.
+    CHORUS_WET = 0.7
 
     #: Voice types that get an ADSR and so fade in/out on mute rather than
     #: being cut. `noise` belongs here despite not being a "note" voice: it is
@@ -1347,7 +1648,7 @@ class Soundscape:
 
     def _schedule_notes(self, voice_name, n0, frames, interval, freq_fn, wf, decay,
                         tone=1.0, drift=0.0, resonance=0.0,
-                        play_n=0, cycle_n=0):
+                        play_n=0, cycle_n=0, extra=None):
         """Append onsets landing in this block for `voice_name`, then enforce
         the shared MAX_ACTIVE_NOTES cap. `freq_fn(step)` returns the Hz for
         onset index `step`. Shared by both `pluck` (indexes a scale) and `arp`
@@ -1374,10 +1675,13 @@ class Soundscape:
             if cycle_n > 0 and (onset % cycle_n) >= play_n:
                 continue          # inside the gap between phrases
             step = onset // interval
-            self._active_notes.append(dict(
+            note = dict(
                 start=onset, freq=freq_fn(step) * self._drift_factor(voice_name, drift),
                 wf=wf, decay=decay, voice=voice_name, tone=tone,
-                resonance=resonance))
+                resonance=resonance)
+            if extra:
+                note.update(extra)       # a voice's own per-note fields (fm)
+            self._active_notes.append(note)
         if len(self._active_notes) > self.MAX_ACTIVE_NOTES:
             # evict oldest first — inaudible in an ambient context, and far
             # cheaper than letting render cost keep climbing
@@ -1564,6 +1868,90 @@ class Soundscape:
         surviving = [n for n, keep in zip(mine, alive_mask) if keep]
         self._active_notes = other + surviving
         return out * 0.6
+
+    #: fm's own polyphony cap inside the shared pool, as for bell: four
+    #: transcendentals per note-sample (two exp, two sin) is ~1ms a block at
+    #: 24 notes, inside the library's band.
+    MAX_ACTIVE_FM_NOTES = 24
+
+    @staticmethod
+    def _fm_fields(v):
+        """The per-note FM fields, from the voice, clamped. Stored ON the note
+        at its onset, like `drift`: a ringing note's modulator phase is
+        derived from its age, so retuning `ratio` under it would jump the
+        phase, and moving `index` mid-ring would step its sidebands at the
+        next block. A knob therefore shapes the NEXT note."""
+        def f(key, lo, hi):
+            try:
+                x = float(v.get(key, FM_DEFAULTS[key]))
+            except (TypeError, ValueError):
+                x = FM_DEFAULTS[key]
+            return min(hi, max(lo, x)) if x == x else FM_DEFAULTS[key]
+        return {"ratio": f("ratio", *FM_RATIO_RANGE),
+                "index": f("index", 0.0, FM_INDEX_MAX),
+                "index_decay": f("index_decay", *FM_INDEX_DECAY_RANGE)}
+
+    def _render_fm(self, v, n0, frames):
+        """Struck two-operator FM. Scheduled exactly like `pluck`/`bell` —
+        scale walk, rate per beat, drift, gap/play — so it is a drop-in
+        timbre for either; rendered by `_render_fm_notes`."""
+        rate = float(v.get("rate", 1.0))
+        interval, play_n, cycle_n = self._onset_cycle(v, rate)
+        scale = v.get("scale") or [0, 3, 7, 10]
+        root = v.get("note", 72)
+        decay = float(v.get("decay", 1.2))
+
+        def freq_fn(step):
+            semi = scale[step % len(scale)] + 12 * ((step // len(scale)) % 2)
+            return midi_to_hz(root + semi)
+
+        self._schedule_notes(v["name"], n0, frames, interval, freq_fn, "sine", decay,
+                             drift=float(v.get("drift", 0.0)),
+                             play_n=play_n, cycle_n=cycle_n, extra=self._fm_fields(v))
+        return self._render_fm_notes(v["name"], n0, frames)
+
+    def _render_fm_notes(self, voice_name, n0, frames):
+        """All of this voice's notes in one batched (N, frames) pass:
+
+            out = env(age) * sin(2pi fc age + I(age) * sin(2pi r fc age))
+
+        with I(age) = index * exp(-age / index_decay). Phase is measured from
+        each note's own onset rather than the absolute clock, so every strike
+        starts its operators in the same relationship — the attack of an FM
+        sound IS that relationship, and a clock-derived phase would make each
+        strike's transient different.
+
+        The index is capped per note so the sidebands stay under Nyquist
+        (Carson's rule: most energy within (I + 1) * fm of the carrier) — a
+        high note at a high ratio would otherwise fold back as inharmonic
+        aliasing that no `index` setting asked for."""
+        mine, other = [], []
+        for note in self._active_notes:
+            (mine if note["voice"] == voice_name else other).append(note)
+        if not mine:
+            return np.zeros(frames, np.float32)
+        if len(mine) > self.MAX_ACTIVE_FM_NOTES:
+            mine = mine[-self.MAX_ACTIVE_FM_NOTES:]
+        idx = np.arange(n0, n0 + frames)
+        col = lambda k, d: np.array([n.get(k, d) for n in mine], dtype=np.float64)[:, None]
+        starts = np.array([n["start"] for n in mine], dtype=np.int64)
+        fc, decay = col("freq", 440.0), np.maximum(col("decay", 1.2), 0.05)
+        fm = fc * col("ratio", FM_DEFAULTS["ratio"])
+        index = np.minimum(col("index", FM_DEFAULTS["index"]),
+                           np.maximum(0.0, (0.45 * self.sr - fc) / fm - 1.0))
+        tau_i = col("index_decay", FM_DEFAULTS["index_decay"])
+        amp = col("amp", 1.0)
+
+        age = (idx[None, :] - starts[:, None]) / self.sr            # (N, frames)
+        a = np.maximum(age, 0.0)
+        env = np.where(age >= 0, np.exp(-a / decay), 0.0) * amp
+        mod = np.sin((2 * math.pi) * fm * a)
+        car = np.sin((2 * math.pi) * fc * a + index * np.exp(-a / tau_i) * mod)
+        out = (env * car).sum(axis=0) * FM_OUTPUT_GAIN
+
+        alive = age[:, -1] <= decay[:, 0] * 6
+        self._active_notes = other + [n for n, keep in zip(mine, alive) if keep]
+        return out.astype(np.float32)
 
     # Harp's own slice of the shared MAX_ACTIVE_NOTES budget, in the same
     # spirit as MAX_ACTIVE_BELL_NOTES but enforced at SCHEDULE time rather
@@ -1952,7 +2340,7 @@ class Soundscape:
     #: Measured played/drone RMS at 0.5 for all: pad 0.92-1.18, osc 0.73,
     #: sub 0.35; see docs/TECHNICAL.md "Playing a scene's instruments".
     HELD_OUTPUT_GAIN = {"pad": 0.5, "osc": 0.68, "sub": 1.4}
-    STRUCK_TYPES = ("pluck", "bell", "harp")
+    STRUCK_TYPES = ("pluck", "bell", "harp", "fm")
 
     @property
     def clock(self) -> int:
@@ -2004,6 +2392,10 @@ class Soundscape:
             elif vt == "bell":
                 note = dict(start=start, freq=freq, wf="sine",
                             decay=float(v.get("decay", 1.2)), voice=name, amp=amp)
+            elif vt == "fm":
+                note = dict(start=start, freq=freq, wf="sine",
+                            decay=float(v.get("decay", 1.2)), voice=name, amp=amp,
+                            **self._fm_fields(v))
             else:   # harp — same decay clamp _schedule_harp applies
                 note = dict(start=start, freq=freq, wf="sine", voice=name,
                             decay=float(min(HARP_MAX_DECAY, max(0.05, v.get("decay", 6.0)))),
@@ -2422,6 +2814,19 @@ def _normalise(spec: dict) -> dict:
     dl["feedback"] = _clamp(dl.get("feedback"), 0.0, 0.92, 0.3)
     dl["mix"] = _clamp(dl.get("mix"), 0.0, 0.95, 0.25)
     s["delay"] = dl
+    # Reverb is optional at the soundscape level, like `eq` used to be
+    # optional per voice: absent means off and STAYS absent, so the tracked
+    # library is untouched on save. Present is kept whole (mix 0 included) —
+    # a scene that has had its room dialled in keeps it.
+    rv = s.get("reverb")
+    if isinstance(rv, dict):
+        rv = dict(rv)
+        rv["mix"] = _clamp(rv.get("mix"), 0.0, 1.0, REVERB_DEFAULT["mix"])
+        rv["size"] = _clamp(rv.get("size"), 0.3, REVERB_MAX_SIZE, REVERB_DEFAULT["size"])
+        rv["damp"] = _clamp(rv.get("damp"), 0.0, 1.0, REVERB_DEFAULT["damp"])
+        s["reverb"] = rv
+    else:
+        s.pop("reverb", None)
     eq = dict(s.get("eq", {}))
     eq["low"] = _clamp(eq.get("low"), -10.0, 10.0, 0.0)
     eq["mid"] = _clamp(eq.get("mid"), -10.0, 10.0, 0.0)
@@ -2458,6 +2863,15 @@ def _normalise(spec: dict) -> dict:
         # same reason as `depth`: absent means off, and stays absent, so
         # scenes that never use it are untouched on save.
         _optional_clamp(v, "sweep", 0.0, 1.0, 0.0)
+        # Reverb send. Full by default — a scene's room applies to every voice
+        # unless one is taken out of it — so the key exists only on a voice
+        # that has been turned down.
+        _optional_clamp(v, "reverb", 0.0, 1.0, 1.0)
+        # Chorus amount and its sweep rate, on any voice type: it processes
+        # the voice's finished signal, so it doesn't care what made it.
+        # Absent is off, and stays absent on save.
+        _optional_clamp(v, "chorus", 0.0, 1.0, 0.0)
+        _optional_clamp(v, "chorus_rate", 0.05, CHORUS_RATE_MAX, CHORUS_RATE_DEFAULT)
         v["mute"] = bool(v.get("mute", False))
         v["tone"] = _clamp(v.get("tone"), 0.0, 1.0, 0.4)
         v["detune"] = _clamp(v.get("detune"), 0.0, 0.05, 0.01)
@@ -2492,13 +2906,24 @@ def _normalise(spec: dict) -> dict:
                 v["lfos"] = kept
             else:
                 v.pop("lfos", None)
+        if v["type"] == "fm":
+            # fm-only, gated like harp's and bell's fields so no other voice
+            # gains them on save. Written whole on an fm voice: they ARE the
+            # instrument, and a scene should say what its fm sounds like.
+            v["ratio"] = _clamp(v.get("ratio"), *FM_RATIO_RANGE, FM_DEFAULTS["ratio"])
+            v["index"] = _clamp(v.get("index"), 0.0, FM_INDEX_MAX, FM_DEFAULTS["index"])
+            v["index_decay"] = _clamp(v.get("index_decay"), *FM_INDEX_DECAY_RANGE,
+                                      FM_DEFAULTS["index_decay"])
+        else:
+            for k in FM_DEFAULTS:
+                v.pop(k, None)
         if v["type"] == "bell":
             ch = str(v.get("character", "bell"))
             v["character"] = ch if ch in BELL_CHARACTERS else "bell"
         # Drift is only read by the note-scheduling voices — the continuous
         # ones derive phase from the absolute clock and cannot be detuned
         # mid-stream without a click (see _drift_factor).
-        if v["type"] in ("pluck", "bell", "harp"):
+        if v["type"] in ("pluck", "bell", "harp", "fm"):
             v["drift"] = _clamp(v.get("drift"), 0.0, 1.0, 0.0)
         # Added silence between notes. Only the three voices that schedule
         # onsets read it; on `harp` the unit is a whole roll rather than a
@@ -2506,7 +2931,7 @@ def _normalise(spec: dict) -> dict:
         # or noise voice gains no key on save, and only written when non-zero
         # so the whole tracked scene library doesn't churn the first time
         # anything is saved.
-        if v["type"] in ("pluck", "bell", "harp"):
+        if v["type"] in ("pluck", "bell", "harp", "fm"):
             g = _clamp(v.get("gap"), 0.0, Soundscape.GAP_MAX_S, 0.0)
             if g > 0:
                 v["gap"] = g

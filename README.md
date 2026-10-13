@@ -1,6 +1,6 @@
 # PromptWaver
 
-![version](https://img.shields.io/badge/version-0.91.0-33e0d0)
+![version](https://img.shields.io/badge/version-0.92.0-33e0d0)
 ![status](https://img.shields.io/badge/status-pre--release-orange)
 ![platform](https://img.shields.io/badge/platform-Ubuntu-informational)
 ![browser](https://img.shields.io/badge/browser-Chrome%20(WebGL2)-important)
@@ -39,7 +39,7 @@ Note: the roots of this reflected on a exploratory game on PS1 called 'Fluid' (1
 - **Live mixer** — tweak camera, soundscape, effects in real time; save settings back to scenes
 - **Authored visuals** — 3D worlds from a shape grammar, and flat symmetric 2D patterns (mandalas, lattices)
 - **2D pattern scenes** — flat mandalas/kaleidoscopes composed in the frame, with per-shape glow
-- **Full-featured synth** — pad/pluck/osc/noise voices, ADSR envelopes, arpeggiator, per-voice LFO, EQ, delay, distortion
+- **Full-featured synth** — pad/osc/sub/pluck/bell/harp/fm/noise voices, ADSR envelopes, arpeggiator, per-voice LFOs and chorus, EQ, delay, convolution reverb, distortion
 - **MIDI control** — learn any control to a hardware knob; slots persist across scene changes
 - **Dual output** — two browser output windows (`/output?out=1` and `?out=2`), each with its own keystone/flip
 - **Monitor effects** — GPU bloom, trails, mirror, kaleidoscope, and an angular↔smooth line curve

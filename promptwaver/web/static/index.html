@@ -469,8 +469,12 @@
   .voice{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;
          padding:10px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
   .voice.muted{opacity:.45}
-  .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px}
-  .voice .vname{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  /* The name gives way, not the buttons: a flex item will not shrink below
+     its content by default, so a long voice name pushed map and mute out of
+     the strip and under the next one. */
+  .voice .vhead{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+  .voice .vname{font-family:var(--mono);font-size:12px;color:var(--ink);
+                min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .voice .vtype{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
   /* Live output level per instrument, fed from that voice's `voice.<name>`
      modulation source. Deliberately dimmer than the master VU's flat --cyan:
@@ -484,7 +488,7 @@
   .voice .mutebtn{padding:3px 7px;font-size:11px;border-radius:6px;line-height:0}
   .voice .mutebtn svg{width:15px;height:15px;vertical-align:middle}
   .voice .mutebtn.on{border-color:var(--amber);color:var(--amber)}
-  .voice .vbtns{display:flex;gap:6px;align-items:center}
+  .voice .vbtns{display:flex;gap:6px;align-items:center;flex-shrink:0}
   /* Map: what PLAYS this voice — a computer key, a MIDI pad (CC) or a MIDI
      keyboard channel. Shows the binding once there is one. */
   .voice .mapbtn{padding:3px 8px;font-size:11px;border-radius:6px;min-width:34px}
@@ -3431,6 +3435,14 @@ function renderSoundscape(s){
   g.appendChild(knob("delay time","delay.time",0.05,1.2,0.01, d.time ?? 0.4, v=>v.toFixed(2)));
   g.appendChild(knob("delay fbk","delay.feedback",0,0.9,0.01, d.feedback ?? 0.3, v=>v.toFixed(2)));
   g.appendChild(knob("delay mix","delay.mix",0,0.9,0.01, d.mix ?? 0.25, v=>v.toFixed(2)));
+  // The room every voice sits in (dsp.ConvReverb). Absent from a scene means
+  // off, so the defaults shown are dsp.REVERB_DEFAULT's: mix 0 until raised.
+  // size/damp edits rebuild the room over a few blocks, so a drag lands
+  // slightly behind the hand rather than stalling the audio.
+  const rv = sc.reverb || {};
+  g.appendChild(knob("reverb mix","reverb.mix",0,1,0.01, rv.mix ?? 0, v=>v.toFixed(2)));
+  g.appendChild(knob("reverb size","reverb.size",0.3,6,0.1, rv.size ?? 3, v=>v.toFixed(1)+"s"));
+  g.appendChild(knob("reverb damp","reverb.damp",0,1,0.01, rv.damp ?? 0.5, v=>v.toFixed(2)));
   const eq = sc.eq || {};
   g.appendChild(knob("eq low","eq.low",-10,10,0.25, eq.low ?? 0, v=>v.toFixed(1)));
   g.appendChild(knob("eq mid","eq.mid",-10,10,0.25, eq.mid ?? 0, v=>v.toFixed(1)));
@@ -3454,6 +3466,7 @@ function renderSoundscape(s){
     el.className = "voice" + (v.mute ? " muted":"");
     const head = document.createElement("div"); head.className="vhead";
     head.innerHTML = `<span class="vname">${v.name}</span><span class="vtype">${v.type}</span>`;
+    head.querySelector(".vname").title = v.name;
     const mb = document.createElement("button");
     mb.className = "mutebtn" + (v.mute?" on":"");
     setMuteIcon(mb, !!v.mute);
@@ -3470,7 +3483,7 @@ function renderSoundscape(s){
     paintMapBtn(pb, v.name);
     const btns = document.createElement("div"); btns.className = "vbtns";
     btns.appendChild(pb); btns.appendChild(mb);
-    const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center";
+    const hrow = document.createElement("div"); hrow.style.display="flex"; hrow.style.justifyContent="space-between"; hrow.style.alignItems="center"; hrow.style.gap="6px";
     hrow.appendChild(head); hrow.appendChild(btns);
     el.appendChild(hrow);
     // Live output level, above this voice's controls. Driven per tick by
@@ -3532,7 +3545,7 @@ function renderSoundscape(s){
     // clamped to the same range _normalise uses, 6s being the non-harp
     // ceiling — harp gets 20s and its own knob because the long ring is that
     // voice's whole character.
-    if (isType("pluck","bell")){
+    if (isType("pluck","bell","fm")){
       el.appendChild(knob("rate",`voice.${v.name}.rate`,0.1,4,0.05, v.rate ?? 0.5, x=>x.toFixed(2), {midi: mk("rate")}));
       el.appendChild(knob("decay",`voice.${v.name}.decay`,0.1,6,0.05, v.decay ?? 1.2, x=>x.toFixed(2), {midi: mk("decay")}));
       // `play` and `gap` are one cycle and read in that order: play for N
@@ -3561,10 +3574,23 @@ function renderSoundscape(s){
       cs.onchange = () => sendAudio(`voice.${v.name}.character`, cs.value);
       el.appendChild(selectRow("character", cs));
     }
+    if (v.type==="fm"){
+      // Two-operator FM (dsp._render_fm_notes). Each note takes these at its
+      // strike, so a turn shapes the NEXT note — a ringing one keeps its own.
+      const rK = knob("ratio",`voice.${v.name}.ratio`,0.25,8,0.01, v.ratio ?? 1, x=>x.toFixed(2), {midi: mk("ratio")});
+      rK.title = "Modulator pitch over the note's. Whole numbers are harmonic (1 e-piano, 2 hollow, 3 reedy); in between is inharmonic — 3.5 is a bell, 1.41 metal.";
+      el.appendChild(rK);
+      const iK = knob("index",`voice.${v.name}.index`,0,10,0.05, v.index ?? 2, x=>x.toFixed(2), {midi: mk("index")});
+      iK.title = "Brightness of the strike — how hard the modulator drives the note. 0 is a pure sine.";
+      el.appendChild(iK);
+      const dK = knob("index decay",`voice.${v.name}.index_decay`,0.02,6,0.01, v.index_decay ?? 0.4, x=>x.toFixed(2)+"s", {midi: mk("index_decay")});
+      dK.title = "How fast the brightness falls away after each strike, separately from the note's own decay. Short = a clangy attack that mellows to a sine.";
+      el.appendChild(dK);
+    }
     // Onset detune. Only the note-scheduling voices have it: a continuous
     // voice derives phase from the absolute sample clock, so it cannot be
     // detuned mid-stream without a phase jump (see _drift_factor in dsp.py).
-    if (isType("pluck","bell","harp")){
+    if (isType("pluck","bell","harp","fm")){
       el.appendChild(knob("drift",`voice.${v.name}.drift`,0,1,0.01, v.drift ?? 0, x=>x.toFixed(2), {midi: mk("drift")}));
     }
     if (v.type==="harp"){
@@ -3606,7 +3632,17 @@ function renderSoundscape(s){
     // globals above — that one is one EQ curve over the summed mix and can't
     // be scaled per instrument; this is the per-instrument half, on the same
     // phase. Put both up and they move as one gesture.
-    el.appendChild(knob("sweep",`voice.${v.name}.sweep`,0,1,0.01, v.sweep ?? 0, x=>x.toFixed(2), {midi: mk("sweep")}));
+    // Not on fm: the sweep swings `tone`, and fm's brightness is its index.
+    if (!isType("fm"))
+      el.appendChild(knob("sweep",`voice.${v.name}.sweep`,0,1,0.01, v.sweep ?? 0, x=>x.toFixed(2), {midi: mk("sweep")}));
+    // Every voice, like distortion: both process the voice's finished signal.
+    // The send defaults to FULL — the scene's room applies to every voice
+    // until one is taken out of it — and does nothing while reverb mix is 0.
+    const sendK = knob("reverb",`voice.${v.name}.reverb`,0,1,0.01, v.reverb ?? 1, x=>x.toFixed(2), {midi: mk("reverb")});
+    sendK.title = "How much of this voice goes into the scene reverb (Soundscape › reverb mix). Turn a sub or bass down: reverb on the lowest octave is mud.";
+    el.appendChild(sendK);
+    el.appendChild(knob("chorus",`voice.${v.name}.chorus`,0,1,0.01, v.chorus ?? 0, x=>x.toFixed(2), {midi: mk("chorus")}));
+    el.appendChild(knob("chorus rate",`voice.${v.name}.chorus_rate`,0.05,3,0.01, v.chorus_rate ?? 0.5, x=>x.toFixed(2)+"Hz", {midi: mk("chorus_rate")}));
 
     if (v.type==="pad" || v.type==="osc"){
       const env = v.env || {attack:3.0, decay:1.2, sustain:0.85, release:2.5};
