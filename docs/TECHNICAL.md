@@ -420,7 +420,7 @@ A `level` LFO is unipolar and downward-only — the authored level stays the cei
 
 ### ADSR envelopes
 
-Any `pad` or `osc` voice now has a real ADSR (attack/decay/sustain/release), exposed as four knobs in the mixer under that voice. This replaced a fixed 3-second linear fade-in with no release. Muting a pad/osc voice now fades out gradually over its `release` time; unmuting re-triggers a clean attack.
+Any `pad` or `osc` voice now has a real ADSR (attack/decay/sustain/release), exposed as four knobs in the mixer under that voice. This replaced a fixed 3-second linear fade-in with no release. Muting any voice fades it out over 3 s and unmuting fades it back in over 3 s (`Soundscape.MUTE_FADE`); the ADSR only shapes the scene-start attack and is not released by a mute.
 
 ### Reverb, chorus, FM and granular (0.92–0.93)
 

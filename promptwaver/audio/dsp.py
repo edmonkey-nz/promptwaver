@@ -850,6 +850,7 @@ class Soundscape:
         self._rng = np.random.default_rng()
         self._voice_env: dict[str, Envelope] = {}     # ADSR per enveloped voice
         self._voice_env_on: dict[str, bool] = {}       # last known trigger state
+        self._mute_fade: dict[str, float] = {}         # per-voice mute ramp, 0..1
         self.spec = {}
         self.muted = False        # engine-level gate; independent of spec['master']
         self._mute_gain = 1.0     # currently-applied smoothed mute multiplier (0..1)
@@ -927,6 +928,7 @@ class Soundscape:
         self._gran.clear()
         self._voice_env = {}
         self._voice_env_on = {}
+        self._mute_fade = {}
         self._departing = []
         for v in self.spec["voices"]:
             self._init_voice(v)
@@ -941,6 +943,9 @@ class Soundscape:
                 attack=e.get("attack", 3.0), decay=e.get("decay", 1.2),
                 sustain=e.get("sustain", 0.85), release=e.get("release", 2.5))
             self._voice_env_on[v["name"]] = False
+        # A voice that arrives muted starts fully faded out, so it stays
+        # silent rather than fading out from full on its first blocks.
+        self._mute_fade[v["name"]] = 0.0 if v.get("mute") else 1.0
         # assign each voice its own random phase/period once, the first
         # time its name is seen — preserved across live param tweaks
         # (which don't call set_spec) so the swell keeps its place
@@ -975,24 +980,20 @@ class Soundscape:
 
     def remove_voice(self, name: str) -> bool:
         """Take a voice out of the soundscape. It leaves the spec at once (so
-        the panel and a Save no longer show it), but an enveloped voice keeps
-        sounding through its own release, as muting it would, and is dropped
-        when that has run out. A struck voice stops at once, the same as a
-        mute does today."""
+        the panel and a Save no longer show it), but keeps sounding through
+        the same MUTE_FADE a mute gets, and is dropped once that has run out
+        — every type, struck voices included."""
         for i, v in enumerate(self.spec["voices"]):
             if v["name"] == name:
                 del self.spec["voices"][i]
-                if v.get("type") in self.ENVELOPED_TYPES:
-                    self._departing.append(dict(v, mute=True))
-                else:
-                    self._forget_voice(name)
+                self._departing.append(dict(v, mute=True))
                 return True
         return False
 
     def _forget_voice(self, name: str):
         self._active_notes = [n for n in self._active_notes if n.get("voice") != name]
         for d in (self._held, self._chorus, self._gran, self._voice_env,
-                  self._voice_env_on, self._lfo_eff):
+                  self._voice_env_on, self._lfo_eff, self._mute_fade):
             d.pop(name, None)
 
     def set_param(self, path: str, value):
@@ -1278,7 +1279,7 @@ class Soundscape:
                            and v.get("source", "scene") == "scene"
                            for v in self.spec["voices"]) else None)
 
-        # Voices removed live keep rendering (muted) until their release has
+        # Voices removed live keep rendering (muted) until their mute fade has
         # run out — see remove_voice. Empty for every ordinary block.
         gone = []
         for v in (self.spec["voices"] + self._departing if self._departing
@@ -1288,24 +1289,43 @@ class Soundscape:
             is_sustained = vt in self.ENVELOPED_TYPES
 
             if is_sustained:
-                # ADSR gate: attack/decay/sustain while unmuted, a genuine
-                # release fade (not a hard cut) once muted. Previously, muting
-                # a pad/osc voice skipped rendering it entirely — an instant
-                # cut with no release at all.
+                # The ADSR is the voice's scene-start attack only. Mute no
+                # longer releases it: that made a mute last as long as the
+                # voice's own release (anything from 0.3s to 10s+) and an
+                # unmute replay the whole attack. Mute is MUTE_FADE below, the
+                # same for every type, and the envelope sits at sustain
+                # underneath it — sampled even while silent so a voice loaded
+                # muted has finished its attack by the time it is unmuted.
                 env = self._voice_env[name]
-                on = not v.get("mute")
-                if on != self._voice_env_on.get(name):
-                    (env.trigger if on else env.release)()
-                    self._voice_env_on[name] = on
+                if not self._voice_env_on.get(name):
+                    env.trigger()
+                    self._voice_env_on[name] = True
                 gain = env.sample(block_t, block_dt)
-                if gain <= 1e-4 and not on:
-                    if self._departing and any(d is v for d in self._departing):
-                        gone.append(v)
-                    continue          # fully released and off — nothing to render
-            elif v.get("mute"):
-                continue
             else:
                 gain = 1.0
+
+            # Mute: a linear ramp at 1/MUTE_FADE per second, per sample, in
+            # both directions — so a re-toggle mid-fade turns round from
+            # where it is rather than jumping. Squared when applied, which
+            # spreads the loudness change more evenly over the fade than a
+            # linear amplitude ramp (that holds near full and drops at the
+            # end). A voice that has never been muted takes the `cur ==
+            # target == 1` path and multiplies by exactly 1.0, as before.
+            target = 0.0 if v.get("mute") else 1.0
+            cur = self._mute_fade.get(name, target)
+            if cur != target:
+                step = 1.0 / (self.MUTE_FADE * self.sr)
+                ramp = cur + (step if target > cur else -step) * np.arange(1, frames + 1)
+                np.clip(ramp, 0.0, 1.0, out=ramp)
+                self._mute_fade[name] = float(ramp[-1])
+                gain = gain * ramp * ramp
+            elif cur <= 0.0:
+                # Fully faded out: nothing to render. The chorus history and
+                # struck-note schedule behave exactly as the old instant mute
+                # left them (see _chorus_voice).
+                if self._departing and any(d is v for d in self._departing):
+                    gone.append(v)
+                continue
 
             # Per-voice LFO. Stepped destinations have to be resolved BEFORE
             # the voice renders (they pick a wavetable / frequencies / a note
@@ -1585,13 +1605,15 @@ class Soundscape:
     #: Wet weight per copy at `chorus` 1.
     CHORUS_WET = 0.7
 
-    #: Voice types that get an ADSR and so fade in/out on mute rather than
-    #: being cut. `noise` belongs here despite not being a "note" voice: it is
-    #: a continuous bed, so skipping its render on mute (which is what used to
-    #: happen) is an instant hard cut, and on a wind/air texture that reads as
-    #: a click. `pluck` stays out — each of its notes already has its own
-    #: decay envelope, and gating the scheduler would fight that.
+    #: Voice types that get an ADSR: an attack when the scene starts. (Mute
+    #: used to release it; it no longer does — see MUTE_FADE.) `noise` belongs
+    #: here despite not being a "note" voice: it is a continuous bed. `pluck`
+    #: stays out — each of its notes already has its own decay envelope.
     ENVELOPED_TYPES = ("pad", "sub", "osc", "noise", "granular")
+
+    #: Seconds a voice takes to fade out when muted, and back in when
+    #: unmuted — every voice type, and a voice removed live (remove_voice).
+    MUTE_FADE = 3.0
 
     # Band edges in Hz. Low is the drone/sub weight, mid the body of the pads
     # and plucks, high the air and bell transients.

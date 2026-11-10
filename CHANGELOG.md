@@ -7,6 +7,35 @@ and APIs between minor versions until a 1.0 release.
 ## [Unreleased]
 - Project scaffolding for VSCode / GitHub (this changelog, `.vscode/`, `LICENSE`, `pyproject.toml`)
 
+## [0.98.0]
+
+### Shapes pane
+
+- **Shapes** (a new collapsible pane under Instruments): a 128×128 thumbnail
+  of every shape in the scene, with its name underneath, so you can see what
+  you are mapping in Modulation › Shape scale.
+  - 3D shapes are drawn from a fixed three-quarter view from slightly above,
+    with the far edges dimmer. 2D pattern pieces are drawn flat.
+  - Each tile uses the colour of the first node that uses the shape.
+  - A shape that already has a Shape scale mapping gets a cyan border and the
+    voice's name under it.
+  - Shapes the scene defines but never places are dimmed. Hover a tile to see
+    how many nodes use it.
+  - Fetched once per scene and only while the pane is open, so it costs
+    nothing during a show.
+
+### Mute fades
+
+- **Muting an instrument fades it out over 3 s, and unmuting fades it back
+  in over 3 s**, for every instrument type.
+  - Before, pads and other sustained voices faded over their own release
+    time (anything from 0.3 s to 10 s or more) and replayed their whole
+    attack on unmute. Pluck, bell, harp, fm and arp cut off instantly.
+  - Pressing mute again partway through a fade turns it round smoothly.
+  - Removing an instrument fades it out over the same 3 s.
+  - Scenes sound exactly as before until you press mute: all 29 library
+    soundscapes render bit-identical to 0.97.0.
+
 ## [0.97.0]
 
 ### Smoother lines

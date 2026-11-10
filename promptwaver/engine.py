@@ -2111,10 +2111,33 @@ class Engine:
             defs = (params or {}).get("defs") or {}
             layers.append({"generator": gen_name,
                            "params": {"defs": {k: None for k in defs}}})
-        return {"name": spec.name, "layers": layers,
+        # gpu_id changes with every new Scene object (load, regenerate,
+        # rebuild after a geometry edit): the Shapes pane refetches on it.
+        return {"name": spec.name, "layers": layers, "gpu_id": sc.gpu_id,
                 "image_prompt": spec.image_prompt, "audio_prompt": spec.audio_prompt,
                 "generation_settings": spec.generation_settings,
                 "play_map": spec.play_map}
+
+    def shape_thumbnails(self) -> dict:
+        """Line-art thumbnails of every def in the current scene, for the
+        control page's Shapes pane. On request only (the `shape_thumbs`
+        command) — never in state(), see `_scene_spec_view` for why.
+
+        Reads the live spec from the web thread without the queue: it only
+        reads, and defs are replaced wholesale rather than mutated in place,
+        so the worst a race can do is return the previous scene's shapes,
+        which the page then refetches on the next scene change."""
+        from . import thumbs
+        sc = self.scenes.current
+        if sc is None:
+            return {"scene": None, "gpu_id": None, "shapes": []}
+        layers = []
+        for layer in list(sc.spec.layers):
+            gen_name = layer.generator if isinstance(layer, Layer) else layer.get("generator")
+            params = (layer.params if isinstance(layer, Layer) else layer.get("params")) or {}
+            layers.append({"generator": gen_name, "defs": params.get("defs") or {},
+                           "nodes": params.get("nodes") or []})
+        return {"scene": sc.spec.name, "gpu_id": sc.gpu_id, "shapes": thumbs.build(layers)}
 
     def state(self) -> dict:
         cam = getattr(self.scenes.current, "camera", None) if self.scenes.current else None

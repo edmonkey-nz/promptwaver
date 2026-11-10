@@ -556,6 +556,10 @@ async def _handle(engine, m: dict, app=None, ws=None, meta=None):
         # Answered on request rather than ridden along in `state()`: listing
         # reads every archived file, and state() runs 20x a second.
         return {"type": "kiosk_scenes", "scenes": engine.kiosk.archive_list()}
+    elif t == "shape_thumbs":
+        # The Shapes pane's tiles. On request (once per scene), not in
+        # state(): it expands every def and the reply is tens of kB.
+        return {"type": "shape_thumbs", **engine.shape_thumbnails()}
     elif t == "kiosk_scenes_delete":
         gone = engine.kiosk.archive_delete(m.get("names"), bool(m.get("all")))
         return {"type": "kiosk_scenes", "deleted": gone,

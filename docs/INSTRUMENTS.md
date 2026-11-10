@@ -152,7 +152,10 @@ of the work follows from.
 **Continuous** (`pad`, `sub`, `osc`, `noise`, `granular`) — the voice always sounds; there
 are no note events. Phase comes from the absolute sample clock, so tones stay
 continuous across block boundaries with no stored per-oscillator phase. These
-belong in `ENVELOPED_TYPES` so muting fades via ADSR instead of cutting.
+belong in `ENVELOPED_TYPES`, which gives them an ADSR attack at scene start.
+Muting is separate and the same for every type: a 3 s fade out and back in
+(`Soundscape.MUTE_FADE`, a per-sample ramp in `render`), with the envelope
+left at sustain underneath.
 
 **Note-scheduling** (`pluck`, `arp`, `bell`, `harp`, `fm`) — onsets are appended to
 the shared `_active_notes` pool and each note carries its own envelope. These
@@ -541,7 +544,7 @@ A starting template is chosen to be heard straight away. The harp's omits
 `gap`: a gap aligns the first roll to a (beat + gap) grid, so a harp added
 with one sat silent for up to ~14s and the add looked broken.
 
-A granular voice is in `ENVELOPED_TYPES` (mute fades it, like `noise`) but
+A granular voice is in `ENVELOPED_TYPES` (an attack at scene start, like `noise`) but
 plays no notes: `play` ignores it and `trigger_pitches` is empty, so the
 panel gives it no map button.
 

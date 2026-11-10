@@ -507,6 +507,22 @@
      collapses that class to zero width. */
   .voices .noscene{grid-column:1/-1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
   .voices .noscene b{color:var(--ink);font-weight:500}
+  /* Shapes pane: fixed 128px tiles (the thumbnail size), as many per row as
+     fit. Names are NOT class="val" — body.hide-values would blank them. */
+  .shapes{display:grid;grid-template-columns:repeat(auto-fill,128px);gap:10px;justify-content:start}
+  .shapes .noscene{grid-column:1/-1;padding:18px 4px;color:var(--dim);font-size:12px;line-height:1.6;text-align:center}
+  .shape-tile{display:flex;flex-direction:column;gap:4px;width:128px}
+  .shape-tile canvas{width:128px;height:128px;display:block;background:var(--bg);
+                     border:1px solid var(--line);border-radius:6px;box-sizing:border-box}
+  .shape-tile.unused canvas{opacity:.45}
+  .shape-tile.mapped canvas{border-color:var(--cyan)}
+  .shape-tile .sname{font-size:11px;color:var(--ink);text-align:center;
+                     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .shape-tile .smap{font-size:10px;color:var(--cyan);text-align:center;min-height:12px;
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* margin-right:auto keeps it beside the title: the summary is
+     space-between, which would otherwise float it to the middle. */
+  .sumcount{color:var(--dim);font-weight:400;margin-left:8px;margin-right:auto;letter-spacing:0}
   /* Strip footer: type + map on the left, remove on the right. margin-top
      auto pins it to the bottom, so footers line up across strips of
      different heights. */
@@ -878,6 +894,17 @@
       <summary>Instruments<button class="sumbtn" id="voice-add-open" title="Add an instrument to this scene" style="display:none">+ add</button></summary>
       <div class="accordion-body">
         <div class="voices" id="voices"></div>
+      </div>
+    </details>
+
+    <!-- What each of the scene's `defs` looks like, so Shape scale mappings
+         (Modulation > Shape scale) are picked by eye rather than by name.
+         Fetched once per scene with `shape_thumbs`, never in the 20Hz state,
+         and only while this pane is open. -->
+    <details class="accordion" id="acc-shapes" open>
+      <summary>Shapes<span class="sumcount" id="shapes-count"></span></summary>
+      <div class="accordion-body">
+        <div class="shapes" id="shapes"></div>
       </div>
     </details>
   </section>
@@ -1533,6 +1560,7 @@ ws.onmessage = e => {
   if (m.type === "frame") { const v = gpuPreview(); if (v) v.handleFrame(m); return; }
   if (m.type === "state") { paintState(m.state); paintPreview(m.preview); }
   else if (m.type === "rec_takes") { paintTakes(m.takes || []); }
+  else if (m.type === "shape_thumbs") { onShapeThumbs(m); }
   else if (m.type === "generation_estimate") { paintSizeEstimate(m); }
   else if (m.type === "generate_result") {
     if (m.action === "apply_audio") {
@@ -1810,6 +1838,7 @@ function paintState(s){
   renderModSources(s);
   updateDirty(s);
   renderShapeModulation(s);
+  syncShapesPane(s);
   syncAudioTargets(s);
   syncMonitorFilters(s);
   // Diagnostics off (default) hides these two blocks entirely rather than
@@ -2650,6 +2679,113 @@ $("shape-mod-add").onclick = () => {
   mods.push({shape, voice, param: "level", dest: "scale", range: [0.5, 1.5]});
   send({type:"set", key:"shape_modulation", value:mods});
 };
+
+// --- Shapes pane: a thumbnail of every def in the scene -------------------
+// The server builds the line-art (promptwaver/thumbs.py) once per Scene
+// object; `scene_spec.gpu_id` changes with every new one, so it is the
+// refetch key. Nothing is fetched while the pane is shut.
+let _shapeKey = null;     // gpu_id last requested ("" = no scene)
+let _shapeData = null;    // last shape_thumbs reply
+let _shapeMapSig = null;
+
+function syncShapesPane(s){
+  const sc = s.scene_spec;
+  const key = sc ? String(sc.gpu_id) : "";
+  if (!sc) {
+    if (_shapeKey !== "") { _shapeKey = ""; _shapeData = null; paintShapes(); }
+    return;
+  }
+  if ($("acc-shapes").open && key !== _shapeKey) {
+    _shapeKey = key;
+    send({type:"shape_thumbs"});
+  }
+  paintShapeMapping(s);
+}
+$("acc-shapes").addEventListener("toggle", () => {
+  if ($("acc-shapes").open && _lastState) syncShapesPane(_lastState);
+});
+
+function onShapeThumbs(m){
+  // A reply for a scene that has since been replaced (a load landed between
+  // request and answer): keep it, but re-key so the next tick asks again.
+  _shapeKey = m.gpu_id == null ? "" : String(m.gpu_id);
+  _shapeData = m;
+  paintShapes();
+}
+
+function paintShapes(){
+  const box = $("shapes");
+  box.innerHTML = "";
+  _shapeMapSig = null;
+  const list = (_shapeData && _shapeData.shapes) || [];
+  $("shapes-count").textContent = list.length ? String(list.length) : "";
+  if (!_shapeData || !_shapeData.scene) {
+    box.innerHTML = `<div class="noscene">No scene loaded.</div>`;
+    return;
+  }
+  if (!list.length) {
+    box.innerHTML = `<div class="noscene">This scene has no authored shapes — it draws
+      only built-in primitives, so there is nothing to map.</div>`;
+    return;
+  }
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  for (const sh of list) {
+    const tile = document.createElement("div");
+    tile.className = "shape-tile" + (sh.uses ? "" : " unused");
+    tile.dataset.shape = sh.name;
+    tile.title = `${sh.name} — ${sh.uses ? `used by ${sh.uses} node${sh.uses === 1 ? "" : "s"}`
+                                         : "defined but not placed in the scene"}`
+               + (sh.kind === "2d" ? " (2D motif)" : "");
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = Math.round(128 * dpr);
+    drawShapeThumb(cv, sh, dpr);
+    const name = document.createElement("div");
+    name.className = "sname"; name.textContent = sh.name;
+    const map = document.createElement("div");
+    map.className = "smap";
+    tile.append(cv, name, map);
+    box.appendChild(tile);
+  }
+  if (_lastState) paintShapeMapping(_lastState);
+}
+
+function drawShapeThumb(cv, sh, dpr){
+  const g = cv.getContext("2d");
+  const W = cv.width, half = W / 2;
+  // Brighten to full value, keeping the hue: a deep-blue node reads as
+  // nothing on a 128px tile at its authored brightness.
+  const c = sh.color || [1, 1, 1];
+  const peak = Math.max(c[0], c[1], c[2], 1e-3);
+  const rgb = c.map(v => Math.round(255 * Math.min(1, v / peak))).join(",");
+  g.lineWidth = 1.25 * dpr;
+  g.lineJoin = g.lineCap = "round";
+  (sh.paths || []).forEach((P, i) => {
+    if (P.length < 2) return;
+    g.strokeStyle = `rgba(${rgb},${(sh.shade && sh.shade[i]) ?? 1})`;
+    g.beginPath();
+    g.moveTo(half + P[0][0] * half, half - P[0][1] * half);
+    for (let k = 1; k < P.length; k++) g.lineTo(half + P[k][0] * half, half - P[k][1] * half);
+    g.stroke();
+  });
+}
+
+function paintShapeMapping(s){
+  // Which voice(s) drive each shape's scale — shown under the name, so the
+  // pane answers "what is this mapped to" as well as "what does it look like".
+  const mods = s.shape_modulation || [];
+  const sig = JSON.stringify(mods.map(m => [m.shape, m.voice]));
+  if (sig === _shapeMapSig) return;
+  _shapeMapSig = sig;
+  const by = {};
+  for (const m of mods) if (m.shape) (by[m.shape] = by[m.shape] || []).push(m.voice || "?");
+  for (const tile of $("shapes").querySelectorAll(".shape-tile")) {
+    const v = by[tile.dataset.shape];
+    tile.classList.toggle("mapped", !!v);
+    const el = tile.querySelector(".smap");
+    el.textContent = v ? "→ " + [...new Set(v)].join(", ") : "";
+    el.title = el.textContent;
+  }
+}
 
 function syncAudioTargets(s){
   const sel = $("audiotarget-regen");
