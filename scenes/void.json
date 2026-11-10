@@ -708,7 +708,7 @@
             }
           }
         ],
-        "shape_speed": 0.17
+        "shape_speed": 0.07
       }
     }
   ],
@@ -940,7 +940,31 @@
     "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
-  "midi_overrides": {},
+  "midi_overrides": {
+    "voice.void_depth.level": 20,
+    "voice.void_depth.pan": 30,
+    "voice.vacuum_hum.pan": 31,
+    "voice.static_breath.pan": 33,
+    "voice.void_depth.tone": 40,
+    "voice.vacuum_hum.tone": 41,
+    "voice.distant_bells.tone": 42,
+    "voice.static_breath.tone": 43,
+    "voice.void_depth.env.attack": 50,
+    "voice.vacuum_hum.env.attack": 51,
+    "voice.distant_bells.env.attack": 52,
+    "voice.static_breath.env.attack": 53,
+    "voice.void_depth.env.release": 60,
+    "voice.distant_bells.env.release": 62,
+    "voice.static_breath.env.release": 63,
+    "voice.void_depth.depth": 70,
+    "voice.vacuum_hum.level": 74,
+    "voice.distant_bells.pan": 16,
+    "voice.vacuum_hum.distortion": 19,
+    "voice.distant_bells.env.sustain": 77,
+    "voice.vacuum_hum.env.release": 79,
+    "voice.distant_bells.level": 71,
+    "voice.static_breath.level": 93
+  },
   "image_prompt": "",
   "audio_prompt": "",
   "generation_settings": {},

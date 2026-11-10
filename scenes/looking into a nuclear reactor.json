@@ -940,7 +940,7 @@
     "orbit_radius": 9.5,
     "far": 32,
     "speed": 0.0,
-    "max_strokes": 110,
+    "max_strokes": 595,
     "depth": {
       "mode": "cull"
     },
@@ -956,8 +956,10 @@
     "laser_max_strokes": null,
     "bloom_spread": 0.005,
     "bloom_intensity": 2.5,
-    "line_curve": 0.0,
-    "line_width": 1.0
+    "line_curve": 0.24,
+    "line_width": 1.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -1002,7 +1004,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "isotope_warble",
@@ -1042,7 +1045,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "cooling_drone",

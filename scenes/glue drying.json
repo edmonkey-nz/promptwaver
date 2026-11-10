@@ -3119,22 +3119,29 @@
         5
       ]
     ],
-    "speed": 0.0,
-    "fov": 62,
+    "speed": 0.1,
+    "fov": 43.0,
     "near": 0.4,
     "far": 40,
     "max_strokes": 120,
     "depth": {
       "mode": "cull"
     },
-    "orbit_radius": 9.0,
+    "orbit_radius": 6.0,
     "orbit_height": 1.5,
     "disable_plane": false,
-    "mirror_x": true,
+    "mirror_x": false,
     "mirror_y": false,
     "glow": 0.2,
     "trail": 0.68,
-    "kaleidoscope_segments": 0
+    "kaleidoscope_segments": 0,
+    "bloom_spread": 0.005,
+    "bloom_intensity": 2.5,
+    "line_curve": 0.57,
+    "line_width": 1.0,
+    "line_softness": 0.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -3157,7 +3164,7 @@
           7,
           12
         ],
-        "level": 0.55,
+        "level": 0.77,
         "tone": 0.2,
         "detune": 0.008,
         "pan": 0.0,
@@ -3171,14 +3178,15 @@
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
-        "unison": 1,
+        "unison": 5.0,
         "distortion": 0.0,
         "scale": [
           0,
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "harmonic_bed",
@@ -3278,7 +3286,9 @@
         "distortion": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "drift": 0.0,
+        "resonance": 0.0
       },
       {
         "name": "molecular_air",
@@ -3309,6 +3319,35 @@
           7,
           10
         ]
+      },
+      {
+        "name": "ions",
+        "type": "fm",
+        "ratio": 1.37,
+        "index": 1.1,
+        "index_decay": 2.68,
+        "decay": 19.55,
+        "rate": 0.5,
+        "drift": 0.46,
+        "level": 0.02,
+        "note": 64,
+        "scale": [
+          0,
+          4,
+          7
+        ],
+        "pan": -0.1,
+        "mute": false,
+        "tone": 0.4,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.68,
+        "chord": [
+          0
+        ],
+        "gap": 0.0,
+        "attack": 5.35
       }
     ],
     "swell_amount": 0.51,
@@ -3317,7 +3356,9 @@
       "mid": 0.0,
       "high": 0.0
     },
-    "swell_period": 24.0
+    "swell_period": 24.0,
+    "filter_sweep_amount": 0.0,
+    "filter_sweep_period": 30.0
   },
   "audio_link": 1.0,
   "midi_overrides": {},
@@ -3329,5 +3370,20 @@
     "energy": 0.28,
     "evolution": 0.85
   },
-  "shape_modulation": []
+  "shape_modulation": [
+    {
+      "shape": "electron_cloud",
+      "voice": "bonding_pulses",
+      "param": "level",
+      "dest": "scale",
+      "range": [
+        2,
+        2
+      ]
+    }
+  ],
+  "lfo": {
+    "lfo_slow": 0.05,
+    "lfo_mid": 0.2
+  }
 }

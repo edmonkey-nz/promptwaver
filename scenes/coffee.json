@@ -272,7 +272,9 @@
       "depth": 0.48,
       "mode": "range",
       "lo": 0.0,
-      "hi": 3.0
+      "hi": 3.0,
+      "in_max": 0.18,
+      "glide": 3.45
     }
   ],
   "camera": {
@@ -286,77 +288,59 @@
     "bloom_spread": 0.005,
     "bloom_intensity": 2.5,
     "line_curve": 0.0,
-    "line_width": 1.0
+    "line_width": 1.0,
+    "line_softness": 0.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
-    "tempo": 33.0,
+    "tempo": 60.0,
     "master": 0.75,
+    "distortion": 0.0,
+    "delay": {
+      "time": 0.5,
+      "feedback": 0.3,
+      "mix": 0.25
+    },
+    "reverb": {
+      "mix": 0.28,
+      "size": 3.8,
+      "damp": 0.6
+    },
     "voices": [
       {
-        "name": "office_hum",
+        "name": "foundation",
         "type": "pad",
-        "note": 38,
+        "waveform": "sine",
+        "note": 36,
         "chord": [
           0,
-          5,
+          7,
           12
         ],
-        "tone": 0.35,
-        "level": 0.4,
-        "env": {
-          "attack": 3.0,
-          "decay": 2.0,
-          "sustain": 0.6,
-          "release": 2.5
-        },
-        "pan": 0.0,
-        "mute": false,
-        "detune": 0.01,
-        "rate": 0.5,
-        "decay": 1.2,
-        "unison": 1,
-        "sub": 0.0,
-        "distortion": 0.3,
-        "scale": [
-          0,
-          3,
-          7,
-          10
-        ]
-      },
-      {
-        "name": "burr_grind",
-        "type": "osc",
-        "note": 64,
-        "chord": [
-          0,
-          2,
-          7,
-          10
-        ],
-        "unison": 3,
-        "detune": 0.008,
-        "tone": 0.75,
-        "resonance": 0.6,
         "level": 0.5,
+        "tone": 0.35,
+        "detune": 0.008,
+        "pan": 0.0,
+        "reverb": 0.15,
+        "env": {
+          "attack": 4.0,
+          "decay": 1.5,
+          "sustain": 0.8,
+          "release": 3.0
+        },
         "lfo": {
-          "on": true,
+          "on": false,
           "dest": "tone",
           "shape": "sine",
-          "rate": 0.08,
+          "rate": 0.04,
           "depth": 0.35
         },
-        "env": {
-          "attack": 0.2,
-          "decay": 1.2,
-          "sustain": 0.7,
-          "release": 1.0
-        },
-        "pan": 0.0,
         "mute": false,
         "rate": 0.5,
         "decay": 1.2,
+        "unison": 1,
         "sub": 0.0,
         "distortion": 0.0,
         "scale": [
@@ -367,35 +351,62 @@
         ]
       },
       {
-        "name": "bean_crunch",
+        "name": "warmth",
+        "type": "pad",
+        "waveform": "sine",
+        "note": 48,
+        "chord": [
+          0,
+          5,
+          9
+        ],
+        "level": 0.35,
+        "tone": 0.45,
+        "detune": 0.012,
+        "pan": -0.15,
+        "chorus": 0.35,
+        "env": {
+          "attack": 3.5,
+          "decay": 1.2,
+          "sustain": 0.75,
+          "release": 2.8
+        },
+        "mute": false,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "scale": [
+          0,
+          3,
+          7,
+          10
+        ]
+      },
+      {
+        "name": "grind",
         "type": "pluck",
-        "note": 72,
         "scale": [
           0,
           3,
           5,
           7,
-          10,
-          12
+          10
         ],
-        "rate": 2.4,
-        "decay": 0.4,
-        "tone": 0.82,
-        "resonance": 0.55,
-        "level": 0.35,
-        "lfos": [
-          {
-            "on": true,
-            "dest": "rate",
-            "shape": "sine",
-            "rate": 0.035,
-            "depth": 0.4
-          }
-        ],
-        "pan": 0.0,
+        "note": 60,
+        "level": 0.28,
+        "rate": 0.3,
+        "decay": 2.2,
+        "tone": 0.5,
+        "resonance": 0.6,
+        "drift": 0.25,
+        "gap": 8.0,
+        "play": 1.8,
+        "order": "random",
+        "pan": 0.2,
         "mute": false,
         "detune": 0.01,
-        "drift": 0.0,
         "unison": 1,
         "sub": 0.0,
         "distortion": 0.0,
@@ -404,25 +415,27 @@
         ]
       },
       {
-        "name": "bell_accent",
-        "type": "bell",
-        "note": 79,
+        "name": "tink",
+        "type": "fm",
         "scale": [
           0,
-          2,
           4,
           7,
-          10,
           12
         ],
-        "rate": 1.1,
-        "decay": 1.2,
-        "tone": 0.78,
-        "character": "glockenspiel",
-        "drift": 0.25,
-        "level": 0.25,
-        "pan": 0.0,
+        "note": 72,
+        "level": 0.22,
+        "rate": 0.25,
+        "decay": 1.6,
+        "drift": 0.3,
+        "gap": 6.5,
+        "play": 1.2,
+        "ratio": 2.5,
+        "index": 3.5,
+        "index_decay": 0.6,
+        "pan": -0.25,
         "mute": false,
+        "tone": 0.4,
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
@@ -432,18 +445,18 @@
         ]
       },
       {
-        "name": "air_rush",
+        "name": "steam",
         "type": "noise",
-        "tone": 0.68,
-        "level": 0.18,
+        "level": 0.12,
+        "tone": 0.42,
+        "pan": 0.0,
         "lfo": {
           "on": true,
           "dest": "level",
           "shape": "sine",
-          "rate": 0.052,
+          "rate": 0.025,
           "depth": 0.5
         },
-        "pan": 0.0,
         "mute": false,
         "detune": 0.01,
         "rate": 0.5,
@@ -462,13 +475,7 @@
         ]
       }
     ],
-    "swell_amount": 0.384,
-    "distortion": 0.0,
-    "delay": {
-      "time": 0.4,
-      "feedback": 0.3,
-      "mix": 0.25
-    },
+    "swell_amount": 0.3,
     "eq": {
       "low": 0.0,
       "mid": 0.0,
@@ -481,7 +488,7 @@
   "audio_link": 1.0,
   "midi_overrides": {},
   "image_prompt": "grinding coffee in a busy office",
-  "audio_prompt": "grinding, crunch, mechanical",
+  "audio_prompt": "coffee grinding, teaspoons, warm slow",
   "generation_settings": {
     "size": null,
     "warmth": 0.24,
@@ -498,7 +505,16 @@
       "estimated": false,
       "usd": 0.0164
     },
-    "expansion": null
+    "expansion": null,
+    "audio_cost": {
+      "model": "claude-haiku-4-5",
+      "input_tokens": 5292,
+      "output_tokens": 836,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "usd": 0.0095
+    }
   },
   "shape_modulation": [],
   "lfo": {

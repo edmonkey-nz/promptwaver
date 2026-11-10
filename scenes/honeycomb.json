@@ -354,7 +354,9 @@
     "bloom_spread": 0.005,
     "bloom_intensity": 1.0,
     "line_curve": -0.91,
-    "line_width": 1.0
+    "line_width": 1.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -474,28 +476,28 @@
           12
         ],
         "level": 0.56,
-        "rate": 0.4,
-        "decay": 2.8,
-        "tone": 0.58,
-        "resonance": 0.65,
+        "rate": 0.25,
+        "decay": 4.05,
+        "tone": 0.08,
+        "resonance": 0.26,
         "drift": 0.25,
         "lfos": [
           {
-            "on": true,
+            "on": false,
             "dest": "level",
             "shape": "triangle",
             "rate": 0.044,
             "depth": 0.18
           },
           {
-            "on": true,
+            "on": false,
             "dest": "pan",
             "shape": "sine",
             "rate": 0.017,
             "depth": 0.22
           },
           {
-            "on": true,
+            "on": false,
             "dest": "gap",
             "shape": "sine",
             "rate": 0.012,
@@ -507,11 +509,13 @@
         "detune": 0.01,
         "unison": 1,
         "sub": 0.0,
-        "distortion": 0.21,
+        "distortion": 0.03,
         "chord": [
           0
         ],
-        "gap": 9.5
+        "gap": 0.0,
+        "reverb": 0.28,
+        "play": 13.0
       },
       {
         "name": "amber_bell",

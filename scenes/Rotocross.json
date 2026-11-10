@@ -144,9 +144,12 @@
     "mirror_x": false,
     "mirror_y": false,
     "kaleidoscope_segments": 0,
-    "bloom_spread": 0.005,
+    "bloom_spread": 0.001,
     "bloom_intensity": 2.5,
-    "line_curve": 0.0
+    "line_curve": 0.0,
+    "line_width": 1.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -258,7 +261,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "data_bells",
@@ -283,7 +287,9 @@
         "distortion": 0.0,
         "chord": [
           0
-        ]
+        ],
+        "character": "bell",
+        "drift": 0.0
       },
       {
         "name": "bit_sequence",
@@ -317,7 +323,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "digital_drift",

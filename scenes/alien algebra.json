@@ -7198,12 +7198,14 @@
   "audio_patch": {},
   "modulation": [
     {
-      "source": "audio_level",
+      "source": "voice.shrill_accent",
       "dest": "camera.speed",
       "depth": 0.5,
       "mode": "range",
       "lo": 0.0,
-      "hi": 0.0648
+      "hi": 0.2904,
+      "glide": 2.75,
+      "in_max": 0.38
     }
   ],
   "camera": {
@@ -7265,11 +7267,11 @@
         -10
       ]
     ],
-    "speed": 0.02,
+    "speed": 0.21,
     "fov": 53.0,
     "near": 0.4,
-    "far": 9.0,
-    "max_strokes": 105,
+    "far": 12.0,
+    "max_strokes": 775,
     "depth": {
       "mode": "cull"
     },
@@ -7277,15 +7279,18 @@
     "orbit_height": 1.5,
     "laser_max_strokes": null,
     "disable_plane": false,
-    "mirror_x": true,
+    "mirror_x": false,
     "mirror_y": false,
-    "glow": 0.14,
-    "trail": 0.77,
+    "glow": 0.05,
+    "trail": 0.83,
     "kaleidoscope_segments": 0,
     "bloom_spread": 0.005,
     "bloom_intensity": 2.5,
-    "line_curve": 0.94,
-    "line_width": 1.0
+    "line_curve": -1.0,
+    "line_width": 1.0,
+    "line_softness": 0.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -7419,7 +7424,7 @@
           11,
           14
         ],
-        "level": 0.15,
+        "level": 0.06,
         "rate": 1.4,
         "decay": 4.95,
         "tone": 0.04,
@@ -7441,8 +7446,80 @@
         },
         "drift": 0.31,
         "resonance": 0.56,
-        "gap": 6.5,
+        "gap": 6.0,
         "play": 12.0
+      },
+      {
+        "name": "fm",
+        "type": "fm",
+        "ratio": 1.0,
+        "index": 2.5,
+        "index_decay": 0.4,
+        "decay": 2.0,
+        "rate": 0.5,
+        "drift": 0.2,
+        "level": 0.22,
+        "note": 60,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          11
+        ],
+        "pan": 0.1,
+        "mute": true,
+        "tone": 0.15,
+        "detune": 0.01,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.16,
+        "chord": [
+          0
+        ],
+        "order": "updown",
+        "chorus": 0.42,
+        "chorus_rate": 0.18,
+        "gap": 0.5,
+        "lfo": {
+          "on": false,
+          "rate": 0.06,
+          "shape": "sine",
+          "depth": 0.5,
+          "dest": "detune"
+        }
+      },
+      {
+        "name": "gran",
+        "type": "granular",
+        "source": "tone",
+        "pitch": 12.0,
+        "density": 1.0,
+        "grain": 0.29,
+        "jitter": 0.06,
+        "scatter": 1.5,
+        "level": 0.16,
+        "note": 72,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          11
+        ],
+        "pan": -0.1,
+        "mute": true,
+        "tone": 0.82,
+        "detune": 0.01,
+        "rate": 0.5,
+        "decay": 1.2,
+        "unison": 1,
+        "sub": 0.0,
+        "distortion": 0.0,
+        "chord": [
+          0
+        ],
+        "chorus": 0.93
       }
     ],
     "swell_amount": 0.354,
@@ -7479,7 +7556,18 @@
       "total": 340
     }
   },
-  "shape_modulation": [],
+  "shape_modulation": [
+    {
+      "shape": "nested_geometry",
+      "voice": "shrill_accent",
+      "param": "level",
+      "dest": "scale",
+      "range": [
+        3,
+        4
+      ]
+    }
+  ],
   "lfo": {
     "lfo_slow": 0.05,
     "lfo_mid": 0.2

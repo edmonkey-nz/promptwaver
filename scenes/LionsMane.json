@@ -221,9 +221,13 @@
     "glow": 0.77,
     "trail": 0.58,
     "kaleidoscope_segments": 0,
-    "bloom_spread": 0.011,
-    "bloom_intensity": 2.9,
-    "line_curve": 0.0
+    "bloom_spread": 0.002,
+    "bloom_intensity": 1.1,
+    "line_curve": 0.0,
+    "line_width": 1.0,
+    "line_softness": 0.0,
+    "hue_override": false,
+    "hue_value": 0.5
   },
   "pps": null,
   "soundscape": {
@@ -266,7 +270,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "jungle_pad",
@@ -334,7 +339,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "roar_accent",
@@ -366,7 +372,8 @@
           3,
           7,
           10
-        ]
+        ],
+        "resonance": 0.0
       },
       {
         "name": "creature_calls",
@@ -399,7 +406,9 @@
         "distortion": 0.36,
         "chord": [
           0
-        ]
+        ],
+        "drift": 0.0,
+        "resonance": 0.0
       },
       {
         "name": "ambient_air",
